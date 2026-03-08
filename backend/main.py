@@ -18,9 +18,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:4200",
-        "http://127.0.0.1:4200",
-        "*"
+        "http://localhost:52481",
+        "http://127.0.0.1:52481",
+        "https://secretaria-api.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],

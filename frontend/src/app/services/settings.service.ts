@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class SettingsService {
-    private apiUrl = 'http://localhost:14789/api/settings';
+    private apiUrl = `${environment.apiUrl}/api/settings`;
 
     constructor(private http: HttpClient, private authService: AuthService) { }
 
