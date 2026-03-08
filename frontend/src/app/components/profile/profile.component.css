@@ -1,0 +1,87 @@
+.profile-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.25rem;
+}
+
+.profile-card {
+    padding: 2rem 1.5rem;
+}
+
+.avatar-lg {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 4px solid #ffffff;
+    box-shadow: 0 0 0 1px #e2e8f0, 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.avatar-lg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-circle-lg {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+.profile-meta p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-meta svg {
+    margin-right: 0.4rem;
+    color: #9ca3af;
+}
+
+.signature-box {
+    border: 1px dashed #d1d5db;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    background: #ffffff;
+}
+
+.mr-2 {
+    margin-right: 0.5rem;
+}
+
+.text-dark {
+    color: #111827;
+}
+
+.form-group input,
+.form-group textarea {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+}
+
+.form-group input:disabled {
+    background: #f9fafb;
+    color: var(--text-muted);
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.position-relative {
+    position: relative;
+}

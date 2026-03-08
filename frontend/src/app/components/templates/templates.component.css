@@ -1,0 +1,264 @@
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.grid-layout {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-2 {
+    flex: 2;
+}
+
+@media (max-width: 768px) {
+    .grid-layout {
+        flex-direction: column;
+    }
+}
+
+.card {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-body.p-0 {
+    padding: 0;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.data-table th {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.data-table td {
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-color);
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.w-full {
+    width: 100%;
+}
+
+.text-danger {
+    color: var(--danger-color);
+}
+
+.file-drop-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 3rem 2rem;
+    border: 2px dashed #d1d5db;
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    background: #f9fafb;
+    text-align: center;
+}
+
+.file-drop-area:hover,
+.file-drop-area:focus-within {
+    border-color: var(--accent-color);
+    background: #eff6ff;
+}
+
+.file-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.file-text {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.drag-list {
+    min-height: 200px;
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.drop-zone-active {
+    background: #f0fdf4;
+    border: 2px dashed #86efac;
+}
+
+.drag-box {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    cursor: grab;
+    background: white;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.drag-box:active {
+    cursor: grabbing;
+}
+
+.box-active {
+    border-left: 4px solid #22c55e;
+}
+
+.drag-handle {
+    color: #9ca3af;
+    margin-right: 1rem;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.drag-handle svg {
+    width: 18px;
+    height: 18px;
+}
+
+.token-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.token-label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.token-tag {
+    background: #f3f4f6;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--accent-color);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    align-self: flex-start;
+}
+
+.token-tag:hover {
+    background: #e5e7eb;
+}
+
+.empty-drop-msg {
+    text-align: center;
+    color: #9ca3af;
+    padding: 3rem;
+    font-style: italic;
+    font-size: 0.95rem;
+}
+
+/* CDK Drag and Drop Animation Classes */
+.cdk-drag-preview {
+    box-sizing: border-box;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    background: white !important;
+    opacity: 1 !important;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cdk-drag-placeholder {
+    opacity: 0.3;
+}
+
+.cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.drag-list.cdk-drop-list-dragging .drag-box:not(.cdk-drag-placeholder) {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
