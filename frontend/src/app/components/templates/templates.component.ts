@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-templates',
@@ -46,7 +47,7 @@ export class TemplatesComponent implements OnInit {
         this.isLoading = true;
         const headers = this.authService.getAuthHeaders();
 
-        this.http.get<any[]>('http://localhost:14789/templates', { headers }).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/templates`, { headers }).subscribe({
             next: (data) => {
                 this.templates = data;
                 this.isLoading = false;
@@ -93,7 +94,7 @@ export class TemplatesComponent implements OnInit {
 
         const qs = `?project_id=${this.selectedProjectId}`;
 
-        this.http.post<any>(`http://localhost:14789/templates/upload${qs}`, formData, {
+        this.http.post<any>(`${environment.apiUrl}/templates/upload${qs}`, formData, {
             headers: this.authService.getAuthHeaders() // El navegador setea automáticamente multipart boundary
         }).subscribe({
             next: (res) => {
@@ -140,7 +141,7 @@ export class TemplatesComponent implements OnInit {
             mapping_config: JSON.stringify(this.activeTokens)
         };
 
-        this.http.put(`http://localhost:14789/templates/${this.lastUploadedTemplateId}/mapping`, mappingPayload, {
+        this.http.put(`${environment.apiUrl}/templates/${this.lastUploadedTemplateId}/mapping`, mappingPayload, {
             headers: this.authService.getAuthHeaders()
         }).subscribe({
             next: () => {

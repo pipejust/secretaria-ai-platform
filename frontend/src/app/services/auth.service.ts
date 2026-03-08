@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
-    // Apuntamos a un puerto personalizado para evitar colisiones: 14789
-    private apiUrl = 'http://localhost:14789/auth';
+    // Apuntamos al endpoint configurado en enviroment
+    private apiUrl = `${environment.apiUrl}/auth`;
     private currentUserSubject = new BehaviorSubject<any>(null);
     public currentUser$ = this.currentUserSubject.asObservable();
 
