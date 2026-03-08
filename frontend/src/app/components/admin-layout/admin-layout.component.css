@@ -1,0 +1,457 @@
+.admin-wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background: var(--bg-main);
+}
+
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    /* Remover bordes translucidos, usar sidebar plana oscura */
+    background: var(--sidebar-bg);
+    color: var(--text-sidebar);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    /* Para el absolute del toggle float */
+}
+
+.sidebar.collapsed {
+    width: 80px;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: white;
+}
+
+.sidebar-header h2 span {
+    color: var(--accent-color);
+}
+
+.logo-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 32px;
+}
+
+.mini-logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-align: center;
+    width: 100%;
+}
+
+.sidebar.collapsed .sidebar-header {
+    padding: 1.5rem 0.5rem;
+}
+
+.sidebar.collapsed .logo-area {
+    justify-content: center;
+}
+
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0;
+    overflow-y: auto;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+}
+
+/* Categorias del menú lateral */
+.nav-category {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 1rem 1.5rem 0.5rem;
+}
+
+.sidebar-nav li {
+    margin-bottom: 0.25rem;
+}
+
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.5rem;
+    color: var(--text-sidebar);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+    white-space: nowrap;
+}
+
+.sidebar.collapsed .sidebar-nav a {
+    padding: 0.75rem 0;
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-nav a svg {
+    margin: 0;
+}
+
+.nav-text {
+    animation: fadeIn 0.3s ease;
+}
+
+.sidebar-nav a:hover {
+    background: var(--sidebar-hover);
+    color: white;
+}
+
+.sidebar-nav a.active {
+    background: rgba(59, 130, 246, 0.15);
+    /* bg azul ligero sobre oscuro */
+    color: var(--text-sidebar-active);
+    border-left-color: var(--accent-color);
+}
+
+.sidebar-footer {
+    padding: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #4ade80;
+    /* bright green */
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding-left: 0.5rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #4ade80;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
+/* Toggle Botón Flotante (Bottom Right) */
+.toggle-sidebar-bottom {
+    position: absolute;
+    bottom: 30px;
+    right: -16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    transition: all 0.3s;
+}
+
+.toggle-sidebar-bottom:hover {
+    background: var(--accent-hover);
+    transform: scale(1.1);
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.topbar {
+    height: 64px;
+    min-height: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    border-radius: 0;
+    background: var(--topbar-bg);
+    color: white;
+    border-bottom: none;
+    z-index: 5;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+}
+
+.page-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+}
+
+.user-profile-container {
+    position: relative;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.user-profile:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.top-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    background: white;
+    color: var(--accent-color);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.u-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+}
+
+.u-role {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+    background: transparent;
+    padding: 0;
+}
+
+.chevron-down {
+    color: rgba(255, 255, 255, 0.8);
+    margin-left: 0.2rem;
+}
+
+/* Dropdown Floating Menu */
+.profile-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    width: 240px;
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    z-index: 100;
+    overflow: hidden;
+    color: var(--text-main);
+    animation: slideDown 0.2s ease forwards;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-header {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown-header strong {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    margin-bottom: 0.2rem;
+}
+
+.dropdown-header span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--border-color);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background: #f3f4f6;
+}
+
+.logout-item {
+    color: var(--danger-color);
+}
+
+.logout-item:hover {
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.content-area {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+/* Mobile Menu & Overlay Utilities */
+.mobile-menu-toggle {
+    display: none;
+    margin-right: 1rem;
+    color: white;
+}
+
+.mobile-overlay {
+    display: none;
+}
+
+/* ================== RESPONSIVE DESIGN (MOBILE BEYOND 768px) ================== */
+@media (max-width: 768px) {
+
+    /* 1. Reset Sidebar layout to absolute sliding model */
+    .sidebar {
+        position: fixed;
+        left: -100%;
+        top: 0;
+        bottom: 0;
+        width: 260px !important;
+        z-index: 50;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 2. Slide-in class */
+    .sidebar.mobile-open {
+        left: 0;
+    }
+
+    /* 3. Override 'collapsed' styles if user triggered it on desktop and resized */
+    .sidebar.collapsed .sidebar-header {
+        padding: 1.5rem;
+    }
+
+    .sidebar.collapsed .logo-area {
+        justify-content: space-between;
+    }
+
+    .sidebar.collapsed .sidebar-nav a {
+        padding: 0.75rem 1.5rem;
+        justify-content: flex-start;
+    }
+
+    .sidebar.collapsed .logout-btn {
+        padding: 0.75rem 1rem;
+        justify-content: flex-start;
+    }
+
+    .sidebar.collapsed .nav-text,
+    .sidebar.collapsed .logout-btn span {
+        display: block !important;
+    }
+
+    .sidebar.collapsed h2,
+    .sidebar.collapsed h2 span {
+        display: inline !important;
+    }
+
+    .sidebar.collapsed .mini-logo {
+        display: none !important;
+    }
+
+    /* 4. Display Hamburger and Overlay */
+    .mobile-menu-toggle {
+        display: flex;
+    }
+
+    .mobile-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+        z-index: 40;
+    }
+
+    /* 5. Hide Desktop toggle Button */
+    .toggle-sidebar {
+        display: none !important;
+    }
+
+    /* 6. Layout adjustments */
+    .topbar {
+        padding: 0 1rem;
+    }
+
+    .content-area {
+        padding: 1rem;
+    }
+}

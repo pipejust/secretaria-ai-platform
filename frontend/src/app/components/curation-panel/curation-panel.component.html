@@ -1,0 +1,79 @@
+<div class="curation-container fade-in">
+  <header class="panel-header">
+    <div class="header-titles">
+      <h1>Curación del Acta</h1>
+      <p class="subtitle">Sesión: {{ meetingData.title }} | Fecha: {{ meetingData.date }}</p>
+    </div>
+    
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="approveAct()" [disabled]="isApproving || isApproved">
+        <span *ngIf="!isApproving && !isApproved">✓ Aprobar Acta y Distribuir Tareas</span>
+        <span *ngIf="isApproving">Procesando...</span>
+        <span *ngIf="isApproved">✅ ¡Acta Procesada!</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="grid-layout">
+    <section class="col-left">
+      <div class="glass-panel section-card">
+        <h3>📝 Resumen Ejecutivo</h3>
+        <textarea [(ngModel)]="meetingData.summary" rows="4"></textarea>
+      </div>
+
+      <div class="glass-panel section-card">
+        <h3>💡 Decisiones Clave</h3>
+        <textarea [(ngModel)]="meetingData.decisions" rows="3"></textarea>
+      </div>
+
+      <div class="glass-panel section-card">
+        <h3>⚠️ Riesgos Identificados</h3>
+        <textarea [(ngModel)]="meetingData.risks" rows="3"></textarea>
+      </div>
+      
+      <div class="glass-panel section-card">
+        <h3>🤝 Acuerdos</h3>
+        <textarea [(ngModel)]="meetingData.agreements" rows="3"></textarea>
+      </div>
+    </section>
+
+    <section class="col-right">
+      <div class="glass-panel section-card tasks-panel">
+        <div class="tasks-header">
+          <h3>📋 Tareas Detectadas por IA ({{meetingData.action_items.length}})</h3>
+          <button class="btn btn-icon btn-add" (click)="addTask()">+ Añadir Manual</button>
+        </div>
+        
+        <div class="task-list">
+          <div class="task-card fade-in" *ngFor="let task of meetingData.action_items; let i = index">
+            <div class="task-header-row">
+              <input type="text" class="task-title-input" [(ngModel)]="task.title" placeholder="Título de Tarea" />
+              <button class="btn btn-icon delete-btn" (click)="removeTask(i)" title="Eliminar Inferencia Errónea">✕</button>
+            </div>
+            
+            <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción de la tarea" rows="2"></textarea>
+            
+            <div class="task-meta">
+               <div class="meta-field">
+                 <label>Responsable</label>
+                 <input type="text" [(ngModel)]="task.owner_name" placeholder="Nombre" />
+               </div>
+               <div class="meta-field">
+                 <label>Email</label>
+                 <input type="email" [(ngModel)]="task.owner_email" placeholder="correo@ejemplo.com" />
+               </div>
+               <div class="meta-field">
+                 <label>Vencimiento</label>
+                 <input type="date" [(ngModel)]="task.due_date" />
+               </div>
+            </div>
+          </div>
+          
+          <div *ngIf="meetingData.action_items.length === 0" class="empty-state">
+             No hay tareas detectadas o todas fueron eliminadas.
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

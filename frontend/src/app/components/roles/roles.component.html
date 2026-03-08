@@ -1,0 +1,122 @@
+<div class="fade-in">
+    <div class="header-actions">
+        <h2 class="section-title">Gestión de Roles</h2>
+    </div>
+
+    <div class="alert alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+    <div class="alert alert-success" *ngIf="successMsg">{{ successMsg }}</div>
+
+    <div class="grid-layout">
+        <!-- Lista de Roles -->
+        <div class="card glass-panel flex-2">
+            <div class="card-header">
+                <h3>Roles Existentes</h3>
+            </div>
+            <div class="card-body p-0">
+                <!-- Loading State (Skeletons) -->
+                <div class="table-container" *ngIf="isLoading">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <div class="skeleton skeleton-text" style="width: 40px;"></div>
+                                </th>
+                                <th>
+                                    <div class="skeleton skeleton-text" style="width: 150px;"></div>
+                                </th>
+                                <th>
+                                    <div class="skeleton skeleton-text" style="width: 200px;"></div>
+                                </th>
+                                <th>
+                                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let i of [1,2,3]">
+                                <td>
+                                    <div class="skeleton skeleton-text" style="width: 30px;"></div>
+                                </td>
+                                <td>
+                                    <div class="skeleton skeleton-title" style="margin-bottom: 0;"></div>
+                                </td>
+                                <td>
+                                    <div class="skeleton skeleton-text" style="width: 180px;"></div>
+                                </td>
+                                <td>
+                                    <div class="skeleton skeleton-text"
+                                        style="width: 80px; height: 24px; border-radius: 12px;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-container" *ngIf="!isLoading">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre del Rol</th>
+                                <th>Descripción</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let role of roles">
+                                <td>#{{ role.id }}</td>
+                                <td><span class="badge">{{ role.name }}</span></td>
+                                <td>{{ role.description || 'Sin descripción' }}</td>
+                                <td>
+                                    <span class="status-indicator" [class.active]="role.is_active">
+                                        {{ role.is_active ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr *ngIf="roles.length === 0">
+                                <td colspan="4" class="p-0">
+                                    <div class="empty-state">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                        </svg>
+                                        <h4>No hay roles registrados</h4>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario Crear Rol -->
+        <div class="card glass-panel flex-1">
+            <div class="card-header">
+                <h3>Crear Nuevo Rol</h3>
+            </div>
+            <div class="card-body">
+                <form (ngSubmit)="createRole()" #roleForm="ngForm">
+                    <div class="form-group">
+                        <label>Nombre del Rol <span class="text-danger">*</span></label>
+                        <input type="text" name="name" [(ngModel)]="newRole.name" required
+                            placeholder="ej: supervisor" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea name="description" [(ngModel)]="newRole.description"
+                            placeholder="Descripción de los permisos..." rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full"
+                        [disabled]="!roleForm.form.valid || isCreating">
+                        <span *ngIf="!isCreating">Guardar Rol</span>
+                        <span *ngIf="isCreating">Guardando...</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
