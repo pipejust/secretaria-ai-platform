@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-dashboard',
@@ -19,6 +20,27 @@ export class DashboardComponent implements OnInit {
 
     ngOnInit() {
         this.loadSessions();
+    }
+
+    onFileSelected(event: any) {
+        const file: File = event.target.files[0];
+        if (file) {
+            this.isLoading = true;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('title', file.name);
+
+            this.http.post(`${environment.apiUrl}/sessions/upload`, formData).subscribe({
+                next: (res: any) => {
+                    alert('Archivo subido exitosamente.');
+                    this.loadSessions();
+                },
+                error: (err) => {
+                    alert('Error subiendo el archivo: ' + err.message);
+                    this.isLoading = false;
+                }
+            });
+        }
     }
 
     loadSessions() {
