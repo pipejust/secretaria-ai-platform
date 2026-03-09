@@ -1,8 +1,11 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+import os
+
 class Settings(BaseSettings):
     project_name: str = "Secretaría AI"
-    database_url: str = "sqlite:///./secretaria.db" # Default to SQLite for easy local dev, can be Supabase PostgresURL
+    # By default, use sqlite in local dir. If running on Vercel (read-only FS), use /tmp
+    database_url: str = "sqlite:////tmp/secretaria.db" if os.environ.get("VERCEL") else "sqlite:///./secretaria.db"
     groq_api_key: str = ""
     fireflies_api_key: str = ""
     
