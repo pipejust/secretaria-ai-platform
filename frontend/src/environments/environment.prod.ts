@@ -1,4 +1,4 @@
 export const environment = {
     production: true,
-    apiUrl: 'https://secretaria-api.vercel.app' // Example production API
+    apiUrl: 'https://backend-6obvykurv-felipes-projects-371cfa9e.vercel.app' // Vercel backend
 };
