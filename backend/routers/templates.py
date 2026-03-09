@@ -65,3 +65,54 @@ def update_template_mapping(
     db.add(template)
     db.commit()
     return {"msg": "Mapeo guardado exitosamente"}
+
+from models import MeetingSession
+from services.word_generator import WordGeneratorService
+
+@router.post("/{template_id}/generate/{session_id}")
+def generate_document_from_template(
+    template_id: int,
+    session_id: int,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(require_admin)
+):
+    """Genera un documento Word basado en la plantilla y la sesión."""
+    template = db.get(Template, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+        
+    session = db.get(MeetingSession, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+        
+    # Reconstruir meeting_data a partir del MeetingSession para el WordGenerator
+    meeting_data = {
+        "title": session.title,
+        "summary": session.raw_summary,
+        "decisions": session.processed_decisions,
+        "risks": session.processed_risks,
+        "agreements": session.processed_agreements,
+        "action_items": []
+    }
+    
+    for act in session.action_items:
+        meeting_data["action_items"].append({
+            "title": act.title,
+            "owner_name": act.owner_name,
+            "description": act.description,
+            "due_date": act.due_date
+        })
+
+    generator = WordGeneratorService()
+    output_filename = f"Acta_{session.id}_{template.name}"
+    output_path = os.path.join("uploads", output_filename) # TODO: Better storage path
+    
+    try:
+        generated_path = generator.generate_document(
+            template_name=template.name, 
+            meeting_data=meeting_data, 
+            output_path=output_path
+        )
+        return {"msg": "Documento generado exitosamente", "download_url": f"/files/{output_filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar documento: {str(e)}")
