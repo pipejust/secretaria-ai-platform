@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-projects',
@@ -28,31 +29,46 @@ export class ProjectsComponent implements OnInit {
 
     loadProjects() {
         this.isLoading = true;
-        // For this prototype, if there's no project endpoint yet we just simulate it 
-        // Usually it goes to some 'http://localhost:8080/projects' endpoint
-
-        // We haven't created the project GET router yet on backend. We'll set empty list for UI mockup.
-        setTimeout(() => {
-            /*
-            this.projects = [
-                { id: 1, name: 'Comité Organizacional Mensual', description: 'Reunión recurrente' },
-                { id: 2, name: 'Entrevistas Técnicas', description: 'Captura de tareas en Hiring' }
-            ];
-            */
-            this.projects = [];
-            this.isLoading = false;
-            this.cdr.detectChanges();
-        }, 1200);
+        this.http.get<any[]>(`${environment.apiUrl}/projects/`).subscribe({
+            next: (data) => {
+                this.projects = data;
+                this.isLoading = false;
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error(err);
+                this.errorMsg = 'Error al cargar los proyectos';
+                this.isLoading = false;
+                this.cdr.detectChanges();
+            }
+        });
     }
 
     createProject() {
-        // Mockup for now
         this.isCreating = true;
-        setTimeout(() => {
-            this.projects.push({ id: Date.now(), ...this.newProject });
-            this.newProject = { name: '', description: '' };
-            this.isCreating = false;
-            this.successMsg = 'Proyecto creado exitosamente';
-        }, 600);
+        this.errorMsg = '';
+        this.successMsg = '';
+
+        const payload = {
+            name: this.newProject.name,
+            description: this.newProject.description,
+            is_active: true
+        };
+
+        this.http.post<any>(`${environment.apiUrl}/projects/`, payload).subscribe({
+            next: (data) => {
+                this.projects.push(data);
+                this.newProject = { name: '', description: '' };
+                this.isCreating = false;
+                this.successMsg = 'Proyecto creado exitosamente';
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error(err);
+                this.errorMsg = err.error?.detail || 'Error al crear el proyecto';
+                this.isCreating = false;
+                this.cdr.detectChanges();
+            }
+        });
     }
 }
