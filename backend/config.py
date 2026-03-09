@@ -4,8 +4,8 @@ import os
 
 class Settings(BaseSettings):
     project_name: str = "Secretaría AI"
-    # By default, use sqlite in local dir. If running on Vercel (read-only FS), use /tmp
-    database_url: str = "sqlite:////tmp/secretaria.db" if os.environ.get("VERCEL") else "sqlite:///./secretaria.db"
+    # Render provides persistent disks, so we can use a relative file or an absolute path on their disk
+    database_url: str = os.environ.get("DATABASE_URL", "sqlite:///./secretaria.db")
     groq_api_key: str = ""
     fireflies_api_key: str = ""
     

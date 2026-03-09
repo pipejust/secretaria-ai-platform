@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: secretaria-ai-backend
+    env: python
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        value: sqlite:///data/secretaria.db
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FIREFLIES_API_KEY
+        sync: false
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1
