@@ -7,6 +7,7 @@ from routers import fireflies
 from routers import auth
 from routers import users
 from routers import templates
+from routers import projects
 
 app = FastAPI(
     title="Secretaría AI Backend",
@@ -39,6 +40,7 @@ from routers import settings
 app.include_router(settings.router)
 from routers import debug
 app.include_router(debug.router)
+app.include_router(projects.router)
 
 
 @app.get("/")
