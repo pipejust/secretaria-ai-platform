@@ -60,13 +60,15 @@ export class TemplatesComponent implements OnInit {
             }
         });
 
-        // Mockup projects fetching
-        setTimeout(() => {
-            this.projects = [
-                { id: 1, name: 'Comité Organizacional Mensual' },
-                { id: 2, name: 'Entrevistas Técnicas' }
-            ]
-        }, 500);
+        this.http.get<any[]>(`${environment.apiUrl}/projects/`, { headers }).subscribe({
+            next: (data) => {
+                this.projects = data;
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error('Error loading projects for templates', err);
+            }
+        });
     }
 
     onFileSelected(event: any) {
