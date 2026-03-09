@@ -44,6 +44,15 @@ from routers import debug
 app.include_router(debug.router)
 app.include_router(projects.router)
 
+from routers import documental
+app.include_router(documental.router)
+from routers import landing
+app.include_router(landing.router)
+from routers import rondas
+app.include_router(rondas.router)
+from routers import sessions_upload
+app.include_router(sessions_upload.router)
+
 
 @app.get("/")
 def read_root():
