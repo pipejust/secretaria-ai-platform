@@ -20,6 +20,7 @@ CREATE TABLE "user" (
 CREATE TABLE project (
 	id SERIAL NOT NULL, 
 	name VARCHAR NOT NULL, 
+	description VARCHAR DEFAULT '' NOT NULL,
 	is_active BOOLEAN NOT NULL, 
 	PRIMARY KEY (id)
 );

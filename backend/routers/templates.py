@@ -34,14 +34,24 @@ async def upload_template(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
+    try:
+        from services.supabase_service import upload_file_to_bucket
+        # Subir a Supabase bucket 'templates'
+        supabase_path = f"project_{project_id}/{file.filename}"
+        public_url = upload_file_to_bucket("templates", file_path, supabase_path)
+        final_file_path = public_url
+    except Exception as e:
+        print(f"Advertencia: No se pudo subir a Supabase. Se usará ruta local. Error: {e}")
+        final_file_path = file_path
+        
     template_record = Template(
         project_id=project_id,
         name=file.filename,
-        file_path=file_path
+        file_path=final_file_path
     )
     db_template = crud.template.create(db, obj_in=template_record)
     
-    return {"msg": "Plantilla subida con éxito", "template_id": db_template.id}
+    return {"msg": "Plantilla subida con éxito", "template_id": db_template.id, "file_url": final_file_path}
 
 from pydantic import BaseModel
 
