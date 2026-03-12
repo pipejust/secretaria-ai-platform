@@ -23,7 +23,8 @@ app.add_middleware(
         "http://127.0.0.1:52481",
         "https://secretaria-api.vercel.app",
         "https://frontend-alpha-gules-63.vercel.app",
-        "https://secretaria-ai-platform.vercel.app"
+        "https://secretaria-ai-platform.vercel.app",
+        "https://secretaria-ai-platform.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
