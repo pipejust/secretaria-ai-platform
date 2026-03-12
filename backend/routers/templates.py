@@ -7,6 +7,7 @@ from typing import List
 from database import get_session
 from models import User, Template
 from routers.auth import require_admin
+import crud
 
 router = APIRouter(prefix="/templates", tags=["Gestión de Plantillas"])
 UPLOAD_DIR = "uploads/templates"
@@ -14,7 +15,7 @@ UPLOAD_DIR = "uploads/templates"
 @router.get("")
 def list_templates(db: Session = Depends(get_session), admin_user: User = Depends(require_admin)):
     """Lista las plantillas disponibles en Base de Datos."""
-    return db.exec(select(Template)).all()
+    return crud.template.get_multi(db)
 
 @router.post("/upload")
 async def upload_template(
@@ -38,11 +39,9 @@ async def upload_template(
         name=file.filename,
         file_path=file_path
     )
-    db.add(template_record)
-    db.commit()
-    db.refresh(template_record)
+    db_template = crud.template.create(db, obj_in=template_record)
     
-    return {"msg": "Plantilla subida con éxito", "template_id": template_record.id}
+    return {"msg": "Plantilla subida con éxito", "template_id": db_template.id}
 
 from pydantic import BaseModel
 
@@ -57,13 +56,11 @@ def update_template_mapping(
     admin_user: User = Depends(require_admin)
 ):
     """Actualiza la configuración de mapeo de una plantilla (drag & drop)"""
-    template = db.get(Template, template_id)
+    template = crud.template.get(db, template_id)
     if not template:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
         
-    template.mapping_config = mapping.mapping_config
-    db.add(template)
-    db.commit()
+    crud.template.update(db, db_obj=template, obj_in={"mapping_config": mapping.mapping_config})
     return {"msg": "Mapeo guardado exitosamente"}
 
 from models import MeetingSession
@@ -77,11 +74,11 @@ def generate_document_from_template(
     current_user: User = Depends(require_admin)
 ):
     """Genera un documento Word basado en la plantilla y la sesión."""
-    template = db.get(Template, template_id)
+    template = crud.template.get(db, template_id)
     if not template:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
         
-    session = db.get(MeetingSession, session_id)
+    session = crud.meeting_session.get(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
         
