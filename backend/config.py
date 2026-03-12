@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     database_url: str = os.environ.get("DATABASE_URL", "sqlite:///./secretaria.db")
     groq_api_key: str = ""
     fireflies_api_key: str = ""
+    supabase_url: str = ""
+    supabase_key: str = ""
     
     # Configuraciones de Integraciones (Trello, Azure DevOps, etc.)
     # Estas pueden ir en DB según el proyecto, pero algunas globales podrían estar aquí.

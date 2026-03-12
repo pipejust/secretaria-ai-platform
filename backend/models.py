@@ -23,6 +23,7 @@ class User(SQLModel, table=True):
 class Project(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True, unique=True, description="Nombre del proyecto, usado para mapear desde Fireflies")
+    description: str = Field(default="")
     is_active: bool = Field(default=True)
     
     templates: List["Template"] = Relationship(back_populates="project")

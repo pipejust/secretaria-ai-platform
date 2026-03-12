@@ -53,11 +53,13 @@ def login_for_access_token(login_req: LoginRequest, db: Session = Depends(get_se
     print(f"Username received: '{login_req.username}'")
     user = db.exec(select(User).where(User.email == login_req.username)).first()
     print(f"User found in DB: {user is not None}")
-    if user:
+    if not user:
+        is_valid = False
+    else:
         is_valid = verify_password(login_req.password, user.hashed_password)
         print(f"Password valid: {is_valid}")
     
-    if not user or not verify_password(login_req.password, user.hashed_password):
+    if not is_valid:
         print("--- LOGIN FAILED ---")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
