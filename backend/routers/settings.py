@@ -23,7 +23,7 @@ def get_all_settings(session: Session = Depends(get_session)):
             result[s.provider_name] = {}
     return result
 
-@router.post("/")
+@router.post("")
 def save_settings(payload: dict, session: Session = Depends(get_session)):
     for provider_name, config_obj in payload.items():
         existing = session.exec(select(IntegrationSetting).where(IntegrationSetting.provider_name == provider_name)).first()
