@@ -5,6 +5,7 @@ from typing import List, Optional
 from database import get_session
 from models import Project, Routing, MeetingSession, User
 from routers.auth import get_current_user
+import crud
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -18,7 +19,7 @@ def get_projects(
     current_user: User = Depends(get_current_user)
 ):
     """Obtiene la lista de todos los proyectos activos"""
-    projects = session.exec(select(Project).where(Project.is_active == True)).all()
+    projects = crud.project.get_active_projects(session)
     return projects
 
 @router.post("/", response_model=Project, status_code=status.HTTP_201_CREATED)
@@ -28,14 +29,11 @@ def create_project(
     current_user: User = Depends(get_current_user)
 ):
     """Crea un nuevo proyecto"""
-    db_project = session.exec(select(Project).where(Project.name == project.name)).first()
+    db_project = crud.project.get_by_name(session, name=project.name)
     if db_project:
         raise HTTPException(status_code=400, detail="Ya existe un proyecto con ese nombre")
     
-    session.add(project)
-    session.commit()
-    session.refresh(project)
-    return project
+    return crud.project.create(session, obj_in=project)
 
 @router.put("/{project_id}", response_model=Project)
 def update_project(
@@ -45,17 +43,11 @@ def update_project(
     current_user: User = Depends(get_current_user)
 ):
     """Actualiza la información de un proyecto"""
-    db_project = session.get(Project, project_id)
+    db_project = crud.project.get(session, project_id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
         
-    db_project.name = project_update.name
-    db_project.is_active = project_update.is_active
-    
-    session.add(db_project)
-    session.commit()
-    session.refresh(db_project)
-    return db_project
+    return crud.project.update(session, db_obj=db_project, obj_in=project_update)
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
@@ -64,13 +56,11 @@ def delete_project(
     current_user: User = Depends(get_current_user)
 ):
     """Desactiva lógicamente un proyecto"""
-    db_project = session.get(Project, project_id)
+    db_project = crud.project.get(session, project_id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     
-    db_project.is_active = False
-    session.add(db_project)
-    session.commit()
+    crud.project.deactivate(session, db_obj=db_project)
 
 # -----------------
 # Routings (Destinations per project)
@@ -82,7 +72,7 @@ def get_project_routings(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    db_project = session.get(Project, project_id)
+    db_project = crud.project.get(session, project_id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
         
@@ -95,15 +85,12 @@ def add_project_routing(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    db_project = session.get(Project, project_id)
+    db_project = crud.project.get(session, project_id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
         
     routing.project_id = project_id
-    session.add(routing)
-    session.commit()
-    session.refresh(routing)
-    return routing
+    return crud.routing.create(session, obj_in=routing)
 
 @router.delete("/routings/{routing_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_routing(
@@ -111,12 +98,11 @@ def delete_routing(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    routing = session.get(Routing, routing_id)
-    if not routing:
+    routing_obj = crud.routing.get(session, routing_id)
+    if not routing_obj:
         raise HTTPException(status_code=404, detail="Routing config not found")
         
-    session.delete(routing)
-    session.commit()
+    crud.routing.remove(session, id=routing_id)
 
 # -----------------
 # Sessions (Meetings per project)
@@ -129,7 +115,7 @@ def get_project_sessions(
     current_user: User = Depends(get_current_user)
 ):
     """Obtiene las sesiones de un proyecto"""
-    db_project = session.get(Project, project_id)
+    db_project = crud.project.get(session, project_id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
         
