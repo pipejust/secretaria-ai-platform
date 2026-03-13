@@ -77,72 +77,72 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
             db.commit()
             db.refresh(new_session)
         
-        # 3. Extraer tareas estructuradas con Groq
-        if raw_transcript:
-            groq_svc = GroqService()
-            
-            project_contacts = []
-            if matched_project_id:
-                db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == matched_project_id)).all()
-                project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
-
-            structured_data = await groq_svc.process_transcript(raw_transcript, project_contacts)
-            
-            # Guardar datos enriquecidos en session
-            new_session.processed_decisions = structured_data.get("decisions", "")
-            new_session.processed_risks = structured_data.get("risks", "")
-            new_session.processed_agreements = structured_data.get("agreements", "")
-            db.add(new_session)
-            db.commit()
-
-            action_items_data = structured_data.get("action_items", [])
-            for item_data in action_items_data:
-                action_item = ActionItem(
-                    session_id=new_session.id,
-                    owner_name=item_data.get("owner_name", "Unknown"),
-                    owner_email=item_data.get("owner_email", ""),
-                    title=item_data.get("title", "Tarea sin título"),
-                    description=item_data.get("description", ""),
-                    due_date=item_data.get("due_date"),
-                    is_approved=False
-                )
-                db.add(action_item)
-            db.commit()
-            
-            # 4. Enviar a Task Managers externos basados en Project Routing si el proyecto existe
-            if matched_project_id:
-                import json
-                from services.integrations.trello import TrelloIntegrationService
-                from services.integrations.jira import JiraIntegrationService
-                from services.integrations.clickup import ClickUpIntegrationService
+            # 3. Extraer tareas estructuradas con Groq
+            if raw_transcript:
+                groq_svc = GroqService()
                 
-                routings = db.exec(select(Routing).where(Routing.project_id == matched_project_id)).all()
-                for routing in routings:
-                    config = json.loads(routing.destination_config or '{}')
-                    dest_type = routing.destination_type.lower()
+                project_contacts = []
+                if matched_project_id:
+                    db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == matched_project_id)).all()
+                    project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
+
+                structured_data = await groq_svc.process_transcript(raw_transcript, project_contacts)
+                
+                # Guardar datos enriquecidos en session
+                new_session.processed_decisions = structured_data.get("decisions", "")
+                new_session.processed_risks = structured_data.get("risks", "")
+                new_session.processed_agreements = structured_data.get("agreements", "")
+                db.add(new_session)
+                db.commit()
+
+                action_items_data = structured_data.get("action_items", [])
+                for item_data in action_items_data:
+                    action_item = ActionItem(
+                        session_id=new_session.id,
+                        owner_name=item_data.get("owner_name", "Unknown"),
+                        owner_email=item_data.get("owner_email", ""),
+                        title=item_data.get("title", "Tarea sin título"),
+                        description=item_data.get("description", ""),
+                        due_date=item_data.get("due_date"),
+                        is_approved=False
+                    )
+                    db.add(action_item)
+                db.commit()
+                
+                # 4. Enviar a Task Managers externos basados en Project Routing si el proyecto existe
+                if matched_project_id:
+                    import json
+                    from services.integrations.trello import TrelloIntegrationService
+                    from services.integrations.jira import JiraIntegrationService
+                    from services.integrations.clickup import ClickUpIntegrationService
                     
-                    try:
-                        if "trello" in dest_type:
-                            trello_service = TrelloIntegrationService("mock_key", "mock_token") # TODO use IntegrationSettings
-                            for act in db.exec(select(ActionItem).where(ActionItem.session_id == new_session.id)).all():
-                                await trello_service.create_card(config.get("board_id"), config.get("list_id"), act.title, act.description, act.due_date)
-                        elif "jira" in dest_type:
-                            jira_service = JiraIntegrationService("mock_domain", "mock@email.com", "mock_token") 
-                            for act in db.exec(select(ActionItem).where(ActionItem.session_id == new_session.id)).all():
-                                await jira_service.create_issue(config.get("project_key"), act.title, act.description)
-                        elif "clickup" in dest_type:
-                            clickup_service = ClickUpIntegrationService("mock_token") 
-                            for act in db.exec(select(ActionItem).where(ActionItem.session_id == new_session.id)).all():
-                                await clickup_service.create_task(config.get("list_id"), act.title, act.description)
-                    except Exception as route_err:
-                        print(f"Error routeando a {routing.destination_type}: {route_err}")
+                    routings = db.exec(select(Routing).where(Routing.project_id == matched_project_id)).all()
+                    for routing in routings:
+                        config = json.loads(routing.destination_config or '{}')
+                        dest_type = routing.destination_type.lower()
+                        
+                        try:
+                            if "trello" in dest_type:
+                                trello_service = TrelloIntegrationService("mock_key", "mock_token") # TODO use IntegrationSettings
+                                for act in db.exec(select(ActionItem).where(ActionItem.session_id == new_session.id)).all():
+                                    await trello_service.create_card(config.get("board_id"), config.get("list_id"), act.title, act.description, act.due_date)
+                            elif "jira" in dest_type:
+                                jira_service = JiraIntegrationService("mock_domain", "mock@email.com", "mock_token") 
+                                for act in db.exec(select(ActionItem).where(ActionItem.session_id == new_session.id)).all():
+                                    await jira_service.create_issue(config.get("project_key"), act.title, act.description)
+                            elif "clickup" in dest_type:
+                                clickup_service = ClickUpIntegrationService("mock_token") 
+                                for act in db.exec(select(ActionItem).where(ActionItem.session_id == new_session.id)).all():
+                                    await clickup_service.create_task(config.get("list_id"), act.title, act.description)
+                        except Exception as route_err:
+                            print(f"Error routeando a {routing.destination_type}: {route_err}")
         
-    except Exception as e:
-        import traceback
-        print(f"====== ERROR EN PROCESAMIENTO BACKGROUND FIREFLIES ======")
-        print(f"Error procesando el transcript en background: {e}")
-        print(traceback.format_exc())
-        print("=========================================================")
+        except Exception as e:
+            import traceback
+            print(f"====== ERROR EN PROCESAMIENTO BACKGROUND FIREFLIES ======")
+            print(f"Error procesando el transcript en background: {e}")
+            print(traceback.format_exc())
+            print("=========================================================")
 
 import json
 
