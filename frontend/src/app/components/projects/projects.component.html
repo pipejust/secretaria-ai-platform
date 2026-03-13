@@ -65,14 +65,14 @@
                                 <td>#{{ p.id }}</td>
                                 <td><span class="badge">{{ p.name }}</span></td>
                                 <td>{{ p.description || 'N/A' }}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-icon-text" style="background-color: #6366f1; color: white;" (click)="manageContacts(p)">
+                                <td style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                                    <button class="btn btn-sm btn-icon-text" style="background-color: #6366f1; color: white; margin: 0;" (click)="manageContacts(p)">
                                         Contactos
                                     </button>
-                                    <button class="btn btn-sm btn-icon-text" style="margin-left: 5px;" (click)="editProject(p)">
+                                    <button class="btn btn-sm btn-icon-text" style="margin: 0;" (click)="editProject(p)">
                                         Editar
                                     </button>
-                                    <button class="btn btn-sm btn-icon-text" style="color: red; margin-left: 5px;" (click)="deleteProject(p.id)" [disabled]="isDeleting">
+                                    <button class="btn btn-sm btn-icon-text" style="color: red; margin: 0;" (click)="deleteProject(p.id)" [disabled]="isDeleting">
                                         Eliminar
                                     </button>
                                 </td>
