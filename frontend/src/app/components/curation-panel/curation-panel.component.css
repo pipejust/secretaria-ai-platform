@@ -111,29 +111,98 @@
 
 .task-desc {
     margin-bottom: 1rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
 }
 
-.task-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr 120px;
-    gap: 1rem;
-    background: rgba(255, 255, 255, 0.03);
+.task-desc:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent-light);
+}
+
+.task-meta-modern {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    background: rgba(15, 23, 42, 0.6);
     padding: 0.75rem;
     border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.meta-field label {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-bottom: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.meta-field {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.5rem;
+    border: 1px solid transparent;
+    transition: var(--transition);
+    flex: 1;
+    min-width: 150px;
+}
+
+.meta-field:focus-within {
+    border-color: var(--accent-color);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.meta-icon {
+    font-size: 1.1rem;
+    margin-right: 0.5rem;
+    opacity: 0.7;
 }
 
 .meta-field input {
     padding: 0.4rem;
     font-size: 0.9rem;
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+}
+
+.action-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-mini {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.modern-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modern-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.modern-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
+.transcript-box {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    font-family: inherit;
+    line-height: 1.6;
 }
 
 .empty-state {
@@ -141,6 +210,8 @@
     padding: 3rem;
     color: var(--text-muted);
     font-style: italic;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
 }
 
 @media (max-width: 1024px) {
