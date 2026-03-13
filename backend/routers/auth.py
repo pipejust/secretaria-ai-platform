@@ -128,3 +128,52 @@ def create_role(role_in: RoleCreate, db: Session = Depends(get_session), admin_u
     db.commit()
     db.refresh(new_role)
     return new_role
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_session)):
+    from auth_utils import create_password_reset_token
+    from services.email_service import EmailService
+    
+    user = db.exec(select(User).where(User.email == req.email)).first()
+    if not user:
+        # Prevent email enumeration by returning success blindly
+        return {"msg": "If the email is registered, you will receive a password reset link."}
+        
+    token = create_password_reset_token(user.email)
+    
+    # Send email
+    try:
+        email_svc = EmailService()
+        await email_svc.send_forgot_password_email(
+            to_email=user.email,
+            user_name=user.full_name,
+            reset_token=token
+        )
+    except Exception as e:
+        print(f"Error sending forgot password email: {e}")
+        
+    return {"msg": "If the email is registered, you will receive a password reset link."}
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+@router.post("/reset-password")
+def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_session)):
+    from auth_utils import verify_password_reset_token, get_password_hash
+    
+    email = verify_password_reset_token(req.token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Token inválido o expirado.")
+        
+    user = db.exec(select(User).where(User.email == email)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+        
+    user.hashed_password = get_password_hash(req.new_password)
+    db.add(user)
+    db.commit()
+    return {"msg": "Contraseña actualizada exitosamente."}

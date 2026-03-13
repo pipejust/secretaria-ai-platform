@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f3f4f6;
+    color: #1f2937;
+  }
+  .container {
+    max-width: 600px;
+    margin: 40px auto;
+    background-color: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    padding: 30px 40px;
+    text-align: center;
+    color: white;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .content {
+    padding: 40px;
+    line-height: 1.6;
+  }
+  .content h2 {
+    color: #111827;
+    font-size: 20px;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  .content p {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #4b5563;
+  }
+  .box {
+    background-color: #f8fafc;
+    border-left: 4px solid #4f46e5;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 0 8px 8px 0;
+  }
+  .box-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+  .box-text {
+    margin: 0;
+    color: #4b5563;
+  }
+  .button-container {
+    text-align: center;
+    margin: 35px 0 15px;
+  }
+  .button {
+    display: inline-block;
+    background-color: #4f46e5;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 16px;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+  }
+  .button:hover {
+    background-color: #4338ca;
+  }
+  .footer {
+    background-color: #f9fafb;
+    border-top: 1px solid #f3f4f6;
+    padding: 24px 40px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 13px;
+  }
+  .footer a {
+    color: #6b7280;
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Secretaría AI</h1>
+    </div>
+    
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+    
+    <div class="footer">
+      <p>&copy; {{ current_year }} Secretaría AI Platform. Todos los derechos reservados.</p>
+      <p>Has recibido este correo porque estás registrado o fuiste mencionado en un acta de reunión.</p>
+    </div>
+  </div>
+</body>
+</html>

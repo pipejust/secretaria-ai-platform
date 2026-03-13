@@ -1,0 +1,22 @@
+{% extends "email_base.html" %}
+
+{% block content %}
+  <h2>Hola, {{ owner_name }}</h2>
+  
+  <p>Se te ha asignado una nueva tarea (Action Item) correspondiente a la siguiente acta/proyecto: <strong>{{ project_name }}</strong>.</p>
+  
+  <div class="box">
+    <h3 class="box-title">{{ task_title }}</h3>
+    <p class="box-text">{{ task_description }}</p>
+    {% if due_date %}
+    <p class="box-text" style="margin-top: 10px; font-size: 14px;"><strong>Fecha límite sugerida:</strong> {{ due_date }}</p>
+    {% endif %}
+  </div>
+
+  <p>Si consideras que hay un error, contacta al administrador del proyecto o a un usuario de la Plataforma Secretaría AI.</p>
+
+  <div class="button-container">
+    <!-- Un enlace genérico si tuviéramos un panel de invitados, si no a la home o nada -->
+    <a href="{{ platform_url }}" class="button">Ver en la plataforma</a>
+  </div>
+{% endblock %}
