@@ -22,6 +22,10 @@ export class AdminLayoutComponent implements OnInit {
 
     ngOnInit() {
         this.authService.currentUser$.subscribe(u => {
+            if (u === null && !this.authService.token) {
+                setTimeout(() => this.router.navigate(['/login']), 100);
+                return;
+            }
             console.log('User from AuthService:', u);
             this.user = u;
             this.isAdmin = u?.role === 'admin';

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -59,7 +59,8 @@ export class CurationPanelComponent implements OnInit {
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -80,25 +81,35 @@ export class CurationPanelComponent implements OnInit {
     
     this.http.get<any>(`${environment.apiUrl}/api/sessions/${this.sessionId}`, { headers }).subscribe({
       next: (data) => {
-        this.meetingData = {
-          id: data.session.id,
-          title: data.session.title,
-          date: data.session.date,
-          status: data.session.status,
-          raw_summary: data.session.raw_summary || '',
-          processed_decisions: data.session.processed_decisions || '',
-          processed_risks: data.session.processed_risks || '',
-          processed_agreements: data.session.processed_agreements || '',
-          action_items: data.action_items.map((item: any) => ({
-             ...item,
-             selected: false // Initialize checkbox state
-          }))
-        };
-        this.isLoading = false;
+        try {
+            console.log("Curation data received:", data);
+            this.meetingData = {
+              id: data.session.id,
+              title: data.session.title,
+              date: data.session.date,
+              status: data.session.status,
+              raw_summary: data.session.raw_summary || '',
+              processed_decisions: data.session.processed_decisions || '',
+              processed_risks: data.session.processed_risks || '',
+              processed_agreements: data.session.processed_agreements || '',
+              // Ensure action_items is always an array
+              action_items: (data.action_items || []).map((item: any) => ({
+                 ...item,
+                 selected: false // Initialize checkbox state
+              }))
+            };
+            this.isLoading = false;
+            this.cdr.detectChanges();
+        } catch (e) {
+            console.error('Data parsing error', e);
+            this.isLoading = false;
+            this.cdr.detectChanges();
+        }
       },
       error: (err) => {
         console.error('Error loading session details', err);
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
