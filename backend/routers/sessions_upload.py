@@ -12,6 +12,14 @@ router = APIRouter(
     tags=["Sessions"]
 )
 
+@router.get("/")
+def get_sessions(db: Session = Depends(get_session)):
+    """Fetch all meeting sessions (Actas) from the database."""
+    from sqlmodel import select
+    sessions = db.exec(select(MeetingSession).order_by(MeetingSession.id.desc())).all()
+    return sessions
+
+
 @router.post("/upload")
 async def upload_manual_session(
     title: str = Form(...),

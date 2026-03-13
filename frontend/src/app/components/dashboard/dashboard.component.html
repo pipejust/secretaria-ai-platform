@@ -86,8 +86,9 @@
                         </td>
                         <td>{{ s.date }}</td>
                         <td>
-                            <span class="status-indicator" [class.active]="s.status === 'completed'">
-                                {{ s.status === 'completed' ? 'Completado' : 'Pendiente Curación' }}
+                            <span class="status-indicator" [class.active]="s.status === 'completed'" [ngStyle]="{'background': s.status === 'processing' ? 'rgba(234, 179, 8, 0.1)' : '', 'color': s.status === 'processing' ? '#eab308' : ''}">
+                                <span *ngIf="s.status === 'processing'" style="display:inline-block; margin-right:4px;">⏳</span>
+                                {{ s.status === 'completed' ? 'Completado' : (s.status === 'processing' ? 'Procesando IA...' : 'Pendiente Curación') }}
                             </span>
                         </td>
                         <td>
