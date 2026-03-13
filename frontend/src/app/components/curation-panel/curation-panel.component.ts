@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../services/auth.service';
 
 interface ActionItem {
   id?: number;
@@ -57,7 +58,8 @@ export class CurationPanelComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -72,7 +74,11 @@ export class CurationPanelComponent implements OnInit {
 
   loadSessionDetails() {
     this.isLoading = true;
-    this.http.get<any>(`${environment.apiUrl}/sessions/${this.sessionId}`).subscribe({
+    
+    // Pass the explicit getAuthHeaders just in case the Interceptor doesn't catch standalone requests.
+    const headers = this.authService.getAuthHeaders();
+    
+    this.http.get<any>(`${environment.apiUrl}/api/sessions/${this.sessionId}`, { headers }).subscribe({
       next: (data) => {
         this.meetingData = {
           id: data.session.id,
@@ -102,7 +108,7 @@ export class CurationPanelComponent implements OnInit {
     const body = new FormData();
     body.append('owner_email', task.owner_email);
 
-    this.http.put(`${environment.apiUrl}/sessions/action_items/${task.id}`, body).subscribe({
+    this.http.put(`${environment.apiUrl}/api/sessions/action_items/${task.id}`, body, { headers: this.authService.getAuthHeaders() }).subscribe({
       next: () => this.showSaveMessage('Email actualizado'),
       error: () => this.showSaveMessage('Error guardando email', true)
     });
@@ -127,7 +133,8 @@ export class CurationPanelComponent implements OnInit {
     if (!selectedIds.length) return;
     
     this.isDispatchingEmails = true;
-    this.http.post(`${environment.apiUrl}/sessions/${this.sessionId}/dispatch_emails`, { action_item_ids: selectedIds }).subscribe({
+    const headers = this.authService.getAuthHeaders();
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_emails`, { action_item_ids: selectedIds }, { headers }).subscribe({
       next: (res: any) => {
         this.isDispatchingEmails = false;
         this.showSaveMessage(`Correos enviados: ${res.results.filter((r:any)=>r.status==='success').length}`);
@@ -144,7 +151,8 @@ export class CurationPanelComponent implements OnInit {
     if (!selectedIds.length) return;
 
     this.isDispatchingPlatforms = true;
-    this.http.post(`${environment.apiUrl}/sessions/${this.sessionId}/dispatch_platforms`, { action_item_ids: selectedIds }).subscribe({
+    const headers = this.authService.getAuthHeaders();
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_platforms`, { action_item_ids: selectedIds }, { headers }).subscribe({
       next: (res: any) => {
         this.isDispatchingPlatforms = false;
         this.showSaveMessage(`Tareas enviadas: ${res.results.filter((r:any)=>r.status==='success').length}`);
