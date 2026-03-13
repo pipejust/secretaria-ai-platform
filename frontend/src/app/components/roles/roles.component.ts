@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-roles',
@@ -29,7 +30,7 @@ export class RolesComponent implements OnInit {
 
     loadRoles() {
         this.isLoading = true;
-        this.http.get<any[]>('http://localhost:8080/auth/roles', { headers: this.authService.getAuthHeaders() })
+        this.http.get<any[]>(`${environment.apiUrl}/auth/roles`, { headers: this.authService.getAuthHeaders() })
             .subscribe({
                 next: (data) => {
                     this.roles = data;
@@ -51,7 +52,7 @@ export class RolesComponent implements OnInit {
         this.errorMsg = '';
         this.successMsg = '';
 
-        this.http.post<any>('http://localhost:8080/auth/roles', this.newRole, { headers: this.authService.getAuthHeaders() })
+        this.http.post<any>(`${environment.apiUrl}/auth/roles`, this.newRole, { headers: this.authService.getAuthHeaders() })
             .subscribe({
                 next: (res) => {
                     this.successMsg = 'Rol creado exitosamente.';
