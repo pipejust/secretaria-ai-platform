@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -16,7 +17,12 @@ export class DashboardComponent implements OnInit {
     sessions: any[] = [];
     isLoading = false;
 
-    constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef) { }
+    constructor(
+        private http: HttpClient, 
+        private authService: AuthService, 
+        private cdr: ChangeDetectorRef,
+        private router: Router
+    ) { }
 
     ngOnInit() {
         this.loadSessions();
@@ -30,7 +36,7 @@ export class DashboardComponent implements OnInit {
             formData.append('file', file);
             formData.append('title', file.name);
 
-            this.http.post(`${environment.apiUrl}/sessions/upload`, formData).subscribe({
+            this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData).subscribe({
                 next: (res: any) => {
                     alert('Archivo subido exitosamente.');
                     this.loadSessions();
@@ -46,7 +52,7 @@ export class DashboardComponent implements OnInit {
     loadSessions() {
         this.isLoading = true;
 
-        this.http.get<any[]>(`${environment.apiUrl}/sessions/`).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/api/sessions/`).subscribe({
             next: (data) => {
                 this.sessions = data;
                 this.isLoading = false;
@@ -62,12 +68,10 @@ export class DashboardComponent implements OnInit {
     }
 
     generateActa(sessionId: number) {
-        // Aca se llamaría al motor de python que ensambla el Word
-        alert(`Llamando al orquestador backend para ensamblar Acta y Tareas de la sesión #${sessionId}`);
+        alert(`Generación de Acta en Word (Mock) para sesión #${sessionId}`);
     }
 
     viewCuration(sessionId: number) {
-        // En un caso real navegariamos usando router.navigate(['/admin/curation', sessionId])
-        alert(`Redirigiendo al panel de curación humano de la sesión #${sessionId}`);
+        this.router.navigate(['/admin/curation', sessionId]);
     }
 }
