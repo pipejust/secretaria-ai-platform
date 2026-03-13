@@ -32,18 +32,28 @@ async def process_transcript_background(transcript_id: str, payload_data: dict, 
             raw_transcript = "\n".join(sentences)
             raw_summary = str(data.get("summary", {}))
         
-        # 1. Deducción Nivel 1: Match por Calendario (Título exacto)
+        # 1. Deducción Nivel 1: Match por Calendario (Título exacto) o Mención Explícita
         projects = db.exec(select(Project)).all()
         matched_project_id = None
+        
+        # A) Match por Título
         for p in projects:
             if p.name.lower() in title.lower():
                 matched_project_id = p.id
                 break
                 
-        # 2. Deducción Nivel 2: Match por Contexto via Groq IA
+        # B) Match por mención explícita en la transcripción (lo que hablaron las personas)
+        if not matched_project_id and raw_transcript:
+            for p in projects:
+                if p.name.lower() in raw_transcript.lower():
+                    matched_project_id = p.id
+                    break
+                
+        # 2. Deducción Nivel 2: Intuición por Contexto via Groq IA
         if not matched_project_id and raw_summary:
             groq_svc = GroqService()
-            proj_dict_list = [{"id": p.id, "name": p.name} for p in projects]
+            # Pasamos tanto el nombre como la descripción del proyecto para que deduzca mejor
+            proj_dict_list = [{"id": p.id, "name": p.name, "description": p.description} for p in projects]
             deduced_id = await groq_svc.deduce_project(raw_summary, proj_dict_list)
             if deduced_id:
                 matched_project_id = deduced_id
