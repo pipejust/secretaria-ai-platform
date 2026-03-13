@@ -156,4 +156,31 @@ export class TemplatesComponent implements OnInit {
             }
         });
     }
+
+    isDeleting = false;
+
+    deleteTemplate(templateId: number) {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta plantilla?')) return;
+
+        this.isDeleting = true;
+        this.errorMsg = '';
+        this.successMsg = '';
+
+        this.http.delete(`${environment.apiUrl}/templates/${templateId}`, {
+            headers: this.authService.getAuthHeaders()
+        }).subscribe({
+            next: () => {
+                this.templates = this.templates.filter(t => t.id !== templateId);
+                this.isDeleting = false;
+                this.successMsg = 'Plantilla eliminada exitosamente';
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error(err);
+                this.errorMsg = err.error?.detail || 'Error al eliminar la plantilla';
+                this.isDeleting = false;
+                this.cdr.detectChanges();
+            }
+        });
+    }
 }

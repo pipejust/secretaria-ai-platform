@@ -12,7 +12,7 @@ router = APIRouter(
 # Simularemos que requiere autenticación como Admin. Para no bloquear el flujo actual, lo mantenemos sin auth estricta
 # pero idealmente se usaría Depends(get_current_admin_user)
 
-@router.get("/")
+@router.get("")
 def get_all_settings(session: Session = Depends(get_session)):
     settings = session.exec(select(IntegrationSetting)).all()
     result = {}
