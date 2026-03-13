@@ -21,6 +21,17 @@ export class RolesComponent implements OnInit {
     isCreating = false;
     errorMsg = '';
     successMsg = '';
+    searchText = '';
+
+    get filteredRoles() {
+        if (!this.searchText.trim()) return this.roles;
+        const search = this.searchText.toLowerCase();
+        return this.roles.filter(r => 
+            (r.name && r.name.toLowerCase().includes(search)) ||
+            (r.description && r.description.toLowerCase().includes(search)) ||
+            (r.id && r.id.toString().includes(search))
+        );
+    }
 
     constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef) { }
 

@@ -23,6 +23,18 @@ export class UsersComponent implements OnInit {
 
     errorMsg = '';
     successMsg = '';
+    searchText = '';
+
+    get filteredUsers() {
+        if (!this.searchText.trim()) return this.users;
+        const search = this.searchText.toLowerCase();
+        return this.users.filter(u => 
+            (u.email && u.email.toLowerCase().includes(search)) ||
+            (u.full_name && u.full_name.toLowerCase().includes(search)) ||
+            (u.id && u.id.toString().includes(search)) ||
+            (u.role && u.role.name && u.role.name.toLowerCase().includes(search))
+        );
+    }
 
     constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef) { }
 

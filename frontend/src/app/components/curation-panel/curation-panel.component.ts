@@ -58,12 +58,21 @@ export class CurationPanelComponent implements OnInit {
   saveStatusMessage = '';
 
   constructor(
-    private http: HttpClient,
     private route: ActivatedRoute,
-    private router: Router,
+    private http: HttpClient,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) {}
+
+  getTranslatedStatus(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'pending': 'Pendiente de Curación',
+      'processing': 'Procesando IA',
+      'completed': 'Completado'
+    };
+    return statusMap[status] || status;
+  }
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {

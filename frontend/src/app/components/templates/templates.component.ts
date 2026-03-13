@@ -25,6 +25,17 @@ export class TemplatesComponent implements OnInit {
 
     selectedFile: File | null = null;
     selectedProjectId: string = '';
+    searchText = '';
+
+    get filteredTemplates() {
+        if (!this.searchText.trim()) return this.templates;
+        const search = this.searchText.toLowerCase();
+        return this.templates.filter(t => 
+            (t.name && t.name.toLowerCase().includes(search)) ||
+            (t.id && t.id.toString().includes(search)) ||
+            (t.project && t.project.name && t.project.name.toLowerCase().includes(search))
+        );
+    }
 
     // Drag & Drop Configurator
     availableTokens = [

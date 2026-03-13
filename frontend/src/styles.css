@@ -139,6 +139,39 @@ label {
   margin-bottom: 0.5rem;
 }
 
+/* ================== MODERN INPUTS & FILTERS ================== */
+.modern-search, .glass-select {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--text-main);
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: var(--transition);
+}
+
+.modern-search:focus, .glass-select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+/* Dark mode / Sidebar mode overrides if placed there */
+.sidebar .modern-search, .sidebar .glass-select {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sidebar .modern-search::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+.sidebar .glass-select option {
+  color: var(--text-main);
+  background: white;
+}
+
 .fade-in {
   animation: fadeIn 0.5s ease forwards;
 }

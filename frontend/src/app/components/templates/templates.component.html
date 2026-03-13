@@ -9,8 +9,9 @@
     <div class="grid-layout">
         <!-- Repositorio Documental -->
         <div class="card glass-panel flex-2">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h3>Repositorio de Plantillas (.docx)</h3>
+                <input type="text" class="modern-search" placeholder="🔍 Buscar por nombre o proyecto..." [(ngModel)]="searchText" style="width: 250px;">
             </div>
             <div class="card-body p-0">
                 <div class="table-container" *ngIf="isLoading">
@@ -61,7 +62,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let t of templates">
+                            <tr *ngFor="let t of filteredTemplates">
                                 <td>#{{ t.id }}</td>
                                 <td>
                                     <span style="display: flex; align-items: center; gap: 0.5rem;">
