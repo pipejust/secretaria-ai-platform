@@ -51,8 +51,9 @@
 
         <!-- Lista de Usuarios -->
         <div class="card glass-panel flex-2">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h3>Usuarios del Sistema</h3>
+                <input type="text" class="modern-search" placeholder="🔍 Buscar por nombre, email o rol..." [(ngModel)]="searchText" style="width: 250px;">
             </div>
             <div class="card-body p-0">
                 <div class="table-container" *ngIf="isLoading">
@@ -105,7 +106,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let u of users">
+                            <tr *ngFor="let u of filteredUsers">
                                 <td>#{{ u.id }}</td>
                                 <td>
                                     <div style="display:flex; flex-direction: column;">

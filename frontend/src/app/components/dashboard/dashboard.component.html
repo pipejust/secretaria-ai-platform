@@ -1,7 +1,7 @@
 <div class="fade-in">
     <div class="header-actions">
         <div>
-            <h2 class="section-title">Registro de Reuniones MoshWasi</h2>
+            <h2 class="section-title">Registro de Actas de Reunión</h2>
             <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Visualiza actas procesadas por
                 inteligencia artificial o carga las tuyas manualmente.</p>
         </div>
@@ -19,12 +19,12 @@
     </div>
 
     <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
-        <input type="text" class="form-control" placeholder="Buscar por título o ID de sesión..." [(ngModel)]="searchText" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 8px;">
-        <select class="form-control" [(ngModel)]="statusFilter" style="width:250px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 8px;">
-            <option value="" style="color: black;">Todos los Estados</option>
-            <option value="pending" style="color: black;">Pendiente Curación</option>
-            <option value="processing" style="color: black;">Procesando IA</option>
-            <option value="completed" style="color: black;">Completado</option>
+        <input type="text" class="modern-search" placeholder="🔍 Buscar por título o ID de sesión..." [(ngModel)]="searchText" style="flex:1;">
+        <select class="glass-select" [(ngModel)]="statusFilter" style="width:250px;">
+            <option value="">Todos los Estados</option>
+            <option value="pending">Pendiente de Curación</option>
+            <option value="processing">Procesando IA</option>
+            <option value="completed">Completado</option>
         </select>
     </div>
 

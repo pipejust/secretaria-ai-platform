@@ -9,8 +9,9 @@
     <div class="grid-layout">
         <!-- Lista de Roles -->
         <div class="card glass-panel flex-2">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h3>Roles Existentes</h3>
+                <input type="text" class="modern-search" placeholder="🔍 Buscar rol por nombre o ID..." [(ngModel)]="searchText" style="width: 250px;">
             </div>
             <div class="card-body p-0">
                 <!-- Loading State (Skeletons) -->
@@ -63,7 +64,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let role of roles">
+                            <tr *ngFor="let role of filteredRoles">
                                 <td>#{{ role.id }}</td>
                                 <td><span class="badge">{{ role.name }}</span></td>
                                 <td>{{ role.description || 'Sin descripción' }}</td>

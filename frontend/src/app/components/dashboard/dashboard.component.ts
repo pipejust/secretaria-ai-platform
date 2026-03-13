@@ -99,8 +99,8 @@ export class DashboardComponent implements OnInit {
             );
         }
         
-        // Sorting logic based on selected column
-        return filtered.sort((a, b) => {
+        // Sorting logic based on selected column: Clone array to trigger Angular Change Detection
+        return [...filtered].sort((a, b) => {
             let valA = a[this.sortColumn];
             let valB = b[this.sortColumn];
 
