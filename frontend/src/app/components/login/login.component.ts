@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
     email = '';
     password = '';
     showPassword = false;
@@ -19,6 +19,13 @@ export class LoginComponent {
     errorMessage = '';
 
     constructor(private authService: AuthService, private router: Router) { }
+
+    ngOnInit() {
+        // Redirigir automáticamente si ya existe una sesión en localStorage
+        if (this.authService.token) {
+            this.router.navigate(['/admin/dashboard']);
+        }
+    }
 
     togglePassword() {
         this.showPassword = !this.showPassword;

@@ -46,23 +46,19 @@ export class DashboardComponent implements OnInit {
     loadSessions() {
         this.isLoading = true;
 
-        // Simulate empty DB for now
-        setTimeout(() => {
-            /*
-            this.sessions = [
-                {
-                    id: 1,
-                    title: 'Sync de Desarrollo Semanal',
-                    date: '2026-03-05',
-                    status: 'pending',
-                    fireflies_id: 'ff-mock-123'
-                }
-            ];
-            */
-            this.sessions = [];
-            this.isLoading = false;
-            this.cdr.detectChanges();
-        }, 1200);
+        this.http.get<any[]>(`${environment.apiUrl}/sessions/`).subscribe({
+            next: (data) => {
+                this.sessions = data;
+                this.isLoading = false;
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error('Error fetching sessions:', err);
+                this.sessions = [];
+                this.isLoading = false;
+                this.cdr.detectChanges();
+            }
+        });
     }
 
     generateActa(sessionId: number) {

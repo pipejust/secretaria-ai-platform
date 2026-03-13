@@ -13,64 +13,69 @@ router = APIRouter(
 )
 
 # Simulamos Background Task para el procesamiento de IA
-async def process_transcript_background(transcript_id: str, payload_data: dict, db: Session):
-    try:
-        # Extraer datos nativos enviados en el Webhook (como indica el usuario de que Fireflies envía esto)
-        title = payload_data.get("title", "Reunión Sin Título")
-        date_str = str(payload_data.get("date", payload_data.get("createdAt", "")))
-        
-        raw_transcript = str(payload_data.get("transcript", ""))
-        raw_summary = str(payload_data.get("summary", ""))
-        
-        # Fallback: Si el payload viene solo con el ID sin los textos ricos (comportamiento por defecto de la API)
-        if not raw_transcript or len(raw_transcript) < 10:
-            service = FirefliesService()
-            data = await service.get_transcript_data(transcript_id)
-            title = data.get("title", title)
-            date_str = str(data.get("date", date_str))
-            sentences = [f"{s.get('speaker_name', 'Anon')}: {s.get('text', '')}" for s in data.get("sentences", [])]
-            raw_transcript = "\n".join(sentences)
-            raw_summary = str(data.get("summary", {}))
-        
-        # 1. Deducción Nivel 1: Match por Calendario (Título exacto) o Mención Explícita
-        projects = db.exec(select(Project)).all()
-        matched_project_id = None
-        
-        # A) Match por Título
-        for p in projects:
-            if p.name.lower() in title.lower():
-                matched_project_id = p.id
-                break
-                
-        # B) Match por mención explícita en la transcripción (lo que hablaron las personas)
-        if not matched_project_id and raw_transcript:
+async def process_transcript_background(session_id: int, transcript_id: str, payload_data: dict):
+    from database import engine
+    with Session(engine) as db:
+        try:
+            # Recuperar la sesión recién creada
+            new_session = db.get(MeetingSession, session_id)
+            if not new_session:
+                print(f"Error: No se encontró la sesión {session_id} para actualizar.")
+                return
+
+            # Extraer datos nativos enviados en el Webhook (como indica el usuario de que Fireflies envía esto)
+            title = payload_data.get("title", "Reunión Sin Título")
+            date_str = str(payload_data.get("date", payload_data.get("createdAt", "")))
+            
+            raw_transcript = str(payload_data.get("transcript", ""))
+            raw_summary = str(payload_data.get("summary", ""))
+            
+            # Fallback: Si el payload viene solo con el ID sin los textos ricos (comportamiento por defecto de la API)
+            if not raw_transcript or len(raw_transcript) < 10:
+                service = FirefliesService()
+                data = await service.get_transcript_data(transcript_id)
+                title = data.get("title", title)
+                date_str = str(data.get("date", date_str))
+                sentences = [f"{s.get('speaker_name', 'Anon')}: {s.get('text', '')}" for s in data.get("sentences", [])]
+                raw_transcript = "\n".join(sentences)
+                raw_summary = str(data.get("summary", {}))
+            
+            # 1. Deducción Nivel 1: Match por Calendario (Título exacto) o Mención Explícita
+            projects = db.exec(select(Project)).all()
+            matched_project_id = None
+            
+            # A) Match por Título
             for p in projects:
-                if p.name.lower() in raw_transcript.lower():
+                if p.name.lower() in title.lower():
                     matched_project_id = p.id
                     break
-                
-        # 2. Deducción Nivel 2: Intuición por Contexto via Groq IA
-        if not matched_project_id and raw_summary:
-            groq_svc = GroqService()
-            # Pasamos tanto el nombre como la descripción del proyecto para que deduzca mejor
-            proj_dict_list = [{"id": p.id, "name": p.name, "description": p.description} for p in projects]
-            deduced_id = await groq_svc.deduce_project(raw_summary, proj_dict_list)
-            if deduced_id:
-                matched_project_id = deduced_id
-        
-        new_session = MeetingSession(
-            fireflies_id=transcript_id,
-            title=title,
-            date=date_str,
-            project_id=matched_project_id,
-            raw_transcript=raw_transcript,
-            raw_summary=raw_summary,
-            status="pending" # Pendiente de curación
-        )
-        
-        db.add(new_session)
-        db.commit()
-        db.refresh(new_session)
+                    
+            # B) Match por mención explícita en la transcripción (lo que hablaron las personas)
+            if not matched_project_id and raw_transcript:
+                for p in projects:
+                    if p.name.lower() in raw_transcript.lower():
+                        matched_project_id = p.id
+                        break
+                    
+            # 2. Deducción Nivel 2: Intuición por Contexto via Groq IA
+            if not matched_project_id and raw_summary:
+                groq_svc = GroqService()
+                # Pasamos tanto el nombre como la descripción del proyecto para que deduzca mejor
+                proj_dict_list = [{"id": p.id, "name": p.name, "description": p.description} for p in projects]
+                deduced_id = await groq_svc.deduce_project(raw_summary, proj_dict_list)
+                if deduced_id:
+                    matched_project_id = deduced_id
+            
+            new_session.title = title
+            new_session.date = date_str
+            new_session.project_id = matched_project_id
+            new_session.raw_transcript = raw_transcript
+            new_session.raw_summary = raw_summary
+            new_session.status = "pending" # Pasa a pendiente de curación
+            
+            db.add(new_session)
+            db.commit()
+            db.refresh(new_session)
         
         # 3. Extraer tareas estructuradas con Groq
         if raw_transcript:
@@ -182,7 +187,24 @@ async def receive_fireflies_webhook(
         return {"status": "ignored", "message": "Falta transcriptId o meetingId en el payload, ignorando."}
         
     print(f"Dispatching background task for transcript: {transcript_id}")
-    # Despachar procesamiento asíncrono pasándole el payload para ahorrar llamadas a API si es posible
-    background_tasks.add_task(process_transcript_background, transcript_id, payload, db)
+    
+    # Creamos la sesión inmediatamente con estado processing para que el UI la muestre en tiempo real
+    title = payload.get("title", "Reunión Procesando...")
+    date_str = str(payload.get("date", payload.get("createdAt", "")))
+    
+    new_session = MeetingSession(
+        fireflies_id=transcript_id,
+        title=title,
+        date=date_str,
+        raw_transcript="",
+        raw_summary="",
+        status="processing"
+    )
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+    
+    # Despachar procesamiento asíncrono pasándole el ID de la sesión recién creada
+    background_tasks.add_task(process_transcript_background, new_session.id, transcript_id, payload)
     
     return {"status": "accepted", "message": f"Transcript/Meeting {transcript_id} programado para procesar en background."}
