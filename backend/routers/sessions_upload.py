@@ -46,6 +46,65 @@ class SessionUpdate(BaseModel):
     processed_risks: Optional[str] = None
     processed_agreements: Optional[str] = None
 
+@router.post("/{session_id}/regenerate_tasks")
+async def regenerate_tasks_from_transcript(session_id: int, db: Session = Depends(get_session)):
+    from models import ActionItem, ProjectContact
+    from services.groq_service import GroqService
+    from sqlmodel import delete
+
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if not session_obj.raw_transcript:
+        raise HTTPException(status_code=400, detail="No transcript available to regenerate tasks from.")
+
+    # 1. Obtenemos Contactos
+    project_contacts = []
+    if session_obj.project_id:
+        from sqlmodel import select
+        db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
+        project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
+
+    # 2. Llamamos a Groq
+    groq_svc = GroqService()
+    structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+
+    # 3. Borramos Tareas Anteriores
+    db.exec(delete(ActionItem).where(ActionItem.session_id == session_id))
+    db.commit()
+
+    # 4. Insertamos Nuevas
+    action_items_data = structured_data.get("action_items", [])
+    new_items_output = []
+    for item_data in action_items_data:
+        action_item = ActionItem(
+            session_id=session_id,
+            owner_name=item_data.get("owner_name", "Unknown"),
+            owner_email=item_data.get("owner_email", ""),
+            title=item_data.get("title", "Tarea sin título"),
+            description=item_data.get("description", ""),
+            due_date=item_data.get("due_date"),
+            is_approved=False
+        )
+        db.add(action_item)
+        db.commit()
+        db.refresh(action_item)
+        # Convertimos para el output JSON dict
+        new_items_output.append({
+            "id": action_item.id,
+            "session_id": action_item.session_id,
+            "owner_name": action_item.owner_name,
+            "owner_email": action_item.owner_email,
+            "title": action_item.title,
+            "description": action_item.description,
+            "due_date": str(action_item.due_date) if action_item.due_date else None,
+            "is_approved": action_item.is_approved,
+            "selected": False
+        })
+
+    return {"status": "success", "action_items": new_items_output}
+
 @router.put("/{session_id}")
 def update_session_content(session_id: int, payload: SessionUpdate, db: Session = Depends(get_session)):
     """Manually update the text content of a curated session."""
@@ -96,7 +155,9 @@ async def upload_manual_session(
         file_size = len(content)
         
         # Crear una nueva sesión
+        import uuid
         new_session = MeetingSession(
+            fireflies_id=f"manual_{uuid.uuid4()}",
             title=title,
             date=datetime.datetime.utcnow().isoformat() + "Z",
             video_url=f"manual_upload_{file.filename}",

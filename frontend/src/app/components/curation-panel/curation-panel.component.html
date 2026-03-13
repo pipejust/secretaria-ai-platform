@@ -29,9 +29,15 @@
           <textarea [(ngModel)]="meetingData.raw_summary" rows="4"></textarea>
         </div>
         
-        <div class="glass-panel section-card">
+        <div class="glass-panel section-card" style="position: relative;">
           <h3>🗣️ Transcripción Original</h3>
-          <textarea [(ngModel)]="meetingData.raw_transcript" rows="6" class="form-control"></textarea>
+          <textarea [(ngModel)]="meetingData.raw_transcript" rows="8" class="form-control transcript-box"></textarea>
+          <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary action-btn" [disabled]="isRegenerating" (click)="regenerateTasks()">
+              <span *ngIf="isRegenerating">⏳ Regenerando Tareas...</span>
+              <span *ngIf="!isRegenerating">🤖 Regenerar Tareas desde el Texto</span>
+            </button>
+          </div>
         </div>
 
         <div class="glass-panel section-card">
@@ -55,44 +61,42 @@
           <div class="tasks-header">
             <h3>📋 Tareas Detectadas por IA ({{meetingData.action_items.length}})</h3>
             <div class="batch-actions">
-              <button class="btn btn-secondary" [disabled]="!hasSelectedTasks || isDispatchingEmails" (click)="dispatchEmails()">
+              <button class="btn btn-secondary btn-mini" [disabled]="!hasSelectedTasks || isDispatchingEmails" (click)="dispatchEmails()">
                 <span *ngIf="isDispatchingEmails">Enviando...</span>
-                <span *ngIf="!isDispatchingEmails">📧 Enviar Correos</span>
+                <span *ngIf="!isDispatchingEmails">📧 Correos</span>
               </button>
-              <button class="btn btn-secondary" [disabled]="!hasSelectedTasks || isDispatchingPlatforms" (click)="dispatchPlatforms()">
+              <button class="btn btn-secondary btn-mini" [disabled]="!hasSelectedTasks || isDispatchingPlatforms" (click)="dispatchPlatforms()">
                 <span *ngIf="isDispatchingPlatforms">Enviando...</span>
-                <span *ngIf="!isDispatchingPlatforms">🔄 Enviar a Plataformas</span>
+                <span *ngIf="!isDispatchingPlatforms">🔄 Plataformas</span>
               </button>
             </div>
           </div>
           
           <div class="select-all-row" *ngIf="meetingData.action_items.length > 0">
             <input type="checkbox" (change)="toggleAllTasks($event)" id="selectAll" />
-            <label for="selectAll">Seleccionar todas las tareas</label>
+            <label for="selectAll" style="font-weight: 500;">Seleccionar todas las tareas</label>
           </div>
           
-          <div class="task-list">
+          <div class="task-list modern-scroll">
             <div class="task-card fade-in" *ngFor="let task of meetingData.action_items; let i = index" [class.selected]="task.selected">
               <div class="task-header-row">
-                <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                  <input type="checkbox" [(ngModel)]="task.selected" />
-                  <input type="text" class="task-title-input" [(ngModel)]="task.title" placeholder="Título de Tarea" />
-                </div>
+                <input type="checkbox" class="task-checkbox" [(ngModel)]="task.selected" />
+                <input type="text" class="task-title-input" [(ngModel)]="task.title" placeholder="Título de Tarea" />
               </div>
               
-              <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción de la tarea" rows="2"></textarea>
+              <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción de la tarea detallada" rows="2"></textarea>
               
-              <div class="task-meta">
+              <div class="task-meta-modern">
                  <div class="meta-field">
-                   <label>Responsable</label>
-                   <input type="text" [(ngModel)]="task.owner_name" placeholder="Nombre" />
+                   <div class="meta-icon">👤</div>
+                   <input type="text" [(ngModel)]="task.owner_name" placeholder="Responsable" />
                  </div>
                  <div class="meta-field">
-                   <label>Email <button class="btn-micro" (click)="updateEmail(task)">Guardar</button></label>
-                   <input type="email" [(ngModel)]="task.owner_email" placeholder="correo@ejemplo.com" />
+                   <div class="meta-icon">✉️</div>
+                   <input type="email" [(ngModel)]="task.owner_email" placeholder="correo@ejemplo.com" (blur)="updateEmail(task)" />
                  </div>
                  <div class="meta-field">
-                   <label>Vencimiento</label>
+                   <div class="meta-icon">📅</div>
                    <input type="date" [(ngModel)]="task.due_date" />
                  </div>
               </div>

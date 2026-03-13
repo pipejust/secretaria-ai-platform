@@ -178,6 +178,33 @@ export class CurationPanelComponent implements OnInit {
     });
   }
 
+  isRegenerating: boolean = false;
+
+  regenerateTasks() {
+    if (!this.meetingData.raw_transcript) {
+      this.showSaveMessage('No hay transcripción para regenerar tareas.', true);
+      return;
+    }
+    this.isRegenerating = true;
+    this.showSaveMessage('Regenerando tareas con LLaMA... Esto puede tardar unos segundos.');
+    const headers = this.authService.getAuthHeaders();
+    
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_tasks`, {}, { headers }).subscribe({
+      next: (res: any) => {
+        this.isRegenerating = false;
+        this.showSaveMessage('Tareas regeneradas correctamente.');
+        if (res.action_items) {
+          this.meetingData.action_items = res.action_items;
+        }
+      },
+      error: (err) => {
+        this.isRegenerating = false;
+        console.error('Error regenerating tasks', err);
+        this.showSaveMessage('Error al regenerar las tareas.', true);
+      }
+    });
+  }
+
   saveManualEdits() {
     this.showSaveMessage('Guardando cambios...');
     const headers = this.authService.getAuthHeaders();
