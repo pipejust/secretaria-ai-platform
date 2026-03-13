@@ -95,14 +95,14 @@ class GroqService:
         
         projects_str = json.dumps(projects, ensure_ascii=False)
         prompt = f"""
-        Eres un asistente de clasificación súper preciso. Tienes el siguiente resumen de una reunión:
+        Eres un asistente de clasificación súper preciso. Tienes el siguiente resumen de una reunión transcrita:
         '{summary}'
         
-        Y la siguiente lista de proyectos disponibles en formato JSON:
+        Y la siguiente lista de proyectos disponibles en formato JSON (junto con sus descripciones):
         {projects_str}
         
-        Deduce de qué proyecto de la lista se estaba hablando en la reunión.
-        Compara los temas tratados con el nombre y contexto del proyecto.
+        Deduce de qué proyecto de la lista se estaba hablando en la reunión basandote en la intuición de los textos.
+        Compara los temas tratados con el nombre y la descripción de cada proyecto.
         Responde exclusivamente con un JSON que contenga la propiedad 'project_id' (entero) con el id del proyecto que encaja. Si definitivamente no hace sentido con ninguno, responde null.
         """
         
