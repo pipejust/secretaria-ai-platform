@@ -66,8 +66,11 @@
                                 <td><span class="badge">{{ p.name }}</span></td>
                                 <td>{{ p.description || 'N/A' }}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-icon-text">
-                                        Detalles
+                                    <button class="btn btn-sm btn-icon-text" (click)="editProject(p)">
+                                        Editar
+                                    </button>
+                                    <button class="btn btn-sm btn-icon-text" style="color: red; margin-left: 5px;" (click)="deleteProject(p.id)" [disabled]="isDeleting">
+                                        Eliminar
                                     </button>
                                 </td>
                             </tr>
@@ -90,13 +93,13 @@
             </div>
         </div>
 
-        <!-- Creador de Proyectos -->
+        <!-- Creador/Editor de Proyectos -->
         <div class="card glass-panel flex-1">
             <div class="card-header">
-                <h3>Nuevo Proyecto</h3>
+                <h3>{{ editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h3>
             </div>
             <div class="card-body">
-                <form (ngSubmit)="createProject()" #projectForm="ngForm">
+                <form (ngSubmit)="editingProject ? updateProject() : createProject()" #projectForm="ngForm">
                     <div class="form-group">
                         <label>Nombre Identificador <span class="text-danger">*</span></label>
                         <input type="text" name="name" [(ngModel)]="newProject.name" required
@@ -109,11 +112,16 @@
                             placeholder="Contexto del proyecto..."></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full"
-                        [disabled]="!projectForm.form.valid || isCreating">
-                        <span *ngIf="!isCreating">Crear Proyecto Space</span>
-                        <span *ngIf="isCreating">Procesando...</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-1"
+                            [disabled]="!projectForm.form.valid || isCreating || isUpdating">
+                            <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Actualizar' : 'Crear Proyecto' }}</span>
+                            <span *ngIf="isCreating || isUpdating">Procesando...</span>
+                        </button>
+                        <button *ngIf="editingProject" type="button" class="btn btn-secondary" (click)="cancelEdit()">
+                            Cancelar
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

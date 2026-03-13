@@ -26,6 +26,9 @@
                                 <th>
                                     <div class="skeleton skeleton-text" style="width: 100px;"></div>
                                 </th>
+                                <th>
+                                    <div class="skeleton skeleton-text" style="width: 60px;"></div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -39,6 +42,9 @@
                                 <td>
                                     <div class="skeleton skeleton-text" style="width: 80px;"></div>
                                 </td>
+                                <td>
+                                    <div class="skeleton skeleton-text" style="width: 60px; height: 32px"></div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -51,6 +57,7 @@
                                 <th>ID</th>
                                 <th>Nombre del Documento</th>
                                 <th>Proyecto / Ruta</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -71,9 +78,15 @@
                                     </span>
                                 </td>
                                 <td><span class="badge">{{ t.project_id || 'Global' }}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-icon-text" style="color: red;"
+                                        (click)="deleteTemplate(t.id)" [disabled]="isDeleting">
+                                        Eliminar
+                                    </button>
+                                </td>
                             </tr>
                             <tr *ngIf="templates.length === 0">
-                                <td colspan="3" class="p-0">
+                                <td colspan="4" class="p-0">
                                     <div class="empty-state">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"

@@ -73,6 +73,20 @@ def update_template_mapping(
     crud.template.update(db, db_obj=template, obj_in={"mapping_config": mapping.mapping_config})
     return {"msg": "Mapeo guardado exitosamente"}
 
+@router.delete("/{template_id}", status_code=204)
+def delete_template(
+    template_id: int,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin)
+):
+    """Elimina una plantilla de la Base de Datos"""
+    template = crud.template.get(db, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+        
+    crud.template.remove(db, id=template_id)
+    return
+
 from models import MeetingSession
 from services.word_generator import WordGeneratorService
 
