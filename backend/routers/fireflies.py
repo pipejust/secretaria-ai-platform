@@ -153,10 +153,10 @@ async def receive_fireflies_webhook(
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
     
     # Verificamos qué estructura envía Fireflies realmente
-    # A veces puede venir envuelto en {"data": {...}} o director
+    # A veces puede venir envuelto en {"data": {...}} o directo
     
-    transcript_id = payload.get("transcriptId")
-    event_type = payload.get("event")
+    transcript_id = payload.get("transcriptId") or payload.get("meetingId")
+    event_type = payload.get("eventType") or payload.get("event")
     
     print(f"Event type: {event_type}, Transcript ID extracted so far: {transcript_id}")
     
@@ -166,17 +166,17 @@ async def receive_fireflies_webhook(
         # Check if it's nested under data
         if not transcript_id and "data" in payload and isinstance(payload["data"], dict):
             data_obj = payload["data"]
-            transcript_id = data_obj.get("transcriptId") or data_obj.get("id")
+            transcript_id = data_obj.get("transcriptId") or data_obj.get("id") or data_obj.get("meetingId")
             print(f"Extracted from nested data: {transcript_id}")
             
     if not transcript_id:
         print("ERROR: No transcript ID found in payload.")
         # We return a 200 instead of 400 because some webhooks (like validation webhooks) 
         # might just be pings that don't have a transcript ID and we don't want Fireflies to disable the hook.
-        return {"status": "ignored", "message": "Falta transcriptId en el payload, ignorando."}
+        return {"status": "ignored", "message": "Falta transcriptId o meetingId en el payload, ignorando."}
         
     print(f"Dispatching background task for transcript: {transcript_id}")
     # Despachar procesamiento asíncrono pasándole el payload para ahorrar llamadas a API si es posible
     background_tasks.add_task(process_transcript_background, transcript_id, payload, db)
     
-    return {"status": "accepted", "message": f"Transcript {transcript_id} programado para procesar en background."}
+    return {"status": "accepted", "message": f"Transcript/Meeting {transcript_id} programado para procesar en background."}
