@@ -12,6 +12,8 @@ import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
+    { path: 'forgot-password', loadComponent: () => import('./components/forgot-password/forgot-password').then(m => m.ForgotPassword) },
+    { path: 'reset-password', loadComponent: () => import('./components/reset-password/reset-password').then(m => m.ResetPassword) },
     {
         path: 'admin',
         component: AdminLayoutComponent,
@@ -24,6 +26,7 @@ export const routes: Routes = [
             { path: 'roles', component: RolesComponent },
             { path: 'settings', component: SettingsComponent },
             { path: 'profile', component: ProfileComponent },
+            { path: 'curation/:id', loadComponent: () => import('./components/curation-panel/curation-panel.component').then(m => m.CurationPanelComponent) },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
     },

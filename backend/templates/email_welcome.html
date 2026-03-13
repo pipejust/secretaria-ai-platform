@@ -1,0 +1,23 @@
+{% extends "email_base.html" %}
+
+{% block content %}
+  <h2>¡Bienvenido/a, {{ user_name }}! 👋</h2>
+  
+  <p>Estamos muy felices de que te unas a la Plataforma Secretaría AI. Hemos configurado todo para que tu cuenta esté lista para organizar tus reuniones y proyectos inteligentemente.</p>
+  
+  <div class="box">
+    <h3 class="box-title">Tus credenciales de acceso:</h3>
+    <ul style="color: #4b5563; margin: 0; padding-left: 20px;">
+      <li style="margin-bottom: 8px;"><strong>Correo:</strong> {{ email }}</li>
+      <li><strong>Rol asignado:</strong> {{ role }}</li>
+    </ul>
+  </div>
+
+  <p>Para comenzar a utilizar la plataforma, haz clic en el botón de abajo e inicia sesión con la contraseña que registraste o que tu administrador te proporcionó.</p>
+
+  <div class="button-container">
+    <a href="{{ login_url }}" class="button">Ir a Secretaría AI</a>
+  </div>
+
+  <p>Si tienes cualquier problema, no dudes en contactar a soporte.</p>
+{% endblock %}
