@@ -35,12 +35,17 @@ class FirefliesService:
             "variables": {"transcriptId": transcript_id}
         }
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             try:
                 response = await client.post(self.BASE_URL, json=payload, headers=headers)
                 response.raise_for_status()
             except httpx.ReadTimeout:
                 print(f"Fireflies API ReadTimeout fetching transcript {transcript_id}")
+                raise
+            except Exception as e:
+                import traceback
+                print(f"Fireflies API Error fetching transcript:")
+                print(traceback.format_exc())
                 raise
                 
             data = response.json()
