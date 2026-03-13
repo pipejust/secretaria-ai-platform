@@ -23,6 +23,7 @@ interface MeetingData {
   title: string;
   date: string;
   raw_summary: string;
+  raw_transcript: string;
   processed_decisions: string;
   processed_risks: string;
   processed_agreements: string;
@@ -42,6 +43,7 @@ export class CurationPanelComponent implements OnInit {
     title: "Cargando...",
     date: "",
     raw_summary: "",
+    raw_transcript: "",
     processed_decisions: "",
     processed_risks: "",
     processed_agreements: "",
@@ -89,6 +91,7 @@ export class CurationPanelComponent implements OnInit {
               date: data.session.date,
               status: data.session.status,
               raw_summary: data.session.raw_summary || '',
+              raw_transcript: data.session.raw_transcript || '',
               processed_decisions: data.session.processed_decisions || '',
               processed_risks: data.session.processed_risks || '',
               processed_agreements: data.session.processed_agreements || '',
@@ -176,7 +179,31 @@ export class CurationPanelComponent implements OnInit {
   }
 
   approveAct() {
-    // Generate document functionality (placeholder / outside epic scope or call specific endpoint)
-    this.showSaveMessage('Funcionalidad de generar Word en desarrollo...');
+    this.showSaveMessage('Generando Acta en Word...');
+    const headers = this.authService.getAuthHeaders();
+    
+    // Indicamos responseType: 'blob' para recibir binario
+    this.http.get(`${environment.apiUrl}/api/sessions/${this.sessionId}/export/word`, { headers, responseType: 'blob' }).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Formatear nombre seguro
+        const safeTitle = this.meetingData.title.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+        a.download = `Acta_${this.sessionId}_${safeTitle}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        this.showSaveMessage('Acta descargada con éxito');
+      },
+      error: (err) => {
+        console.error('Error generando documento', err);
+        this.showSaveMessage('Error descargando el Acta', true);
+      }
+    });
   }
 }

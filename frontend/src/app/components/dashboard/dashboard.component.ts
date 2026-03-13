@@ -67,8 +67,48 @@ export class DashboardComponent implements OnInit {
         });
     }
 
-    generateActa(sessionId: number) {
-        alert(`Generación de Acta en Word (Mock) para sesión #${sessionId}`);
+    searchText: string = '';
+    statusFilter: string = '';
+
+    get filteredSessions() {
+        let filtered = this.sessions || [];
+        
+        if (this.statusFilter) {
+            filtered = filtered.filter(s => s.status === this.statusFilter);
+        }
+        
+        if (this.searchText.trim()) {
+            const search = this.searchText.toLowerCase();
+            filtered = filtered.filter(s => 
+                (s.title && s.title.toLowerCase().includes(search)) ||
+                (s.id && s.id.toString().includes(search))
+            );
+        }
+        
+        // Sorting by Date descending is already done by backend mostly, but we can enforce it:
+        return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    generateActa(session: any) {
+        // Enforce the headers and get the blob stream directly from Dashboard
+        const headers = this.authService.getAuthHeaders();
+        this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/word`, { headers, responseType: 'blob' }).subscribe({
+            next: (blob: Blob) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const safeTitle = (session.title || 'Acta').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+                a.download = `Acta_${session.id}_${safeTitle}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            },
+            error: (err) => {
+                console.error('Error generando documento', err);
+                alert('Error descargando el documento. Asegúrese de tener conexión.');
+            }
+        });
     }
 
     viewCuration(sessionId: number) {

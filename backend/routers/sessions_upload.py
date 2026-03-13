@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional
 from database import get_session
@@ -6,6 +7,8 @@ from sqlmodel import Session
 from models import MeetingSession
 import datetime
 import uuid
+import io
+import docx
 
 router = APIRouter(
     prefix="/api/sessions",
@@ -64,16 +67,16 @@ async def upload_manual_session(
         file_size = len(content)
         
         # Crear una nueva sesión
-        new_session_id = str(uuid.uuid4())
         new_session = MeetingSession(
-            id=new_session_id,
             title=title,
             date=datetime.datetime.utcnow().isoformat() + "Z",
             video_url=f"manual_upload_{file.filename}",
-            transcript_text=f"Uploaded {file.filename} manually.",  # O convertir si es texto/audio real
+            raw_transcript=f"Uploaded {file.filename} manually.",  # Changed to raw_transcript to match model
             status="pending",
-            summary="",
-            action_items="[]"
+            raw_summary="",
+            processed_decisions="",
+            processed_risks="",
+            processed_agreements=""
         )
         
         session.add(new_session)
@@ -181,3 +184,82 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
             results.append({"id": item_id, "status": "failed"})
 
     return {"status": "success", "results": results}
+
+@router.get("/{session_id}/export/word")
+def export_word(session_id: int, db: Session = Depends(get_session)):
+    """Generate and return a Microsoft Word (.docx) document with the meeting details."""
+    from models import ActionItem
+    from sqlmodel import select
+    from docx import Document
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+    import io
+
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
+
+    doc = Document()
+
+    # Title
+    title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
+    title_run.font.color.rgb = RGBColor(79, 70, 229) # Branding Indigo
+    
+    # Meta
+    doc.add_paragraph(f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+    doc.add_paragraph(f"Fecha: {session_obj.date}")
+    doc.add_paragraph(f"Estado: {session_obj.status.capitalize()}")
+    doc.add_paragraph()
+
+    # Sections
+    if session_obj.raw_summary:
+        doc.add_heading('Resumen Ejecutivo', level=1)
+        doc.add_paragraph(session_obj.raw_summary)
+
+    if session_obj.processed_decisions:
+        doc.add_heading('Decisiones Clave', level=1)
+        doc.add_paragraph(session_obj.processed_decisions)
+
+    if session_obj.processed_risks:
+        doc.add_heading('Riesgos Identificados', level=1)
+        doc.add_paragraph(session_obj.processed_risks)
+
+    if session_obj.processed_agreements:
+        doc.add_heading('Acuerdos', level=1)
+        doc.add_paragraph(session_obj.processed_agreements)
+
+    # Action Items Table
+    doc.add_heading('Tareas (Action Items)', level=1)
+    
+    if action_items:
+        table = doc.add_table(rows=1, cols=4)
+        table.style = 'Table Grid'
+        
+        # Header
+        hdr_cells = table.rows[0].cells
+        hdr_cells[0].text = 'Responsable'
+        hdr_cells[1].text = 'Tarea'
+        hdr_cells[2].text = 'Descripción'
+        hdr_cells[3].text = 'Vencimiento'
+        
+        for item in action_items:
+            row_cells = table.add_row().cells
+            row_cells[0].text = f"{item.owner_name} ({item.owner_email})"
+            row_cells[1].text = item.title
+            row_cells[2].text = item.description or ""
+            row_cells[3].text = item.due_date or "Sin fecha"
+    else:
+        doc.add_paragraph("No se detectaron tareas para esta sesión.")
+        
+    # Salvar el documento a un buffer en memoria
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    headers = {
+        'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{session_obj.title[:20]}.docx"'
+    }
+
+    return Response(content=buffer.getvalue(), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)

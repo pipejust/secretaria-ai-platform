@@ -28,6 +28,11 @@
           <h3>📝 Resumen Ejecutivo</h3>
           <textarea [(ngModel)]="meetingData.raw_summary" rows="4"></textarea>
         </div>
+        
+        <div class="glass-panel section-card">
+          <h3>🗣️ Transcripción Original</h3>
+          <textarea [(ngModel)]="meetingData.raw_transcript" rows="6" readonly class="readonly-textarea"></textarea>
+        </div>
 
         <div class="glass-panel section-card">
           <h3>💡 Decisiones Clave</h3>

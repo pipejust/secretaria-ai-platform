@@ -18,6 +18,16 @@
         </button>
     </div>
 
+    <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
+        <input type="text" class="form-control" placeholder="Buscar por título o ID de sesión..." [(ngModel)]="searchText" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 8px;">
+        <select class="form-control" [(ngModel)]="statusFilter" style="width:250px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 8px;">
+            <option value="" style="color: black;">Todos los Estados</option>
+            <option value="pending" style="color: black;">Pendiente Curación</option>
+            <option value="processing" style="color: black;">Procesando IA</option>
+            <option value="completed" style="color: black;">Completado</option>
+        </select>
+    </div>
+
     <div class="card glass-panel flex-2">
         <div class="card-body p-0">
             <!-- Loading State (Skeletons) -->
@@ -78,13 +88,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let s of sessions">
+                    <tr *ngFor="let s of filteredSessions">
                         <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{
                                 s.id }}</span></td>
                         <td>
                             <strong style="color:var(--text-main);">{{ s.title }}</strong>
                         </td>
-                        <td>{{ s.date }}</td>
+                        <td>{{ s.date | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td>
                             <span class="status-indicator" [class.active]="s.status === 'completed'" [ngStyle]="{'background': s.status === 'processing' ? 'rgba(234, 179, 8, 0.1)' : '', 'color': s.status === 'processing' ? '#eab308' : ''}">
                                 <span *ngIf="s.status === 'processing'" style="display:inline-block; margin-right:4px;">⏳</span>
@@ -98,7 +108,7 @@
                                     (click)="viewCuration(s.id)">
                                     Ver Curación
                                 </button>
-                                <button class="btn btn-sm btn-primary" (click)="generateActa(s.id)">
+                                <button class="btn btn-sm btn-primary" (click)="generateActa(s)">
                                     Generar Acta
                                 </button>
                             </div>
