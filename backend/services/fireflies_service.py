@@ -35,12 +35,17 @@ class FirefliesService:
             "variables": {"transcriptId": transcript_id}
         }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(self.BASE_URL, json=payload, headers=headers)
-            response.raise_for_status()
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.post(self.BASE_URL, json=payload, headers=headers)
+                response.raise_for_status()
+            except httpx.ReadTimeout:
+                print(f"Fireflies API ReadTimeout fetching transcript {transcript_id}")
+                raise
+                
             data = response.json()
             
-            # TODO: Manejo de errores de GraphQL
+            # Manejo de errores de GraphQL
             if "errors" in data:
                 raise Exception(f"GraphQL Error: {data['errors']}")
                 
