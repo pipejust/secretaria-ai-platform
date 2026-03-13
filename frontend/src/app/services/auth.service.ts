@@ -70,7 +70,15 @@ export class AuthService {
             next: (user) => {
                 this.currentUserSubject.next(user);
             },
-            error: () => this.logout() // token was invalid
+            error: (err) => {
+                // Solo desloguear si es explícitamente un error de token inválido (401)
+                // Esto previene que una caída temporal de Render o Timeouts borren la sesión.
+                if (err.status === 401) {
+                    this.logout();
+                } else {
+                    console.error('No se pudo cargar el perfil, backend no disponible temporalmente', err);
+                }
+            }
         });
     }
 
