@@ -64,10 +64,12 @@ class GroqService:
         Eres un asistente experto que procesa transcripciones de reuniones.
         Analiza el siguiente texto y extrae un resumen, las decisiones clave, los riesgos identificados, los acuerdos generales y las tareas accionables.
         
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS):
+        ES OBLIGATORIO extraer absolutamente cualquier compromiso, revisión, sugerencia de acción futura, o actividad explícita o implícita discutida, y categorizarla como una Tarea ('action_items'). 
+        Presta especial atención a verbos como 'se debe revisar', 'tengo que hacer', 'enviaré', 'hay que corregir'.
+        
         PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
-        Cuando extraigas tareas, intenta identificar y extraer los correos electrónicos mencionados por los participantes en la transcripción. 
-        Si alguien deletrea su correo o indica sus datos de contacto, añádelo en 'owner_email'.
-        {contacts_info}
+        Cuando extraigas tareas, intenta identificar y extraer los correos electrónicos mencionados por los participantes en la transcripción para asignarlos a 'owner_email'. {contacts_info}
         
         Transcripción:
         {safe_transcript}

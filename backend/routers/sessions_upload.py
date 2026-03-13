@@ -33,12 +33,41 @@ def get_session_details(session_id: int, db: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Session not found")
         
     action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
-    
     # Podríamos crear un Pydantic model response, pero dict/jsonable encoder lo maneja bien
     return {
         "session": session_obj,
         "action_items": action_items
     }
+
+class SessionUpdate(BaseModel):
+    raw_summary: Optional[str] = None
+    raw_transcript: Optional[str] = None
+    processed_decisions: Optional[str] = None
+    processed_risks: Optional[str] = None
+    processed_agreements: Optional[str] = None
+
+@router.put("/{session_id}")
+def update_session_content(session_id: int, payload: SessionUpdate, db: Session = Depends(get_session)):
+    """Manually update the text content of a curated session."""
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    if payload.raw_summary is not None:
+        session_obj.raw_summary = payload.raw_summary
+    if payload.raw_transcript is not None:
+        session_obj.raw_transcript = payload.raw_transcript
+    if payload.processed_decisions is not None:
+        session_obj.processed_decisions = payload.processed_decisions
+    if payload.processed_risks is not None:
+        session_obj.processed_risks = payload.processed_risks
+    if payload.processed_agreements is not None:
+        session_obj.processed_agreements = payload.processed_agreements
+        
+    db.add(session_obj)
+    db.commit()
+    db.refresh(session_obj)
+    return {"status": "success", "message": "Manual edits saved successfully"}
 
 @router.put("/action_items/{item_id}")
 def update_action_item_email(item_id: int, owner_email: str = Form(...), db: Session = Depends(get_session)):

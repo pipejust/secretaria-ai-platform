@@ -69,6 +69,20 @@ export class DashboardComponent implements OnInit {
 
     searchText: string = '';
     statusFilter: string = '';
+    sortColumn: string = 'date';
+    sortDirection: 'asc' | 'desc' = 'desc';
+
+    sortBy(column: string) {
+        if (this.sortColumn === column) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.sortColumn = column;
+            this.sortDirection = 'asc'; // Default to asc when clicking a new column
+            if (column === 'date' || column === 'id') {
+                this.sortDirection = 'desc'; // Exception: new IDs and dates default to descending
+            }
+        }
+    }
 
     get filteredSessions() {
         let filtered = this.sessions || [];
@@ -85,8 +99,31 @@ export class DashboardComponent implements OnInit {
             );
         }
         
-        // Sorting by Date descending is already done by backend mostly, but we can enforce it:
-        return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // Sorting logic based on selected column
+        return filtered.sort((a, b) => {
+            let valA = a[this.sortColumn];
+            let valB = b[this.sortColumn];
+
+            // Normalize values for sorting
+            if (this.sortColumn === 'date') {
+                valA = new Date(valA).getTime();
+                valB = new Date(valB).getTime();
+            } else if (typeof valA === 'string') {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            } else {
+                valA = valA || 0;
+                valB = valB || 0;
+            }
+
+            if (valA < valB) {
+                return this.sortDirection === 'asc' ? -1 : 1;
+            }
+            if (valA > valB) {
+                return this.sortDirection === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
     }
 
     generateActa(session: any) {
