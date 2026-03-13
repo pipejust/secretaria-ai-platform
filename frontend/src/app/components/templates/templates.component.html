@@ -79,7 +79,11 @@
                                 </td>
                                 <td><span class="badge">{{ t.project_id || 'Global' }}</span></td>
                                 <td>
-                                    <button class="btn btn-sm btn-icon-text" style="color: red;"
+                                    <button *ngIf="t.project_id" class="btn btn-sm btn-icon-text" style="background-color: #6366f1; color: white;" 
+                                        (click)="goToProjectContacts(t.project_id)">
+                                        Contactos (Proyecto)
+                                    </button>
+                                    <button class="btn btn-sm btn-icon-text" style="color: red; margin-left: 5px;"
                                         (click)="deleteTemplate(t.id)" [disabled]="isDeleting">
                                         Eliminar
                                     </button>

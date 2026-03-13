@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
@@ -37,7 +38,7 @@ export class TemplatesComponent implements OnInit {
 
     showConfigurator = false;
 
-    constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef) { }
+    constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef, private router: Router) { }
 
     ngOnInit() {
         this.loadData();
@@ -69,6 +70,13 @@ export class TemplatesComponent implements OnInit {
                 console.error('Error loading projects for templates', err);
             }
         });
+    }
+
+    goToProjectContacts(projectId: number) {
+        if (!projectId) return;
+        // Navega a la vista de proyectos. Nota: Para manejar el estado interno de "Contactos abiertos" 
+        // requeriría un state service, pero redirigir a la vista de proyectos es el primer paso.
+        this.router.navigate(['/projects'], { queryParams: { openContacts: projectId } });
     }
 
     onFileSelected(event: any) {

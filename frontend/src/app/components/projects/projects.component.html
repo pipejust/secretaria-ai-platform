@@ -66,7 +66,10 @@
                                 <td><span class="badge">{{ p.name }}</span></td>
                                 <td>{{ p.description || 'N/A' }}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-icon-text" (click)="editProject(p)">
+                                    <button class="btn btn-sm btn-icon-text" style="background-color: #6366f1; color: white;" (click)="manageContacts(p)">
+                                        Contactos
+                                    </button>
+                                    <button class="btn btn-sm btn-icon-text" style="margin-left: 5px;" (click)="editProject(p)">
                                         Editar
                                     </button>
                                     <button class="btn btn-sm btn-icon-text" style="color: red; margin-left: 5px;" (click)="deleteProject(p.id)" [disabled]="isDeleting">
@@ -94,7 +97,7 @@
         </div>
 
         <!-- Creador/Editor de Proyectos -->
-        <div class="card glass-panel flex-1">
+        <div class="card glass-panel flex-1" *ngIf="!managingContactsForProject">
             <div class="card-header">
                 <h3>{{ editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h3>
             </div>
@@ -120,6 +123,72 @@
                         </button>
                         <button *ngIf="editingProject" type="button" class="btn btn-secondary" (click)="cancelEdit()">
                             Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Gestor de Contactos -->
+        <div class="card glass-panel flex-1" *ngIf="managingContactsForProject">
+            <div class="card-header" style="justify-content: space-between; display: flex; align-items: center;">
+                <h3>Contactos: {{ managingContactsForProject.name }}</h3>
+                <button class="btn btn-sm" (click)="closeContacts()">X</button>
+            </div>
+            <div class="card-body">
+                <!-- Lista de contactos -->
+                <div class="contacts-list" style="margin-bottom: 20px;">
+                    <div *ngIf="isLoadingContacts" class="text-center">Cargando...</div>
+                    <div *ngIf="!isLoadingContacts && projectContacts.length === 0" class="text-center" style="color: gray;">
+                        Sin contactos guardados.
+                    </div>
+                    <ul *ngIf="!isLoadingContacts && projectContacts.length > 0" style="padding: 0; margin: 0; list-style: none;">
+                        <li *ngFor="let contact of projectContacts" style="background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="display: block;">{{ contact.name }}</strong>
+                                <small style="color: #a0aec0;">{{ contact.email }} | {{ contact.role }}</small>
+                                <small *ngIf="contact.phone" style="display: block; color: #a0aec0;">Tel: {{ contact.phone }}</small>
+                            </div>
+                            <button class="btn btn-sm btn-icon-text" style="color: red;" (click)="deleteContact(contact.id)" [disabled]="isDeletingContactId === contact.id">
+                                Eliminar
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+
+                <h4>Agregar Nuevo</h4>
+                <form (ngSubmit)="addContact()" #contactForm="ngForm">
+                    <div class="form-group">
+                        <label>Nombre <span class="text-danger">*</span></label>
+                        <input type="text" name="contactName" [(ngModel)]="newContact.name" required
+                            placeholder="ej: Juan Pérez" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Correo <span class="text-danger">*</span></label>
+                        <input type="email" name="contactEmail" [(ngModel)]="newContact.email" required
+                            placeholder="juan@empresa.com" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Rol / Cargo <span class="text-danger">*</span></label>
+                        <input type="text" name="contactRole" [(ngModel)]="newContact.role" required
+                            placeholder="ej: Gerente IT" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Teléfono Celular (Opcional)</label>
+                        <input type="text" name="contactPhone" [(ngModel)]="newContact.phone"
+                            placeholder="+12345678" />
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-1"
+                            [disabled]="!contactForm.form.valid || isAddingContact">
+                            <span *ngIf="!isAddingContact">Guardar Contacto</span>
+                            <span *ngIf="isAddingContact">Guardando...</span>
                         </button>
                     </div>
                 </form>
