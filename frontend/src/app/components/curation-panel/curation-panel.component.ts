@@ -178,6 +178,32 @@ export class CurationPanelComponent implements OnInit {
     });
   }
 
+  saveManualEdits() {
+    this.showSaveMessage('Guardando cambios...');
+    const headers = this.authService.getAuthHeaders();
+    const payload = {
+      raw_summary: this.meetingData.raw_summary,
+      raw_transcript: this.meetingData.raw_transcript,
+      processed_decisions: this.meetingData.processed_decisions,
+      processed_risks: this.meetingData.processed_risks,
+      processed_agreements: this.meetingData.processed_agreements
+    };
+
+    this.http.put(`${environment.apiUrl}/api/sessions/${this.sessionId}`, payload, { headers }).subscribe({
+      next: (res: any) => {
+        this.showSaveMessage('Los textos de la sesión se han guardado correctamente.');
+      },
+      error: (err) => {
+        console.error('Error saving manual edits', err);
+        this.showSaveMessage('Error al guardar los cambios de la sesión', true);
+      }
+    });
+  }
+
+  goBack() {
+    this.router.navigate(['/admin/dashboard']);
+  }
+
   approveAct() {
     this.showSaveMessage('Generando Acta en Word...');
     const headers = this.authService.getAuthHeaders();
