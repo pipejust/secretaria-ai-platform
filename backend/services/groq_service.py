@@ -78,7 +78,7 @@ class GroqService:
             "content": f"Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_json_schema())}"
         })
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
             if response.status_code != 200:
                 print(f"Groq API Error: {response.text}")
@@ -125,7 +125,7 @@ class GroqService:
             "temperature": 0.0
         }
         
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             try:
                 response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
                 response.raise_for_status()
