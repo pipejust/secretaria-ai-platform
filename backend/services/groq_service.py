@@ -8,7 +8,7 @@ from models import ActionItem
 
 class GroqService:
     BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
-    MODEL = "llama-3.1-70b-versatile" # Groq soporta multiples, este es bueno para schemas
+    MODEL = "llama-3.3-70b-versatile" # Groq soporta multiples, este es bueno para schemas
     
     def __init__(self):
         self.headers = {
