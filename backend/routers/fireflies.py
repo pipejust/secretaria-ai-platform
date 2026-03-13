@@ -127,8 +127,13 @@ async def process_transcript_background(transcript_id: str, payload_data: dict, 
                         print(f"Error routeando a {routing.destination_type}: {route_err}")
         
     except Exception as e:
-        # En producción se manejaría el log y reintento
+        import traceback
+        print(f"====== ERROR EN PROCESAMIENTO BACKGROUND FIREFLIES ======")
         print(f"Error procesando el transcript en background: {e}")
+        print(traceback.format_exc())
+        print("=========================================================")
+
+import json
 
 @router.post("")
 async def receive_fireflies_webhook(
@@ -139,19 +144,38 @@ async def receive_fireflies_webhook(
     """
     Endpoint para recibir el evento 'Transcription complete' desde Fireflies.
     """
-    payload = await request.json()
+    try:
+        payload = await request.json()
+        print("====== FIREFLIES WEBHOOK INCOMING ======")
+        print(f"Payload received: {json.dumps(payload, ensure_ascii=False)[:500]}...") # Loguear una porción segura del payload
+    except Exception as e:
+        print(f"Error parsing webhook JSON: {e}")
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
     
-    # Fireflies envía transcriptId en el payload
+    # Verificamos qué estructura envía Fireflies realmente
+    # A veces puede venir envuelto en {"data": {...}} o director
+    
     transcript_id = payload.get("transcriptId")
     event_type = payload.get("event")
     
+    print(f"Event type: {event_type}, Transcript ID extracted so far: {transcript_id}")
+    
     if not transcript_id:
-        # Algunos payloads de prueba en webhooks pueden tener otras estructuras
+        # Fallbacks for different possible webhook schemas
         transcript_id = payload.get("id") or payload.get("meeting_id")
-        
+        # Check if it's nested under data
+        if not transcript_id and "data" in payload and isinstance(payload["data"], dict):
+            data_obj = payload["data"]
+            transcript_id = data_obj.get("transcriptId") or data_obj.get("id")
+            print(f"Extracted from nested data: {transcript_id}")
+            
     if not transcript_id:
-        raise HTTPException(status_code=400, detail="Falta transcriptId en el payload")
+        print("ERROR: No transcript ID found in payload.")
+        # We return a 200 instead of 400 because some webhooks (like validation webhooks) 
+        # might just be pings that don't have a transcript ID and we don't want Fireflies to disable the hook.
+        return {"status": "ignored", "message": "Falta transcriptId en el payload, ignorando."}
         
+    print(f"Dispatching background task for transcript: {transcript_id}")
     # Despachar procesamiento asíncrono pasándole el payload para ahorrar llamadas a API si es posible
     background_tasks.add_task(process_transcript_background, transcript_id, payload, db)
     
