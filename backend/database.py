@@ -2,10 +2,16 @@ from sqlmodel import create_engine, SQLModel, Session
 from config import settings
 
 # Engine global 
+connect_args = {"check_same_thread": False} if "sqlite" in settings.database_url else {}
+
+# Agregamos pool_pre_ping para evitar conexiones muertas y configuramos el connection pool para Supabase
 engine = create_engine(
     settings.database_url,
-    echo=True, # Puede deshabilitarse en prod
-    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {}
+    echo=False, # logs de DB apagados para mejor performance
+    pool_size=10, 
+    max_overflow=20,
+    pool_pre_ping=True,
+    connect_args=connect_args
 )
 
 def create_db_and_tables():

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../services/settings.service';
@@ -22,7 +22,7 @@ export class SettingsComponent implements OnInit {
   successMessage = '';
   errorMessage = '';
 
-  constructor(private settingsService: SettingsService) { }
+  constructor(private settingsService: SettingsService, private cdr: ChangeDetectorRef) { }
 
   ngOnInit(): void {
     this.settingsService.getSettings().subscribe({
@@ -33,6 +33,7 @@ export class SettingsComponent implements OnInit {
         if (data.jira) this.jiraSettings = data.jira;
         if (data.azure) this.azureSettings = data.azure;
         if (data.clickup) this.clickupSettings = data.clickup;
+        this.cdr.detectChanges();
       },
       error: (err) => console.error('Failed to load settings', err)
     });
@@ -56,12 +57,17 @@ export class SettingsComponent implements OnInit {
       next: () => {
         this.isSaving = false;
         this.successMessage = 'Ajustes de integración guardados exitosamente.';
-        setTimeout(() => this.successMessage = '', 4000);
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.successMessage = '';
+          this.cdr.detectChanges();
+        }, 4000);
       },
       error: (err) => {
         this.isSaving = false;
         this.errorMessage = 'Hubo un error guardando los ajustes.';
         console.error(err);
+        this.cdr.detectChanges();
       }
     });
   }
