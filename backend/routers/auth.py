@@ -49,24 +49,13 @@ def require_admin(current_user: User = Depends(get_current_user)):
 
 @router.post("/login")
 def login_for_access_token(login_req: LoginRequest, db: Session = Depends(get_session)):
-    print(f"--- DEBUG LOGIN ---")
-    print(f"Username received: '{login_req.username}'")
     user = db.exec(select(User).where(User.email == login_req.username)).first()
-    print(f"User found in DB: {user is not None}")
-    if not user:
-        is_valid = False
-    else:
-        is_valid = verify_password(login_req.password, user.hashed_password)
-        print(f"Password valid: {is_valid}")
-    
-    if not is_valid:
-        print("--- LOGIN FAILED ---")
+    if not user or not verify_password(login_req.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    print("--- LOGIN SUCCESS ---")
         
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     # in JWT payload, typically "sub" is used for identify subject
