@@ -43,7 +43,7 @@ class GroqService:
             "required": ["summary", "decisions", "risks", "agreements", "action_items"]
         }
 
-    async def process_transcript(self, transcript: str) -> dict:
+    async def process_transcript(self, transcript: str, project_contacts: list = None) -> dict:
         """
         Envía el transcript completo a Groq para extraer información estructurada
         basada en el JSON schema.
@@ -55,11 +55,21 @@ class GroqService:
         if len(transcript) > 25000:
             safe_transcript = transcript[:5000] + "\n\n[... TRUNCATED ...]\n\n" + transcript[-20000:]
             
+        contacts_info = ""
+        if project_contacts:
+            contacts_str = json.dumps(project_contacts, ensure_ascii=False)
+            contacts_info = f"\n\nTienes acceso a la siguiente lista de personas del proyecto:\n{contacts_str}\nSi una tarea es asignada a una persona de esta lista, debes usar su 'name' y 'email' exactos.\n"
+
         prompt = f"""
         Eres un asistente experto que procesa transcripciones de reuniones.
         Analiza el siguiente texto y extrae un resumen, las decisiones clave, los riesgos identificados, los acuerdos generales y las tareas accionables.
         
-        Transcipción:
+        PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
+        Cuando extraigas tareas, intenta identificar y extraer los correos electrónicos mencionados por los participantes en la transcripción. 
+        Si alguien deletrea su correo o indica sus datos de contacto, añádelo en 'owner_email'.
+        {contacts_info}
+        
+        Transcripción:
         {safe_transcript}
         """
 

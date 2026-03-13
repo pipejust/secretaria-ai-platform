@@ -7,6 +7,10 @@ from .crud_action_item import action_item
 from .crud_role import role
 from .crud_integration_setting import integration_setting
 
+from models import ProjectContact
+from .base import CRUDBase
+project_contact = CRUDBase[ProjectContact, ProjectContact, ProjectContact](ProjectContact)
+
 # For a new basic set of items for which you don't even want to create a new file, you could do:
 # from crud.base import CRUDBase
 # from models import Item

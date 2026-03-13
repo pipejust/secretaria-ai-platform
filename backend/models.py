@@ -29,6 +29,17 @@ class Project(SQLModel, table=True):
     templates: List["Template"] = Relationship(back_populates="project")
     routings: List["Routing"] = Relationship(back_populates="project")
     sessions: List["MeetingSession"] = Relationship(back_populates="project")
+    contacts: List["ProjectContact"] = Relationship(back_populates="project")
+
+class ProjectContact(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="project.id")
+    name: str
+    email: str
+    role: str
+    phone: Optional[str] = Field(default=None)
+
+    project: Optional[Project] = Relationship(back_populates="contacts")
 
 class Template(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

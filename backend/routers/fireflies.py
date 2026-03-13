@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from typing import Dict, Any
 
 from database import get_session
-from models import MeetingSession, Project, ActionItem, Routing
+from models import MeetingSession, Project, ActionItem, Routing, ProjectContact
 from services.fireflies_service import FirefliesService
 from services.groq_service import GroqService
 
@@ -75,7 +75,13 @@ async def process_transcript_background(transcript_id: str, payload_data: dict, 
         # 3. Extraer tareas estructuradas con Groq
         if raw_transcript:
             groq_svc = GroqService()
-            structured_data = await groq_svc.process_transcript(raw_transcript)
+            
+            project_contacts = []
+            if matched_project_id:
+                db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == matched_project_id)).all()
+                project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
+
+            structured_data = await groq_svc.process_transcript(raw_transcript, project_contacts)
             
             # Guardar datos enriquecidos en session
             new_session.processed_decisions = structured_data.get("decisions", "")
