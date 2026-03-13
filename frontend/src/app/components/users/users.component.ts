@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-users',
@@ -34,7 +35,7 @@ export class UsersComponent implements OnInit {
         const headers = this.authService.getAuthHeaders();
 
         // Load Users
-        this.http.get<any[]>('http://localhost:8080/users', { headers }).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/users`, { headers }).subscribe({
             next: (data) => {
                 this.users = data;
                 this.isLoading = false;
@@ -48,7 +49,7 @@ export class UsersComponent implements OnInit {
         });
 
         // Load Roles for the select dropdown
-        this.http.get<any[]>('http://localhost:8080/auth/roles', { headers }).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/auth/roles`, { headers }).subscribe({
             next: (data) => {
                 this.roles = data;
                 this.cdr.detectChanges();
@@ -71,7 +72,7 @@ export class UsersComponent implements OnInit {
             role_id: parseInt(this.newUser.role_id, 10)
         };
 
-        this.http.post<any>('http://localhost:8080/auth/register/admin-only', payload, { headers: this.authService.getAuthHeaders() })
+        this.http.post<any>(`${environment.apiUrl}/auth/register/admin-only`, payload, { headers: this.authService.getAuthHeaders() })
             .subscribe({
                 next: () => {
                     this.successMsg = 'Usuario registrado exitosamente.';
@@ -88,7 +89,7 @@ export class UsersComponent implements OnInit {
 
     toggleStatus(user: any) {
         const newStatus = !user.is_active;
-        this.http.put(`http://localhost:8080/users/${user.id}/status?is_active=${newStatus}`, {}, { headers: this.authService.getAuthHeaders() })
+        this.http.put(`${environment.apiUrl}/users/${user.id}/status?is_active=${newStatus}`, {}, { headers: this.authService.getAuthHeaders() })
             .subscribe({
                 next: () => user.is_active = newStatus,
                 error: (err) => this.errorMsg = err.error?.detail || 'Error al cambiar estado'

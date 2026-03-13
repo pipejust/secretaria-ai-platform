@@ -48,12 +48,19 @@ class GroqService:
         Envía el transcript completo a Groq para extraer información estructurada
         basada en el JSON schema.
         """
+        # Groq Llama 3 70b has an 8k token limit. A full hour transcript can exceed this, causing a 400 error.
+        # We safely truncate to the last 25,000 characters (approx 5000 tokens) because action items and summaries
+        # are heavily weighted towards the end of the meeting, but we also include the first 5000 chars for context.
+        safe_transcript = transcript
+        if len(transcript) > 25000:
+            safe_transcript = transcript[:5000] + "\n\n[... TRUNCATED ...]\n\n" + transcript[-20000:]
+            
         prompt = f"""
         Eres un asistente experto que procesa transcripciones de reuniones.
         Analiza el siguiente texto y extrae un resumen, las decisiones clave, los riesgos identificados, los acuerdos generales y las tareas accionables.
         
         Transcipción:
-        {transcript}
+        {safe_transcript}
         """
 
         payload = {
@@ -73,6 +80,8 @@ class GroqService:
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+            if response.status_code != 200:
+                print(f"Groq API Error: {response.text}")
             response.raise_for_status()
             
             result_json = response.json()
