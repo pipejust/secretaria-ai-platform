@@ -146,7 +146,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
     
     # Send email
     try:
-        email_svc = EmailService()
+        email_svc = EmailService(db=db)
         await email_svc.send_forgot_password_email(
             to_email=user.email,
             user_name=user.full_name,

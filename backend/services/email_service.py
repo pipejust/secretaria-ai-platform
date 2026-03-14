@@ -1,26 +1,45 @@
 import os
 import resend
+import json
 from jinja2 import Environment, FileSystemLoader
+from sqlmodel import Session, select
+from models import IntegrationSetting
 
 # En un entorno real, manejar la config via `config.py/settings`
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-FROM_EMAIL = os.environ.get("FROM_EMAIL", "no-reply@secretaria-ai.com")
+DEFAULT_RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+DEFAULT_FROM_EMAIL = os.environ.get("FROM_EMAIL", "no-reply@secretaria-ai.com")
 
 class EmailService:
-    def __init__(self):
+    def __init__(self, db: Session = None):
         # Configurar Jinja2 para cargar plantillas desde el directorio local `templates`
         current_dir = os.path.dirname(os.path.abspath(__file__))
         templates_dir = os.path.join(os.path.dirname(current_dir), 'templates')
         self.jinja_env = Environment(loader=FileSystemLoader(templates_dir))
-        if RESEND_API_KEY:
-            resend.api_key = RESEND_API_KEY
+        
+        self.api_key = DEFAULT_RESEND_API_KEY
+        self.from_email = DEFAULT_FROM_EMAIL
+
+        if db:
+            setting = db.exec(select(IntegrationSetting).where(IntegrationSetting.provider_name == 'smtp')).first()
+            if setting and setting.is_active:
+                try:
+                    config = json.loads(setting.config_json)
+                    if config.get("apiKey"):
+                        self.api_key = config.get("apiKey")
+                    if config.get("senderEmail"):
+                        self.from_email = config.get("senderEmail")
+                except Exception as e:
+                    print(f"Error parsing local SMTP settings: {e}")
+
+        if self.api_key:
+            resend.api_key = self.api_key
 
     async def _send_html_email(self, to_email: str, subject: str, html_content: str):
         """Método interno para despachar el correo utilizando Resend. Imprime el HTML en modo dev."""
-        if RESEND_API_KEY:
+        if self.api_key:
             try:
                 response = resend.Emails.send({
-                    "from": FROM_EMAIL,
+                    "from": self.from_email,
                     "to": to_email,
                     "subject": subject,
                     "html": html_content

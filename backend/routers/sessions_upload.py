@@ -280,7 +280,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
         
-    email_service = EmailService()
+    email_service = EmailService(db=db)
     results = []
     
     for item_id in request.action_item_ids:
