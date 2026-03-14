@@ -53,6 +53,48 @@ async def upload_template(
     
     return {"msg": "Plantilla subida con éxito", "template_id": db_template.id, "file_url": final_file_path}
 
+@router.put("/{template_id}")
+async def update_template(
+    template_id: int,
+    project_id: int = Form(...),
+    name: str = Form(...),
+    file: UploadFile = File(None),
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin)
+):
+    """Actualiza una plantilla existente (nombre, proyecto o archivo .docx)"""
+    template = crud.template.get(db, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+
+    update_data = {
+        "project_id": project_id,
+        "name": name
+    }
+
+    if file:
+        if not file.filename.endswith('.docx'):
+            raise HTTPException(status_code=400, detail="Solo se permiten archivos .docx")
+            
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        file_path = os.path.join(UPLOAD_DIR, file.filename)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        try:
+            from services.supabase_service import upload_file_to_bucket
+            supabase_path = f"project_{project_id}/{file.filename}"
+            public_url = upload_file_to_bucket("templates", file_path, supabase_path)
+            update_data["file_path"] = public_url
+        except Exception as e:
+            print(f"Advertencia: No se pudo subir a Supabase. Se usará ruta local. Error: {e}")
+            update_data["file_path"] = file_path
+
+    crud.template.update(db, db_obj=template, obj_in=update_data)
+    
+    return {"msg": "Plantilla actualizada con éxito"}
+
 from pydantic import BaseModel
 
 class MappingUpdate(BaseModel):
