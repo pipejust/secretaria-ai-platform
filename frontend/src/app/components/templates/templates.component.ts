@@ -162,7 +162,8 @@ export class TemplatesComponent implements OnInit {
                 this.isUploading = false;
                 
                 if (!this.editingTemplateId) {
-                    this.showConfigurator = true;
+                    // Initialize the visual configurator properly for the newly created template
+                    this.openConfigurator({ id: res.template_id, mapping_config: null });
                 } else {
                     setTimeout(() => {
                         this.showUploadModal = false;
