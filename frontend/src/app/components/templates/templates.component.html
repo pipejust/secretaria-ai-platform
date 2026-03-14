@@ -1,221 +1,206 @@
 <div class="fade-in">
-    <div class="header-actions">
-        <h2 class="section-title">Plantillas de Actas (Word Document)</h2>
-    </div>
-
-    <div class="alert alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
-    <div class="alert alert-success" *ngIf="successMsg">{{ successMsg }}</div>
-
-    <div class="grid-layout">
-        <!-- Repositorio Documental -->
-        <div class="card glass-panel flex-2">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>Repositorio de Plantillas (.docx)</h3>
-                <input type="text" class="modern-search" placeholder="🔍 Buscar por nombre o proyecto..." [(ngModel)]="searchText" style="width: 250px;">
-            </div>
-            <div class="card-body p-0">
-                <div class="table-container" *ngIf="isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 40px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 180px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 100px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 60px;"></div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let i of [1,2,3]">
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 30px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-title" style="margin-bottom: 0;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 60px; height: 32px"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-container" *ngIf="!isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre del Documento</th>
-                                <th>Proyecto / Ruta</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let t of filteredTemplates">
-                                <td>#{{ t.id }}</td>
-                                <td>
-                                    <span style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                            viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                            <polyline points="14 2 14 8 20 8"></polyline>
-                                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                                            <polyline points="10 9 9 9 8 9"></polyline>
-                                        </svg>
-                                        {{ t.name }}
-                                    </span>
-                                </td>
-                                <td><span class="badge">{{ t.project_id || 'Global' }}</span></td>
-                                <td>
-                                    <button *ngIf="t.project_id" class="btn btn-sm btn-icon-text" style="background-color: #6366f1; color: white;" 
-                                        (click)="goToProjectContacts(t.project_id)">
-                                        Contactos (Proyecto)
-                                    </button>
-                                    <button class="btn btn-sm btn-icon-text" style="color: red; margin-left: 5px;"
-                                        (click)="deleteTemplate(t.id)" [disabled]="isDeleting">
-                                        Eliminar
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr *ngIf="templates.length === 0">
-                                <td colspan="4" class="p-0">
-                                    <div class="empty-state">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        </svg>
-                                        <h4>Aún no hay plantillas (.docx) en la base de datos</h4>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cargar Documentos Formulari -->
-        <div class="card glass-panel flex-1">
-            <div class="card-header">
+    <!-- Modal para Cargar Plantilla -->
+    <div class="modal-overlay" *ngIf="showUploadModal && !showConfigurator">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h3>Cargar Plantilla</h3>
+                <button class="btn-close" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
-            <div class="card-body">
-                <form (ngSubmit)="uploadFile()" #uploadForm="ngForm">
+            <div class="modal-body">
+                <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
+                <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
 
-                    <div class="form-group">
+                <form (ngSubmit)="uploadFile()" #uploadForm="ngForm">
+                    <div class="form-group mb-4">
                         <label>Proyecto Destino <span class="text-danger">*</span></label>
-                        <select name="project_id" [(ngModel)]="selectedProjectId" required>
+                        <select name="project_id" [(ngModel)]="selectedProjectId" required class="form-select glass-select">
                             <option value="" disabled selected>Asignar a un Proyecto</option>
                             <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group mb-4">
                         <label>Subir Documento (Solo .docx)</label>
-
                         <div class="file-drop-area">
                             <input type="file" class="file-input" (change)="onFileSelected($event)" accept=".docx" />
-                            <div class="file-text" *ngIf="!selectedFile">Haz clic para buscar o arrastra el .docx aquí
-                            </div>
-                            <div class="file-text" *ngIf="selectedFile"
-                                style="color:var(--accent-color); font-weight:600;">
+                            <div class="file-text" *ngIf="!selectedFile">Haz clic para buscar o arrastra el .docx aquí</div>
+                            <div class="file-text" *ngIf="selectedFile" style="color:var(--accent-color); font-weight:600;">
                                 {{ selectedFile.name }}
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full"
-                        [disabled]="!selectedFile || !selectedProjectId || isUploading">
+                    <button type="submit" class="btn btn-primary w-full" [disabled]="!selectedFile || !selectedProjectId || isUploading">
                         <span *ngIf="!isUploading">Subir Plantilla de Word</span>
-                        <span *ngIf="isUploading">Cargando 0%...</span>
+                        <span *ngIf="isUploading">Cargando...</span>
                     </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Configurator Drag & Drop (Visible after uploading) -->
-    <div class="card mt-4" *ngIf="showConfigurator">
-        <div class="card-header bg-primary text-white"
-            style="background: var(--accent-color); color: white; padding: 1.5rem;">
-            <h3 style="margin: 0; color: white;">Mapeo de Variables Inteligentes (Plantilla Word)</h3>
-            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.95rem;">Arrastra las variables que hayas
-                insertado en tu Word hacia la zona activa (derecha) para confirmarle al sistema qué datos inyectar. Haz
-                clic en la etiqueta para copiarla al portapapeles y pegarla en tu nuevo documento.</p>
+    <!-- Modal para el Configurador Drag&Drop -->
+    <div class="modal-overlay" *ngIf="showConfigurator">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header" style="background: var(--accent-color); color: white; border-bottom: none;">
+                <div>
+                    <h3 style="margin: 0; color: white;">Mapeo de Variables Inteligentes (Plantilla Word)</h3>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.85rem; font-weight: normal;">
+                        Arrastra las variables insertadas en tu Word hacia la zona activa (derecha) para indicarle al sistema qué datos inyectar. Clic para copiar.
+                    </p>
+                </div>
+                <button class="btn-close" (click)="showConfigurator = false; showUploadModal = false" style="background: rgba(255,255,255,0.2); color: white;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="grid-layout cols-2 gap-0" style="margin: 0; display:flex;">
+                    <!-- Lista de Disponibles -->
+                    <div class="p-4" style="flex:1; border-right: 1px solid var(--border-color); background: #f8fafc;">
+                        <h4 class="mb-3" style="font-size:1rem;">Variables Disponibles</h4>
+                        <div cdkDropList #availableList="cdkDropList" [cdkDropListData]="availableTokens"
+                            [cdkDropListConnectedTo]="[activeList]" class="drag-list" (cdkDropListDropped)="drop($event)">
+                            <div class="drag-box" *ngFor="let token of availableTokens" cdkDrag>
+                                <div class="drag-handle" cdkDragHandle>
+                                    <svg width="20px" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"></path>
+                                    </svg>
+                                </div>
+                                <div class="token-info flex-1">
+                                    <span class="token-label" style="font-size:0.9rem;">{{ token.label }}</span>
+                                    <code class="token-tag" (click)="copyTag(token.tag)" title="Clic para copiar">{{ token.tag }}</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Activos -->
+                    <div class="p-4" style="flex:1;">
+                        <h4 class="mb-3" style="font-size:1rem;">Variables Activadas</h4>
+                        <div cdkDropList #activeList="cdkDropList" [cdkDropListData]="activeTokens"
+                            [cdkDropListConnectedTo]="[availableList]" class="drag-list drop-zone-active"
+                            (cdkDropListDropped)="drop($event)" style="min-height: 250px;">
+                            <div class="empty-drop-msg" *ngIf="activeTokens.length === 0">
+                                Arrastra aquí las variables que usarás.
+                            </div>
+                            <div class="drag-box box-active" *ngFor="let token of activeTokens" cdkDrag>
+                                <div class="drag-handle" cdkDragHandle>
+                                    <svg width="20px" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"></path>
+                                    </svg>
+                                </div>
+                                <div class="token-info flex-1">
+                                    <span class="token-label" style="font-size:0.9rem;">{{ token.label }}</span>
+                                    <code class="token-tag" (click)="copyTag(token.tag)" title="Clic para copiar">{{ token.tag }}</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-between align-items-center" style="gap:1rem;">
+                            <span class="text-muted text-sm" style="flex:1; font-size:0.8rem; line-height:1.2;">El motor renderizará estas etiquetas nativamente.</span>
+                            <button class="btn btn-primary" (click)="showConfigurator = false; showUploadModal = false;">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
+
+    <!-- Header identical to dashboard -->
+    <div class="header-actions">
+        <div>
+            <h2 class="section-title">Plantillas de Actas (Word Document)</h2>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra tus plantillas institucionales .docx</p>
+        </div>
+        <button class="btn btn-primary" (click)="showUploadModal = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0.5rem;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Subir Plantilla
+        </button>
+    </div>
+
+    <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
+        <input type="text" class="modern-search" placeholder="🔍 Buscar por nombre o proyecto..." [(ngModel)]="searchText" style="flex:1;">
+    </div>
+
+    <!-- Tabla Full-Width -->
+    <div class="card glass-panel w-full">
         <div class="card-body p-0">
-            <div class="grid-layout cols-2 gap-0" style="margin: 0;">
-                <!-- Lista de Disponibles -->
-                <div class="p-4" style="border-right: 1px solid var(--border-color); background: #f9fafb;">
-                    <h4 class="mb-3">Variables del Sistema Disponibles</h4>
-                    <div cdkDropList #availableList="cdkDropList" [cdkDropListData]="availableTokens"
-                        [cdkDropListConnectedTo]="[activeList]" class="drag-list" (cdkDropListDropped)="drop($event)">
+            <div class="table-container" *ngIf="isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><div class="skeleton skeleton-text" style="width: 40px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 180px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 100px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 60px;"></div></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let i of [1,2,3]">
+                            <td><div class="skeleton skeleton-text" style="width: 30px;"></div></td>
+                            <td><div class="skeleton skeleton-title" style="margin-bottom: 0;"></div></td>
+                            <td><div class="skeleton skeleton-text" style="width: 80px;"></div></td>
+                            <td><div class="skeleton skeleton-text" style="width: 60px; height: 32px"></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                        <div class="drag-box" *ngFor="let token of availableTokens" cdkDrag>
-                            <div class="drag-handle" cdkDragHandle>
-                                <svg width="24px" fill="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                        d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z">
-                                    </path>
-                                </svg>
-                            </div>
-                            <div class="token-info flex-1">
-                                <span class="token-label">{{ token.label }}</span>
-                                <code class="token-tag" (click)="copyTag(token.tag)"
-                                    title="Clic para copiar">{{ token.tag }}</code>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lista de Activos -->
-                <div class="p-4">
-                    <h4 class="mb-3">Variables Activadas en el Documento actual</h4>
-                    <div cdkDropList #activeList="cdkDropList" [cdkDropListData]="activeTokens"
-                        [cdkDropListConnectedTo]="[availableList]" class="drag-list drop-zone-active"
-                        (cdkDropListDropped)="drop($event)">
-
-                        <div class="empty-drop-msg" *ngIf="activeTokens.length === 0">
-                            Arrastra aquí las variables que usarás.
-                        </div>
-
-                        <div class="drag-box box-active" *ngFor="let token of activeTokens" cdkDrag>
-                            <div class="drag-handle" cdkDragHandle>
-                                <svg width="24px" fill="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                        d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z">
-                                    </path>
-                                </svg>
-                            </div>
-                            <div class="token-info flex-1">
-                                <span class="token-label">{{ token.label }}</span>
-                                <code class="token-tag" (click)="copyTag(token.tag)"
-                                    title="Clic para copiar">{{ token.tag }}</code>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 flex justify-between align-items-center">
-                        <span class="text-muted text-sm">El motor Word renderizará estas etiquetas de forma
-                            nativa.</span>
-                        <button class="btn btn-primary" (click)="showConfigurator = false">Confirmar inyección de
-                            Plantilla</button>
-                    </div>
-                </div>
+            <div class="table-container" *ngIf="!isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre del Documento</th>
+                            <th>Proyecto / Ruta</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let t of filteredTemplates">
+                            <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{ t.id }}</span></td>
+                            <td>
+                                <span style="display: flex; align-items: center; gap: 0.5rem; font-weight:600; color:var(--text-main);">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                    {{ t.name }}
+                                </span>
+                            </td>
+                            <td><span class="badge badge-primary">{{ t.project_id || 'Global' }}</span></td>
+                            <td>
+                                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                    <button *ngIf="t.project_id" class="btn btn-sm" style="background:#e0e7ff; color:#4f46e5; border:1px solid #c7d2fe;" (click)="goToProjectContacts(t.project_id)">
+                                        Contactos (Proyecto)
+                                    </button>
+                                    <button class="btn btn-sm" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;" (click)="deleteTemplate(t.id)" [disabled]="isDeleting">
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="templates.length === 0">
+                            <td colspan="4" class="p-0">
+                                <div class="empty-state">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    </svg>
+                                    <h4>Aún no hay plantillas (.docx) en la base de datos</h4>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

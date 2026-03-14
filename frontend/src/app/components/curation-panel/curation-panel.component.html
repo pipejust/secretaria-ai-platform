@@ -69,8 +69,8 @@
       <section class="col-right">
         <div class="glass-panel section-card tasks-panel">
           <div class="tasks-header">
-            <h3>📋 Tareas Detectadas por IA ({{meetingData.action_items.length}})</h3>
-            <div class="batch-actions">
+            <h3 style="margin-bottom:0;">📋 Tareas Detectadas por IA ({{meetingData.action_items.length}})</h3>
+            <div class="batch-actions" style="display:flex; gap:0.5rem;">
               <button class="btn btn-secondary btn-mini" [disabled]="!hasSelectedTasks || isDispatchingEmails" (click)="dispatchEmails()">
                 <span *ngIf="isDispatchingEmails">Enviando...</span>
                 <span *ngIf="!isDispatchingEmails">📧 Correos</span>
@@ -83,8 +83,8 @@
           </div>
           
           <div class="select-all-row" *ngIf="meetingData.action_items.length > 0">
-            <input type="checkbox" (change)="toggleAllTasks($event)" id="selectAll" />
-            <label for="selectAll" style="font-weight: 500;">Seleccionar todas las tareas</label>
+            <input type="checkbox" (change)="toggleAllTasks($event)" id="selectAll" class="task-checkbox" />
+            <label for="selectAll" style="font-weight: 500; font-size: 0.95rem; cursor:pointer;">Seleccionar todas las tareas</label>
           </div>
           
           <div class="task-list modern-scroll">
@@ -94,7 +94,7 @@
                 <input type="text" class="task-title-input" [(ngModel)]="task.title" placeholder="Título de Tarea" />
               </div>
               
-              <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción de la tarea detallada" rows="2"></textarea>
+              <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción detallada de la tarea" rows="2"></textarea>
               
               <div class="task-meta-modern">
                  <div class="meta-field">
@@ -107,7 +107,7 @@
                  </div>
                  <div class="meta-field">
                    <div class="meta-icon">📅</div>
-                   <input type="date" [(ngModel)]="task.due_date" />
+                   <input type="date" [(ngModel)]="task.due_date" style="color:var(--text-main);" />
                  </div>
               </div>
             </div>

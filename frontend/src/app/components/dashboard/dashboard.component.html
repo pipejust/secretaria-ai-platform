@@ -101,22 +101,21 @@
                 </thead>
                 <tbody>
                     <tr *ngFor="let s of filteredSessions">
-                        <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{
+                        <td><span class="badge" style="background:#e0e7ff; color:var(--text-main);">#{{
                                 s.id }}</span></td>
                         <td>
                             <strong style="color:var(--text-main);">{{ s.title }}</strong>
                         </td>
                         <td>{{ s.date | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td>
-                            <span class="status-indicator" [class.active]="s.status === 'completed'" [ngStyle]="{'background': s.status === 'processing' ? 'rgba(234, 179, 8, 0.1)' : '', 'color': s.status === 'processing' ? '#eab308' : ''}">
+                            <span class="status-indicator" [class.active]="s.status === 'completed'" [ngStyle]="{'background': s.status === 'processing' ? '#fef08a' : '', 'color': s.status === 'processing' ? '#854d0e' : ''}">
                                 <span *ngIf="s.status === 'processing'" style="display:inline-block; margin-right:4px;">⏳</span>
                                 {{ s.status === 'completed' ? 'Completado' : (s.status === 'processing' ? 'Procesando IA...' : 'Pendiente Curación') }}
                             </span>
                         </td>
                         <td>
                             <div style="display:flex; gap:0.5rem;">
-                                <button class="btn btn-sm"
-                                    style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2)"
+                                <button class="btn btn-sm btn-secondary"
                                     (click)="viewCuration(s.id)">
                                     Ver Curación
                                 </button>
@@ -140,7 +139,7 @@
                                 </svg>
                                 <h4>No hay actas registradas</h4>
                                 <p class="text-muted mt-4 text-center" style="max-width: 400px;">
-                                    Aquí aparecerán las reuniones procesadas por el bot "MoshWasi" o las transcripciones
+                                    Aquí aparecerán las reuniones procesadas por la inteligencia artificial o las transcripciones
                                     que subas manualmente.
                                 </p>
                             </div>

@@ -22,6 +22,7 @@ export class RolesComponent implements OnInit {
     errorMsg = '';
     successMsg = '';
     searchText = '';
+    showCreateModal = false;
 
     get filteredRoles() {
         if (!this.searchText.trim()) return this.roles;
@@ -70,6 +71,10 @@ export class RolesComponent implements OnInit {
                     this.roles.push(res);
                     this.newRole = { name: '', description: '' };
                     this.isCreating = false;
+                    setTimeout(() => {
+                        this.showCreateModal = false;
+                        this.successMsg = '';
+                    }, 1500);
                 },
                 error: (err) => {
                     this.errorMsg = err.error?.detail || 'Error al crear el rol.';
