@@ -1,146 +1,144 @@
 <div class="fade-in">
-    <div class="header-actions">
-        <h2 class="section-title">Control de Accesos (Usuarios)</h2>
-    </div>
-
-    <div class="alert alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
-    <div class="alert alert-success" *ngIf="successMsg">{{ successMsg }}</div>
-
-    <div class="grid-layout">
-        <!-- Formulario Crear Usuario (Registro por Admin) -->
-        <div class="card glass-panel flex-1">
-            <div class="card-header">
+    <!-- Modal de Creación -->
+    <div class="modal-overlay" *ngIf="showCreateModal">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h3>Registrar Acceso a Plataforma</h3>
+                <button class="btn-close" (click)="showCreateModal = false; errorMsg = ''; successMsg = ''">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
-            <div class="card-body">
+            <div class="modal-body">
+                <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
+                <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
+
                 <form (ngSubmit)="createUser()" #userForm="ngForm">
                     <div class="form-group mb-4">
                         <label>Nombre Completo</label>
-                        <input type="text" name="full_name" [(ngModel)]="newUser.full_name" required
-                            placeholder="Nombre Apellido" />
+                        <input type="text" name="full_name" [(ngModel)]="newUser.full_name" required placeholder="Nombre Apellido" />
                     </div>
 
                     <div class="form-group mb-4">
                         <label>Correo Electrónico <span class="text-danger">*</span></label>
-                        <input type="email" name="email" [(ngModel)]="newUser.email" required
-                            placeholder="ejemplo@empresa.com" />
+                        <input type="email" name="email" [(ngModel)]="newUser.email" required placeholder="ejemplo@empresa.com" />
                     </div>
 
                     <div class="form-group mb-4">
                         <label>Contraseña Inicial <span class="text-danger">*</span></label>
-                        <input type="password" name="password" [(ngModel)]="newUser.password" required
-                            placeholder="••••••••" />
+                        <input type="password" name="password" [(ngModel)]="newUser.password" required placeholder="••••••••" />
                     </div>
 
                     <div class="form-group mb-5">
                         <label>Rol de Sistema <span class="text-danger">*</span></label>
-                        <select name="role_id" [(ngModel)]="newUser.role_id" required class="form-select">
+                        <select name="role_id" [(ngModel)]="newUser.role_id" required class="form-select glass-select">
                             <option value="" disabled selected>Selecciona un rol</option>
                             <option *ngFor="let role of roles" [value]="role.id">{{ role.name }}</option>
                         </select>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full"
-                        [disabled]="!userForm.form.valid || isCreating">
+                    <button type="submit" class="btn btn-primary w-full" style="margin-top: 10px;" [disabled]="!userForm.form.valid || isCreating">
                         <span *ngIf="!isCreating">Registrar Usuario</span>
                         <span *ngIf="isCreating">Procesando...</span>
                     </button>
                 </form>
             </div>
         </div>
+    </div>
 
-        <!-- Lista de Usuarios -->
-        <div class="card glass-panel flex-2">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>Usuarios del Sistema</h3>
-                <input type="text" class="modern-search" placeholder="🔍 Buscar por nombre, email o rol..." [(ngModel)]="searchText" style="width: 250px;">
+    <!-- Header Actions idéntico a Dashboard -->
+    <div class="header-actions">
+        <div>
+            <h2 class="section-title">Control de Accesos (Usuarios)</h2>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra las cuentas y los permisos de acceso al sistema.</p>
+        </div>
+        <button class="btn btn-primary" (click)="showCreateModal = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="margin-right:0.5rem;">
+                <circle cx="12" cy="7" r="4"></circle>
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                <line x1="19" y1="8" x2="19" y2="14"></line>
+                <line x1="22" y1="11" x2="16" y2="11"></line>
+            </svg>
+            Registrar Usuario
+        </button>
+    </div>
+
+    <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
+        <input type="text" class="modern-search" placeholder="🔍 Buscar por nombre, email o rol..." [(ngModel)]="searchText" style="flex:1;">
+    </div>
+
+    <!-- Tabla Full-Width -->
+    <div class="card glass-panel w-full">
+        <div class="card-body p-0">
+            <div class="table-container" *ngIf="isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><div class="skeleton skeleton-text" style="width: 40px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 150px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 100px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 80px;"></div></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let i of [1,2,3]">
+                            <td><div class="skeleton skeleton-text" style="width: 30px;"></div></td>
+                            <td>
+                                <div class="skeleton skeleton-title" style="margin-bottom: 0.25rem;"></div>
+                                <div class="skeleton skeleton-text" style="width: 120px;"></div>
+                            </td>
+                            <td><div class="skeleton skeleton-text" style="width: 80px;"></div></td>
+                            <td><div class="skeleton skeleton-text" style="width: 70px; height: 32px; border-radius: var(--radius-md);"></div></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="card-body p-0">
-                <div class="table-container" *ngIf="isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 40px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 150px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 100px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let i of [1,2,3]">
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 30px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-title" style="margin-bottom: 0.25rem;"></div>
-                                    <div class="skeleton skeleton-text" style="width: 120px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text"
-                                        style="width: 70px; height: 32px; border-radius: var(--radius-md);"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
 
-                <div class="table-container" *ngIf="!isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Usuario</th>
-                                <th>Rol Asignado</th>
-                                <th>Acceso</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let u of filteredUsers">
-                                <td>#{{ u.id }}</td>
-                                <td>
-                                    <div style="display:flex; flex-direction: column;">
-                                        <strong style="color:var(--text-main);">{{ u.full_name }}</strong>
-                                        <span style="font-size:0.8rem; color:var(--text-muted)">{{ u.email }}</span>
-                                    </div>
-                                </td>
-                                <td><span class="badge">{{ u.role }}</span></td>
-                                <td>
-                                    <button class="btn btn-sm" [class.btn-danger]="u.is_active"
-                                        [class.btn-primary]="!u.is_active" (click)="toggleStatus(u)"
-                                        title="{{ u.is_active ? 'Revocar Acceso' : 'Permitir Acceso' }}">
-                                        {{ u.is_active ? 'Desactivar' : 'Activar' }}
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr *ngIf="users.length === 0">
-                                <td colspan="4" class="p-0">
-                                    <div class="empty-state">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="9" cy="7" r="4"></circle>
-                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                                        </svg>
-                                        <h4>No hay usuarios creados</h4>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-container" *ngIf="!isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Rol Asignado</th>
+                            <th>Acceso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let u of filteredUsers">
+                            <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{ u.id }}</span></td>
+                            <td>
+                                <div style="display:flex; flex-direction: column;">
+                                    <strong style="color:var(--text-main);">{{ u.full_name }}</strong>
+                                    <span style="font-size:0.8rem; color:var(--text-muted)">{{ u.email }}</span>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-primary">{{ u.role }}</span></td>
+                            <td>
+                                <button class="btn btn-sm" [class.btn-danger]="u.is_active"
+                                    [class.btn-success]="!u.is_active" (click)="toggleStatus(u)"
+                                    title="{{ u.is_active ? 'Revocar Acceso' : 'Permitir Acceso' }}"
+                                    style="min-width: 100px;">
+                                    {{ u.is_active ? 'Desactivar' : 'Activar' }}
+                                </button>
+                            </td>
+                        </tr>
+                        <tr *ngIf="users.length === 0">
+                            <td colspan="4" class="p-0">
+                                <div class="empty-state">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                    </svg>
+                                    <h4>No hay usuarios creados</h4>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

@@ -26,6 +26,7 @@ export class TemplatesComponent implements OnInit {
     selectedFile: File | null = null;
     selectedProjectId: string = '';
     searchText = '';
+    showUploadModal = false;
 
     get filteredTemplates() {
         if (!this.searchText.trim()) return this.templates;

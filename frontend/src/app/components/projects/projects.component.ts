@@ -24,6 +24,7 @@ export class ProjectsComponent implements OnInit {
     isDeleting = false;
     errorMsg = '';
     successMsg = '';
+    showProjectModal = false;
 
     // Contact Management State
     managingContactsForProject: any = null;
@@ -100,7 +101,12 @@ export class ProjectsComponent implements OnInit {
                 this.newProject = { name: '', description: '' };
                 this.isCreating = false;
                 this.successMsg = 'Proyecto creado exitosamente';
-                this.cdr.detectChanges();
+                setTimeout(() => {
+                    this.showProjectModal = false;
+                    this.successMsg = '';
+                    this.cdr.detectChanges(); // Ensure UI updates after modal closes
+                }, 1000);
+                this.cdr.detectChanges(); // Update UI immediately for success message
             },
             error: (err) => {
                 console.error(err);
@@ -112,18 +118,16 @@ export class ProjectsComponent implements OnInit {
     }
 
     editProject(project: any) {
-        this.managingContactsForProject = null;
         this.editingProject = { ...project };
-        this.newProject = { name: project.name, description: project.description };
-        this.errorMsg = '';
-        this.successMsg = '';
+        this.newProject = { name: project.name, description: project.description || '' };
+        this.showProjectModal = true;
     }
 
     cancelEdit() {
         this.editingProject = null;
         this.newProject = { name: '', description: '' };
         this.errorMsg = '';
-        this.successMsg = '';
+        this.showProjectModal = false;
     }
 
     updateProject() {
@@ -133,10 +137,9 @@ export class ProjectsComponent implements OnInit {
         this.successMsg = '';
 
         const payload = {
-            id: this.editingProject.id,
             name: this.newProject.name,
             description: this.newProject.description,
-            is_active: true
+            is_active: this.editingProject.is_active
         };
 
         this.http.put<any>(`${environment.apiUrl}/projects/${this.editingProject.id}`, payload).subscribe({
@@ -145,10 +148,13 @@ export class ProjectsComponent implements OnInit {
                 if (index !== -1) {
                     this.projects[index] = data;
                 }
-                this.cancelEdit();
                 this.isUpdating = false;
                 this.successMsg = 'Proyecto actualizado exitosamente';
-                this.cdr.detectChanges();
+                setTimeout(() => {
+                    this.cancelEdit();
+                    this.successMsg = '';
+                    this.cdr.detectChanges();
+                }, 1000);
             },
             error: (err) => {
                 console.error(err);

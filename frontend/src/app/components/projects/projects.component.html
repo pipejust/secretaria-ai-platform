@@ -1,197 +1,177 @@
 <div class="fade-in">
-    <div class="header-actions">
-        <h2 class="section-title">Gestión de Proyectos</h2>
-    </div>
-
-    <div class="alert alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
-    <div class="alert alert-success" *ngIf="successMsg">{{ successMsg }}</div>
-
-    <div class="grid-layout">
-        <!-- Lista de Proyectos -->
-        <div class="card glass-panel flex-2">
-            <div class="card-header">
-                <h3>Proyectos (Mapeo de Fireflies)</h3>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-container" *ngIf="isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 40px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 150px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 200px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let i of [1,2,3]">
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 30px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-title" style="margin-bottom: 0;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 180px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 80px; height: 32px;"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-container" *ngIf="!isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre de Captura</th>
-                                <th>Descripción</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let p of projects">
-                                <td>#{{ p.id }}</td>
-                                <td><span class="badge">{{ p.name }}</span></td>
-                                <td>{{ p.description || 'N/A' }}</td>
-                                <td style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                                    <button class="btn btn-sm btn-icon-text" style="background-color: #6366f1; color: white; margin: 0;" (click)="manageContacts(p)">
-                                        Contactos
-                                    </button>
-                                    <button class="btn btn-sm btn-icon-text" style="margin: 0;" (click)="editProject(p)">
-                                        Editar
-                                    </button>
-                                    <button class="btn btn-sm btn-icon-text" style="color: red; margin: 0;" (click)="deleteProject(p.id)" [disabled]="isDeleting">
-                                        Eliminar
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr *ngIf="projects.length === 0">
-                                <td colspan="4" class="p-0">
-                                    <div class="empty-state">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                        </svg>
-                                        <h4>No hay proyectos creados</h4>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Creador/Editor de Proyectos -->
-        <div class="card glass-panel flex-1" *ngIf="!managingContactsForProject">
-            <div class="card-header">
+    <!-- Modal de Proyecto (Nuevo/Editar) -->
+    <div class="modal-overlay" *ngIf="showProjectModal">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h3>{{ editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h3>
+                <button class="btn-close" (click)="cancelEdit()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
-            <div class="card-body">
+            <div class="modal-body">
+                <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
+                <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
+
                 <form (ngSubmit)="editingProject ? updateProject() : createProject()" #projectForm="ngForm">
-                    <div class="form-group">
+                    <div class="form-group mb-4">
                         <label>Nombre Identificador <span class="text-danger">*</span></label>
-                        <input type="text" name="name" [(ngModel)]="newProject.name" required
-                            placeholder="ej: Reclutamiento" />
+                        <input type="text" name="name" [(ngModel)]="newProject.name" required placeholder="ej: Reclutamiento" />
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group mb-4">
                         <label>Descripción</label>
-                        <textarea name="description" [(ngModel)]="newProject.description" rows="3"
-                            placeholder="Contexto del proyecto..."></textarea>
+                        <textarea name="description" [(ngModel)]="newProject.description" rows="3" placeholder="Contexto del proyecto..."></textarea>
                     </div>
 
-                    <div class="flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-1"
-                            [disabled]="!projectForm.form.valid || isCreating || isUpdating">
-                            <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Actualizar' : 'Crear Proyecto' }}</span>
+                    <div class="flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary flex-1" [disabled]="!projectForm.form.valid || isCreating || isUpdating">
+                            <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Actualizar Proyecto' : 'Crear Proyecto' }}</span>
                             <span *ngIf="isCreating || isUpdating">Procesando...</span>
                         </button>
-                        <button *ngIf="editingProject" type="button" class="btn btn-secondary" (click)="cancelEdit()">
-                            Cancelar
-                        </button>
+                        <button *ngIf="editingProject" type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancelar</button>
                     </div>
                 </form>
             </div>
         </div>
+    </div>
 
-        <!-- Gestor de Contactos -->
-        <div class="card glass-panel flex-1" *ngIf="managingContactsForProject">
-            <div class="card-header" style="justify-content: space-between; display: flex; align-items: center;">
+    <!-- Modal Gestor de Contactos -->
+    <div class="modal-overlay" *ngIf="managingContactsForProject">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
                 <h3>Contactos: {{ managingContactsForProject.name }}</h3>
-                <button class="btn btn-sm" (click)="closeContacts()">X</button>
+                <button class="btn-close" (click)="closeContacts()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
-            <div class="card-body">
+            <div class="modal-body" style="background:#f8fafc; padding: 1.5rem;">
                 <!-- Lista de contactos -->
-                <div class="contacts-list" style="margin-bottom: 20px;">
+                <div class="contacts-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;">
                     <div *ngIf="isLoadingContacts" class="text-center">Cargando...</div>
                     <div *ngIf="!isLoadingContacts && projectContacts.length === 0" class="text-center" style="color: gray;">
-                        Sin contactos guardados.
+                        Sin contactos guardados para este proyecto.
                     </div>
                     <ul *ngIf="!isLoadingContacts && projectContacts.length > 0" style="padding: 0; margin: 0; list-style: none;">
-                        <li *ngFor="let contact of projectContacts" style="background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 5px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                        <li *ngFor="let contact of projectContacts" style="background: white; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                             <div>
-                                <strong style="display: block;">{{ contact.name }}</strong>
-                                <small style="color: #a0aec0;">{{ contact.email }} | {{ contact.role }}</small>
-                                <small *ngIf="contact.phone" style="display: block; color: #a0aec0;">Tel: {{ contact.phone }}</small>
+                                <strong style="display: block; color: var(--text-main);">{{ contact.name }}</strong>
+                                <small style="color: var(--text-muted);">{{ contact.email }} | {{ contact.role }}</small>
+                                <small *ngIf="contact.phone" style="display: block; color: var(--text-muted);">Tel: {{ contact.phone }}</small>
                             </div>
-                            <button class="btn btn-sm btn-icon-text" style="color: red;" (click)="deleteContact(contact.id)" [disabled]="isDeletingContactId === contact.id">
+                            <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteContact(contact.id)" [disabled]="isDeletingContactId === contact.id">
                                 Eliminar
                             </button>
                         </li>
                     </ul>
                 </div>
 
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
-
-                <h4>Agregar Nuevo</h4>
-                <form (ngSubmit)="addContact()" #contactForm="ngForm">
-                    <div class="form-group">
-                        <label>Nombre <span class="text-danger">*</span></label>
-                        <input type="text" name="contactName" [(ngModel)]="newContact.name" required
-                            placeholder="ej: Juan Pérez" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Correo <span class="text-danger">*</span></label>
-                        <input type="email" name="contactEmail" [(ngModel)]="newContact.email" required
-                            placeholder="juan@empresa.com" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Rol / Cargo <span class="text-danger">*</span></label>
-                        <input type="text" name="contactRole" [(ngModel)]="newContact.role" required
-                            placeholder="ej: Gerente IT" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Teléfono Celular (Opcional)</label>
-                        <input type="text" name="contactPhone" [(ngModel)]="newContact.phone"
-                            placeholder="+12345678" />
-                    </div>
-
-                    <div class="flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-1"
-                            [disabled]="!contactForm.form.valid || isAddingContact">
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <h4 style="margin-bottom: 1rem; color: var(--text-main); font-size: 1.1rem;">Agregar Nuevo Contacto</h4>
+                    <form (ngSubmit)="addContact()" #contactForm="ngForm">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group mb-4">
+                                <label>Nombre <span class="text-danger">*</span></label>
+                                <input type="text" name="contactName" [(ngModel)]="newContact.name" required placeholder="ej: Juan Pérez" />
+                            </div>
+                            <div class="form-group mb-4">
+                                <label>Correo <span class="text-danger">*</span></label>
+                                <input type="email" name="contactEmail" [(ngModel)]="newContact.email" required placeholder="juan@empresa.com" />
+                            </div>
+                            <div class="form-group mb-4">
+                                <label>Rol / Cargo <span class="text-danger">*</span></label>
+                                <input type="text" name="contactRole" [(ngModel)]="newContact.role" required placeholder="ej: Gerente IT" />
+                            </div>
+                            <div class="form-group mb-4">
+                                <label>Teléfono (Opcional)</label>
+                                <input type="text" name="contactPhone" [(ngModel)]="newContact.phone" placeholder="+12345678" />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-full" [disabled]="!contactForm.form.valid || isAddingContact">
                             <span *ngIf="!isAddingContact">Guardar Contacto</span>
                             <span *ngIf="isAddingContact">Guardando...</span>
                         </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header identical to dashboard -->
+    <div class="header-actions">
+        <div>
+            <h2 class="section-title">Gestión de Proyectos</h2>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra tus proyectos y mapea los contactos de Fireflies.</p>
+        </div>
+        <button class="btn btn-primary" (click)="showProjectModal = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0.5rem;">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                <line x1="12" y1="11" x2="12" y2="17"></line>
+                <line x1="9" y1="14" x2="15" y2="14"></line>
+            </svg>
+            Crear Proyecto
+        </button>
+    </div>
+
+    <!-- Tabla Full-Width -->
+    <div class="card glass-panel w-full">
+        <div class="card-body p-0">
+            <div class="table-container" *ngIf="isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><div class="skeleton skeleton-text" style="width: 40px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 150px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 200px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 80px;"></div></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let i of [1,2,3]">
+                            <td><div class="skeleton skeleton-text" style="width: 30px;"></div></td>
+                            <td><div class="skeleton skeleton-title" style="margin-bottom: 0;"></div></td>
+                            <td><div class="skeleton skeleton-text" style="width: 180px;"></div></td>
+                            <td><div class="skeleton skeleton-text" style="width: 80px; height: 32px;"></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-container" *ngIf="!isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre de Captura</th>
+                            <th>Descripción</th>
+                            <th>Acciones Disponibles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let p of projects">
+                            <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{ p.id }}</span></td>
+                            <td><strong><span class="badge badge-primary">{{ p.name }}</span></strong></td>
+                            <td>{{ p.description || 'N/A' }}</td>
+                            <td>
+                                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                    <button class="btn btn-sm" style="background:#e0e7ff; color:#4f46e5; border:1px solid #c7d2fe;" (click)="manageContacts(p)">Contactos</button>
+                                    <button class="btn btn-sm" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;" (click)="editProject(p)">Editar</button>
+                                    <button class="btn btn-sm" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;" (click)="deleteProject(p.id)" [disabled]="isDeleting">Eliminar</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="projects.length === 0">
+                            <td colspan="4" class="p-0">
+                                <div class="empty-state">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                    </svg>
+                                    <h4>No hay proyectos creados</h4>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

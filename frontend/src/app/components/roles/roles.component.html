@@ -1,122 +1,116 @@
 <div class="fade-in">
-    <div class="header-actions">
-        <h2 class="section-title">Gestión de Roles</h2>
-    </div>
-
-    <div class="alert alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
-    <div class="alert alert-success" *ngIf="successMsg">{{ successMsg }}</div>
-
-    <div class="grid-layout">
-        <!-- Lista de Roles -->
-        <div class="card glass-panel flex-2">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>Roles Existentes</h3>
-                <input type="text" class="modern-search" placeholder="🔍 Buscar rol por nombre o ID..." [(ngModel)]="searchText" style="width: 250px;">
-            </div>
-            <div class="card-body p-0">
-                <!-- Loading State (Skeletons) -->
-                <div class="table-container" *ngIf="isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 40px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 150px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 200px;"></div>
-                                </th>
-                                <th>
-                                    <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let i of [1,2,3]">
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 30px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-title" style="margin-bottom: 0;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text" style="width: 180px;"></div>
-                                </td>
-                                <td>
-                                    <div class="skeleton skeleton-text"
-                                        style="width: 80px; height: 24px; border-radius: 12px;"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-container" *ngIf="!isLoading">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre del Rol</th>
-                                <th>Descripción</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let role of filteredRoles">
-                                <td>#{{ role.id }}</td>
-                                <td><span class="badge">{{ role.name }}</span></td>
-                                <td>{{ role.description || 'Sin descripción' }}</td>
-                                <td>
-                                    <span class="status-indicator" [class.active]="role.is_active">
-                                        {{ role.is_active ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr *ngIf="roles.length === 0">
-                                <td colspan="4" class="p-0">
-                                    <div class="empty-state">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                        </svg>
-                                        <h4>No hay roles registrados</h4>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Formulario Crear Rol -->
-        <div class="card glass-panel flex-1">
-            <div class="card-header">
+    <!-- Modal de Creación -->
+    <div class="modal-overlay" *ngIf="showCreateModal">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h3>Crear Nuevo Rol</h3>
+                <button class="btn-close" (click)="showCreateModal = false; errorMsg = ''; successMsg = ''">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
-            <div class="card-body">
+            <div class="modal-body">
+                <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
+                <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
+
                 <form (ngSubmit)="createRole()" #roleForm="ngForm">
                     <div class="form-group">
                         <label>Nombre del Rol <span class="text-danger">*</span></label>
-                        <input type="text" name="name" [(ngModel)]="newRole.name" required
-                            placeholder="ej: supervisor" />
+                        <input type="text" name="name" [(ngModel)]="newRole.name" required placeholder="ej: supervisor" />
                     </div>
 
                     <div class="form-group">
                         <label>Descripción</label>
-                        <textarea name="description" [(ngModel)]="newRole.description"
-                            placeholder="Descripción de los permisos..." rows="3"></textarea>
+                        <textarea name="description" [(ngModel)]="newRole.description" placeholder="Descripción de los permisos..." rows="3"></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full"
-                        [disabled]="!roleForm.form.valid || isCreating">
+                    <button type="submit" class="btn btn-primary w-full" style="margin-top: 10px;" [disabled]="!roleForm.form.valid || isCreating">
                         <span *ngIf="!isCreating">Guardar Rol</span>
                         <span *ngIf="isCreating">Guardando...</span>
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header Actions idéntico a Dashboard -->
+    <div class="header-actions">
+        <div>
+            <h2 class="section-title">Gestión de Roles</h2>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra los niveles de acceso y permisos del sistema.</p>
+        </div>
+        <button class="btn btn-primary" (click)="showCreateModal = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="margin-right:0.5rem;">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Crear Nuevo Rol
+        </button>
+    </div>
+
+    <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
+        <input type="text" class="modern-search" placeholder="🔍 Buscar rol por nombre o ID..." [(ngModel)]="searchText" style="flex:1;">
+    </div>
+
+    <!-- Tabla Full-Width -->
+    <div class="card glass-panel w-full">
+        <div class="card-body p-0">
+            <!-- Loading State (Skeletons) -->
+            <div class="table-container" *ngIf="isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th><div class="skeleton skeleton-text" style="width: 40px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 150px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 200px;"></div></th>
+                            <th><div class="skeleton skeleton-text" style="width: 80px;"></div></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let i of [1,2,3]">
+                            <td><div class="skeleton skeleton-text" style="width: 30px;"></div></td>
+                            <td><div class="skeleton skeleton-title" style="margin-bottom: 0;"></div></td>
+                            <td><div class="skeleton skeleton-text" style="width: 180px;"></div></td>
+                            <td><div class="skeleton skeleton-text" style="width: 80px; height: 24px; border-radius: 12px;"></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-container" *ngIf="!isLoading">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre del Rol</th>
+                            <th>Descripción</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let role of filteredRoles">
+                            <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{ role.id }}</span></td>
+                            <td><strong><span class="badge badge-primary">{{ role.name }}</span></strong></td>
+                            <td>{{ role.description || 'Sin descripción' }}</td>
+                            <td>
+                                <span class="status-indicator" [class.active]="role.is_active">
+                                    {{ role.is_active ? 'Activo' : 'Inactivo' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr *ngIf="roles.length === 0">
+                            <td colspan="4" class="p-0">
+                                <div class="empty-state">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                    <h4>No hay roles registrados</h4>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

@@ -24,6 +24,7 @@ export class UsersComponent implements OnInit {
     errorMsg = '';
     successMsg = '';
     searchText = '';
+    showCreateModal = false;
 
     get filteredUsers() {
         if (!this.searchText.trim()) return this.users;
@@ -89,8 +90,12 @@ export class UsersComponent implements OnInit {
                 next: () => {
                     this.successMsg = 'Usuario registrado exitosamente.';
                     this.newUser = { email: '', password: '', full_name: '', role_id: '' };
-                    this.loadData(); // Reload list
+                    this.loadData();
                     this.isCreating = false;
+                    setTimeout(() => {
+                        this.showCreateModal = false;
+                        this.successMsg = '';
+                    }, 1500);
                 },
                 error: (err) => {
                     this.errorMsg = err.error?.detail || 'Error al registrar el usuario.';
