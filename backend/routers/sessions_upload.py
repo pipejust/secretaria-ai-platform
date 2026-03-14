@@ -335,12 +335,15 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
 
     action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
 
-    doc = Document()
+    from models import Template
+    from sqlmodel import select
+    import requests
+    import tempfile
+    import os
+    from docxtpl import DocxTemplate
 
-    # Title
-    title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
-    title_run.font.color.rgb = RGBColor(79, 70, 229) # Branding Indigo
-    
+    template_obj = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
+
     import datetime
     
     # 1. Parsear Fecha
@@ -357,58 +360,112 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
     }
     status_str = status_map.get(session_obj.status, session_obj.status.capitalize())
 
-    # Meta
-    doc.add_paragraph(f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
-    doc.add_paragraph(f"Fecha: {formatted_date}")
-    doc.add_paragraph(f"Estado: {status_str}")
-    doc.add_paragraph()
-
-    # Sections
+    # 3. Eliminar etiquetas en inglés de Fireflies
+    clean_summary = ""
     if session_obj.raw_summary:
-        # 3. Eliminar etiquetas en inglés de Fireflies
         clean_summary = session_obj.raw_summary.replace("Notes", "Notas de la Sesión").replace("Action items", "Elementos de Acción")
-        doc.add_heading('Resumen Ejecutivo', level=1)
-        doc.add_paragraph(clean_summary)
 
-    if session_obj.processed_decisions:
-        doc.add_heading('Decisiones Clave', level=1)
-        doc.add_paragraph(session_obj.processed_decisions)
-
-    if session_obj.processed_risks:
-        doc.add_heading('Riesgos Identificados', level=1)
-        doc.add_paragraph(session_obj.processed_risks)
-
-    if session_obj.processed_agreements:
-        doc.add_heading('Acuerdos', level=1)
-        doc.add_paragraph(session_obj.processed_agreements)
-
-    # Action Items Table
-    doc.add_heading('Tareas (Action Items)', level=1)
-    
-    if action_items:
-        table = doc.add_table(rows=1, cols=4)
-        table.style = 'Table Grid'
-        
-        # Header
-        hdr_cells = table.rows[0].cells
-        hdr_cells[0].text = 'Responsable'
-        hdr_cells[1].text = 'Tarea'
-        hdr_cells[2].text = 'Descripción'
-        hdr_cells[3].text = 'Vencimiento'
-        
-        for item in action_items:
-            row_cells = table.add_row().cells
-            row_cells[0].text = f"{item.owner_name} ({item.owner_email})"
-            row_cells[1].text = item.title
-            row_cells[2].text = item.description or ""
-            row_cells[3].text = item.due_date or "Sin fecha"
-    else:
-        doc.add_paragraph("No se detectaron tareas para esta sesión.")
-        
-    # Salvar el documento a un buffer en memoria
     buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
+    doc_generated = False
+
+    if template_obj and template_obj.file_path:
+        try:
+            tmp_path = None
+            if template_obj.file_path.startswith("http"):
+                r = requests.get(template_obj.file_path, stream=True)
+                r.raise_for_status()
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        tmp.write(chunk)
+                    tmp_path = tmp.name
+                doc = DocxTemplate(tmp_path)
+            else:
+                doc = DocxTemplate(template_obj.file_path)
+
+            context = {
+                "title": session_obj.title,
+                "date": formatted_date,
+                "status": status_str,
+                "summary": clean_summary,
+                "decisions": session_obj.processed_decisions or "Sin decisiones",
+                "risks": session_obj.processed_risks or "Sin riesgos",
+                "agreements": session_obj.processed_agreements or "Sin acuerdos",
+            }
+            formatted_items = []
+            for item in action_items:
+                formatted_items.append({
+                    "owner": item.owner_name,
+                    "email": item.owner_email,
+                    "title": item.title,
+                    "description": item.description or "",
+                    "due_date": item.due_date or "Sin fecha",
+                })
+            context["action_items"] = formatted_items
+            
+            doc.render(context)
+            doc.save(buffer)
+            doc_generated = True
+            
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception as e:
+            print(f"Error usando docxtpl: {e}")
+            if 'tmp_path' in locals() and tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    if not doc_generated:
+        doc = Document()
+
+        # Title
+        title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
+        title_run.font.color.rgb = RGBColor(79, 70, 229)
+        
+        # Meta
+        doc.add_paragraph(f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+        doc.add_paragraph(f"Fecha: {formatted_date}")
+        doc.add_paragraph(f"Estado: {status_str}")
+        doc.add_paragraph()
+
+        # Sections
+        if clean_summary:
+            doc.add_heading('Resumen Ejecutivo', level=1)
+            doc.add_paragraph(clean_summary)
+
+        if session_obj.processed_decisions:
+            doc.add_heading('Decisiones Clave', level=1)
+            doc.add_paragraph(session_obj.processed_decisions)
+
+        if session_obj.processed_risks:
+            doc.add_heading('Riesgos Identificados', level=1)
+            doc.add_paragraph(session_obj.processed_risks)
+
+        if session_obj.processed_agreements:
+            doc.add_heading('Acuerdos', level=1)
+            doc.add_paragraph(session_obj.processed_agreements)
+
+        # Action Items Table
+        doc.add_heading('Tareas (Action Items)', level=1)
+        
+        if action_items:
+            table = doc.add_table(rows=1, cols=4)
+            table.style = 'Table Grid'
+            
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = 'Responsable'
+            hdr_cells[1].text = 'Tarea'
+            hdr_cells[2].text = 'Descripción'
+            hdr_cells[3].text = 'Vencimiento'
+            
+            for item in action_items:
+                row_cells = table.add_row().cells
+                row_cells[0].text = f"{item.owner_name} ({item.owner_email})"
+                row_cells[1].text = item.title
+                row_cells[2].text = item.description or ""
+                row_cells[3].text = item.due_date or "Sin fecha"
+        else:
+            doc.add_paragraph("No se detectaron tareas para esta sesión.")
+            
+        doc.save(buffer)
 
     headers = {
         'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{session_obj.title[:20]}.docx"'
