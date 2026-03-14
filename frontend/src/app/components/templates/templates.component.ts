@@ -41,16 +41,22 @@ export class TemplatesComponent implements OnInit {
     }
 
     // Drag & Drop Configurator
-    availableTokens = [
-        { id: '1', label: 'Resumen Ejecutivo', tag: '{{RESUMEN_REUNION}}' },
-        { id: '2', label: 'Lista de Asistentes', tag: '{{ASISTENTES}}' },
-        { id: '3', label: 'Tabla de Tareas/Compromisos', tag: '{{TABLA_TAREAS}}' },
-        { id: '4', label: 'Decisiones Tomadas', tag: '{{DECISIONES}}' },
-        { id: '5', label: 'Riesgos Identificados', tag: '{{RIESGOS}}' }
+    allPossibleTokens = [
+        { id: 'meta', label: 'Cabecera (Título, Fecha, Estado)' },
+        { id: 'summary', label: 'Resumen Ejecutivo' },
+        { id: 'attendees', label: 'Lista de Asistentes' },
+        { id: 'themes', label: 'Temas y Puntos de Discusión' },
+        { id: 'decisions', label: 'Decisiones Clave' },
+        { id: 'risks', label: 'Riesgos Identificados' },
+        { id: 'agreements', label: 'Acuerdos' },
+        { id: 'action_items', label: 'Tabla de Tareas/Compromisos' }
     ];
+    
+    availableTokens: any[] = [];
     activeTokens: any[] = [];
 
     showConfigurator = false;
+    isTraditionalConfigurator = false;
 
     constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef, private router: Router) { }
 
@@ -189,6 +195,39 @@ export class TemplatesComponent implements OnInit {
     }
 
     lastUploadedTemplateId: number | null = null;
+    
+    openConfigurator(template: any) {
+        this.lastUploadedTemplateId = template.id;
+        this.successMsg = '';
+        this.errorMsg = '';
+        
+        let loadedMapping: string[] = [];
+        try {
+            if (template.mapping_config) {
+                loadedMapping = JSON.parse(template.mapping_config);
+            }
+        } catch (e) {
+            loadedMapping = [];
+        }
+
+        // Si ya hay un mapping guardado con formato antiguo (array vacio pero plantilla vieja), 
+        // tal vez requiera isTraditionalConfigurator? No, defaults to blocks unless they want to type tags manually.
+        // If they want to type tags manually they can just leave blocks empty.
+        
+        // Populate activeTokens based on IDs
+        this.activeTokens = [];
+        for (const blockId of loadedMapping) {
+            const found = this.allPossibleTokens.find(t => t.id === blockId);
+            if (found) {
+                this.activeTokens.push({...found});
+            }
+        }
+        
+        // Populate availableTokens with whatever is NOT in activeTokens
+        this.availableTokens = this.allPossibleTokens.filter(at => !loadedMapping.includes(at.id));
+        
+        this.showConfigurator = true;
+    }
 
     confirmMapping() {
         if (!this.lastUploadedTemplateId) {
@@ -197,7 +236,7 @@ export class TemplatesComponent implements OnInit {
         }
 
         const mappingPayload = {
-            mapping_config: JSON.stringify(this.activeTokens)
+            mapping_config: JSON.stringify(this.activeTokens.map(t => t.id))
         };
 
         this.http.put(`${environment.apiUrl}/templates/${this.lastUploadedTemplateId}/mapping`, mappingPayload, {
@@ -205,8 +244,11 @@ export class TemplatesComponent implements OnInit {
         }).subscribe({
             next: () => {
                 this.successMsg = 'Mapeo guardado exitosamente en la base de datos.';
-                this.showConfigurator = false;
-                setTimeout(() => this.successMsg = '', 4000);
+                this.loadData();
+                setTimeout(() => {
+                    this.showConfigurator = false;
+                    this.successMsg = '';
+                }, 2000);
             },
             error: (err) => {
                 this.errorMsg = 'Error al guardar el mapeo: ' + (err.error?.detail || err.message);

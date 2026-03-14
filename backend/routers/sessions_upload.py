@@ -395,52 +395,126 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                     for chunk in r.iter_content(chunk_size=8192):
                         tmp.write(chunk)
                     tmp_path = tmp.name
-                doc = DocxTemplate(tmp_path)
-            else:
-                doc = DocxTemplate(template_obj.file_path)
-
-            context = {
-                "title": session_obj.title,
-                "date": formatted_date,
-                "status": status_str,
-                "summary": clean_summary,
-                "decisions": session_obj.processed_decisions or "Sin decisiones",
-                "risks": session_obj.processed_risks or "Sin riesgos",
-                "agreements": session_obj.processed_agreements or "Sin acuerdos",
-            }
-            
-            # --- Parse arrays ---
-            import json
-            
-            # Attendees
-            try:
-                attendees_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
-            except Exception:
-                attendees_list = []
-            context["attendees"] = attendees_list
-            
-            # Themes
-            try:
-                themes_list = json.loads(session_obj.processed_themes) if session_obj.processed_themes else []
-            except Exception:
-                themes_list = []
-            context["themes"] = themes_list
-            
-            # Action Items
-            formatted_items = []
-            for item in action_items:
-                formatted_items.append({
-                    "owner": item.owner_name,
-                    "email": item.owner_email,
-                    "title": item.title,
-                    "description": item.description or "",
-                    "due_date": item.due_date or "Sin fecha",
-                })
-            context["action_items"] = formatted_items
-            
-            doc.render(context)
-            doc.save(buffer)
-            doc_generated = True
+                import json
+                mapping_blocks = []
+                if template_obj.mapping_config:
+                    try:
+                        mapping_blocks = json.loads(template_obj.mapping_config)
+                    except Exception:
+                        pass
+                
+                if mapping_blocks and len(mapping_blocks) > 0:
+                    from docx import Document
+                    from docx.shared import RGBColor
+                    if tmp_path:
+                        doc = Document(tmp_path)
+                    else:
+                        doc = Document(template_obj.file_path)
+                    
+                    for block_id in mapping_blocks:
+                        if block_id == 'meta':
+                            title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
+                            title_run.font.color.rgb = RGBColor(79, 70, 229)
+                            doc.add_paragraph(f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+                            doc.add_paragraph(f"Fecha: {formatted_date}")
+                            doc.add_paragraph(f"Estado: {status_str}")
+                            doc.add_paragraph()
+                        elif block_id == 'summary' and clean_summary:
+                            doc.add_heading('Resumen Ejecutivo', level=1)
+                            doc.add_paragraph(clean_summary)
+                        elif block_id == 'decisions' and session_obj.processed_decisions:
+                            doc.add_heading('Decisiones Clave', level=1)
+                            doc.add_paragraph(session_obj.processed_decisions)
+                        elif block_id == 'risks' and session_obj.processed_risks:
+                            doc.add_heading('Riesgos Identificados', level=1)
+                            doc.add_paragraph(session_obj.processed_risks)
+                        elif block_id == 'agreements' and session_obj.processed_agreements:
+                            doc.add_heading('Acuerdos', level=1)
+                            doc.add_paragraph(session_obj.processed_agreements)
+                        elif block_id == 'attendees':
+                            try:
+                                att_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
+                                if att_list:
+                                    doc.add_heading('Asistentes', level=1)
+                                    for att in att_list:
+                                        doc.add_paragraph(f"- {att.get('name', '')} ({att.get('role', '')}) - {att.get('entity', '')}")
+                            except Exception:
+                                pass
+                        elif block_id == 'themes':
+                            try:
+                                thm_list = json.loads(session_obj.processed_themes) if session_obj.processed_themes else []
+                                if thm_list:
+                                    doc.add_heading('Temas y Puntos de Discusión', level=1)
+                                    for thm in thm_list:
+                                        doc.add_heading(thm.get('theme_name', ''), level=2)
+                                        for pt in thm.get('discussion_points', []):
+                                            doc.add_paragraph(f"• {pt}")
+                            except Exception:
+                                pass
+                        elif block_id == 'action_items' and action_items:
+                            doc.add_heading('Tareas (Action Items)', level=1)
+                            table = doc.add_table(rows=1, cols=4)
+                            table.style = 'Table Grid'
+                            hdr_cells = table.rows[0].cells
+                            hdr_cells[0].text = 'Responsable'
+                            hdr_cells[1].text = 'Tarea'
+                            hdr_cells[2].text = 'Descripción'
+                            hdr_cells[3].text = 'Vencimiento'
+                            for item in action_items:
+                                row_cells = table.add_row().cells
+                                row_cells[0].text = f"{item.owner_name} ({item.owner_email})"
+                                row_cells[1].text = item.title
+                                row_cells[2].text = item.description or ""
+                                row_cells[3].text = item.due_date or "Sin fecha"
+                    
+                    doc.save(buffer)
+                    doc_generated = True
+                else:
+                    if tmp_path:
+                        doc = DocxTemplate(tmp_path)
+                    else:
+                        doc = DocxTemplate(template_obj.file_path)
+    
+                    context = {
+                        "title": session_obj.title,
+                        "date": formatted_date,
+                        "status": status_str,
+                        "summary": clean_summary,
+                        "decisions": session_obj.processed_decisions or "Sin decisiones",
+                        "risks": session_obj.processed_risks or "Sin riesgos",
+                        "agreements": session_obj.processed_agreements or "Sin acuerdos",
+                    }
+                    
+                    # --- Parse arrays ---
+                    # Attendees
+                    try:
+                        attendees_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
+                    except Exception:
+                        attendees_list = []
+                    context["attendees"] = attendees_list
+                    
+                    # Themes
+                    try:
+                        themes_list = json.loads(session_obj.processed_themes) if session_obj.processed_themes else []
+                    except Exception:
+                        themes_list = []
+                    context["themes"] = themes_list
+                    
+                    # Action Items
+                    formatted_items = []
+                    for item in action_items:
+                        formatted_items.append({
+                            "owner": item.owner_name,
+                            "email": item.owner_email,
+                            "title": item.title,
+                            "description": item.description or "",
+                            "due_date": item.due_date or "Sin fecha",
+                        })
+                    context["action_items"] = formatted_items
+                    
+                    doc.render(context)
+                    doc.save(buffer)
+                    doc_generated = True
             
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
