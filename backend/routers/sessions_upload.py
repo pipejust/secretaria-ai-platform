@@ -75,7 +75,11 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
 
     # 2. Llamamos a Groq
     groq_svc = GroqService()
-    structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+    try:
+        structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error conectando con la IA (Groq): {str(e)}")
+
 
     # 3. Insertamos Nuevas
     action_items_data = structured_data.get("action_items", [])
@@ -139,7 +143,12 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
         db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
         project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
 
-    structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+    structured_data = {}
+    try:
+        structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error conectando con la IA (Groq): {str(e)}")
+
 
     summary = structured_data.get("summary")
     if summary is not None:
