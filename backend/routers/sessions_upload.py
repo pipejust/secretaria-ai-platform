@@ -413,6 +413,15 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
 
     buffer = io.BytesIO()
     doc_generated = False
+    
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    def add_justified_paragraph(d, text, style=None):
+        try:
+            p = d.add_paragraph(text, style=style)
+        except Exception:
+            p = d.add_paragraph(text)
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        return p
 
     if template_obj and template_obj.file_path:
         try:
@@ -444,29 +453,29 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                         if block_id == 'meta':
                             title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
                             title_run.font.color.rgb = RGBColor(79, 70, 229)
-                            doc.add_paragraph(f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
-                            doc.add_paragraph(f"Fecha: {formatted_date}")
-                            doc.add_paragraph(f"Estado: {status_str}")
+                            add_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+                            add_justified_paragraph(doc, f"Fecha: {formatted_date}")
+                            add_justified_paragraph(doc, f"Estado: {status_str}")
                             doc.add_paragraph()
                         elif block_id == 'summary' and clean_summary:
                             doc.add_heading('Resumen Ejecutivo', level=1)
-                            doc.add_paragraph(clean_summary)
+                            add_justified_paragraph(doc, clean_summary)
                         elif block_id == 'decisions' and session_obj.processed_decisions:
                             doc.add_heading('Decisiones Clave', level=1)
-                            doc.add_paragraph(session_obj.processed_decisions)
+                            add_justified_paragraph(doc, session_obj.processed_decisions)
                         elif block_id == 'risks' and session_obj.processed_risks:
                             doc.add_heading('Riesgos Identificados', level=1)
-                            doc.add_paragraph(session_obj.processed_risks)
+                            add_justified_paragraph(doc, session_obj.processed_risks)
                         elif block_id == 'agreements' and session_obj.processed_agreements:
                             doc.add_heading('Acuerdos', level=1)
-                            doc.add_paragraph(session_obj.processed_agreements)
+                            add_justified_paragraph(doc, session_obj.processed_agreements)
                         elif block_id == 'attendees':
                             try:
                                 att_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
                                 if att_list:
                                     doc.add_heading('Asistentes', level=1)
                                     for att in att_list:
-                                        doc.add_paragraph(f"- {att.get('name', '')} ({att.get('role', '')}) - {att.get('entity', '')}")
+                                        add_justified_paragraph(doc, f"- {att.get('name', '')} ({att.get('role', '')}) - {att.get('entity', '')}")
                             except Exception:
                                 pass
                         elif block_id == 'themes':
@@ -477,13 +486,16 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                                     for thm in thm_list:
                                         doc.add_heading(thm.get('theme_name', ''), level=2)
                                         for pt in thm.get('discussion_points', []):
-                                            doc.add_paragraph(f"• {pt}")
+                                            add_justified_paragraph(doc, f"• {pt}")
                             except Exception:
                                 pass
                         elif block_id == 'action_items' and action_items:
                             doc.add_heading('Tareas (Action Items)', level=1)
                             table = doc.add_table(rows=1, cols=4)
-                            table.style = 'Table Grid'
+                            try:
+                                table.style = 'Table Grid'
+                            except Exception:
+                                pass
                             hdr_cells = table.rows[0].cells
                             hdr_cells[0].text = 'Responsable'
                             hdr_cells[1].text = 'Tarea'
@@ -560,34 +572,37 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
         title_run.font.color.rgb = RGBColor(79, 70, 229)
         
         # Meta
-        doc.add_paragraph(f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
-        doc.add_paragraph(f"Fecha: {formatted_date}")
-        doc.add_paragraph(f"Estado: {status_str}")
+        add_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+        add_justified_paragraph(doc, f"Fecha: {formatted_date}")
+        add_justified_paragraph(doc, f"Estado: {status_str}")
         doc.add_paragraph()
 
         # Sections
         if clean_summary:
             doc.add_heading('Resumen Ejecutivo', level=1)
-            doc.add_paragraph(clean_summary)
+            add_justified_paragraph(doc, clean_summary)
 
         if session_obj.processed_decisions:
             doc.add_heading('Decisiones Clave', level=1)
-            doc.add_paragraph(session_obj.processed_decisions)
+            add_justified_paragraph(doc, session_obj.processed_decisions)
 
         if session_obj.processed_risks:
             doc.add_heading('Riesgos Identificados', level=1)
-            doc.add_paragraph(session_obj.processed_risks)
+            add_justified_paragraph(doc, session_obj.processed_risks)
 
         if session_obj.processed_agreements:
             doc.add_heading('Acuerdos', level=1)
-            doc.add_paragraph(session_obj.processed_agreements)
+            add_justified_paragraph(doc, session_obj.processed_agreements)
 
         # Action Items Table
         doc.add_heading('Tareas (Action Items)', level=1)
         
         if action_items:
             table = doc.add_table(rows=1, cols=4)
-            table.style = 'Table Grid'
+            try:
+                table.style = 'Table Grid'
+            except Exception:
+                pass
             
             hdr_cells = table.rows[0].cells
             hdr_cells[0].text = 'Responsable'
@@ -602,7 +617,7 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                 row_cells[2].text = item.description or ""
                 row_cells[3].text = item.due_date or "Sin fecha"
         else:
-            doc.add_paragraph("No se detectaron tareas para esta sesión.")
+            add_justified_paragraph(doc, "No se detectaron tareas para esta sesión.")
             
         doc.save(buffer)
 
