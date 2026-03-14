@@ -43,7 +43,7 @@ typing_extensions==4.15.0
 uvicorn==0.41.0
 supabase>=2.3.0
 
-sendgrid>=6.11.0
+resend
 jinja2>=3.1.0
 docxtpl
 requests

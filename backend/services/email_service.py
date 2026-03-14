@@ -1,10 +1,9 @@
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+import resend
 from jinja2 import Environment, FileSystemLoader
 
 # En un entorno real, manejar la config via `config.py/settings`
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "no-reply@secretaria-ai.com")
 
 class EmailService:
@@ -13,27 +12,26 @@ class EmailService:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         templates_dir = os.path.join(os.path.dirname(current_dir), 'templates')
         self.jinja_env = Environment(loader=FileSystemLoader(templates_dir))
-        self.sg = None
-        if SENDGRID_API_KEY:
-            self.sg = SendGridAPIClient(SENDGRID_API_KEY)
+        if RESEND_API_KEY:
+            resend.api_key = RESEND_API_KEY
 
     async def _send_html_email(self, to_email: str, subject: str, html_content: str):
-        """Método interno para despachar el correo utilizando SendGrid. Imprime el HTML en modo dev."""
-        message = Mail(
-            from_email=FROM_EMAIL,
-            to_emails=to_email,
-            subject=subject,
-            html_content=html_content
-        )
-        
-        if self.sg:
+        """Método interno para despachar el correo utilizando Resend. Imprime el HTML en modo dev."""
+        if RESEND_API_KEY:
             try:
-                response = self.sg.send(message)
-                print(f"✅ Email enviado a {to_email} (Status: {response.status_code})")
+                response = resend.Emails.send({
+                    "from": FROM_EMAIL,
+                    "to": to_email,
+                    "subject": subject,
+                    "html": html_content
+                })
+                print(f"✅ Email enviado a {to_email} (ID: {response.get('id', 'Unknown')})")
                 return True
             except Exception as e:
                 print(f"❌ Error enviando email: {str(e)}")
                 raise e
+        
+
         else:
             # Modo Desarrollo: Simular envío e imprimir HTML en consola
             print(f"--- 📧 SIMULACIÓN DE ENVÍO DE EMAIL ---")
