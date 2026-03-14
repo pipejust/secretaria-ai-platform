@@ -102,6 +102,40 @@
                 </div>
             </div>
 
+            <div class="mt-4">
+                <h4 class="mb-3" style="font-size:1rem; color: #1e293b;">Listas Dinámicas</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Para iterar listas (como Participantes, Tareas o Temas), debes crear una tabla en Word e insertar la etiqueta de inicio y fin (<code>{{ '{' }}%p for item in array %{{ '}' }}</code>) en la primera y última celda, y las variables de cada item en medio de ellas.</p>
+                <div class="grid-layout cols-1 gap-3 mb-4">
+                    <div class="drag-box" style="padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;">
+                        <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Asistentes / Participantes de la Reunión</span>
+                        <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{%p for a in attendees %}')" title="Clic para copiar">Cíclo Inicio: {{ '{' }}%p for a in attendees %{{ '}' }}</code>
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{{ a.name }}')" title="Clic para copiar">{{ '{' }}{{ '{' }} a.name {{ '}' }}{{ '}' }}</code>
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{{ a.role }}')" title="Clic para copiar">{{ '{' }}{{ '{' }} a.role {{ '}' }}{{ '}' }}</code>
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{{ a.entity }}')" title="Clic para copiar">{{ '{' }}{{ '{' }} a.entity {{ '}' }}{{ '}' }}</code>
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{%p endfor %}')" title="Clic para copiar">Cíclo Fin: {{ '{' }}%p endfor %{{ '}' }}</code>
+                        </div>
+                    </div>
+
+                    <div class="drag-box" style="padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;">
+                        <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Temas Tratados y Puntos de Discusión</span>
+                        <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{%p for t in themes %}')" title="Clic para copiar">Cíclo Inicio: {{ '{' }}%p for t in themes %{{ '}' }}</code>
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{{ t.theme_name }}')" title="Clic para copiar">Título Tema: {{ '{' }}{{ '{' }} t.theme_name {{ '}' }}{{ '}' }}</code>
+                        </div>
+                        <div style="margin-top:0.5rem; font-size: 0.8rem; color: #64748b;">Para los puntos de cada tema (Sublista):</div>
+                        <div style="display:flex; gap: 0.5rem; flex-wrap:wrap; margin-top: 0.25rem;">
+                            <code class="token-tag" style="cursor: pointer; background:#fefce8; color:#ca8a04" (click)="copyTag('{%p for d in t.discussion_points %}')" title="Clic para copiar">SubCíclo Inicio: {{ '{' }}%p for d in t.discussion_points %{{ '}' }}</code>
+                            <code class="token-tag" style="cursor: pointer; background:#fefce8; color:#ca8a04" (click)="copyTag('{{ d }}')" title="Clic para copiar">Punto (item): {{ '{' }}{{ '{' }} d {{ '}' }}{{ '}' }}</code>
+                            <code class="token-tag" style="cursor: pointer; background:#fefce8; color:#ca8a04" (click)="copyTag('{%p endfor %}')" title="Clic para copiar">SubCíclo Fin: {{ '{' }}%p endfor %{{ '}' }}</code>
+                        </div>
+                        <div style="display:flex; gap: 0.5rem; flex-wrap:wrap; margin-top: 0.5rem;">
+                            <code class="token-tag" style="cursor: pointer;" (click)="copyTag('{%p endfor %}')" title="Clic para copiar">Cíclo Fin: {{ '{' }}%p endfor %{{ '}' }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="mt-4 flex justify-end" style="gap:1rem;">
                 <button class="btn btn-primary" (click)="showConfigurator = false; showUploadModal = false; successMsg=''">Cerrar Asistente</button>
             </div>

@@ -98,6 +98,9 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
                 new_session.processed_decisions = structured_data.get("decisions", "")
                 new_session.processed_risks = structured_data.get("risks", "")
                 new_session.processed_agreements = structured_data.get("agreements", "")
+                import json
+                new_session.processed_attendees = json.dumps(structured_data.get("attendees", []), ensure_ascii=False)
+                new_session.processed_themes = json.dumps(structured_data.get("themes", []), ensure_ascii=False)
                 db.add(new_session)
                 db.commit()
 

@@ -141,6 +141,10 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Regenerate
     session_obj.processed_decisions = structured_data.get("decisions", session_obj.processed_decisions)
     session_obj.processed_risks = structured_data.get("risks", session_obj.processed_risks)
     session_obj.processed_agreements = structured_data.get("agreements", session_obj.processed_agreements)
+    
+    import json
+    session_obj.processed_attendees = json.dumps(structured_data.get("attendees", []), ensure_ascii=False)
+    session_obj.processed_themes = json.dumps(structured_data.get("themes", []), ensure_ascii=False)
 
     db.add(session_obj)
     db.commit()
@@ -152,7 +156,9 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Regenerate
             "raw_summary": session_obj.raw_summary,
             "processed_decisions": session_obj.processed_decisions,
             "processed_risks": session_obj.processed_risks,
-            "processed_agreements": session_obj.processed_agreements
+            "processed_agreements": session_obj.processed_agreements,
+            "processed_attendees": session_obj.processed_attendees,
+            "processed_themes": session_obj.processed_themes
         }
     }
 
@@ -219,7 +225,9 @@ async def upload_manual_session(
             raw_summary="",
             processed_decisions="",
             processed_risks="",
-            processed_agreements=""
+            processed_agreements="",
+            processed_attendees="[]",
+            processed_themes="[]"
         )
         
         session.add(new_session)
@@ -400,6 +408,25 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                 "risks": session_obj.processed_risks or "Sin riesgos",
                 "agreements": session_obj.processed_agreements or "Sin acuerdos",
             }
+            
+            # --- Parse arrays ---
+            import json
+            
+            # Attendees
+            try:
+                attendees_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
+            except Exception:
+                attendees_list = []
+            context["attendees"] = attendees_list
+            
+            # Themes
+            try:
+                themes_list = json.loads(session_obj.processed_themes) if session_obj.processed_themes else []
+            except Exception:
+                themes_list = []
+            context["themes"] = themes_list
+            
+            # Action Items
             formatted_items = []
             for item in action_items:
                 formatted_items.append({
