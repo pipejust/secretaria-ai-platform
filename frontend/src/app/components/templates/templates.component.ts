@@ -200,6 +200,7 @@ export class TemplatesComponent implements OnInit {
         this.lastUploadedTemplateId = template.id;
         this.successMsg = '';
         this.errorMsg = '';
+        this.isTraditionalConfigurator = false; // Reset toggle state
         
         let loadedMapping: string[] = [];
         try {
