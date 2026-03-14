@@ -135,6 +135,17 @@ class GroqService:
             try:
                 content_str = result_json["choices"][0]["message"]["content"]
                 parsed_data = json.loads(content_str)
+                
+                # Defensive check: Llama sometimes wraps output in "properties" because of the schema prompt
+                if "properties" in parsed_data and isinstance(parsed_data["properties"], dict) and "summary" in parsed_data.get("properties", {}):
+                    parsed_data = parsed_data["properties"]
+                
+                # Defensive check 2: if it wrapped it in a single root object like {"response": {...}}
+                if isinstance(parsed_data, dict) and len(parsed_data) == 1:
+                    first_key = list(parsed_data.keys())[0]
+                    if isinstance(parsed_data[first_key], dict) and ("summary" in parsed_data[first_key] or "action_items" in parsed_data[first_key]):
+                        parsed_data = parsed_data[first_key]
+                        
                 return parsed_data
             except Exception as e:
                 # Si falla el parseo, lanzar error
