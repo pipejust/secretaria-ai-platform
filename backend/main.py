@@ -21,6 +21,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:52481",
         "http://127.0.0.1:52481",
+        "http://localhost:4200",
+        "http://127.0.0.1:4200",
         "https://secretaria-api.vercel.app",
         "https://frontend-alpha-gules-63.vercel.app",
         "https://secretaria-ai-platform.vercel.app",
