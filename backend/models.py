@@ -79,6 +79,8 @@ class MeetingSession(SQLModel, table=True):
     processed_decisions: str = Field(default="")
     processed_risks: str = Field(default="")
     processed_agreements: str = Field(default="")
+    processed_attendees: str = Field(default="")
+    processed_themes: str = Field(default="")
     
     status: str = Field(default="pending", description="'pending', 'approved', 'processed'")
     

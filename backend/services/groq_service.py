@@ -25,6 +25,35 @@ class GroqService:
                 "decisions": {"type": "string"},
                 "risks": {"type": "string"},
                 "agreements": {"type": "string"},
+                "attendees": {
+                    "type": "array",
+                    "description": "Lista de participantes de la reunión, extrayendo nombre, cargo y entidad/empresa si se mencionan.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "role": {"type": "string", "description": "Cargo o rol del participante"},
+                            "entity": {"type": "string", "description": "Empresa o entidad a la que pertenece"}
+                        },
+                        "required": ["name"]
+                    }
+                },
+                "themes": {
+                    "type": "array",
+                    "description": "Lista de temas principales discutidos en la reunión, con sus respectivos puntos de discusión.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "theme_name": {"type": "string", "description": "Título corto del tema discutido, ej. 'Revisión servidor y WAR'"},
+                            "discussion_points": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Lista de los detalles o puntos principales hablados en este tema específico"
+                            }
+                        },
+                        "required": ["theme_name", "discussion_points"]
+                    }
+                },
                 "action_items": {
                     "type": "array",
                     "items": {
@@ -40,7 +69,7 @@ class GroqService:
                     }
                 }
             },
-            "required": ["summary", "decisions", "risks", "agreements", "action_items"]
+            "required": ["summary", "decisions", "risks", "agreements", "attendees", "themes", "action_items"]
         }
 
     async def process_transcript(self, transcript: str, project_contacts: list = None) -> dict:
@@ -62,7 +91,13 @@ class GroqService:
 
         prompt = f"""
         Eres un asistente experto que procesa transcripciones de reuniones.
-        Analiza el siguiente texto y extrae un resumen, las decisiones clave, los riesgos identificados, los acuerdos generales y las tareas accionables.
+        Analiza el siguiente texto y extrae un resumen general, los TEMAS ESPECÍFICOS tratados con sus detalles, las decisiones clave globales, los riesgos identificados, los acuerdos generales, las TAREAS accionables y los ASISTENTES de la reunión.
+        
+        INSTRUCCIONES CLAVE PARA ASISTENTES ('attendees'):
+        Extrae los nombres de las personas que participaron. Si se menciona su cargo o la empresa a la que pertenecen, inclúyelo también.
+        
+        INSTRUCCIONES CLAVE PARA TEMAS ('themes'):
+        Divide la reunión en los diferentes temas puntuales que se trataron. Para cada tema, extrae una lista viñeteada de los puntos de discusión específicos ('discussion_points').
         
         INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS):
         ES OBLIGATORIO extraer absolutamente cualquier compromiso, revisión, sugerencia de acción futura, o actividad explícita o implícita discutida, y categorizarla como una Tarea ('action_items'). 
