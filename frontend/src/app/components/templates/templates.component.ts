@@ -205,15 +205,14 @@ export class TemplatesComponent implements OnInit {
         let loadedMapping: string[] = [];
         try {
             if (template.mapping_config) {
-                loadedMapping = JSON.parse(template.mapping_config);
+                const parsed = JSON.parse(template.mapping_config);
+                if (Array.isArray(parsed)) {
+                    loadedMapping = parsed;
+                }
             }
         } catch (e) {
             loadedMapping = [];
         }
-
-        // Si ya hay un mapping guardado con formato antiguo (array vacio pero plantilla vieja), 
-        // tal vez requiera isTraditionalConfigurator? No, defaults to blocks unless they want to type tags manually.
-        // If they want to type tags manually they can just leave blocks empty.
         
         // Populate activeTokens based on IDs
         this.activeTokens = [];
