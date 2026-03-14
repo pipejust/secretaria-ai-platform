@@ -77,12 +77,16 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: RegenerateP
     groq_svc = GroqService()
     structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
 
-    # 3. Borramos Tareas Anteriores
-    db.exec(delete(ActionItem).where(ActionItem.session_id == session_id))
-    db.commit()
-
-    # 4. Insertamos Nuevas
+    # 3. Insertamos Nuevas
     action_items_data = structured_data.get("action_items", [])
+    if action_items_data is None:
+        action_items_data = []
+
+    if action_items_data:
+        # Solo borramos las anteriores si realmente vienen nuevas
+        db.exec(delete(ActionItem).where(ActionItem.session_id == session_id))
+        db.commit()
+
     new_items_output = []
     for item_data in action_items_data:
         action_item = ActionItem(
@@ -137,14 +141,30 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Regenerate
 
     structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
 
-    session_obj.raw_summary = structured_data.get("summary", session_obj.raw_summary)
-    session_obj.processed_decisions = structured_data.get("decisions", session_obj.processed_decisions)
-    session_obj.processed_risks = structured_data.get("risks", session_obj.processed_risks)
-    session_obj.processed_agreements = structured_data.get("agreements", session_obj.processed_agreements)
+    summary = structured_data.get("summary")
+    if summary is not None:
+        session_obj.raw_summary = summary
+        
+    decisions = structured_data.get("decisions")
+    if decisions is not None:
+        session_obj.processed_decisions = decisions
+        
+    risks = structured_data.get("risks")
+    if risks is not None:
+        session_obj.processed_risks = risks
+        
+    agreements = structured_data.get("agreements")
+    if agreements is not None:
+        session_obj.processed_agreements = agreements
     
     import json
-    session_obj.processed_attendees = json.dumps(structured_data.get("attendees", []), ensure_ascii=False)
-    session_obj.processed_themes = json.dumps(structured_data.get("themes", []), ensure_ascii=False)
+    attendees = structured_data.get("attendees")
+    if attendees is not None:
+        session_obj.processed_attendees = json.dumps(attendees, ensure_ascii=False)
+        
+    themes = structured_data.get("themes")
+    if themes is not None:
+        session_obj.processed_themes = json.dumps(themes, ensure_ascii=False)
 
     db.add(session_obj)
     db.commit()
