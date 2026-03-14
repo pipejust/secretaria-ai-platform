@@ -141,18 +141,19 @@ label {
 
 /* ================== MODERN INPUTS & FILTERS ================== */
 .modern-search, .glass-select {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
   color: var(--text-main);
-  padding: 0.65rem 1rem;
+  padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
   transition: var(--transition);
+  font-weight: 500;
 }
 
 .modern-search:focus, .glass-select:focus {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
   outline: none;
 }
 
@@ -305,6 +306,23 @@ label {
   border-bottom: 1px solid var(--border-color);
   border-top: 1px solid var(--border-color);
   padding: 1rem 2rem;
+}
+
+.data-table th[style*="cursor"], 
+.data-table th[style*="cursor: pointer"],
+.data-table th[style*="cursor:pointer"] {
+  transition: background 0.2s, color 0.2s;
+}
+
+.data-table th[style*="cursor"]:hover,
+.data-table th[style*="cursor: pointer"]:hover,
+.data-table th[style*="cursor:pointer"]:hover {
+  background: #f1f5f9;
+  color: var(--accent-color);
+}
+
+.data-table tbody tr {
+  transition: background 0.2s;
 }
 
 .data-table tbody tr:hover {

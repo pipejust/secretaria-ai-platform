@@ -54,7 +54,14 @@ export class DashboardComponent implements OnInit {
 
         this.http.get<any[]>(`${environment.apiUrl}/api/sessions/`).subscribe({
             next: (data) => {
-                this.sessions = data;
+                // Ensure dates are parsed correctly
+                this.sessions = data.map(s => {
+                    let parsedDate = s.date;
+                    if (typeof parsedDate === 'string' && !isNaN(Number(parsedDate))) {
+                        parsedDate = Number(parsedDate);
+                    }
+                    return { ...s, date: parsedDate };
+                });
                 this.isLoading = false;
                 this.cdr.detectChanges();
             },
@@ -106,8 +113,10 @@ export class DashboardComponent implements OnInit {
 
             // Normalize values for sorting
             if (this.sortColumn === 'date') {
-                valA = new Date(valA).getTime();
-                valB = new Date(valB).getTime();
+                if (typeof valA === 'string' && !isNaN(Number(valA))) valA = Number(valA);
+                if (typeof valB === 'string' && !isNaN(Number(valB))) valB = Number(valB);
+                valA = new Date(valA).getTime() || 0;
+                valB = new Date(valB).getTime() || 0;
             } else if (typeof valA === 'string') {
                 valA = valA.toLowerCase();
                 valB = valB.toLowerCase();

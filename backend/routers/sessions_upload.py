@@ -105,6 +105,47 @@ async def regenerate_tasks_from_transcript(session_id: int, db: Session = Depend
 
     return {"status": "success", "action_items": new_items_output}
 
+@router.post("/{session_id}/regenerate_fields")
+async def regenerate_fields_from_transcript(session_id: int, db: Session = Depends(get_session)):
+    from services.groq_service import GroqService
+
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if not session_obj.raw_transcript:
+        raise HTTPException(status_code=400, detail="No transcript available to regenerate fields from.")
+
+    groq_svc = GroqService()
+    # Enviamos solo con los contactos requeridos si existen (para tareas) aunque aquí saquemos los demás campos
+    project_contacts = []
+    if session_obj.project_id:
+        from sqlmodel import select
+        from models import ProjectContact
+        db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
+        project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
+
+    structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+
+    session_obj.raw_summary = structured_data.get("summary", session_obj.raw_summary)
+    session_obj.processed_decisions = structured_data.get("decisions", session_obj.processed_decisions)
+    session_obj.processed_risks = structured_data.get("risks", session_obj.processed_risks)
+    session_obj.processed_agreements = structured_data.get("agreements", session_obj.processed_agreements)
+
+    db.add(session_obj)
+    db.commit()
+    db.refresh(session_obj)
+
+    return {
+        "status": "success",
+        "fields": {
+            "raw_summary": session_obj.raw_summary,
+            "processed_decisions": session_obj.processed_decisions,
+            "processed_risks": session_obj.processed_risks,
+            "processed_agreements": session_obj.processed_agreements
+        }
+    }
+
 @router.put("/{session_id}")
 def update_session_content(session_id: int, payload: SessionUpdate, db: Session = Depends(get_session)):
     """Manually update the text content of a curated session."""

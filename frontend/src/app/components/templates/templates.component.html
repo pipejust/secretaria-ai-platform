@@ -1,112 +1,113 @@
+<!-- Modal para Cargar Plantilla -->
+<div class="modal-overlay" *ngIf="showUploadModal && !showConfigurator">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Cargar Plantilla</h3>
+            <button class="btn-close" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
+            <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
+
+            <form (ngSubmit)="uploadFile()" #uploadForm="ngForm">
+                <div class="form-group mb-4">
+                    <label>Proyecto Destino <span class="text-danger">*</span></label>
+                    <select name="project_id" [(ngModel)]="selectedProjectId" required class="form-select glass-select">
+                        <option value="" disabled selected>Asignar a un Proyecto</option>
+                        <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label>Subir Documento (Solo .docx)</label>
+                    <div class="file-drop-area">
+                        <input type="file" class="file-input" (change)="onFileSelected($event)" accept=".docx" />
+                        <div class="file-text" *ngIf="!selectedFile">Haz clic para buscar o arrastra el .docx aquí</div>
+                        <div class="file-text" *ngIf="selectedFile" style="color:var(--accent-color); font-weight:600;">
+                            {{ selectedFile.name }}
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-full" [disabled]="!selectedFile || !selectedProjectId || isUploading">
+                    <span *ngIf="!isUploading">Subir Plantilla de Word</span>
+                    <span *ngIf="isUploading">Cargando...</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para el Configurador Drag&Drop -->
+<div class="modal-overlay" *ngIf="showConfigurator">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header" style="background: var(--accent-color); color: white; border-bottom: none;">
+            <div>
+                <h3 style="margin: 0; color: white;">Mapeo de Variables Inteligentes (Plantilla Word)</h3>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.85rem; font-weight: normal;">
+                    Arrastra las variables insertadas en tu Word hacia la zona activa (derecha) para indicarle al sistema qué datos inyectar. Clic para copiar.
+                </p>
+            </div>
+            <button class="btn-close" (click)="showConfigurator = false; showUploadModal = false" style="background: rgba(255,255,255,0.2); color: white;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="modal-body p-0">
+            <div class="grid-layout cols-2 gap-0" style="margin: 0; display:flex;">
+                <!-- Lista de Disponibles -->
+                <div class="p-4" style="flex:1; border-right: 1px solid var(--border-color); background: #f8fafc;">
+                    <h4 class="mb-3" style="font-size:1rem;">Variables Disponibles</h4>
+                    <div cdkDropList #availableList="cdkDropList" [cdkDropListData]="availableTokens"
+                        [cdkDropListConnectedTo]="[activeList]" class="drag-list" (cdkDropListDropped)="drop($event)">
+                        <div class="drag-box" *ngFor="let token of availableTokens" cdkDrag>
+                            <div class="drag-handle" cdkDragHandle>
+                                <svg width="20px" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"></path>
+                                </svg>
+                            </div>
+                            <div class="token-info flex-1">
+                                <span class="token-label" style="font-size:0.9rem;">{{ token.label }}</span>
+                                <code class="token-tag" (click)="copyTag(token.tag)" title="Clic para copiar">{{ token.tag }}</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Activos -->
+                <div class="p-4" style="flex:1;">
+                    <h4 class="mb-3" style="font-size:1rem;">Variables Activadas</h4>
+                    <div cdkDropList #activeList="cdkDropList" [cdkDropListData]="activeTokens"
+                        [cdkDropListConnectedTo]="[availableList]" class="drag-list drop-zone-active"
+                        (cdkDropListDropped)="drop($event)" style="min-height: 250px;">
+                        <div class="empty-drop-msg" *ngIf="activeTokens.length === 0">
+                            Arrastra aquí las variables que usarás.
+                        </div>
+                        <div class="drag-box box-active" *ngFor="let token of activeTokens" cdkDrag>
+                            <div class="drag-handle" cdkDragHandle>
+                                <svg width="20px" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"></path>
+                                </svg>
+                            </div>
+                            <div class="token-info flex-1">
+                                <span class="token-label" style="font-size:0.9rem;">{{ token.label }}</span>
+                                <code class="token-tag" (click)="copyTag(token.tag)" title="Clic para copiar">{{ token.tag }}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-between align-items-center" style="gap:1rem;">
+                        <span class="text-muted text-sm" style="flex:1; font-size:0.8rem; line-height:1.2;">El motor renderizará estas etiquetas nativamente.</span>
+                        <button class="btn btn-primary" (click)="showConfigurator = false; showUploadModal = false;">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="fade-in">
-    <!-- Modal para Cargar Plantilla -->
-    <div class="modal-overlay" *ngIf="showUploadModal && !showConfigurator">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Cargar Plantilla</h3>
-                <button class="btn-close" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
-                <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
-
-                <form (ngSubmit)="uploadFile()" #uploadForm="ngForm">
-                    <div class="form-group mb-4">
-                        <label>Proyecto Destino <span class="text-danger">*</span></label>
-                        <select name="project_id" [(ngModel)]="selectedProjectId" required class="form-select glass-select">
-                            <option value="" disabled selected>Asignar a un Proyecto</option>
-                            <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group mb-4">
-                        <label>Subir Documento (Solo .docx)</label>
-                        <div class="file-drop-area">
-                            <input type="file" class="file-input" (change)="onFileSelected($event)" accept=".docx" />
-                            <div class="file-text" *ngIf="!selectedFile">Haz clic para buscar o arrastra el .docx aquí</div>
-                            <div class="file-text" *ngIf="selectedFile" style="color:var(--accent-color); font-weight:600;">
-                                {{ selectedFile.name }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-full" [disabled]="!selectedFile || !selectedProjectId || isUploading">
-                        <span *ngIf="!isUploading">Subir Plantilla de Word</span>
-                        <span *ngIf="isUploading">Cargando...</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para el Configurador Drag&Drop -->
-    <div class="modal-overlay" *ngIf="showConfigurator">
-        <div class="modal-content" style="max-width: 800px;">
-            <div class="modal-header" style="background: var(--accent-color); color: white; border-bottom: none;">
-                <div>
-                    <h3 style="margin: 0; color: white;">Mapeo de Variables Inteligentes (Plantilla Word)</h3>
-                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.85rem; font-weight: normal;">
-                        Arrastra las variables insertadas en tu Word hacia la zona activa (derecha) para indicarle al sistema qué datos inyectar. Clic para copiar.
-                    </p>
-                </div>
-                <button class="btn-close" (click)="showConfigurator = false; showUploadModal = false" style="background: rgba(255,255,255,0.2); color: white;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="grid-layout cols-2 gap-0" style="margin: 0; display:flex;">
-                    <!-- Lista de Disponibles -->
-                    <div class="p-4" style="flex:1; border-right: 1px solid var(--border-color); background: #f8fafc;">
-                        <h4 class="mb-3" style="font-size:1rem;">Variables Disponibles</h4>
-                        <div cdkDropList #availableList="cdkDropList" [cdkDropListData]="availableTokens"
-                            [cdkDropListConnectedTo]="[activeList]" class="drag-list" (cdkDropListDropped)="drop($event)">
-                            <div class="drag-box" *ngFor="let token of availableTokens" cdkDrag>
-                                <div class="drag-handle" cdkDragHandle>
-                                    <svg width="20px" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"></path>
-                                    </svg>
-                                </div>
-                                <div class="token-info flex-1">
-                                    <span class="token-label" style="font-size:0.9rem;">{{ token.label }}</span>
-                                    <code class="token-tag" (click)="copyTag(token.tag)" title="Clic para copiar">{{ token.tag }}</code>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Lista de Activos -->
-                    <div class="p-4" style="flex:1;">
-                        <h4 class="mb-3" style="font-size:1rem;">Variables Activadas</h4>
-                        <div cdkDropList #activeList="cdkDropList" [cdkDropListData]="activeTokens"
-                            [cdkDropListConnectedTo]="[availableList]" class="drag-list drop-zone-active"
-                            (cdkDropListDropped)="drop($event)" style="min-height: 250px;">
-                            <div class="empty-drop-msg" *ngIf="activeTokens.length === 0">
-                                Arrastra aquí las variables que usarás.
-                            </div>
-                            <div class="drag-box box-active" *ngFor="let token of activeTokens" cdkDrag>
-                                <div class="drag-handle" cdkDragHandle>
-                                    <svg width="20px" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z"></path>
-                                    </svg>
-                                </div>
-                                <div class="token-info flex-1">
-                                    <span class="token-label" style="font-size:0.9rem;">{{ token.label }}</span>
-                                    <code class="token-tag" (click)="copyTag(token.tag)" title="Clic para copiar">{{ token.tag }}</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 flex justify-between align-items-center" style="gap:1rem;">
-                            <span class="text-muted text-sm" style="flex:1; font-size:0.8rem; line-height:1.2;">El motor renderizará estas etiquetas nativamente.</span>
-                            <button class="btn btn-primary" (click)="showConfigurator = false; showUploadModal = false;">Confirmar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Header identical to dashboard -->
     <div class="header-actions">

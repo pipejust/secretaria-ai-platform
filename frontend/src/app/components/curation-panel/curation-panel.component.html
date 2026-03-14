@@ -7,23 +7,23 @@
   <div *ngIf="!isLoading">
     <header class="panel-header">
       <div class="header-titles">
-        <h1>Curación del Acta</h1>
+        <h1>Curación de la Sesión</h1>
         <p class="subtitle">
             Sesión: <strong>{{ meetingData.title }}</strong> | 
-            Fecha: {{ meetingData.date | date:'medium' }} | 
+            Fecha: {{ meetingData.date | date:'dd/MM/yyyy HH:mm' }} | 
             Estado: <span class="badge badge-primary">{{ getTranslatedStatus(meetingData.status) }}</span>
         </p>
       </div>
       
       <div class="header-actions" style="display: flex; gap: 10px; margin-bottom: 0;">
-        <button class="btn btn-secondary" (click)="goBack()">
-          ← Volver a Actas
-        </button>
-        <button class="btn btn-success" (click)="saveManualEdits()">
-          💾 Guardar Cambios
+        <button class="btn" style="background: white; color: #4b5563; border: 1px solid #d1d5db;" (click)="goBack()">
+          ← Volver a Sesiones
         </button>
         <button class="btn btn-primary" (click)="approveAct()">
-          📄 Generar Acta (Word)
+          📄 Generar Documento
+        </button>
+        <button class="btn btn-success" style="background: #10b981;" (click)="saveManualEdits()">
+          💾 Guardar Cambios
         </button>
       </div>
     </header>
@@ -42,10 +42,14 @@
         <div class="glass-panel section-card" style="position: relative;">
           <h3>🗣️ Transcripción Original</h3>
           <textarea [(ngModel)]="meetingData.raw_transcript" rows="8" class="form-control transcript-box"></textarea>
-          <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+          <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn btn-secondary action-btn" [disabled]="isRegeneratingFields" (click)="regenerateFields()">
+              <span *ngIf="isRegeneratingFields">⏳ Regenerando Campos...</span>
+              <span *ngIf="!isRegeneratingFields">✨ Sugerir Campos con IA</span>
+            </button>
             <button class="btn btn-secondary action-btn" [disabled]="isRegenerating" (click)="regenerateTasks()">
               <span *ngIf="isRegenerating">⏳ Regenerando Tareas...</span>
-              <span *ngIf="!isRegenerating">🤖 Regenerar Tareas desde el Texto</span>
+              <span *ngIf="!isRegenerating">🤖 Regenerar Tareas</span>
             </button>
           </div>
         </div>
