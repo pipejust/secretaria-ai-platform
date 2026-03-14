@@ -25,6 +25,8 @@ export class TemplatesComponent implements OnInit {
 
     selectedFile: File | null = null;
     selectedProjectId: string = '';
+    templateName: string = '';
+    editingTemplateId: number | null = null;
     searchText = '';
     showUploadModal = false;
 
@@ -104,30 +106,65 @@ export class TemplatesComponent implements OnInit {
         }
     }
 
+    openCreateModal() {
+        this.editingTemplateId = null;
+        this.selectedFile = null;
+        this.selectedProjectId = '';
+        this.templateName = '';
+        this.errorMsg = '';
+        this.successMsg = '';
+        this.showUploadModal = true;
+    }
+
+    editTemplate(template: any) {
+        this.editingTemplateId = template.id;
+        this.templateName = template.name;
+        this.selectedProjectId = template.project_id;
+        this.selectedFile = null; // No forzamos re-subir archivo a menos que lo deseen
+        this.errorMsg = '';
+        this.successMsg = '';
+        this.showUploadModal = true;
+    }
+
     uploadFile() {
-        if (!this.selectedFile || !this.selectedProjectId) return;
+        if (!this.selectedProjectId || !this.templateName || (!this.selectedFile && !this.editingTemplateId)) return;
 
         this.isUploading = true;
         this.errorMsg = '';
         this.successMsg = '';
 
         const formData = new FormData();
-        formData.append('file', this.selectedFile);
+        if (this.selectedFile) {
+            formData.append('file', this.selectedFile);
+        }
+        formData.append('project_id', this.selectedProjectId.toString());
+        formData.append('name', this.templateName);
 
-        const qs = `?project_id=${this.selectedProjectId}`;
+        const url = this.editingTemplateId 
+            ? `${environment.apiUrl}/templates/${this.editingTemplateId}`
+            : `${environment.apiUrl}/templates/upload`;
+            
+        const requestBase = this.editingTemplateId
+            ? this.http.put<any>(url, formData, { headers: this.authService.getAuthHeaders() })
+            : this.http.post<any>(url, formData, { headers: this.authService.getAuthHeaders() });
 
-        this.http.post<any>(`${environment.apiUrl}/templates/upload${qs}`, formData, {
-            headers: this.authService.getAuthHeaders() // El navegador setea automáticamente multipart boundary
-        }).subscribe({
+        requestBase.subscribe({
             next: (res) => {
-                this.successMsg = 'Documento subido con éxito. Ahora configura las etiquetas del Word.';
-                this.lastUploadedTemplateId = res.template_id;
-                this.loadData(); // Recargar la tabla
+                this.successMsg = this.editingTemplateId ? 'Plantilla actualizada exitosamente' : 'Documento subido con éxito. Ahora configura las etiquetas del Word.';
+                this.lastUploadedTemplateId = this.editingTemplateId || res.template_id;
+                this.loadData();
                 this.isUploading = false;
-                this.showConfigurator = true;
+                
+                if (!this.editingTemplateId) {
+                    this.showConfigurator = true;
+                } else {
+                    setTimeout(() => {
+                        this.showUploadModal = false;
+                    }, 1500);
+                }
             },
             error: (err) => {
-                this.errorMsg = err.error?.detail || 'Error al subir la plantilla.';
+                this.errorMsg = err.error?.detail || 'Error al guardar la plantilla.';
                 this.isUploading = false;
             }
         });
