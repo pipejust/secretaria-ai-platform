@@ -210,8 +210,9 @@ export class CurationPanelComponent implements OnInit {
     this.cdr.detectChanges();
     
     const headers = this.authService.getAuthHeaders();
+    const payload = { raw_transcript: this.meetingData.raw_transcript };
     
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_tasks`, {}, { headers }).subscribe({
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_tasks`, payload, { headers }).subscribe({
       next: (res: any) => {
         this.isRegenerating = false;
         this.showSaveMessage('Tareas regeneradas correctamente.');
@@ -244,8 +245,9 @@ export class CurationPanelComponent implements OnInit {
     this.cdr.detectChanges();
     
     const headers = this.authService.getAuthHeaders();
+    const payload = { raw_transcript: this.meetingData.raw_transcript };
     
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_fields`, {}, { headers }).subscribe({
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_fields`, payload, { headers }).subscribe({
       next: (res: any) => {
         this.isRegeneratingFields = false;
         this.showSaveMessage('Campos regenerados correctamente.');
