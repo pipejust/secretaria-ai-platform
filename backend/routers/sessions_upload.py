@@ -47,8 +47,11 @@ class SessionUpdate(BaseModel):
     processed_agreements: Optional[str] = None
     status: Optional[str] = None
 
+class RegeneratePayload(BaseModel):
+    raw_transcript: Optional[str] = None
+
 @router.post("/{session_id}/regenerate_tasks")
-async def regenerate_tasks_from_transcript(session_id: int, db: Session = Depends(get_session)):
+async def regenerate_tasks_from_transcript(session_id: int, payload: RegeneratePayload, db: Session = Depends(get_session)):
     from models import ActionItem, ProjectContact
     from services.groq_service import GroqService
     from sqlmodel import delete
@@ -56,6 +59,9 @@ async def regenerate_tasks_from_transcript(session_id: int, db: Session = Depend
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
+        
+    if payload.raw_transcript:
+        session_obj.raw_transcript = payload.raw_transcript
     
     if not session_obj.raw_transcript:
         raise HTTPException(status_code=400, detail="No transcript available to regenerate tasks from.")
@@ -107,12 +113,15 @@ async def regenerate_tasks_from_transcript(session_id: int, db: Session = Depend
     return {"status": "success", "action_items": new_items_output}
 
 @router.post("/{session_id}/regenerate_fields")
-async def regenerate_fields_from_transcript(session_id: int, db: Session = Depends(get_session)):
+async def regenerate_fields_from_transcript(session_id: int, payload: RegeneratePayload, db: Session = Depends(get_session)):
     from services.groq_service import GroqService
 
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
+        
+    if payload.raw_transcript:
+        session_obj.raw_transcript = payload.raw_transcript
     
     if not session_obj.raw_transcript:
         raise HTTPException(status_code=400, detail="No transcript available to regenerate fields from.")
