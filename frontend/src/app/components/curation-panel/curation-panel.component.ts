@@ -300,7 +300,7 @@ export class CurationPanelComponent implements OnInit {
     this.showSaveMessage('Generando Documento en Word...');
     const headers = this.authService.getAuthHeaders();
     
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/export_word`, {}, {
+    this.http.get(`${environment.apiUrl}/api/sessions/${this.sessionId}/export/word`, {
       headers,
       responseType: 'blob'
     }).subscribe({
