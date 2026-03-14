@@ -242,9 +242,14 @@
     width: 36px;
     height: 36px;
     font-size: 1.1rem;
-    background: white;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     color: var(--accent-color);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
 }
 
 .user-details {

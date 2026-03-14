@@ -1,7 +1,7 @@
 <div class="fade-in">
     <div class="header-actions">
         <div>
-            <h2 class="section-title">Registro de Actas de Reunión</h2>
+            <h2 class="section-title">Registro de Sesiones</h2>
             <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Visualiza actas procesadas por
                 inteligencia artificial o carga las tuyas manualmente.</p>
         </div>
@@ -117,10 +117,10 @@
                             <div style="display:flex; gap:0.5rem;">
                                 <button class="btn btn-sm btn-secondary"
                                     (click)="viewCuration(s.id)">
-                                    Ver Curación
+                                    {{ s.status === 'completed' ? 'Detalle de la Sesión' : 'Ver Curación' }}
                                 </button>
                                 <button class="btn btn-sm btn-primary" (click)="generateActa(s)">
-                                    Generar Acta
+                                    Generar Documento
                                 </button>
                             </div>
                         </td>
@@ -137,9 +137,9 @@
                                     <line x1="16" y1="17" x2="8" y2="17"></line>
                                     <polyline points="10 9 9 9 8 9"></polyline>
                                 </svg>
-                                <h4>No hay actas registradas</h4>
+                                <h4>No hay sesiones registradas</h4>
                                 <p class="text-muted mt-4 text-center" style="max-width: 400px;">
-                                    Aquí aparecerán las reuniones procesadas por la inteligencia artificial o las transcripciones
+                                    Aquí aparecerán las sesiones procesadas por la inteligencia artificial o las transcripciones
                                     que subas manualmente.
                                 </p>
                             </div>

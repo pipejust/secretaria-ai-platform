@@ -53,8 +53,10 @@ export class CurationPanelComponent implements OnInit {
 
   sessionId: number | null = null;
   isLoading = true;
+  isRegenerating = false;
   isDispatchingEmails = false;
   isDispatchingPlatforms = false;
+  isRegeneratingFields = false;
   saveStatusMessage = '';
 
   constructor(
@@ -66,12 +68,14 @@ export class CurationPanelComponent implements OnInit {
   ) {}
 
   getTranslatedStatus(status: string): string {
+    const rawStatus = (status || '').trim().toLowerCase();
     const statusMap: { [key: string]: string } = {
       'pending': 'Pendiente de Curación',
       'processing': 'Procesando IA',
-      'completed': 'Completado'
+      'completed': 'Completado',
+      'error': 'Error en Procesamiento'
     };
-    return statusMap[status] || status;
+    return statusMap[rawStatus] || status;
   }
 
   ngOnInit() {
@@ -94,11 +98,18 @@ export class CurationPanelComponent implements OnInit {
       next: (data) => {
         try {
             console.log("Curation data received:", data);
+            
+            // Safe date parsing to avoid InvalidPipeArgument
+            let parsedDate = data.session.date;
+            if (typeof parsedDate === 'string' && !isNaN(Number(parsedDate))) {
+                parsedDate = Number(parsedDate);
+            }
+
             this.meetingData = {
               id: data.session.id,
-              title: data.session.title,
-              date: data.session.date,
-              status: data.session.status,
+              title: data.session.title || 'Sesión sin título',
+              date: parsedDate,
+              status: data.session.status || 'pending',
               raw_summary: data.session.raw_summary || '',
               raw_transcript: data.session.raw_transcript || '',
               processed_decisions: data.session.processed_decisions || '',
@@ -187,15 +198,17 @@ export class CurationPanelComponent implements OnInit {
     });
   }
 
-  isRegenerating: boolean = false;
 
   regenerateTasks() {
     if (!this.meetingData.raw_transcript) {
       this.showSaveMessage('No hay transcripción para regenerar tareas.', true);
+      this.cdr.detectChanges();
       return;
     }
     this.isRegenerating = true;
     this.showSaveMessage('Regenerando tareas con LLaMA... Esto puede tardar unos segundos.');
+    this.cdr.detectChanges();
+    
     const headers = this.authService.getAuthHeaders();
     
     this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_tasks`, {}, { headers }).subscribe({
@@ -203,13 +216,52 @@ export class CurationPanelComponent implements OnInit {
         this.isRegenerating = false;
         this.showSaveMessage('Tareas regeneradas correctamente.');
         if (res.action_items) {
-          this.meetingData.action_items = res.action_items;
+          // Aseguramos que tengan el selected map
+          this.meetingData.action_items = res.action_items.map((item: any) => ({
+                 ...item,
+                 selected: false
+              }));
         }
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isRegenerating = false;
         console.error('Error regenerating tasks', err);
         this.showSaveMessage('Error al regenerar las tareas.', true);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  regenerateFields() {
+    if (!this.meetingData.raw_transcript) {
+      this.showSaveMessage('No hay transcripción para sugerir campos.', true);
+      this.cdr.detectChanges();
+      return;
+    }
+    this.isRegeneratingFields = true;
+    this.showSaveMessage('Regenerando campos con Inteligencia Artificial... Esto tarda un momento.');
+    this.cdr.detectChanges();
+    
+    const headers = this.authService.getAuthHeaders();
+    
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_fields`, {}, { headers }).subscribe({
+      next: (res: any) => {
+        this.isRegeneratingFields = false;
+        this.showSaveMessage('Campos regenerados correctamente.');
+        if (res.fields) {
+          this.meetingData.raw_summary = res.fields.raw_summary;
+          this.meetingData.processed_decisions = res.fields.processed_decisions;
+          this.meetingData.processed_risks = res.fields.processed_risks;
+          this.meetingData.processed_agreements = res.fields.processed_agreements;
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isRegeneratingFields = false;
+        console.error('Error regenerating fields', err);
+        this.showSaveMessage('Error al sugerir los campos con IA.', true);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -222,16 +274,20 @@ export class CurationPanelComponent implements OnInit {
       raw_transcript: this.meetingData.raw_transcript,
       processed_decisions: this.meetingData.processed_decisions,
       processed_risks: this.meetingData.processed_risks,
-      processed_agreements: this.meetingData.processed_agreements
+      processed_agreements: this.meetingData.processed_agreements,
+      status: 'completed'
     };
 
     this.http.put(`${environment.apiUrl}/api/sessions/${this.sessionId}`, payload, { headers }).subscribe({
       next: (res: any) => {
+        this.meetingData.status = 'completed';
         this.showSaveMessage('Los textos de la sesión se han guardado correctamente.');
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error saving manual edits', err);
         this.showSaveMessage('Error al guardar los cambios de la sesión', true);
+        this.cdr.detectChanges();
       }
     });
   }

@@ -38,7 +38,13 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
                 date_str = str(data.get("date", date_str))
                 sentences = [f"{s.get('speaker_name', 'Anon')}: {s.get('text', '')}" for s in data.get("sentences", [])]
                 raw_transcript = "\n".join(sentences)
-                raw_summary = str(data.get("summary", {}))
+                
+                # Extraer overview del JSON de Fireflies de su objeto summary
+                summary_obj = data.get("summary")
+                if isinstance(summary_obj, dict):
+                    raw_summary = summary_obj.get("overview", "")
+                else:
+                    raw_summary = str(summary_obj or "")
             
             # 1. Deducción Nivel 1: Match por Calendario (Título exacto) o Mención Explícita
             projects = db.exec(select(Project)).all()
