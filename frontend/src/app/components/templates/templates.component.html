@@ -57,6 +57,9 @@
                 <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.85rem; font-weight: normal;">
                     Tu archivo Word se usará para preservar la Cabecera, Logos y Pie de Página. Arrastra los bloques a la derecha en el orden que desees que aparezcan en el cuerpo del documento.
                 </p>
+                <div style="background: white; color: red; padding: 5px; margin-top: 5px; font-size: 12px; font-family: monospace;">
+                    DEBUG: available={{availableTokens?.length}} active={{activeTokens?.length}} success={{successMsg}} err={{errorMsg}}
+                </div>
             </div>
             <button class="btn-close" (click)="showConfigurator = false; showUploadModal = false; successMsg=''" style="background: rgba(255,255,255,0.2); color: white;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -82,12 +85,14 @@
                          class="drag-list-container"
                          (cdkDropListDropped)="drop($event)"
                          style="flex:1; background:#e2e8f0; border-radius:12px; padding:1rem; border: 2px dashed #cbd5e1; overflow-y:auto;">
-                        <div class="drag-box" *ngFor="let item of availableTokens" cdkDrag
-                             style="background:white; border:1px solid #cbd5e1; border-radius:8px; padding:0.8rem; margin-bottom:0.5rem; cursor:grab; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; align-items:center; gap:0.5rem;">
-                            <!-- Drag Handle Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
-                            <span style="font-weight: 500; font-size:0.9rem; color:#1e293b;">{{ item.label }}</span>
-                        </div>
+                         @for (item of availableTokens; track item.id) {
+                            <div class="drag-box" cdkDrag [cdkDragData]="item"
+                                 style="background:white; border:1px solid #cbd5e1; border-radius:8px; padding:0.8rem; margin-bottom:0.5rem; cursor:grab; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; align-items:center; gap:0.5rem;">
+                                <!-- Drag Handle Icon -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
+                                <span style="font-weight: 500; font-size:0.9rem; color:#1e293b;">{{ item.label }}</span>
+                            </div>
+                         }
                     </div>
                 </div>
 
@@ -101,23 +106,27 @@
                          (cdkDropListDropped)="drop($event)"
                          style="flex:1; background:white; border-radius:12px; padding:1rem; border: 2px solid var(--accent-color); overflow-y:auto; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);">
                          
-                        <div *ngIf="activeTokens.length === 0" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; text-align:center;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom:1rem; opacity:0.5;">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                            <p>Arrastra bloques aquí para<br>construir la plantilla</p>
-                        </div>
+                        @if (activeTokens.length === 0) {
+                            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; text-align:center;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom:1rem; opacity:0.5;">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                <p>Arrastra bloques aquí para<br>construir la plantilla</p>
+                            </div>
+                        }
 
-                        <div class="drag-box" *ngFor="let item of activeTokens" cdkDrag
-                             style="background:#f8fafc; border:1px solid #94a3b8; border-left:4px solid var(--accent-color); border-radius:8px; padding:0.8rem; margin-bottom:0.5rem; cursor:grab; box-shadow:0 2px 5px rgba(0,0,0,0.05); display:flex; align-items:center; gap:0.5rem;">
-                            <!-- Drag Handle Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
-                            <span style="font-weight: 600; font-size:0.9rem; color:#0f172a;">{{ item.label }}</span>
-                        </div>
+                        @for (item of activeTokens; track item.id) {
+                            <div class="drag-box" cdkDrag [cdkDragData]="item"
+                                 style="background:#f8fafc; border:1px solid #94a3b8; border-left:4px solid var(--accent-color); border-radius:8px; padding:0.8rem; margin-bottom:0.5rem; cursor:grab; box-shadow:0 2px 5px rgba(0,0,0,0.05); display:flex; align-items:center; gap:0.5rem;">
+                                <!-- Drag Handle Icon -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
+                                <span style="font-weight: 600; font-size:0.9rem; color:#0f172a;">{{ item.label }}</span>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
