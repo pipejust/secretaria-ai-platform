@@ -143,8 +143,8 @@ export class DashboardComponent implements OnInit {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                const safeTitle = (session.title || 'Acta').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-                a.download = `Acta_${session.id}_${safeTitle}.docx`;
+                const safeTitle = (session.title || 'Sesion').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+                a.download = `Sesion_${session.id}_${safeTitle}.docx`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

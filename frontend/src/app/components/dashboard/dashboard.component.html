@@ -2,7 +2,7 @@
     <div class="header-actions">
         <div>
             <h2 class="section-title">Registro de Sesiones</h2>
-            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Visualiza actas procesadas por
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Visualiza sesiones procesadas por
                 inteligencia artificial o carga las tuyas manualmente.</p>
         </div>
         <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)">
@@ -138,10 +138,7 @@
                                     <polyline points="10 9 9 9 8 9"></polyline>
                                 </svg>
                                 <h4>No hay sesiones registradas</h4>
-                                <p class="text-muted mt-4 text-center" style="max-width: 400px;">
-                                    Aquí aparecerán las sesiones procesadas por la inteligencia artificial o las transcripciones
-                                    que subas manualmente.
-                                </p>
+                                <p style="color:var(--text-muted); margin-top:0.5rem; font-size:0.95rem;">Empieza subiendo una transcripción o graba una nueva sesión.</p>
                             </div>
                         </td>
                     </tr>

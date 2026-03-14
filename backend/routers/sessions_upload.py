@@ -45,6 +45,7 @@ class SessionUpdate(BaseModel):
     processed_decisions: Optional[str] = None
     processed_risks: Optional[str] = None
     processed_agreements: Optional[str] = None
+    status: Optional[str] = None
 
 @router.post("/{session_id}/regenerate_tasks")
 async def regenerate_tasks_from_transcript(session_id: int, db: Session = Depends(get_session)):
@@ -163,6 +164,8 @@ def update_session_content(session_id: int, payload: SessionUpdate, db: Session 
         session_obj.processed_risks = payload.processed_risks
     if payload.processed_agreements is not None:
         session_obj.processed_agreements = payload.processed_agreements
+    if payload.status is not None:
+        session_obj.status = payload.status
         
     db.add(session_obj)
     db.commit()

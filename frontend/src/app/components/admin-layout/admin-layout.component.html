@@ -15,7 +15,7 @@
             <ul>
                 <li class="nav-category" *ngIf="!isCollapsed">Gestión Operativa</li>
                 <li>
-                    <a routerLink="/admin/dashboard" routerLinkActive="active">
+                    <a routerLink="/admin/dashboard" routerLinkActive="active" title="Sesiones Generadas">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="7" height="7"></rect>
@@ -23,7 +23,7 @@
                             <rect x="14" y="14" width="7" height="7"></rect>
                             <rect x="3" y="14" width="7" height="7"></rect>
                         </svg>
-                        <span class="nav-text" *ngIf="!isCollapsed">Actas de Reunión</span>
+                        <span class="nav-text" *ngIf="!isCollapsed">Sesiones Generadas</span>
                     </a>
                 </li>
                 <!-- Solo visible para Admin -->
@@ -37,6 +37,7 @@
                         <span class="nav-text" *ngIf="!isCollapsed">Proyectos</span>
                     </a>
                 </li>
+
                 <li *ngIf="isAdmin">
                     <a routerLink="/admin/templates" routerLinkActive="active">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"

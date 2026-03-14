@@ -297,30 +297,31 @@ export class CurationPanelComponent implements OnInit {
   }
 
   approveAct() {
-    this.showSaveMessage('Generando Acta en Word...');
+    this.showSaveMessage('Generando Documento en Word...');
     const headers = this.authService.getAuthHeaders();
     
-    // Indicamos responseType: 'blob' para recibir binario
-    this.http.get(`${environment.apiUrl}/api/sessions/${this.sessionId}/export/word`, { headers, responseType: 'blob' }).subscribe({
-      next: (blob: Blob) => {
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/export_word`, {}, {
+      headers,
+      responseType: 'blob'
+    }).subscribe({
+      next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        
-        // Formatear nombre seguro
-        const safeTitle = this.meetingData.title.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-        a.download = `Acta_${this.sessionId}_${safeTitle}.docx`;
+        const safeTitle = (this.meetingData.title || 'Sesion').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+        a.download = `Sesion_${this.sessionId}_${safeTitle}.docx`;
         document.body.appendChild(a);
         a.click();
-        
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
-        this.showSaveMessage('Acta descargada con éxito');
+        this.meetingData.status = 'approved';
+        this.showSaveMessage('Documento descargado con éxito');
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Error generando documento', err);
-        this.showSaveMessage('Error descargando el Acta', true);
+        console.error('Error downloading word', err);
+        this.showSaveMessage('Error descargando el Documento', true);
       }
     });
   }
