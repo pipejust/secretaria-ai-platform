@@ -341,16 +341,34 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
     title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
     title_run.font.color.rgb = RGBColor(79, 70, 229) # Branding Indigo
     
+    import datetime
+    
+    # 1. Parsear Fecha
+    formatted_date = session_obj.date
+    if session_obj.date and session_obj.date.isdigit():
+        dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
+        formatted_date = dt.strftime("%d/%m/%Y %H:%M")
+        
+    # 2. Traducir Estado
+    status_map = {
+        "completed": "Completado",
+        "processing": "Procesando IA",
+        "pending": "Pendiente de Curación"
+    }
+    status_str = status_map.get(session_obj.status, session_obj.status.capitalize())
+
     # Meta
     doc.add_paragraph(f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
-    doc.add_paragraph(f"Fecha: {session_obj.date}")
-    doc.add_paragraph(f"Estado: {session_obj.status.capitalize()}")
+    doc.add_paragraph(f"Fecha: {formatted_date}")
+    doc.add_paragraph(f"Estado: {status_str}")
     doc.add_paragraph()
 
     # Sections
     if session_obj.raw_summary:
+        # 3. Eliminar etiquetas en inglés de Fireflies
+        clean_summary = session_obj.raw_summary.replace("Notes", "Notas de la Sesión").replace("Action items", "Elementos de Acción")
         doc.add_heading('Resumen Ejecutivo', level=1)
-        doc.add_paragraph(session_obj.raw_summary)
+        doc.add_paragraph(clean_summary)
 
     if session_obj.processed_decisions:
         doc.add_heading('Decisiones Clave', level=1)
