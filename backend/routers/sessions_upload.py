@@ -275,6 +275,8 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
     """Dispatch emails for the selected action items."""
     from models import ActionItem
     from services.email_service import EmailService
+    import asyncio
+    from fpdf import FPDF
     
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
@@ -282,6 +284,33 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
         
     email_service = EmailService(db=db)
     results = []
+    
+    # Generate generic PDF once for the session
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("helvetica", "B", 16)
+        pdf.cell(0, 10, "Secretaria AI - Resumen de Sesion", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.ln(10)
+        
+        pdf.set_font("helvetica", "B", 12)
+        safe_title = session_obj.title.encode('latin-1', 'replace').decode('latin-1')
+        pdf.cell(0, 8, f"Proyecto: {safe_title}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 8, f"Fecha: {session_obj.date}", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(5)
+        
+        if session_obj.raw_summary:
+            pdf.set_font("helvetica", "B", 12)
+            pdf.cell(0, 8, "Resumen Ejecutivo:", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", "", 11)
+            safe_summary = session_obj.raw_summary.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 6, safe_summary)
+            pdf.ln(5)
+            
+        pdf_bytes = list(pdf.output())
+    except Exception as e:
+        print(f"Error generating PDF summary: {e}")
+        pdf_bytes = None
     
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
@@ -292,16 +321,53 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             results.append({"id": item_id, "status": "failed", "reason": "No email provided"})
             continue
             
+        attachments = []
+        if pdf_bytes:
+            attachments.append({
+                "filename": "Resumen_Sesion.pdf",
+                "content": pdf_bytes
+            })
+            
+        if item.due_date:
+            try:
+                date_clean = str(item.due_date).replace("-", "")
+                if len(date_clean) == 8:
+                    desc_clean = (item.description or "").replace("\n", "\\n").replace("\r", "")
+                    title_clean = item.title.replace("\n", "").replace("\r", "")
+                    ics_lines = [
+                        "BEGIN:VCALENDAR",
+                        "VERSION:2.0",
+                        "PRODID:-//Secretaria AI//ES",
+                        "BEGIN:VEVENT",
+                        f"SUMMARY:{title_clean}",
+                        f"DTSTART;VALUE=DATE:{date_clean}",
+                        f"DTEND;VALUE=DATE:{date_clean}",
+                        f"DESCRIPTION:{desc_clean}",
+                        "END:VEVENT",
+                        "END:VCALENDAR"
+                    ]
+                    ics_bytes = list("\r\n".join(ics_lines).encode('utf-8'))
+                    attachments.append({
+                        "filename": "recordatorio.ics",
+                        "content": ics_bytes
+                    })
+            except Exception as e:
+                print(f"Error generating ICS: {e}")
+            
         try:
-            # Here we will call the new email service method sending the HTML template
+            # Pasa los datos extra al nuevo email service (fecha, attachments)
             await email_service.send_action_item_email(
                 to_email=item.owner_email,
                 owner_name=item.owner_name,
                 task_title=item.title,
                 task_description=item.description,
-                project_name=session_obj.title # or the actual project name
+                project_name=session_obj.title,
+                due_date=item.due_date,
+                attachments=attachments
             )
             results.append({"id": item_id, "status": "success"})
+            # Resend Free limit is 2 requests per second. Sleep 0.6s to stay strictly below limit.
+            await asyncio.sleep(0.6)
         except Exception as e:
             results.append({"id": item_id, "status": "failed", "reason": str(e)})
             
@@ -435,15 +501,61 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                     tmp_path = tmp.name
                 import json
                 mapping_blocks = []
+                style_config = {}
                 if template_obj.mapping_config:
                     try:
                         mapping_blocks = json.loads(template_obj.mapping_config)
                     except Exception:
                         pass
                 
+                if getattr(template_obj, "style_config", None):
+                    try:
+                        style_config = json.loads(template_obj.style_config)
+                    except Exception:
+                        pass
+                
                 if mapping_blocks and len(mapping_blocks) > 0:
                     from docx import Document
-                    from docx.shared import RGBColor
+                    from docx.shared import RGBColor, Pt
+                    from docx.oxml import OxmlElement
+                    from docx.oxml.ns import qn
+                    
+                    def hex_to_rgb(hex_str):
+                        hex_str = hex_str.lstrip('#')
+                        if len(hex_str) != 6:
+                            return RGBColor(0, 0, 0)
+                        return RGBColor(int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
+                        
+                    def apply_font_styles(run, is_heading=False):
+                        if style_config.get("fontFamily"):
+                            run.font.name = style_config.get("fontFamily")
+                        if not is_heading and style_config.get("fontSize"):
+                            run.font.size = Pt(int(style_config.get("fontSize")))
+                        if is_heading and style_config.get("headingColor"):
+                            run.font.color.rgb = hex_to_rgb(style_config.get("headingColor"))
+                        elif not is_heading and style_config.get("textColor"):
+                            run.font.color.rgb = hex_to_rgb(style_config.get("textColor"))
+                            
+                    def add_styled_heading(d, text, level):
+                        h = d.add_heading(level=level)
+                        run = h.add_run(text)
+                        apply_font_styles(run, is_heading=True)
+                        return h
+                        
+                    def add_styled_justified_paragraph(d, text, style=None):
+                        p = add_justified_paragraph(d, "", style=style)
+                        run = p.add_run(text)
+                        apply_font_styles(run, is_heading=False)
+                        return p
+
+                    def set_cell_bg_color(cell, hex_color):
+                        if hex_color:
+                            hex_color = hex_color.lstrip('#')
+                            shd = OxmlElement('w:shd')
+                            shd.set(qn('w:val'), 'clear')
+                            shd.set(qn('w:color'), 'auto')
+                            shd.set(qn('w:fill'), hex_color)
+                            cell._tc.get_or_add_tcPr().append(shd)
                     if tmp_path:
                         doc = Document(tmp_path)
                     else:
@@ -451,62 +563,82 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                     
                     for block_id in mapping_blocks:
                         if block_id == 'meta':
-                            title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
-                            title_run.font.color.rgb = RGBColor(79, 70, 229)
-                            add_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
-                            add_justified_paragraph(doc, f"Fecha: {formatted_date}")
-                            add_justified_paragraph(doc, f"Estado: {status_str}")
+                            title_run = add_styled_heading(doc, "Acta de Reunión", level=0).runs[0]
+                            if style_config.get("headingColor"):
+                                title_run.font.color.rgb = hex_to_rgb(style_config.get("headingColor"))
+                            else:
+                                title_run.font.color.rgb = RGBColor(79, 70, 229)
+                                
+                            add_styled_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+                            add_styled_justified_paragraph(doc, f"Fecha: {formatted_date}")
+                            add_styled_justified_paragraph(doc, f"Estado: {status_str}")
                             doc.add_paragraph()
                         elif block_id == 'summary' and clean_summary:
-                            doc.add_heading('Resumen Ejecutivo', level=1)
-                            add_justified_paragraph(doc, clean_summary)
+                            add_styled_heading(doc, 'Resumen Ejecutivo', level=1)
+                            add_styled_justified_paragraph(doc, clean_summary)
                         elif block_id == 'decisions' and session_obj.processed_decisions:
-                            doc.add_heading('Decisiones Clave', level=1)
-                            add_justified_paragraph(doc, session_obj.processed_decisions)
+                            add_styled_heading(doc, 'Decisiones Clave', level=1)
+                            add_styled_justified_paragraph(doc, session_obj.processed_decisions)
                         elif block_id == 'risks' and session_obj.processed_risks:
-                            doc.add_heading('Riesgos Identificados', level=1)
-                            add_justified_paragraph(doc, session_obj.processed_risks)
+                            add_styled_heading(doc, 'Riesgos Identificados', level=1)
+                            add_styled_justified_paragraph(doc, session_obj.processed_risks)
                         elif block_id == 'agreements' and session_obj.processed_agreements:
-                            doc.add_heading('Acuerdos', level=1)
-                            add_justified_paragraph(doc, session_obj.processed_agreements)
+                            add_styled_heading(doc, 'Acuerdos', level=1)
+                            add_styled_justified_paragraph(doc, session_obj.processed_agreements)
                         elif block_id == 'attendees':
                             try:
                                 att_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
                                 if att_list:
-                                    doc.add_heading('Asistentes', level=1)
+                                    add_styled_heading(doc, 'Asistentes', level=1)
                                     for att in att_list:
-                                        add_justified_paragraph(doc, f"- {att.get('name', '')} ({att.get('role', '')}) - {att.get('entity', '')}")
+                                        add_styled_justified_paragraph(doc, f"- {att.get('name', '')} ({att.get('role', '')}) - {att.get('entity', '')}")
                             except Exception:
                                 pass
                         elif block_id == 'themes':
                             try:
                                 thm_list = json.loads(session_obj.processed_themes) if session_obj.processed_themes else []
                                 if thm_list:
-                                    doc.add_heading('Temas y Puntos de Discusión', level=1)
+                                    add_styled_heading(doc, 'Temas y Puntos de Discusión', level=1)
                                     for thm in thm_list:
-                                        doc.add_heading(thm.get('theme_name', ''), level=2)
+                                        add_styled_heading(doc, thm.get('theme_name', ''), level=2)
                                         for pt in thm.get('discussion_points', []):
-                                            add_justified_paragraph(doc, f"• {pt}")
+                                            add_styled_justified_paragraph(doc, f"• {pt}")
                             except Exception:
                                 pass
                         elif block_id == 'action_items' and action_items:
-                            doc.add_heading('Tareas (Action Items)', level=1)
+                            add_styled_heading(doc, 'Tareas (Action Items)', level=1)
                             table = doc.add_table(rows=1, cols=4)
                             try:
                                 table.style = 'Table Grid'
                             except Exception:
                                 pass
                             hdr_cells = table.rows[0].cells
-                            hdr_cells[0].text = 'Responsable'
-                            hdr_cells[1].text = 'Tarea'
-                            hdr_cells[2].text = 'Descripción'
-                            hdr_cells[3].text = 'Vencimiento'
+                            headers = ['Responsable', 'Tarea', 'Descripción', 'Vencimiento']
+                            
+                            for i, text in enumerate(headers):
+                                cell = hdr_cells[i]
+                                cell.text = "" # Clean default run
+                                run = cell.paragraphs[0].add_run(text)
+                                run.bold = True
+                                apply_font_styles(run, is_heading=False)
+                                if style_config.get("tableHeaderTextColor"):
+                                    run.font.color.rgb = hex_to_rgb(style_config.get("tableHeaderTextColor"))
+                                if style_config.get("tableHeaderBg"):
+                                    set_cell_bg_color(cell, style_config.get("tableHeaderBg"))
+                                
                             for item in action_items:
                                 row_cells = table.add_row().cells
-                                row_cells[0].text = f"{item.owner_name} ({item.owner_email})"
-                                row_cells[1].text = item.title
-                                row_cells[2].text = item.description or ""
-                                row_cells[3].text = item.due_date or "Sin fecha"
+                                row_cells[0].text = ""
+                                apply_font_styles(row_cells[0].paragraphs[0].add_run(f"{item.owner_name} ({item.owner_email})"))
+                                
+                                row_cells[1].text = ""
+                                apply_font_styles(row_cells[1].paragraphs[0].add_run(item.title))
+                                
+                                row_cells[2].text = ""
+                                apply_font_styles(row_cells[2].paragraphs[0].add_run(item.description or ""))
+                                
+                                row_cells[3].text = ""
+                                apply_font_styles(row_cells[3].paragraphs[0].add_run(item.due_date or "Sin fecha"))
                     
                     doc.save(buffer)
                     doc_generated = True

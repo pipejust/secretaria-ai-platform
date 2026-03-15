@@ -3,20 +3,25 @@
 {% block content %}
   <h2>Hola, {{ owner_name }}</h2>
   
-  <p>Se te ha asignado una nueva tarea (Action Item) correspondiente a la siguiente acta/proyecto: <strong>{{ project_name }}</strong>.</p>
+  <p>Se te ha asignado una nueva tarea correspondiente a la siguiente acta/proyecto: <strong>{{ project_name }}</strong>.</p>
   
   <div class="box">
     <h3 class="box-title">{{ task_title }}</h3>
     <p class="box-text">{{ task_description }}</p>
     {% if due_date %}
-    <p class="box-text" style="margin-top: 10px; font-size: 14px;"><strong>Fecha límite sugerida:</strong> {{ due_date }}</p>
+    <p class="box-text" style="margin-top: 12px; font-size: 14px; color: #059669; font-weight: 600;">
+      📅 Fecha límite: {{ due_date }}
+    </p>
     {% endif %}
   </div>
 
-  <p>Si consideras que hay un error, contacta al administrador del proyecto o a un usuario de la Plataforma Secretaría AI.</p>
+  <p style="margin-bottom: 10px;">Se adjunta a este correo un <strong>PDF</strong> con el resumen ejecutivo de la sesión para tu contexto.</p>
+  
+  {% if due_date %}
+  <p style="margin-bottom: 25px;"><em>También encontrarás adjunto un archivo <strong>.ics</strong> para agregar un recordatorio a tu calendario.</em></p>
+  {% else %}
+  <p style="margin-bottom: 25px;"></p>
+  {% endif %}
 
-  <div class="button-container">
-    <!-- Un enlace genérico si tuviéramos un panel de invitados, si no a la home o nada -->
-    <a href="{{ platform_url }}" class="button">Ver en la plataforma</a>
-  </div>
+  <p>Si consideras que hay un error, contacta al administrador del proyecto o a un usuario de la Plataforma Secretaría AI.</p>
 {% endblock %}

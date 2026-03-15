@@ -34,16 +34,20 @@ class EmailService:
         if self.api_key:
             resend.api_key = self.api_key
 
-    async def _send_html_email(self, to_email: str, subject: str, html_content: str):
+    async def _send_html_email(self, to_email: str, subject: str, html_content: str, attachments: list = None):
         """Método interno para despachar el correo utilizando Resend. Imprime el HTML en modo dev."""
         if self.api_key:
             try:
-                response = resend.Emails.send({
+                payload = {
                     "from": self.from_email,
                     "to": to_email,
                     "subject": subject,
                     "html": html_content
-                })
+                }
+                if attachments:
+                    payload["attachments"] = attachments
+                    
+                response = resend.Emails.send(payload)
                 print(f"✅ Email enviado a {to_email} (ID: {response.get('id', 'Unknown')})")
                 return True
             except Exception as e:
@@ -61,17 +65,17 @@ class EmailService:
             print("---------------------------------------")
             return True
 
-    async def send_action_item_email(self, to_email: str, owner_name: str, task_title: str, task_description: str, project_name: str, platform_url: str = ""):
+    async def send_action_item_email(self, to_email: str, owner_name: str, task_title: str, task_description: str, project_name: str, due_date: str = None, attachments: list = None):
         template = self.jinja_env.get_template('email_action_item.html')
         html_content = template.render(
             owner_name=owner_name,
             task_title=task_title,
             task_description=task_description,
             project_name=project_name,
-            platform_url=platform_url or "https://secretaria.moshwasi.com",
+            due_date=due_date,
             current_year=2026
         )
-        await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content)
+        await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content, attachments=attachments)
         
     async def send_welcome_email(self, to_email: str, user_name: str, role: str, login_url: str = ""):
         template = self.jinja_env.get_template('email_welcome.html')

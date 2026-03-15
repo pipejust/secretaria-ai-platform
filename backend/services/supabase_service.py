@@ -17,11 +17,17 @@ def upload_file_to_bucket(bucket_name: str, file_path: str, destination_path: st
     
     # Asegurar que el bucket existe o falla amigablemente
     with open(file_path, 'rb') as f:
-        response = supabase.storage.from_(bucket_name).upload(
-            file=f,
-            path=destination_path,
-            file_options={"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
-        )
+        try:
+            response = supabase.storage.from_(bucket_name).upload(
+                file=f,
+                path=destination_path,
+                file_options={"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+            )
+        except Exception as e:
+            import traceback
+            print(f"Supabase File Upload Exception ({bucket_name}/{destination_path}): {e}")
+            traceback.print_exc()
+            raise e
         
     # Obtener URL pública
     public_url = supabase.storage.from_(bucket_name).get_public_url(destination_path)

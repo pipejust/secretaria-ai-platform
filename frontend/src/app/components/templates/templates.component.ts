@@ -197,6 +197,15 @@ export class TemplatesComponent implements OnInit {
 
     lastUploadedTemplateId: number | null = null;
     
+    styleConfig = {
+        fontFamily: 'Arial',
+        fontSize: '11',
+        textColor: '#000000',
+        headingColor: '#000000',
+        tableHeaderBg: '#EFEFEF',
+        tableHeaderTextColor: '#000000'
+    };
+    
     openConfigurator(template: any) {
         this.lastUploadedTemplateId = template.id;
         this.successMsg = '';
@@ -214,6 +223,15 @@ export class TemplatesComponent implements OnInit {
         } catch (e) {
             loadedMapping = [];
         }
+        
+        try {
+            if (template.style_config) {
+                const parsedStyles = JSON.parse(template.style_config);
+                if (parsedStyles && typeof parsedStyles === 'object') {
+                    this.styleConfig = { ...this.styleConfig, ...parsedStyles };
+                }
+            }
+        } catch (e) {}
         
         // Populate activeTokens based on IDs
         this.activeTokens = [];
@@ -237,7 +255,8 @@ export class TemplatesComponent implements OnInit {
         }
 
         const mappingPayload = {
-            mapping_config: JSON.stringify(this.activeTokens.map(t => t.id))
+            mapping_config: JSON.stringify(this.activeTokens.map(t => t.id)),
+            style_config: JSON.stringify(this.styleConfig)
         };
 
         this.http.put(`${environment.apiUrl}/templates/${this.lastUploadedTemplateId}/mapping`, mappingPayload, {

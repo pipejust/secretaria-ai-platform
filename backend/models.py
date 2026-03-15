@@ -47,6 +47,7 @@ class Template(SQLModel, table=True):
     name: str = Field(description="Ej. Acta de Inicio, Seguimiento Menor")
     file_path: str = Field(description="Ruta donde se almacena el template localmente o en S3")
     mapping_config: str = Field(default="[]", description="JSON array de los tags activos configurados por Drag&Drop")
+    style_config: str = Field(default="{}", description="JSON con colores, fuentes y tamaños para personalizar el DOCX generado")
     
     project: Optional[Project] = Relationship(back_populates="templates")
 

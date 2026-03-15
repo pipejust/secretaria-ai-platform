@@ -99,6 +99,7 @@ from pydantic import BaseModel
 
 class MappingUpdate(BaseModel):
     mapping_config: str
+    style_config: str = "{}"
 
 @router.put("/{template_id}/mapping")
 def update_template_mapping(
@@ -107,13 +108,16 @@ def update_template_mapping(
     db: Session = Depends(get_session), 
     admin_user: User = Depends(require_admin)
 ):
-    """Actualiza la configuración de mapeo de una plantilla (drag & drop)"""
+    """Actualiza la configuración de mapeo de una plantilla (drag & drop) y sus estilos"""
     template = crud.template.get(db, template_id)
     if not template:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
         
-    crud.template.update(db, db_obj=template, obj_in={"mapping_config": mapping.mapping_config})
-    return {"msg": "Mapeo guardado exitosamente"}
+    crud.template.update(db, db_obj=template, obj_in={
+        "mapping_config": mapping.mapping_config,
+        "style_config": mapping.style_config
+    })
+    return {"msg": "Configuración guardada exitosamente"}
 
 @router.delete("/{template_id}", status_code=204)
 def delete_template(
