@@ -172,10 +172,12 @@ export class CurationPanelComponent implements OnInit {
       next: (res: any) => {
         this.isDispatchingEmails = false;
         this.showSaveMessage(`Correos enviados: ${res.results.filter((r:any)=>r.status==='success').length}`);
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isDispatchingEmails = false;
         this.showSaveMessage('Error enviando correos', true);
+        this.cdr.detectChanges();
       }
     });
   }
@@ -190,10 +192,12 @@ export class CurationPanelComponent implements OnInit {
       next: (res: any) => {
         this.isDispatchingPlatforms = false;
         this.showSaveMessage(`Tareas enviadas: ${res.results.filter((r:any)=>r.status==='success').length}`);
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isDispatchingPlatforms = false;
         this.showSaveMessage('Error enviando a plataformas', true);
+        this.cdr.detectChanges();
       }
     });
   }
