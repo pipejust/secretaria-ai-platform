@@ -57,6 +57,7 @@ class Routing(SQLModel, table=True):
     project_id: int = Field(foreign_key="project.id")
     destination_type: str = Field(description="Ej. 'Trello', 'Azure DevOps', 'Jira'")
     destination_config: str = Field(description="Un JSON stringifiado de configuraciones (ej. ID del Board)")
+    is_active: bool = Field(default=True)
     
     project: Optional[Project] = Relationship(back_populates="routings")
 
