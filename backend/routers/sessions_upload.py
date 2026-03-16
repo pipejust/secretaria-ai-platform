@@ -97,7 +97,17 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
         db.commit()
 
     new_items_output = []
+    
+    # Defensive programming: If groq returned a single dict instead of a list of dicts
+    if isinstance(action_items_data, dict):
+        action_items_data = [action_items_data]
+    elif not isinstance(action_items_data, list):
+        action_items_data = []
+
     for item_data in action_items_data:
+        if not isinstance(item_data, dict):
+            continue
+            
         action_item = ActionItem(
             session_id=session_id,
             owner_name=item_data.get("owner_name", "Unknown"),

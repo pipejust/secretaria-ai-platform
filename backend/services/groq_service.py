@@ -146,6 +146,9 @@ class GroqService:
                     if isinstance(parsed_data[first_key], dict) and ("summary" in parsed_data[first_key] or "action_items" in parsed_data[first_key]):
                         parsed_data = parsed_data[first_key]
                         
+                if not isinstance(parsed_data, dict):
+                    return {"summary": str(parsed_data)}
+                    
                 return parsed_data
             except Exception as e:
                 # Si falla el parseo, lanzar error
