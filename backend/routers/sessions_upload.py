@@ -341,10 +341,10 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             pdf.multi_cell(0, 6, safe_summary)
             pdf.ln(5)
             
-        pdf_b64_global = base64.b64encode(bytes(pdf.output())).decode('utf-8')
+        pdf_bytes_global = list(bytes(pdf.output()))
     except Exception as e:
         print(f"Error generating PDF summary: {e}")
-        pdf_b64_global = None
+        pdf_bytes_global = None
     
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
@@ -356,10 +356,10 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             continue
             
         attachments = []
-        if pdf_b64_global:
+        if pdf_bytes_global:
             attachments.append({
                 "filename": "Resumen_Sesion.pdf",
-                "content": pdf_b64_global,
+                "content": pdf_bytes_global,
                 "content_type": "application/pdf"
             })
             
@@ -382,10 +382,10 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                         "END:VCALENDAR"
                     ]
                     ics_raw = "\r\n".join(ics_lines).encode('utf-8')
-                    ics_b64 = base64.b64encode(ics_raw).decode('utf-8')
                     attachments.append({
                         "filename": "recordatorio.ics",
-                        "content": ics_b64
+                        "content": list(ics_raw),
+                        "content_type": "text/calendar"
                     })
             except Exception as e:
                 print(f"Error generating ICS: {e}")
