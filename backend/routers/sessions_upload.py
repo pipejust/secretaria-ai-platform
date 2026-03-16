@@ -570,17 +570,48 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                         elif not is_heading and style_config.get("textColor"):
                             run.font.color.rgb = hex_to_rgb(style_config.get("textColor"))
                             
-                    def add_styled_heading(d, text, level):
+                    def add_styled_heading(d, text, level, align_center=False):
                         h = d.add_heading(level=level)
+                        if align_center:
+                            from docx.enum.text import WD_ALIGN_PARAGRAPH
+                            h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                            
+                        # Set spacing for headers (12pt before, 6pt after)
+                        h.paragraph_format.space_before = Pt(12)
+                        h.paragraph_format.space_after = Pt(6)
+                        
                         run = h.add_run(text)
                         apply_font_styles(run, is_heading=True)
                         return h
                         
                     def add_styled_justified_paragraph(d, text, style=None):
+                        # python-docx ignores \n in text, so we split and add multiple runs with breaks
                         p = add_justified_paragraph(d, "", style=style)
-                        run = p.add_run(text)
-                        apply_font_styles(run, is_heading=False)
+                        p.paragraph_format.space_after = Pt(12) # Add spacing between paragraphs
+                        
+                        lines = text.split('\n')
+                        for i, line in enumerate(lines):
+                            if line.strip() or i > 0:
+                                run = p.add_run(line)
+                                apply_font_styles(run, is_heading=False)
+                                if i < len(lines) - 1:
+                                    run.add_break()
                         return p
+
+                    def set_table_borders(table):
+                        from docx.oxml import OxmlElement
+                        from docx.oxml.ns import qn
+                        tblPr = table._element.xpath('w:tblPr')
+                        if tblPr:
+                            e = OxmlElement('w:tblBorders')
+                            for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+                                border = OxmlElement(f'w:{border_name}')
+                                border.set(qn('w:val'), 'single')
+                                border.set(qn('w:sz'), '4')
+                                border.set(qn('w:space'), '0')
+                                border.set(qn('w:color'), '000000')
+                                e.append(border)
+                            tblPr[0].append(e)
 
                     def set_cell_bg_color(cell, hex_color):
                         if hex_color:
@@ -594,10 +625,18 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                         doc = Document(tmp_path)
                     else:
                         doc = Document(template_obj.file_path)
+                        
+                    # Remove trailing empty paragraphs from the template to prevent content from starting too low
+                    while len(doc.paragraphs) > 0 and not doc.paragraphs[-1].text.strip():
+                        p = doc.paragraphs[-1]._element
+                        p.getparent().remove(p)
+                        # We also need to remove it from doc.paragraphs so the loop updates correctly
+                        # doc.paragraphs is generated dynamically in python-docx, but just to be safe:
+                        pass
                     
                     for block_id in mapping_blocks:
                         if block_id == 'meta':
-                            title_run = add_styled_heading(doc, "Acta de Reunión", level=0).runs[0]
+                            title_run = add_styled_heading(doc, "Acta de Reunión", level=0, align_center=True).runs[0]
                             if style_config.get("headingColor"):
                                 title_run.font.color.rgb = hex_to_rgb(style_config.get("headingColor"))
                             else:
@@ -646,6 +685,9 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                                 table.style = 'Table Grid'
                             except Exception:
                                 pass
+                            
+                            set_table_borders(table)
+                            
                             hdr_cells = table.rows[0].cells
                             headers = ['Responsable', 'Tarea', 'Descripción', 'Vencimiento']
                             
@@ -732,36 +774,58 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
 
     if not doc_generated:
         doc = Document()
+        
+        def add_fallback_paragraph(d, text, style=None):
+            p = add_justified_paragraph(d, "", style=style)
+            from docx.shared import Pt
+            p.paragraph_format.space_after = Pt(12)
+            lines = (text or "").split('\n')
+            for i, line in enumerate(lines):
+                if line.strip() or i > 0:
+                    run = p.add_run(line)
+                    if i < len(lines) - 1:
+                        run.add_break()
+            return p
+            
+        def add_fallback_heading(d, text, level):
+            h = d.add_heading(text, level=level)
+            from docx.shared import Pt
+            h.paragraph_format.space_before = Pt(12)
+            h.paragraph_format.space_after = Pt(6)
+            return h
 
         # Title
-        title_run = doc.add_heading(level=0).add_run("Acta de Reunión")
+        title_heading = add_fallback_heading(doc, "", level=0)
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title_heading.add_run("Acta de Reunión")
         title_run.font.color.rgb = RGBColor(79, 70, 229)
         
         # Meta
-        add_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
-        add_justified_paragraph(doc, f"Fecha: {formatted_date}")
-        add_justified_paragraph(doc, f"Estado: {status_str}")
+        add_fallback_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+        add_fallback_paragraph(doc, f"Fecha: {formatted_date}")
+        add_fallback_paragraph(doc, f"Estado: {status_str}")
         doc.add_paragraph()
 
         # Sections
         if clean_summary:
-            doc.add_heading('Resumen Ejecutivo', level=1)
-            add_justified_paragraph(doc, clean_summary)
+            add_fallback_heading(doc, 'Resumen Ejecutivo', level=1)
+            add_fallback_paragraph(doc, clean_summary)
 
         if session_obj.processed_decisions:
-            doc.add_heading('Decisiones Clave', level=1)
-            add_justified_paragraph(doc, session_obj.processed_decisions)
+            add_fallback_heading(doc, 'Decisiones Clave', level=1)
+            add_fallback_paragraph(doc, session_obj.processed_decisions)
 
         if session_obj.processed_risks:
-            doc.add_heading('Riesgos Identificados', level=1)
-            add_justified_paragraph(doc, session_obj.processed_risks)
+            add_fallback_heading(doc, 'Riesgos Identificados', level=1)
+            add_fallback_paragraph(doc, session_obj.processed_risks)
 
         if session_obj.processed_agreements:
-            doc.add_heading('Acuerdos', level=1)
-            add_justified_paragraph(doc, session_obj.processed_agreements)
+            add_fallback_heading(doc, 'Acuerdos', level=1)
+            add_fallback_paragraph(doc, session_obj.processed_agreements)
 
         # Action Items Table
-        doc.add_heading('Tareas (Action Items)', level=1)
+        add_fallback_heading(doc, 'Tareas (Action Items)', level=1)
         
         if action_items:
             table = doc.add_table(rows=1, cols=4)
@@ -769,19 +833,45 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                 table.style = 'Table Grid'
             except Exception:
                 pass
+                
+            # Agregamos bordes XML para garantizar que se vean incluso si el estilo falla
+            from docx.oxml import OxmlElement
+            from docx.oxml.ns import qn
+            tblPr = table._element.xpath('w:tblPr')
+            if tblPr:
+                e = OxmlElement('w:tblBorders')
+                for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+                    border = OxmlElement(f'w:{border_name}')
+                    border.set(qn('w:val'), 'single')
+                    border.set(qn('w:sz'), '4')
+                    border.set(qn('w:space'), '0')
+                    border.set(qn('w:color'), '000000')
+                    e.append(border)
+                tblPr[0].append(e)
             
             hdr_cells = table.rows[0].cells
             hdr_cells[0].text = 'Responsable'
             hdr_cells[1].text = 'Tarea'
             hdr_cells[2].text = 'Descripción'
             hdr_cells[3].text = 'Vencimiento'
-            
             for item in action_items:
                 row_cells = table.add_row().cells
-                row_cells[0].text = f"{item.owner_name} ({item.owner_email})"
-                row_cells[1].text = item.title
-                row_cells[2].text = item.description or ""
-                row_cells[3].text = item.due_date or "Sin fecha"
+                
+                # Process each cell text splitting by \n
+                def apply_fallback_text(cell, content):
+                    cell.text = ""
+                    p = cell.paragraphs[0]
+                    lines = (content or "").split('\n')
+                    for i, line in enumerate(lines):
+                        if line.strip() or i > 0:
+                            run = p.add_run(line)
+                            if i < len(lines) - 1:
+                                run.add_break()
+                                
+                apply_fallback_text(row_cells[0], f"{item.owner_name}\n({item.owner_email})")
+                apply_fallback_text(row_cells[1], item.title)
+                apply_fallback_text(row_cells[2], item.description or "")
+                apply_fallback_text(row_cells[3], item.due_date or "Sin fecha")
         else:
             add_justified_paragraph(doc, "No se detectaron tareas para esta sesión.")
             
