@@ -111,7 +111,7 @@
 
         <!-- Azure DevOps -->
         <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -121,6 +121,12 @@
                     </svg>
                     Azure DevOps
                 </h4>
+                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="azureActive" [(ngModel)]="azureSettings.isActive" name="azureActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
+                    <label class="form-check-label mb-0" for="azureActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': azureSettings.isActive ? '#10b981' : '#6b7280'}">
+                        {{ azureSettings.isActive ? 'Activo' : 'Inactivo' }}
+                    </label>
+                </div>
             </div>
             <div class="card-body">
                 <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
@@ -151,7 +157,7 @@
 
         <!-- Trello -->
         <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -161,6 +167,12 @@
                     </svg>
                     Trello
                 </h4>
+                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="trelloActive" [(ngModel)]="trelloSettings.isActive" name="trelloActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
+                    <label class="form-check-label mb-0" for="trelloActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': trelloSettings.isActive ? '#10b981' : '#6b7280'}">
+                        {{ trelloSettings.isActive ? 'Activo' : 'Inactivo' }}
+                    </label>
+                </div>
             </div>
             <div class="card-body">
                 <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
@@ -192,7 +204,7 @@
 
         <!-- Jira -->
         <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -204,6 +216,12 @@
                     </svg>
                     Atlassian Jira
                 </h4>
+                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="jiraActive" [(ngModel)]="jiraSettings.isActive" name="jiraActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
+                    <label class="form-check-label mb-0" for="jiraActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': jiraSettings.isActive ? '#10b981' : '#6b7280'}">
+                        {{ jiraSettings.isActive ? 'Activo' : 'Inactivo' }}
+                    </label>
+                </div>
             </div>
             <div class="card-body">
                 <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
@@ -233,7 +251,7 @@
 
         <!-- ClickUp -->
         <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -243,6 +261,12 @@
                     </svg>
                     ClickUp
                 </h4>
+                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="clickupActive" [(ngModel)]="clickupSettings.isActive" name="clickupActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
+                    <label class="form-check-label mb-0" for="clickupActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': clickupSettings.isActive ? '#10b981' : '#6b7280'}">
+                        {{ clickupSettings.isActive ? 'Activo' : 'Inactivo' }}
+                    </label>
+                </div>
             </div>
             <div class="card-body">
                 <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">

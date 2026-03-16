@@ -130,11 +130,9 @@
                 <form (ngSubmit)="addRouting()" #routingForm="ngForm">
                     <div class="form-group mb-4">
                         <label>Plataforma de Destino <span class="text-danger">*</span></label>
-                        <select name="destType" [(ngModel)]="newRouting.destination_type" required style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
-                            <option value="trello">Trello</option>
-                            <option value="jira">Jira</option>
-                            <option value="clickup">ClickUp</option>
-                            <option value="azure">Azure DevOps</option>
+                        <select name="destType" [(ngModel)]="newRouting.destination_type" required style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;" [disabled]="activeIntegrations.length === 0">
+                            <option *ngFor="let integration of activeIntegrations" [value]="integration.id">{{ integration.name }}</option>
+                            <option *ngIf="activeIntegrations.length === 0" value="" disabled selected>Primero activa una integración en Ajustes</option>
                         </select>
                     </div>
 
@@ -172,7 +170,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success w-full mt-2" [disabled]="!routingForm.form.valid || isAddingRouting">
+                    <button type="submit" class="btn btn-success w-full mt-2" [disabled]="!routingForm.form.valid || isAddingRouting || activeIntegrations.length === 0">
                         <span *ngIf="!isAddingRouting">Guardar Ruta</span>
                         <span *ngIf="isAddingRouting">Guardando...</span>
                     </button>

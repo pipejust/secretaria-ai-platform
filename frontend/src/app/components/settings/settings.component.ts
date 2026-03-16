@@ -13,10 +13,10 @@ import { SettingsService } from '../../services/settings.service';
 export class SettingsComponent implements OnInit {
   smtpSettings = { provider: 'Resend', apiKey: '', senderEmail: '' };
   firefliesSettings = { apiKey: '', webhookUrl: '' };
-  trelloSettings = { apiKey: '', apiToken: '', boardId: '' };
-  jiraSettings = { email: '', apiToken: '', domain: '' };
-  azureSettings = { organization: '', project: '', pat: '' };
-  clickupSettings = { apiToken: '', teamId: '' };
+  trelloSettings = { apiKey: '', apiToken: '', boardId: '', isActive: false };
+  jiraSettings = { email: '', apiToken: '', domain: '', isActive: false };
+  azureSettings = { organization: '', project: '', pat: '', isActive: false };
+  clickupSettings = { apiToken: '', teamId: '', isActive: false };
 
   isSaving = false;
   successMessage = '';
@@ -27,12 +27,12 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
     this.settingsService.getSettings().subscribe({
       next: (data) => {
-        if (data.smtp) this.smtpSettings = data.smtp;
-        if (data.fireflies) this.firefliesSettings = data.fireflies;
-        if (data.trello) this.trelloSettings = data.trello;
-        if (data.jira) this.jiraSettings = data.jira;
-        if (data.azure) this.azureSettings = data.azure;
-        if (data.clickup) this.clickupSettings = data.clickup;
+        if (data.smtp) this.smtpSettings = { ...this.smtpSettings, ...data.smtp };
+        if (data.fireflies) this.firefliesSettings = { ...this.firefliesSettings, ...data.fireflies };
+        if (data.trello) this.trelloSettings = { ...this.trelloSettings, ...data.trello };
+        if (data.jira) this.jiraSettings = { ...this.jiraSettings, ...data.jira };
+        if (data.azure) this.azureSettings = { ...this.azureSettings, ...data.azure };
+        if (data.clickup) this.clickupSettings = { ...this.clickupSettings, ...data.clickup };
         this.cdr.detectChanges();
       },
       error: (err) => console.error('Failed to load settings', err)

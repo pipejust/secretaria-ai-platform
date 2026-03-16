@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { SettingsService } from '../../services/settings.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -48,16 +49,19 @@ export class ProjectsComponent implements OnInit {
     };
     isAddingRouting = false;
     isDeletingRoutingId: number | null = null;
+    activeIntegrations: { id: string, name: string }[] = [];
 
     constructor(
         private http: HttpClient, 
         private authService: AuthService, 
+        private settingsService: SettingsService,
         private cdr: ChangeDetectorRef,
         private route: ActivatedRoute
     ) { }
 
     ngOnInit() {
         this.loadProjects();
+        this.loadActiveIntegrations();
         this.route.queryParams.subscribe(params => {
             if (params['openContacts']) {
                 const projectId = Number(params['openContacts']);
@@ -74,6 +78,20 @@ export class ProjectsComponent implements OnInit {
     }
 
     pendingContactProject: number | null = null;
+
+    loadActiveIntegrations() {
+        this.settingsService.getSettings().subscribe({
+            next: (data) => {
+                this.activeIntegrations = [];
+                if (data.trello?.isActive) this.activeIntegrations.push({ id: 'trello', name: 'Trello' });
+                if (data.jira?.isActive) this.activeIntegrations.push({ id: 'jira', name: 'Jira' });
+                if (data.clickup?.isActive) this.activeIntegrations.push({ id: 'clickup', name: 'ClickUp' });
+                if (data.azure?.isActive) this.activeIntegrations.push({ id: 'azure', name: 'Azure DevOps' });
+                this.cdr.detectChanges();
+            },
+            error: (err) => console.error('Failed to load settings for active integrations', err)
+        });
+    }
 
     loadProjects() {
         this.isLoading = true;
@@ -297,8 +315,19 @@ export class ProjectsComponent implements OnInit {
         this.managingRoutingsForProject = project;
         this.editingProject = null;
         this.managingContactsForProject = null;
+        this.managingContactsForProject = null;
         this.errorMsg = '';
         this.successMsg = '';
+        
+        const defaultType = this.activeIntegrations.length > 0 ? this.activeIntegrations[0].id : '';
+        this.newRouting = { destination_type: defaultType, config_str: '{}', is_active: true };
+        this.destinationConfig = {
+            trello: { board_id: '', list_id: '' },
+            jira: { project_key: '' },
+            clickup: { list_id: '' },
+            azure: { area_path: '' }
+        };
+        
         this.loadRoutings(project.id);
     }
 
@@ -311,12 +340,13 @@ export class ProjectsComponent implements OnInit {
     }
 
     resetRoutingForm() {
-        this.newRouting = { destination_type: 'trello', config_str: '{}', is_active: true };
+        const defaultType = this.activeIntegrations.length > 0 ? this.activeIntegrations[0].id : '';
+        this.newRouting = { destination_type: defaultType, config_str: '{}', is_active: true };
         this.destinationConfig = {
             trello: { board_id: '', list_id: '' },
             jira: { project_key: '' },
             clickup: { list_id: '' },
-            azure: { project_id: '' }
+            azure: { area_path: '' }
         };
     }
 
