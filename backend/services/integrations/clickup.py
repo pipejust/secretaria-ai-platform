@@ -22,12 +22,7 @@ class ClickUpIntegrationService:
         }
         
         async with httpx.AsyncClient() as client:
-            # En entorno real descomentar:
-            # response = await client.post(url, json=payload, headers=self.headers)
-            # response.raise_for_status()
-            # data = response.json()
-            # return {"id": data["id"], "url": data["url"]}
-            
-            # Simulamos éxito
-            print(f"Mock ClickUp: Tarea creada '{name}' en lista {list_id}")
-            return {"id": "mock_clickup_123", "url": "https://app.clickup.com/t/mock_clickup_123"}
+            response = await client.post(url, json=payload, headers=self.headers)
+            response.raise_for_status()
+            data = response.json()
+            return {"id": data["id"], "url": data["url"]}

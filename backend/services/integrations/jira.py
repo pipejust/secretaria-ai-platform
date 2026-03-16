@@ -3,6 +3,7 @@ from typing import Dict, Any
 
 class JiraIntegrationService:
     def __init__(self, domain: str, email: str, api_token: str):
+        self.domain = domain
         self.base_url = f"https://{domain}.atlassian.net/rest/api/3"
         self.email = email
         self.api_token = api_token
@@ -40,12 +41,7 @@ class JiraIntegrationService:
         }
         
         async with httpx.AsyncClient() as client:
-            # En entorno real descomentar:
-            # response = await client.post(url, json=payload, auth=self.auth)
-            # response.raise_for_status()
-            # data = response.json()
-            # return {"id": data["id"], "key": data["key"], "url": f"https://{domain}.atlassian.net/browse/{data['key']}"}
-            
-            # Simulamos éxito
-            print(f"Mock Jira: Issue creado '{summary}' en proyecto {project_key}")
-            return {"id": "mock_jira_123", "key": f"{project_key}-123", "url": f"https://mock.atlassian.net/browse/{project_key}-123"}
+            response = await client.post(url, json=payload, auth=self.auth)
+            response.raise_for_status()
+            data = response.json()
+            return {"id": data["id"], "key": data["key"], "url": f"https://{self.domain}.atlassian.net/browse/{data['key']}"}

@@ -37,11 +37,6 @@ class AzureDevOpsIntegrationService:
         headers = {"Content-Type": "application/json-patch+json"}
         
         async with httpx.AsyncClient() as client:
-            # En producción:
-            # response = await client.post(url, json=payload, auth=auth, headers=headers)
-            # response.raise_for_status()
-            # return response.json()
-            
-            # Simulamos éxito
-            print(f"Mock ADO: Work Item '{title}' creado para {assigned_to}")
-            return {"id": "mock_ado_123", "url": "https://dev.azure.com/mock"}
+            response = await client.post(url, json=payload, auth=auth, headers=headers)
+            response.raise_for_status()
+            return response.json()

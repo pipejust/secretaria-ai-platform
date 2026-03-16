@@ -21,11 +21,6 @@ class TrelloIntegrationService:
         }
         
         async with httpx.AsyncClient() as client:
-            # En entorno real descomentar:
-            # response = await client.post(url, params=query)
-            # response.raise_for_status()
-            # return response.json()
-            
-            # Simulamos éxito
-            print(f"Mock Trello: Tarjeta creada '{title}' en list {list_id}")
-            return {"id": "mock_trello_card_123", "url": "https://trello.com/c/mock"}
+            response = await client.post(url, params=query)
+            response.raise_for_status()
+            return response.json()
