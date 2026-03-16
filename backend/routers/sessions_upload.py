@@ -689,7 +689,7 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                             else:
                                 title_run.font.color.rgb = RGBColor(79, 70, 229)
                                 
-                            add_styled_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+                            add_styled_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}")
                             add_styled_justified_paragraph(doc, f"Fecha: {formatted_date}")
                             add_styled_justified_paragraph(doc, f"Estado: {status_str}")
                             doc.add_paragraph()
@@ -851,7 +851,7 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
         title_run.font.color.rgb = RGBColor(79, 70, 229)
         
         # Meta
-        add_fallback_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}", style='Intense Quote')
+        add_fallback_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}")
         add_fallback_paragraph(doc, f"Fecha: {formatted_date}")
         add_fallback_paragraph(doc, f"Estado: {status_str}")
         doc.add_paragraph()
