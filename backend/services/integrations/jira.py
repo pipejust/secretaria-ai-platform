@@ -3,8 +3,8 @@ from typing import Dict, Any, Optional
 
 class JiraIntegrationService:
     def __init__(self, domain: str, email: str, api_token: str):
-        self.domain = domain
-        self.base_url = f"https://{domain}.atlassian.net/rest/api/3"
+        self.domain = domain.replace('.atlassian.net', '').strip()
+        self.base_url = f"https://{self.domain}.atlassian.net/rest/api/3"
         self.email = email
         self.api_token = api_token
         self.auth = (self.email, self.api_token)
