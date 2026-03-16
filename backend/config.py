@@ -4,8 +4,7 @@ import os
 
 class Settings(BaseSettings):
     project_name: str = "Secretaría AI"
-    # Render provides persistent disks, so we can use a relative file or an absolute path on their disk
-    database_url: str = os.environ.get("DATABASE_URL", "sqlite:///./secretaria.db")
+    database_url: str = ""
     groq_api_key: str = ""
     fireflies_api_key: str = ""
     supabase_url: str = ""

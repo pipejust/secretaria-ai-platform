@@ -457,20 +457,20 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
                     t_config = settings_dict.get("trello", {})
                     if t_config.get("apiKey") and t_config.get("apiToken"):
                         trello_service = TrelloIntegrationService(t_config["apiKey"], t_config["apiToken"])
-                        await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, item.description, item.due_date)
+                        await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, item.description, item.due_date, item.owner_email)
                         item_success = True
                 elif "jira" in dest_type:
                     j_config = settings_dict.get("jira", {})
                     if j_config.get("domain") and j_config.get("apiToken"):
                         jira_email = j_config.get("email", "")
                         jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"]) 
-                        await jira_service.create_issue(config.get("project_key"), item.title, item.description)
+                        await jira_service.create_issue(config.get("project_key"), item.title, item.description, due_date=item.due_date, owner_email=item.owner_email)
                         item_success = True
                 elif "clickup" in dest_type:
                     c_config = settings_dict.get("clickup", {})
                     if c_config.get("apiToken"):
                         clickup_service = ClickUpIntegrationService(c_config["apiToken"]) 
-                        await clickup_service.create_task(config.get("list_id"), item.title, item.description)
+                        await clickup_service.create_task(config.get("list_id"), item.title, item.description, item.due_date, item.owner_email)
                         item_success = True
                 elif "azure" in dest_type:
                     a_config = settings_dict.get("azure", {})
