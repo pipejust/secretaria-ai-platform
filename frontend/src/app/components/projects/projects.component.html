@@ -136,19 +136,26 @@
                         </select>
                     </div>
 
-                    <!-- Configuraciones dinámicas según el tipo -->
-                    <div *ngIf="newRouting.destination_type === 'trello'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                        <div class="form-group mb-0">
-                            <label>Trello Board ID <span class="text-danger">*</span></label>
-                            <input type="text" name="trelloBoardId" [(ngModel)]="destinationConfig['trello'].board_id" required placeholder="ej: 60a1b2c3..." />
-                        </div>
-                        <div class="form-group mb-0">
-                            <label>Trello List ID <span class="text-danger">*</span></label>
-                            <input type="text" name="trelloListId" [(ngModel)]="destinationConfig['trello'].list_id" required placeholder="ej: 60a1b2d4..." />
+                    <div *ngIf="newRouting.destination_type === 'trello'" style="margin-bottom: 1rem;">
+                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
+                            <strong>¿Dónde encuentro los IDs?</strong> Ingresa a un tablero de Trello y agrega <code>.json</code> a la URL (ej: <code>trello.com/b/ABC/mi-tablero.json</code>). Busca <code>"id"</code> para el tablero y el array <code>"lists"</code> para obtener el ID de la lista.
+                        </p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group mb-0">
+                                <label>Trello Board ID <span class="text-danger">*</span></label>
+                                <input type="text" name="trelloBoardId" [(ngModel)]="destinationConfig['trello'].board_id" required placeholder="ej: 60a1b2c3..." />
+                            </div>
+                            <div class="form-group mb-0">
+                                <label>Trello List ID <span class="text-danger">*</span></label>
+                                <input type="text" name="trelloListId" [(ngModel)]="destinationConfig['trello'].list_id" required placeholder="ej: 60a1b2d4..." />
+                            </div>
                         </div>
                     </div>
 
                     <div *ngIf="newRouting.destination_type === 'jira'" style="margin-bottom: 1rem;">
+                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
+                            <strong>¿Dónde encuentro la Project Key?</strong> Es el prefijo corto en mayúsculas de todos tus tickets en ese proyecto. Si un ticket es <code>PROJ-123</code>, la Project Key es <code>PROJ</code>.
+                        </p>
                         <div class="form-group mb-0">
                             <label>Jira Project Key <span class="text-danger">*</span></label>
                             <input type="text" name="jiraProjectKey" [(ngModel)]="destinationConfig['jira'].project_key" required placeholder="ej: PROJ" />
@@ -156,6 +163,9 @@
                     </div>
 
                     <div *ngIf="newRouting.destination_type === 'clickup'" style="margin-bottom: 1rem;">
+                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
+                            <strong>¿Dónde encuentro el List ID?</strong> Abre tu lista en ClickUp. En la URL (ej: <code>.../v/l/li/1234567</code>), el ID de la lista son los números del final.
+                        </p>
                         <div class="form-group mb-0">
                             <label>ClickUp List ID <span class="text-danger">*</span></label>
                             <input type="text" name="clickupListId" [(ngModel)]="destinationConfig['clickup'].list_id" required placeholder="ej: 1234567" />
@@ -163,10 +173,12 @@
                     </div>
 
                     <div *ngIf="newRouting.destination_type === 'azure'" style="margin-bottom: 1rem;">
+                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
+                            <strong>¿Area Path?</strong> Si tu proyecto usa subdivisiones (Area Paths), ingrésala aquí (ej: <code>MiProyecto\EquipoFrontend</code>). Déjalo en blanco para enviar las tareas a la bandeja general del Proyecto.
+                        </p>
                         <div class="form-group mb-0">
                             <label>Azure Area Path (Opcional)</label>
                             <input type="text" name="azureAreaPath" [(ngModel)]="destinationConfig['azure'].area_path" placeholder="ej: MyProject\MyArea" />
-                            <small class="text-muted mt-1" style="display: block;">Dejar vacío si las tareas van a la bandeja general del proyecto global.</small>
                         </div>
                     </div>
 
