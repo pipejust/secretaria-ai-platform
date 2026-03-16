@@ -107,11 +107,11 @@
                  </div>
                  <div class="meta-field">
                    <div class="meta-icon">✉️</div>
-                   <input type="email" [(ngModel)]="task.owner_email" placeholder="correo@ejemplo.com" (blur)="updateEmail(task)" />
+                   <input type="email" [(ngModel)]="task.owner_email" placeholder="correo@ejemplo.com" (blur)="updateTaskField(task)" />
                  </div>
                  <div class="meta-field">
                    <div class="meta-icon">📅</div>
-                   <input type="date" [(ngModel)]="task.due_date" style="color:var(--text-main);" />
+                   <input type="date" [(ngModel)]="task.due_date" style="color:var(--text-main);" (change)="updateTaskField(task)" />
                  </div>
               </div>
             </div>

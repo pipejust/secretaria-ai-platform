@@ -1,20 +1,41 @@
+import os
 import resend
-resend.api_key = "re_invalidkey123"
+import base64
 
-attachment_dict = {
-    "filename": "test.pdf",
-    "content": list(b"hello world")
-}
-
-params = {
-    "from": "test@example.com",
-    "to": ["test2@example.com"],
-    "subject": "Test",
-    "html": "<p>test</p>",
-    "attachments": [attachment_dict]
-}
+resend.api_key = "re_123456789"
 
 try:
-    resend.Emails.send(params)
+    print("Testing string b64")
+    r = resend.Emails.send({
+        "from": "onboarding@resend.dev",
+        "to": "delivered@resend.dev",
+        "subject": "hello world",
+        "html": "<strong>it works!</strong>",
+        "attachments": [
+            {
+                "filename": "invoice.pdf",
+                "content": "SGVsbG8gV29ybGQ=" # Base64 for "Hello World"
+            }
+        ]
+    })
+    print(r)
 except Exception as e:
-    print("Resend Error:", e)
+    print(f"B64 Exception: {e}")
+
+try:
+    print("Testing list of ints")
+    r = resend.Emails.send({
+        "from": "onboarding@resend.dev",
+        "to": "delivered@resend.dev",
+        "subject": "hello world",
+        "html": "<strong>it works!</strong>",
+        "attachments": [
+            {
+                "filename": "invoice.pdf",
+                "content": list(b"Hello World")
+            }
+        ]
+    })
+    print(r)
+except Exception as e:
+    print(f"Int List Exception: {e}")

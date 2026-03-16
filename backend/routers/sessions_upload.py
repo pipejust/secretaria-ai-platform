@@ -222,18 +222,22 @@ def update_session_content(session_id: int, payload: SessionUpdate, db: Session 
     return {"status": "success", "message": "Manual edits saved successfully"}
 
 @router.put("/action_items/{item_id}")
-def update_action_item_email(item_id: int, owner_email: str = Form(...), db: Session = Depends(get_session)):
-    """Update the owner email of an action item manually."""
+def update_action_item_email(item_id: int, owner_email: Optional[str] = Form(None), due_date: Optional[str] = Form(None), db: Session = Depends(get_session)):
+    """Update the owner email or due_date of an action item manually."""
     from models import ActionItem
     item = db.get(ActionItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Action Item not found")
     
-    item.owner_email = owner_email
+    if owner_email is not None:
+        item.owner_email = owner_email
+    if due_date is not None:
+        item.due_date = due_date
+
     db.add(item)
     db.commit()
     db.refresh(item)
-    return {"status": "success", "message": "Email actualizado", "item": item}
+    return {"status": "success", "message": "Tarea actualizada", "item": item}
 
 
 @router.post("/upload")
@@ -327,8 +331,18 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
         pdf.set_text_color(*color_text)
         pdf.set_font("helvetica", "B", 12)
         safe_title = session_obj.title.encode('latin-1', 'replace').decode('latin-1')
-        pdf.cell(0, 8, f"Proyecto: {safe_title}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 8, f"Fecha: {session_obj.date}", new_x="LMARGIN", new_y="NEXT")
+        
+        try:
+            if session_obj.date and str(session_obj.date).isdigit():
+                dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
+                formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                formatted_date = str(session_obj.date)
+        except Exception:
+            formatted_date = str(session_obj.date)
+            
+        pdf.cell(0, 8, f"Sesión: {safe_title}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 8, f"Fecha: {formatted_date}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
         
         # Resumen Ejecutivo

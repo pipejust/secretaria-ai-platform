@@ -137,14 +137,15 @@ export class CurationPanelComponent implements OnInit {
     });
   }
 
-  updateEmail(task: ActionItem) {
+  updateTaskField(task: ActionItem) {
     if (!task.id) return;
     const body = new FormData();
-    body.append('owner_email', task.owner_email);
+    if (task.owner_email != null) body.append('owner_email', task.owner_email);
+    if (task.due_date != null) body.append('due_date', task.due_date);
 
     this.http.put(`${environment.apiUrl}/api/sessions/action_items/${task.id}`, body, { headers: this.authService.getAuthHeaders() }).subscribe({
-      next: () => this.showSaveMessage('Email actualizado'),
-      error: () => this.showSaveMessage('Error guardando email', true)
+      next: () => this.showSaveMessage('Tarea actualizada'),
+      error: () => this.showSaveMessage('Error guardando tarea', true)
     });
   }
 

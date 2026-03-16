@@ -1,27 +1,41 @@
+import os
 import resend
 
-resend.api_key = "re_invalidkey123"
-
-attachment_list = {
-    "filename": "test.pdf",
-    "content": list(b"hello world")
-}
-
-attachment_b64 = {
-    "filename": "test2.pdf",
-    "content": "aGVsbG8gd29ybGQ=" # base64 string
-}
-
-params = {
-    "from": "test@example.com",
-    "to": ["test2@example.com"],
-    "subject": "Test",
-    "html": "<p>test</p>",
-    "attachments": [attachment_list, attachment_b64]
-}
+# Attempt to use a dummy key
+resend.api_key = "re_123456789"
 
 try:
-    resend.Emails.send(params)
-    print("Success") # won't happen due to key
+    print("Testing string b64")
+    r = resend.Emails.send({
+        "from": "onboarding@resend.dev",
+        "to": "delivered@resend.dev",
+        "subject": "hello world",
+        "html": "<strong>it works!</strong>",
+        "attachments": [
+            {
+                "filename": "invoice.pdf",
+                "content": "SGVsbG8gV29ybGQ=" # Base64 for "Hello World"
+            }
+        ]
+    })
+    print(r)
 except Exception as e:
-    print("Resend Error:", type(e), str(e))
+    print(f"B64 Exception: {e}")
+
+try:
+    print("Testing list of ints")
+    r = resend.Emails.send({
+        "from": "onboarding@resend.dev",
+        "to": "delivered@resend.dev",
+        "subject": "hello world",
+        "html": "<strong>it works!</strong>",
+        "attachments": [
+            {
+                "filename": "invoice.pdf",
+                "content": list(b"Hello World")
+            }
+        ]
+    })
+    print(r)
+except Exception as e:
+    print(f"Int List Exception: {e}")
