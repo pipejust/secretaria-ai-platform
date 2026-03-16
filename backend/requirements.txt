@@ -48,3 +48,5 @@ jinja2>=3.1.0
 docxtpl
 requests
 fpdf2>=2.8.1
+apscheduler
+tzlocal>=3.0
