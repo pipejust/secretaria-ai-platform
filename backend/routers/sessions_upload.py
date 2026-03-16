@@ -287,21 +287,55 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
     
     # Generate generic PDF once for the session
     try:
+        from models import Template
+        import json
+        style_config = {}
+        
+        # Intentar obtener el template activo del proyecto para heredar sus estilos
+        if session_obj.project_id:
+            templates = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).all()
+            if templates and templates[0].style_config:
+                try:
+                    style_config = json.loads(templates[0].style_config)
+                except Exception:
+                    pass
+                    
+        def hex_to_rgb_tuple(hex_str: str) -> tuple:
+            hex_str = hex_str.lstrip('#')
+            if len(hex_str) != 6:
+                return (0, 0, 0)
+            return (int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
+            
+        color_text = hex_to_rgb_tuple(style_config.get("textColor", "#1f2937"))
+        color_heading = hex_to_rgb_tuple(style_config.get("headingColor", "#4f46e5"))
+        
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("helvetica", "B", 16)
+        
+        # Titulo Principal
+        pdf.set_text_color(*color_heading)
+        pdf.set_font("helvetica", "B", 18)
         pdf.cell(0, 10, "Secretaria AI - Resumen de Sesion", new_x="LMARGIN", new_y="NEXT", align="C")
         pdf.ln(10)
         
+        # Meta Info
+        pdf.set_text_color(*color_text)
         pdf.set_font("helvetica", "B", 12)
         safe_title = session_obj.title.encode('latin-1', 'replace').decode('latin-1')
         pdf.cell(0, 8, f"Proyecto: {safe_title}", new_x="LMARGIN", new_y="NEXT")
         pdf.cell(0, 8, f"Fecha: {session_obj.date}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
         
+        # Resumen Ejecutivo
         if session_obj.raw_summary:
-            pdf.set_font("helvetica", "B", 12)
-            pdf.cell(0, 8, "Resumen Ejecutivo:", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_fill_color(*color_heading)
+            pdf.set_text_color(255, 255, 255) # Texto blanco sobre fondo de color
+            pdf.set_font("helvetica", "B", 14)
+            # Add some padding and solid fill
+            pdf.cell(0, 10, "Resumen Ejecutivo:", new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.ln(3)
+            
+            pdf.set_text_color(*color_text)
             pdf.set_font("helvetica", "", 11)
             safe_summary = session_obj.raw_summary.encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(0, 6, safe_summary)
