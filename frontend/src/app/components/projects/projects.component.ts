@@ -423,4 +423,21 @@ export class ProjectsComponent implements OnInit {
             }
         });
     }
+
+    toggleRoutingStatus(routing: any) {
+        this.errorMsg = '';
+        this.successMsg = '';
+        this.http.patch<any>(`${environment.apiUrl}/projects/routings/${routing.id}/toggle`, {}).subscribe({
+            next: (data) => {
+                routing.is_active = data.is_active;
+                this.successMsg = `Ruta ${routing.is_active ? 'activada' : 'desactivada'} exitosamente`;
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error(err);
+                this.errorMsg = err.error?.detail || 'Error al cambiar el estado de la ruta';
+                this.cdr.detectChanges();
+            }
+        });
+    }
 }

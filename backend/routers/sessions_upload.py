@@ -429,7 +429,7 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
     if not session_obj.project_id:
         raise HTTPException(status_code=400, detail="Cannot dispatch: Meeting is not related to any project routing.")
         
-    routings = db.exec(select(Routing).where(Routing.project_id == session_obj.project_id)).all()
+    routings = db.exec(select(Routing).where(Routing.project_id == session_obj.project_id, Routing.is_active == True)).all()
     if not routings:
         raise HTTPException(status_code=400, detail="Project has no configured routings.")
 

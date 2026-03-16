@@ -117,9 +117,15 @@
                             <strong style="display: block; color: var(--text-main); text-transform: capitalize;">{{ routing.destination_type }}</strong>
                             <small style="color: var(--text-muted); font-family: monospace;">{{ routing.destination_config }}</small>
                         </div>
-                        <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteRouting(routing.id)" [disabled]="isDeletingRoutingId === routing.id">
-                            Eliminar
-                        </button>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.85rem; color: #64748b; margin: 0;">
+                                <input type="checkbox" [checked]="routing.is_active" (change)="toggleRoutingStatus(routing)" style="margin-right: 5px;">
+                                {{ routing.is_active ? 'Activa' : 'Inactiva' }}
+                            </label>
+                            <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteRouting(routing.id)" [disabled]="isDeletingRoutingId === routing.id">
+                                Eliminar
+                            </button>
+                        </div>
                     </li>
                 </ul>
             </div>

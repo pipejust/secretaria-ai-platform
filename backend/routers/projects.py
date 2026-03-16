@@ -104,6 +104,22 @@ def delete_routing(
         
     crud.routing.remove(session, id=routing_id)
 
+@router.patch("/routings/{routing_id}/toggle", response_model=Routing)
+def toggle_routing_status(
+    routing_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    routing_obj = crud.routing.get(session, routing_id)
+    if not routing_obj:
+        raise HTTPException(status_code=404, detail="Routing config not found")
+        
+    routing_obj.is_active = not routing_obj.is_active
+    session.add(routing_obj)
+    session.commit()
+    session.refresh(routing_obj)
+    return routing_obj
+
 # -----------------
 # Sessions (Meetings per project)
 # -----------------
