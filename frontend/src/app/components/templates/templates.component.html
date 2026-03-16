@@ -190,9 +190,15 @@
 
             <div class="mt-4" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; border-top: 1px solid #e2e8f0; padding-top:1rem;">
                 <button class="btn btn-sm" style="background:#f1f5f9; color:#64748b; border:none;" (click)="isTraditionalConfigurator = true">Cambiar a Inyección Manual {{ '{' }}{{ '{' }} {{ '}' }}{{ '}' }}</button>
-                <div style="display:flex; gap:0.5rem;">
-                    <button class="btn btn-secondary" (click)="showConfigurator = false; showUploadModal = false; successMsg=''">Cancelar</button>
-                    <button class="btn btn-primary" (click)="confirmMapping()">Guardar Estructura</button>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <div *ngIf="saveMappingSuccessMsg" style="color:#10b981; font-size:0.9rem; font-weight:500; margin-right: 1rem;">
+                        <i class="feather icon-check-circle"></i> {{ saveMappingSuccessMsg }}
+                    </div>
+                    <button class="btn btn-secondary" (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg=''" [disabled]="isSavingMapping">Cancelar</button>
+                    <button class="btn btn-primary" (click)="confirmMapping()" [disabled]="isSavingMapping">
+                        <span *ngIf="isSavingMapping" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        {{ isSavingMapping ? 'Guardando...' : 'Guardar Estructura' }}
+                    </button>
                 </div>
             </div>
         </div>

@@ -248,11 +248,17 @@ export class TemplatesComponent implements OnInit {
         this.showConfigurator = true;
     }
 
+    isSavingMapping = false;
+    saveMappingSuccessMsg = '';
+
     confirmMapping() {
         if (!this.lastUploadedTemplateId) {
             this.showConfigurator = false;
             return;
         }
+
+        this.isSavingMapping = true;
+        this.saveMappingSuccessMsg = '';
 
         const mappingPayload = {
             mapping_config: JSON.stringify(this.activeTokens.map(t => t.id)),
@@ -263,14 +269,16 @@ export class TemplatesComponent implements OnInit {
             headers: this.authService.getAuthHeaders()
         }).subscribe({
             next: () => {
-                this.successMsg = 'Mapeo guardado exitosamente en la base de datos.';
+                this.saveMappingSuccessMsg = 'Configuración y estilos guardados correctamente.';
+                this.isSavingMapping = false;
                 this.loadData();
                 setTimeout(() => {
                     this.showConfigurator = false;
-                    this.successMsg = '';
+                    this.saveMappingSuccessMsg = '';
                 }, 2000);
             },
             error: (err) => {
+                this.isSavingMapping = false;
                 this.errorMsg = 'Error al guardar el mapeo: ' + (err.error?.detail || err.message);
             }
         });
