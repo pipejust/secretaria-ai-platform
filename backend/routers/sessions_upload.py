@@ -441,6 +441,8 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
         except:
             settings_dict[s.provider_name] = {}
 
+    from datetime import datetime
+    
     results = []
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
@@ -448,6 +450,11 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
             continue
         
         item_success = False
+        
+        eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
+        
+        safe_description = f"{item.description}\n\n**Metadatos de Secretaría**\n- Asignado Original: {item.owner_email or 'N/A'}\n- Fecha Vencimiento Asignada: {eff_due_date}"
+        
         for routing in routings:
             config = json.loads(routing.destination_config or '{}')
             dest_type = routing.destination_type.lower()
@@ -457,29 +464,29 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
                     t_config = settings_dict.get("trello", {})
                     if t_config.get("apiKey") and t_config.get("apiToken"):
                         trello_service = TrelloIntegrationService(t_config["apiKey"], t_config["apiToken"])
-                        await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, item.description, item.due_date, item.owner_email)
+                        await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
                         item_success = True
                 elif "jira" in dest_type:
                     j_config = settings_dict.get("jira", {})
                     if j_config.get("domain") and j_config.get("apiToken"):
                         jira_email = j_config.get("email", "")
                         jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"]) 
-                        await jira_service.create_issue(config.get("project_key"), item.title, item.description, due_date=item.due_date, owner_email=item.owner_email)
+                        await jira_service.create_issue(config.get("project_key"), item.title, safe_description, due_date=eff_due_date, owner_email=item.owner_email)
                         item_success = True
                 elif "clickup" in dest_type:
                     c_config = settings_dict.get("clickup", {})
                     if c_config.get("apiToken"):
                         clickup_service = ClickUpIntegrationService(c_config["apiToken"]) 
-                        await clickup_service.create_task(config.get("list_id"), item.title, item.description, item.due_date, item.owner_email)
+                        await clickup_service.create_task(config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
                         item_success = True
                 elif "azure" in dest_type:
                     a_config = settings_dict.get("azure", {})
                     if a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
                         azure_service = AzureDevOpsIntegrationService(a_config["organization"], a_config["project"], a_config["pat"])
-                        desc = item.description
+                        desc = safe_description
                         if config.get("area_path"):
                             desc += f"\n\n[Destino Específico: {config['area_path']}]"
-                        await azure_service.create_work_item(item.title, desc)
+                        await azure_service.create_work_item(item.title, desc, due_date=eff_due_date, owner_email=item.owner_email)
                         item_success = True
             except Exception as e:
                 print(f"Error dispatching to {dest_type}: {e}")
