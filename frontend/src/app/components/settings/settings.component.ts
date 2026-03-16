@@ -17,6 +17,7 @@ export class SettingsComponent implements OnInit {
   jiraSettings = { email: '', apiToken: '', domain: '', isActive: false };
   azureSettings = { organization: '', project: '', pat: '', isActive: false };
   clickupSettings = { apiToken: '', teamId: '', isActive: false };
+  autoCurationSettings = { isEnabled: false, timeoutHours: 1 };
 
   isSaving = false;
   successMessage = '';
@@ -33,6 +34,7 @@ export class SettingsComponent implements OnInit {
         if (data.jira) this.jiraSettings = { ...this.jiraSettings, ...data.jira };
         if (data.azure) this.azureSettings = { ...this.azureSettings, ...data.azure };
         if (data.clickup) this.clickupSettings = { ...this.clickupSettings, ...data.clickup };
+        if (data.autoCuration) this.autoCurationSettings = { ...this.autoCurationSettings, ...data.autoCuration };
         this.cdr.detectChanges();
       },
       error: (err) => console.error('Failed to load settings', err)
@@ -50,7 +52,8 @@ export class SettingsComponent implements OnInit {
       trello: this.trelloSettings,
       jira: this.jiraSettings,
       azure: this.azureSettings,
-      clickup: this.clickupSettings
+      clickup: this.clickupSettings,
+      autoCuration: this.autoCurationSettings
     };
 
     this.settingsService.saveSettings(payload).subscribe({

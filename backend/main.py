@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel
 from database import create_db_and_tables
+from services.cron_service import start_cron, stop_cron
 from routers import fireflies
 from routers import auth
 from routers import users
@@ -36,6 +37,11 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
+    start_cron()
+
+@app.on_event("shutdown")
+def on_shutdown():
+    stop_cron()
 
 app.include_router(fireflies.router)
 app.include_router(auth.router)

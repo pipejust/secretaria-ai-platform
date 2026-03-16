@@ -28,16 +28,20 @@ def save_settings(payload: dict, session: Session = Depends(get_session)):
     for provider_name, config_obj in payload.items():
         existing = session.exec(select(IntegrationSetting).where(IntegrationSetting.provider_name == provider_name)).first()
         
+        # Extract isActive boolean if provided by the frontend configuration
+        is_active = config_obj.get("isActive", True) if existing is None else config_obj.get("isActive", existing.is_active)
+        
         config_json_str = json.dumps(config_obj)
         
         if existing:
             existing.config_json = config_json_str
+            existing.is_active = is_active
             session.add(existing)
         else:
             new_setting = IntegrationSetting(
                 provider_name=provider_name,
                 config_json=config_json_str,
-                is_active=True
+                is_active=is_active
             )
             session.add(new_setting)
             

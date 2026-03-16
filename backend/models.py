@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from pydantic import HttpUrl
+from datetime import datetime
 
 class Role(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -74,6 +75,7 @@ class MeetingSession(SQLModel, table=True):
     title: str
     date: str
     project_id: Optional[int] = Field(default=None, foreign_key="project.id")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     
     # Textos crudos provenientes de IA/API
     raw_transcript: str = Field(default="")

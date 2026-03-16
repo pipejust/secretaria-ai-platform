@@ -104,6 +104,40 @@
         </div>
     </div>
 
+    <!-- Curación Automática -->
+    <h3 class="mb-4 section-title mt-4" style="font-size: 1.1rem; font-weight: 700; color: #111827;">Automatización de Flujos</h3>
+    <div class="grid-layout cols-1 gap-4 mb-4">
+        <div class="card flex-1">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Curación Autónoma (Auto-Dispatch)
+                </h4>
+                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="autoCurationActive" [(ngModel)]="autoCurationSettings.isEnabled" name="autoCurationActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
+                    <label class="form-check-label mb-0" for="autoCurationActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': autoCurationSettings.isEnabled ? '#10b981' : '#6b7280'}">
+                        {{ autoCurationSettings.isEnabled ? 'Habilitado' : 'Deshabilitado' }}
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem;">
+                    <strong>Envío automático en segundo plano</strong>
+                    <p class="mb-0 mt-1">Si una sesión entra al sistema y no se aprueba manualmente en la ventana de tiempo definida, la plataforma despachará correos y tareas a las integraciones activas de forma automática.</p>
+                </div>
+                <form>
+                    <div class="form-group mb-0">
+                        <label>Tiempo Límite para Curación Manual (en Horas)</label>
+                        <input type="number" [(ngModel)]="autoCurationSettings.timeoutHours" name="ac_timeout" min="1" max="168" style="max-width: 200px;">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Gestores de Tareas / Proyectos -->
     <h3 class="mb-4 section-title" style="font-size: 1.1rem; font-weight: 700; color: #111827;">Conexión a Gestores de
         Tareas Externos</h3>
