@@ -34,6 +34,21 @@ export class ProjectsComponent implements OnInit {
     isAddingContact = false;
     isDeletingContactId: number | null = null;
 
+    // Routing Management State
+    managingRoutingsForProject: any = null;
+    projectRoutings: any[] = [];
+    isLoadingRoutings = false;
+    newRouting = { destination_type: 'trello', config_str: '{}', is_active: true };
+    // UI Helpers for Routing Config
+    destinationConfig: any = {
+        trello: { board_id: '', list_id: '' },
+        jira: { project_key: '' },
+        clickup: { list_id: '' },
+        azure: { area_path: '' } // project and organization are global, just need area or iteration path if needed, but lets just store an empty object if no specific routing needed besides global, wait actually we might need project_key or something. Let's use board_id/list_id for trello.
+    };
+    isAddingRouting = false;
+    isDeletingRoutingId: number | null = null;
+
     constructor(
         private http: HttpClient, 
         private authService: AuthService, 
@@ -272,6 +287,108 @@ export class ProjectsComponent implements OnInit {
                 console.error(err);
                 this.errorMsg = err.error?.detail || 'Error al eliminar el contacto';
                 this.isDeletingContactId = null;
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    // --- Routing Management Methods ---
+    manageRoutings(project: any) {
+        this.managingRoutingsForProject = project;
+        this.editingProject = null;
+        this.managingContactsForProject = null;
+        this.errorMsg = '';
+        this.successMsg = '';
+        this.loadRoutings(project.id);
+    }
+
+    closeRoutings() {
+        this.managingRoutingsForProject = null;
+        this.projectRoutings = [];
+        this.resetRoutingForm();
+        this.errorMsg = '';
+        this.successMsg = '';
+    }
+
+    resetRoutingForm() {
+        this.newRouting = { destination_type: 'trello', config_str: '{}', is_active: true };
+        this.destinationConfig = {
+            trello: { board_id: '', list_id: '' },
+            jira: { project_key: '' },
+            clickup: { list_id: '' },
+            azure: { project_id: '' }
+        };
+    }
+
+    loadRoutings(projectId: number) {
+        this.isLoadingRoutings = true;
+        this.http.get<any[]>(`${environment.apiUrl}/projects/${projectId}/routings`).subscribe({
+            next: (data) => {
+                this.projectRoutings = data;
+                this.isLoadingRoutings = false;
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error(err);
+                this.errorMsg = 'Error al cargar las rutas de integración';
+                this.isLoadingRoutings = false;
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    addRouting() {
+        if (!this.managingRoutingsForProject) return;
+        this.isAddingRouting = true;
+        this.errorMsg = '';
+        this.successMsg = '';
+
+        // Prepare config JSON string based on selected type
+        const type = this.newRouting.destination_type as 'trello' | 'jira' | 'clickup' | 'azure';
+        const configObj = this.destinationConfig[type];
+        
+        const payload = {
+            project_id: this.managingRoutingsForProject.id,
+            destination_type: type,
+            destination_config: JSON.stringify(configObj),
+            is_active: true
+        };
+
+        this.http.post<any>(`${environment.apiUrl}/projects/${this.managingRoutingsForProject.id}/routings`, payload).subscribe({
+            next: (data) => {
+                this.projectRoutings.push(data);
+                this.resetRoutingForm();
+                this.isAddingRouting = false;
+                this.successMsg = 'Ruta de integración agregada exitosamente';
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error(err);
+                this.errorMsg = err.error?.detail || 'Error al agregar la ruta';
+                this.isAddingRouting = false;
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    deleteRouting(routingId: number) {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta ruta de integración?')) return;
+
+        this.isDeletingRoutingId = routingId;
+        this.errorMsg = '';
+        this.successMsg = '';
+
+        this.http.delete(`${environment.apiUrl}/projects/${this.managingRoutingsForProject.id}/routings/${routingId}`).subscribe({
+            next: () => {
+                this.projectRoutings = this.projectRoutings.filter(r => r.id !== routingId);
+                this.isDeletingRoutingId = null;
+                this.successMsg = 'Ruta eliminada exitosamente';
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error(err);
+                this.errorMsg = err.error?.detail || 'Error al eliminar la ruta';
+                this.isDeletingRoutingId = null;
                 this.cdr.detectChanges();
             }
         });

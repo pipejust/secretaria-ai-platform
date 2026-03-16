@@ -11,22 +11,74 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
-    { path: 'login', component: LoginComponent },
-    { path: 'forgot-password', loadComponent: () => import('./components/forgot-password/forgot-password').then(m => m.ForgotPassword) },
-    { path: 'reset-password', loadComponent: () => import('./components/reset-password/reset-password').then(m => m.ResetPassword) },
+    { 
+        path: 'login', 
+        component: LoginComponent,
+        title: 'Iniciar Sesión | Secretaria AI',
+        data: { description: 'Inicia sesión en Secretaria AI para gestionar tus asistentencias virtuales corporativas y administrar las actas de tus reuniones.' }
+    },
+    { 
+        path: 'forgot-password', 
+        loadComponent: () => import('./components/forgot-password/forgot-password').then(m => m.ForgotPassword),
+        title: 'Recuperar Contraseña | Secretaria AI',
+        data: { description: 'Recupera el acceso a tu cuenta corporativa de Secretaria AI introduciendo tu correo electrónico.' }
+    },
+    { 
+        path: 'reset-password', 
+        loadComponent: () => import('./components/reset-password/reset-password').then(m => m.ResetPassword),
+        title: 'Restablecer Contraseña | Secretaria AI'
+    },
     {
         path: 'admin',
         component: AdminLayoutComponent,
         canActivate: [authGuard],
         children: [
-            { path: 'dashboard', component: DashboardComponent },
-            { path: 'projects', component: ProjectsComponent },
-            { path: 'templates', component: TemplatesComponent },
-            { path: 'users', component: UsersComponent },
-            { path: 'roles', component: RolesComponent },
-            { path: 'settings', component: SettingsComponent },
-            { path: 'profile', component: ProfileComponent },
-            { path: 'curation/:id', loadComponent: () => import('./components/curation-panel/curation-panel.component').then(m => m.CurationPanelComponent) },
+            { 
+                path: 'dashboard', 
+                component: DashboardComponent,
+                title: 'Panel de Control | Secretaria AI',
+                data: { description: 'Resumen en tiempo real de métricas, actas generadas y tareas despachadas automáticamente por Inteligencia Artificial.' }
+            },
+            { 
+                path: 'projects', 
+                component: ProjectsComponent,
+                title: 'Gestión de Proyectos | Secretaria AI',
+                data: { description: 'Administra tus proyectos corporativos, mapeo de contactos y definición de rutas de integración hacia Trello, Jira, ClickUp o Azure.' }
+            },
+            { 
+                path: 'templates', 
+                component: TemplatesComponent,
+                title: 'Plantillas Documentales | Secretaria AI',
+                data: { description: 'Sincroniza y personaliza las plantillas para la generación automatizada de actas formales y reportes ejecutivos.' }
+            },
+            { 
+                path: 'users', 
+                component: UsersComponent,
+                title: 'Usuarios | Secretaria AI',
+                data: { description: 'Administra los accesos y credenciales del equipo a la plataforma de Inteligencia Artificial.' }
+            },
+            { 
+                path: 'roles', 
+                component: RolesComponent,
+                title: 'Roles de Sistema | Secretaria AI'
+            },
+            { 
+                path: 'settings', 
+                component: SettingsComponent,
+                title: 'Configuraciones Generales | Secretaria AI',
+                data: { description: 'Configura las credenciales de API (Fireflies, Resend) y establece la conexión con plataformas de gestión de tareas externas.' }
+            },
+            { 
+                path: 'profile', 
+                component: ProfileComponent,
+                title: 'Mi Perfil | Secretaria AI'
+            },
+            { 
+                path: 'curation/:id', 
+                loadComponent: () => import('./components/curation-panel/curation-panel.component').then(m => m.CurationPanelComponent),
+                title: 'Panel de Curaduría | Secretaria AI',
+                data: { description: 'Modera, edita y despacha manualmente las tareas, compromisos y correos extraídos de la sesión virtual antes de ser enviados.' }
+            },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
     },

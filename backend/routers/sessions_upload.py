@@ -413,13 +413,14 @@ class DispatchPlatformsRequest(BaseModel):
 
 @router.post("/{session_id}/dispatch_platforms")
 async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest, db: Session = Depends(get_session)):
-    """Dispatch selected action items to configured platforms (ClickUp, Trello, Jira)."""
-    from models import ActionItem, Routing
+    """Dispatch selected action items to configured platforms (ClickUp, Trello, Jira, Azure)."""
+    from models import ActionItem, Routing, IntegrationSetting
     import json
     from sqlmodel import select
     from services.integrations.trello import TrelloIntegrationService
     from services.integrations.jira import JiraIntegrationService
     from services.integrations.clickup import ClickUpIntegrationService
+    from services.integrations.azure_devops import AzureDevOpsIntegrationService
 
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
@@ -431,6 +432,14 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
     routings = db.exec(select(Routing).where(Routing.project_id == session_obj.project_id)).all()
     if not routings:
         raise HTTPException(status_code=400, detail="Project has no configured routings.")
+
+    global_settings = db.exec(select(IntegrationSetting)).all()
+    settings_dict = {}
+    for s in global_settings:
+        try:
+            settings_dict[s.provider_name] = json.loads(s.config_json)
+        except:
+            settings_dict[s.provider_name] = {}
 
     results = []
     for item_id in request.action_item_ids:
@@ -445,18 +454,35 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
             
             try:
                 if "trello" in dest_type:
-                    trello_service = TrelloIntegrationService("mock_key", "mock_token") # TODO use Settings
-                    await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, item.description, item.due_date)
-                    item_success = True
+                    t_config = settings_dict.get("trello", {})
+                    if t_config.get("apiKey") and t_config.get("apiToken"):
+                        trello_service = TrelloIntegrationService(t_config["apiKey"], t_config["apiToken"])
+                        await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, item.description, item.due_date)
+                        item_success = True
                 elif "jira" in dest_type:
-                    jira_service = JiraIntegrationService("mock_domain", "mock@email.com", "mock_token") 
-                    await jira_service.create_issue(config.get("project_key"), item.title, item.description)
-                    item_success = True
+                    j_config = settings_dict.get("jira", {})
+                    if j_config.get("domain") and j_config.get("apiToken"):
+                        jira_email = j_config.get("email", "")
+                        jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"]) 
+                        await jira_service.create_issue(config.get("project_key"), item.title, item.description)
+                        item_success = True
                 elif "clickup" in dest_type:
-                    clickup_service = ClickUpIntegrationService("mock_token") 
-                    await clickup_service.create_task(config.get("list_id"), item.title, item.description)
-                    item_success = True
+                    c_config = settings_dict.get("clickup", {})
+                    if c_config.get("apiToken"):
+                        clickup_service = ClickUpIntegrationService(c_config["apiToken"]) 
+                        await clickup_service.create_task(config.get("list_id"), item.title, item.description)
+                        item_success = True
+                elif "azure" in dest_type:
+                    a_config = settings_dict.get("azure", {})
+                    if a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
+                        azure_service = AzureDevOpsIntegrationService(a_config["organization"], a_config["project"], a_config["pat"])
+                        desc = item.description
+                        if config.get("area_path"):
+                            desc += f"\n\n[Destino Específico: {config['area_path']}]"
+                        await azure_service.create_work_item(item.title, desc)
+                        item_success = True
             except Exception as e:
+                print(f"Error dispatching to {dest_type}: {e}")
                 pass # Proceed to next routing iteration
                 
         if item_success:

@@ -95,6 +95,96 @@
     </div>
 </div>
 
+<!-- Modal Gestor de Rutas de Integración -->
+<div class="modal-overlay" *ngIf="managingRoutingsForProject">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3>Rutas de Integración: {{ managingRoutingsForProject.name }}</h3>
+            <button class="btn-close" (click)="closeRoutings()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="modal-body" style="background:#f8fafc; padding: 1.5rem;">
+            <!-- Lista de Rutas -->
+            <div class="routings-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;">
+                <div *ngIf="isLoadingRoutings" class="text-center">Cargando...</div>
+                <div *ngIf="!isLoadingRoutings && projectRoutings.length === 0" class="text-center" style="color: gray;">
+                    Sin rutas de integración configuradas para este proyecto. Cero tareas serán despachadas.
+                </div>
+                <ul *ngIf="!isLoadingRoutings && projectRoutings.length > 0" style="padding: 0; margin: 0; list-style: none;">
+                    <li *ngFor="let routing of projectRoutings" style="background: white; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <div>
+                            <strong style="display: block; color: var(--text-main); text-transform: capitalize;">{{ routing.destination_type }}</strong>
+                            <small style="color: var(--text-muted); font-family: monospace;">{{ routing.destination_config }}</small>
+                        </div>
+                        <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteRouting(routing.id)" [disabled]="isDeletingRoutingId === routing.id">
+                            Eliminar
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Formulario para agregar nueva ruta -->
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <h4 style="margin-bottom: 1rem; color: var(--text-main); font-size: 1.1rem;">Agregar Nueva Ruta</h4>
+                <form (ngSubmit)="addRouting()" #routingForm="ngForm">
+                    <div class="form-group mb-4">
+                        <label>Plataforma de Destino <span class="text-danger">*</span></label>
+                        <select name="destType" [(ngModel)]="newRouting.destination_type" required style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                            <option value="trello">Trello</option>
+                            <option value="jira">Jira</option>
+                            <option value="clickup">ClickUp</option>
+                            <option value="azure">Azure DevOps</option>
+                        </select>
+                    </div>
+
+                    <!-- Configuraciones dinámicas según el tipo -->
+                    <div *ngIf="newRouting.destination_type === 'trello'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group mb-0">
+                            <label>Trello Board ID <span class="text-danger">*</span></label>
+                            <input type="text" name="trelloBoardId" [(ngModel)]="destinationConfig['trello'].board_id" required placeholder="ej: 60a1b2c3..." />
+                        </div>
+                        <div class="form-group mb-0">
+                            <label>Trello List ID <span class="text-danger">*</span></label>
+                            <input type="text" name="trelloListId" [(ngModel)]="destinationConfig['trello'].list_id" required placeholder="ej: 60a1b2d4..." />
+                        </div>
+                    </div>
+
+                    <div *ngIf="newRouting.destination_type === 'jira'" style="margin-bottom: 1rem;">
+                        <div class="form-group mb-0">
+                            <label>Jira Project Key <span class="text-danger">*</span></label>
+                            <input type="text" name="jiraProjectKey" [(ngModel)]="destinationConfig['jira'].project_key" required placeholder="ej: PROJ" />
+                        </div>
+                    </div>
+
+                    <div *ngIf="newRouting.destination_type === 'clickup'" style="margin-bottom: 1rem;">
+                        <div class="form-group mb-0">
+                            <label>ClickUp List ID <span class="text-danger">*</span></label>
+                            <input type="text" name="clickupListId" [(ngModel)]="destinationConfig['clickup'].list_id" required placeholder="ej: 1234567" />
+                        </div>
+                    </div>
+
+                    <div *ngIf="newRouting.destination_type === 'azure'" style="margin-bottom: 1rem;">
+                        <div class="form-group mb-0">
+                            <label>Azure Area Path (Opcional)</label>
+                            <input type="text" name="azureAreaPath" [(ngModel)]="destinationConfig['azure'].area_path" placeholder="ej: MyProject\MyArea" />
+                            <small class="text-muted mt-1" style="display: block;">Dejar vacío si las tareas van a la bandeja general del proyecto global.</small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-full mt-2" [disabled]="!routingForm.form.valid || isAddingRouting">
+                        <span *ngIf="!isAddingRouting">Guardar Ruta</span>
+                        <span *ngIf="isAddingRouting">Guardando...</span>
+                    </button>
+                    
+                    <div class="alert alert-error mt-3" *ngIf="errorMsg">{{ errorMsg }}</div>
+                    <div class="alert alert-success mt-3" *ngIf="successMsg">{{ successMsg }}</div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="fade-in">
     <!-- Header identical to dashboard -->
     <div class="header-actions">
@@ -154,6 +244,7 @@
                             <td>
                                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                                     <button class="btn btn-sm" style="background:#e0e7ff; color:#4f46e5; border:1px solid #c7d2fe;" (click)="manageContacts(p)">Contactos</button>
+                                    <button class="btn btn-sm" style="background:#dbeafe; color:#2563eb; border:1px solid #bfdbfe;" (click)="manageRoutings(p)">Rutas</button>
                                     <button class="btn btn-sm" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;" (click)="editProject(p)">Editar</button>
                                     <button class="btn btn-sm" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;" (click)="deleteProject(p.id)" [disabled]="isDeleting">Eliminar</button>
                                 </div>
