@@ -341,10 +341,10 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             pdf.multi_cell(0, 6, safe_summary)
             pdf.ln(5)
             
-        pdf_bytes = list(bytes(pdf.output()))
+        pdf_b64_global = base64.b64encode(bytes(pdf.output())).decode('utf-8')
     except Exception as e:
         print(f"Error generating PDF summary: {e}")
-        pdf_bytes = None
+        pdf_b64_global = None
     
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
@@ -356,23 +356,12 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             continue
             
         attachments = []
-        if pdf_bytes:
-            # pdf_bytes comes directly from pdf.output(dest="S").encode(...) or byte list.
-            # Convert raw bytes back to base64 string to ensure Resend SDK picks it up seamlessly.
-            try:
-                if isinstance(pdf_bytes, list):
-                    raw_b = bytes(pdf_bytes)
-                elif isinstance(pdf_bytes, str):
-                    raw_b = pdf_bytes.encode('latin-1')
-                else:
-                    raw_b = bytes(pdf_bytes)
-                pdf_b64 = base64.b64encode(raw_b).decode('utf-8')
-                attachments.append({
-                    "filename": "Resumen_Sesion.pdf",
-                    "content": pdf_b64
-                })
-            except Exception as e:
-                print(f"Error base64 encoding PDF: {e}")
+        if pdf_b64_global:
+            attachments.append({
+                "filename": "Resumen_Sesion.pdf",
+                "content": pdf_b64_global,
+                "content_type": "application/pdf"
+            })
             
         if item.due_date:
             try:
