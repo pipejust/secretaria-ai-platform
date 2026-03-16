@@ -1,13 +1,16 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import Response
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks
+from sqlmodel import Session, select
+from models import MeetingSession, ActionItem, IntegrationSetting, Routing
 from database import get_session
-from sqlmodel import Session
-from models import MeetingSession
-import datetime
 import uuid
+import os
 import io
+import json
+import base64
+from typing import List, Optional
+from pydantic import BaseModel
+from sqlalchemy.orm import selectinload
+from fpdf import FPDF
 import docx
 
 router = APIRouter(
@@ -341,10 +344,10 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             pdf.multi_cell(0, 6, safe_summary)
             pdf.ln(5)
             
-        pdf_bytes_global = list(bytes(pdf.output()))
+        pdf_b64_global = base64.b64encode(bytes(pdf.output())).decode('utf-8')
     except Exception as e:
         print(f"Error generating PDF summary: {e}")
-        pdf_bytes_global = None
+        pdf_b64_global = None
     
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
@@ -356,10 +359,10 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             continue
             
         attachments = []
-        if pdf_bytes_global:
+        if pdf_b64_global:
             attachments.append({
                 "filename": "Resumen_Sesion.pdf",
-                "content": pdf_bytes_global,
+                "content": pdf_b64_global,
                 "content_type": "application/pdf"
             })
             
@@ -382,9 +385,10 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                         "END:VCALENDAR"
                     ]
                     ics_raw = "\r\n".join(ics_lines).encode('utf-8')
+                    ics_b64 = base64.b64encode(ics_raw).decode('utf-8')
                     attachments.append({
                         "filename": "recordatorio.ics",
-                        "content": list(ics_raw),
+                        "content": ics_b64,
                         "content_type": "text/calendar"
                     })
             except Exception as e:
