@@ -357,10 +357,22 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             
         attachments = []
         if pdf_bytes:
-            attachments.append({
-                "filename": "Resumen_Sesion.pdf",
-                "content": pdf_bytes
-            })
+            # pdf_bytes comes directly from pdf.output(dest="S").encode(...) or byte list.
+            # Convert raw bytes back to base64 string to ensure Resend SDK picks it up seamlessly.
+            try:
+                if isinstance(pdf_bytes, list):
+                    raw_b = bytes(pdf_bytes)
+                elif isinstance(pdf_bytes, str):
+                    raw_b = pdf_bytes.encode('latin-1')
+                else:
+                    raw_b = bytes(pdf_bytes)
+                pdf_b64 = base64.b64encode(raw_b).decode('utf-8')
+                attachments.append({
+                    "filename": "Resumen_Sesion.pdf",
+                    "content": pdf_b64
+                })
+            except Exception as e:
+                print(f"Error base64 encoding PDF: {e}")
             
         if item.due_date:
             try:
@@ -380,10 +392,11 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                         "END:VEVENT",
                         "END:VCALENDAR"
                     ]
-                    ics_bytes = list("\r\n".join(ics_lines).encode('utf-8'))
+                    ics_raw = "\r\n".join(ics_lines).encode('utf-8')
+                    ics_b64 = base64.b64encode(ics_raw).decode('utf-8')
                     attachments.append({
                         "filename": "recordatorio.ics",
-                        "content": ics_bytes
+                        "content": ics_b64
                     })
             except Exception as e:
                 print(f"Error generating ICS: {e}")
