@@ -26,6 +26,21 @@ class JiraIntegrationService:
         """Crea un issue en Jira."""
         url = f"{self.base_url}/issue"
         
+        content_nodes = []
+        for line in description.split('\n'):
+            line = line.strip()
+            if line:
+                content_nodes.append({
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": line}]
+                })
+            else:
+                # Empty line as spacer
+                content_nodes.append({
+                    "type": "paragraph",
+                    "content": []
+                })
+        
         payload = {
             "fields": {
                 "project": {
@@ -35,17 +50,7 @@ class JiraIntegrationService:
                 "description": {
                     "type": "doc",
                     "version": 1,
-                    "content": [
-                        {
-                            "type": "paragraph",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": description
-                                }
-                            ]
-                        }
-                    ]
+                    "content": content_nodes
                 },
                 "issuetype": {
                     "name": issue_type
@@ -68,9 +73,19 @@ class JiraIntegrationService:
             response = await client.post(url, json=payload, auth=self.auth)
             try:
                 response.raise_for_status()
+                data = response.json()
+                return {"id": data["id"], "key": data["key"], "url": f"https://{self.domain}.atlassian.net/browse/{data['key']}"}
             except httpx.HTTPStatusError as e:
-                print(f"Jira API error on create_issue: {e.response.text}")
-                raise e
+                print(f"Jira API error on strict create_issue: {e.response.text}")
                 
-            data = response.json()
-            return {"id": data["id"], "key": data["key"], "url": f"https://{self.domain}.atlassian.net/browse/{data['key']}"}
+                # Fallback: Remover campos problemáticos (assignee, duedate) que suelen fallar por permisos de pantalla en Jira
+                if "assignee" in payload["fields"]:
+                    del payload["fields"]["assignee"]
+                if "duedate" in payload["fields"]:
+                    del payload["fields"]["duedate"]
+                    
+                print("Retrying Jira without assignee/duedate...")
+                fallback_resp = await client.post(url, json=payload, auth=self.auth)
+                fallback_resp.raise_for_status()
+                data = fallback_resp.json()
+                return {"id": data["id"], "key": data["key"], "url": f"https://{self.domain}.atlassian.net/browse/{data['key']}"}
