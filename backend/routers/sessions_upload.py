@@ -341,8 +341,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             pdf.multi_cell(0, 6, safe_summary)
             pdf.ln(5)
             
-        import base64
-        pdf_bytes = base64.b64encode(bytes(pdf.output())).decode('utf-8')
+        pdf_bytes = list(bytes(pdf.output()))
     except Exception as e:
         print(f"Error generating PDF summary: {e}")
         pdf_bytes = None
@@ -381,7 +380,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                         "END:VEVENT",
                         "END:VCALENDAR"
                     ]
-                    ics_bytes = base64.b64encode("\r\n".join(ics_lines).encode('utf-8')).decode('utf-8')
+                    ics_bytes = list("\r\n".join(ics_lines).encode('utf-8'))
                     attachments.append({
                         "filename": "recordatorio.ics",
                         "content": ics_bytes
@@ -462,26 +461,26 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
             try:
                 if "trello" in dest_type:
                     t_config = settings_dict.get("trello", {})
-                    if t_config.get("apiKey") and t_config.get("apiToken"):
+                    if t_config.get("isActive", False) and t_config.get("apiKey") and t_config.get("apiToken"):
                         trello_service = TrelloIntegrationService(t_config["apiKey"], t_config["apiToken"])
                         await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
                         item_success = True
                 elif "jira" in dest_type:
                     j_config = settings_dict.get("jira", {})
-                    if j_config.get("domain") and j_config.get("apiToken"):
+                    if j_config.get("isActive", False) and j_config.get("domain") and j_config.get("apiToken"):
                         jira_email = j_config.get("email", "")
                         jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"]) 
                         await jira_service.create_issue(config.get("project_key"), item.title, safe_description, due_date=eff_due_date, owner_email=item.owner_email)
                         item_success = True
                 elif "clickup" in dest_type:
                     c_config = settings_dict.get("clickup", {})
-                    if c_config.get("apiToken"):
+                    if c_config.get("isActive", False) and c_config.get("apiToken"):
                         clickup_service = ClickUpIntegrationService(c_config["apiToken"]) 
                         await clickup_service.create_task(config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
                         item_success = True
                 elif "azure" in dest_type:
                     a_config = settings_dict.get("azure", {})
-                    if a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
+                    if a_config.get("isActive", False) and a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
                         azure_service = AzureDevOpsIntegrationService(a_config["organization"], a_config["project"], a_config["pat"])
                         desc = safe_description
                         if config.get("area_path"):
