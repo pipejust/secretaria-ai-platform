@@ -341,7 +341,8 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             pdf.multi_cell(0, 6, safe_summary)
             pdf.ln(5)
             
-        pdf_bytes = list(pdf.output())
+        import base64
+        pdf_bytes = base64.b64encode(bytes(pdf.output())).decode('utf-8')
     except Exception as e:
         print(f"Error generating PDF summary: {e}")
         pdf_bytes = None
@@ -380,7 +381,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                         "END:VEVENT",
                         "END:VCALENDAR"
                     ]
-                    ics_bytes = list("\r\n".join(ics_lines).encode('utf-8'))
+                    ics_bytes = base64.b64encode("\r\n".join(ics_lines).encode('utf-8')).decode('utf-8')
                     attachments.append({
                         "filename": "recordatorio.ics",
                         "content": ics_bytes
@@ -514,13 +515,12 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
     buffer = io.BytesIO()
     doc_generated = False
     
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
     def add_justified_paragraph(d, text, style=None):
         try:
             p = d.add_paragraph(text, style=style)
         except Exception:
             p = d.add_paragraph(text)
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        # Removed JUSTIFY alignment as requested by user
         return p
 
     if template_obj and template_obj.file_path:
@@ -589,7 +589,9 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                         p = add_justified_paragraph(d, "", style=style)
                         p.paragraph_format.space_after = Pt(12) # Add spacing between paragraphs
                         
-                        lines = text.split('\n')
+                        # Replace unicode line separators (\u2028) with standard newlines before splitting
+                        clean_text = (text or "").replace('\u2028', '\n')
+                        lines = clean_text.split('\n')
                         for i, line in enumerate(lines):
                             if line.strip() or i > 0:
                                 run = p.add_run(line)
@@ -597,6 +599,18 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                                 if i < len(lines) - 1:
                                     run.add_break()
                         return p
+
+                    def apply_cell_text(cell, content):
+                        cell.text = ""
+                        p = cell.paragraphs[0]
+                        clean_content = (content or "").replace('\u2028', '\n')
+                        lines = clean_content.split('\n')
+                        for i, line in enumerate(lines):
+                            if line.strip() or i > 0:
+                                run = p.add_run(line)
+                                apply_font_styles(run, is_heading=False)
+                                if i < len(lines) - 1:
+                                    run.add_break()
 
                     def set_table_borders(table):
                         from docx.oxml import OxmlElement
@@ -779,7 +793,9 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
             p = add_justified_paragraph(d, "", style=style)
             from docx.shared import Pt
             p.paragraph_format.space_after = Pt(12)
-            lines = (text or "").split('\n')
+            # Replace unicode line separators (\u2028)
+            clean_text = (text or "").replace('\u2028', '\n')
+            lines = clean_text.split('\n')
             for i, line in enumerate(lines):
                 if line.strip() or i > 0:
                     run = p.add_run(line)
@@ -861,7 +877,8 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                 def apply_fallback_text(cell, content):
                     cell.text = ""
                     p = cell.paragraphs[0]
-                    lines = (content or "").split('\n')
+                    clean_content = (content or "").replace('\u2028', '\n')
+                    lines = clean_content.split('\n')
                     for i, line in enumerate(lines):
                         if line.strip() or i > 0:
                             run = p.add_run(line)
