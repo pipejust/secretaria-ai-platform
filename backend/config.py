@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     fireflies_api_key: str = ""
     supabase_url: str = ""
     supabase_key: str = ""
+    frontend_url: str = "http://localhost:4200"
     
     # Configuraciones de Integraciones (Trello, Azure DevOps, etc.)
     # Estas pueden ir en DB según el proyecto, pero algunas globales podrían estar aquí.

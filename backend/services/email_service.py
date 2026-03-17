@@ -96,19 +96,20 @@ class EmailService:
         
     async def send_welcome_email(self, to_email: str, user_name: str, role: str, login_url: str = ""):
         template = self.jinja_env.get_template('email_welcome.html')
+        frontend_url = getattr(settings, "frontend_url", "http://localhost:4200").rstrip('/')
         html_content = template.render(
             user_name=user_name,
             email=to_email,
             role=role,
-            login_url=login_url or "https://secretaria.moshwasi.com/login",
+            login_url=login_url or f"{frontend_url}/login",
             current_year=2026
         )
         await self._send_html_email(to_email, f"¡Bienvenido a Secretaría AI!", html_content)
 
     async def send_forgot_password_email(self, to_email: str, user_name: str, reset_token: str):
-        template = self.jinja_env.get_template('email_forgot_password.html')
+        frontend_url = getattr(settings, "frontend_url", "http://localhost:4200").rstrip('/')
         # En el front-end crearemos la ruta /reset-password
-        reset_url = f"https://secretaria.moshwasi.com/reset-password?token={reset_token}"
+        reset_url = f"{frontend_url}/reset-password?token={reset_token}"
         html_content = template.render(
             user_name=user_name,
             reset_url=reset_url,
