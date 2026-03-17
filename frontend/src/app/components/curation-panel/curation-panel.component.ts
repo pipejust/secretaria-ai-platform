@@ -28,6 +28,8 @@ interface MeetingData {
   processed_decisions: string;
   processed_risks: string;
   processed_agreements: string;
+  processed_attendees?: string;
+  processed_themes?: string;
   action_items: ActionItem[];
   status: string;
 }
@@ -180,8 +182,17 @@ export class CurationPanelComponent implements OnInit {
     if (!selectedIds.length) return;
     
     this.isDispatchingEmails = true;
+    this.showSaveMessage('Preparando acta de reunión y enviando correos...', false);
+    this.cdr.detectChanges();
+
     const headers = this.authService.getAuthHeaders();
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_emails`, { action_item_ids: selectedIds }, { headers }).subscribe({
+    // We tell the backend to attach the generated summary document directly
+    const payload: any = { 
+        action_item_ids: selectedIds,
+        attach_document: true
+    };
+
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_emails`, payload, { headers }).subscribe({
       next: (res: any) => {
         this.isDispatchingEmails = false;
         this.showSaveMessage(`Correos enviados: ${res.results.filter((r:any)=>r.status==='success').length}`);

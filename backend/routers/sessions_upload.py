@@ -313,316 +313,19 @@ async def upload_manual_session(
 
 class DispatchEmailsRequest(BaseModel):
     action_item_ids: list[int]
+    custom_pdf_b64: str = None
+    attach_document: bool = False
 
-@router.post("/{session_id}/dispatch_emails")
-async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: Session = Depends(get_session)):
-    """Dispatch emails for the selected action items."""
-    from models import ActionItem
-    from services.email_service import EmailService
-    import asyncio
-    from fpdf import FPDF
-    
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
-        
-    email_service = EmailService(db=db)
-    results = []
-    
-    # Generate generic PDF once for the session
-    try:
-        from models import Template
-        import json
-        style_config = {}
-        
-        # Intentar obtener el template activo del proyecto para heredar sus estilos
-        if session_obj.project_id:
-            templates = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).all()
-            if templates and templates[0].style_config:
-                try:
-                    style_config = json.loads(templates[0].style_config)
-                except Exception:
-                    pass
-                    
-        def hex_to_rgb_tuple(hex_str: str) -> tuple:
-            hex_str = hex_str.lstrip('#')
-            if len(hex_str) != 6:
-                return (0, 0, 0)
-            return (int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
-            
-        color_text = hex_to_rgb_tuple(style_config.get("textColor", "#1f2937"))
-        color_heading = hex_to_rgb_tuple(style_config.get("headingColor", "#4f46e5"))
-        
-        pdf = FPDF()
-        pdf.add_page()
-        
-        # Titulo Principal
-        pdf.set_text_color(*color_heading)
-        pdf.set_font("helvetica", "B", 18)
-        pdf.cell(0, 10, "Secretaria AI - Resumen de Sesion", new_x="LMARGIN", new_y="NEXT", align="C")
-        pdf.ln(10)
-        
-        # Meta Info
-        pdf.set_text_color(*color_text)
-        pdf.set_font("helvetica", "B", 12)
-        safe_title = session_obj.title.encode('latin-1', 'replace').decode('latin-1')
-        
-        try:
-            if session_obj.date and str(session_obj.date).isdigit():
-                dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
-                formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                formatted_date = str(session_obj.date)
-        except Exception:
-            formatted_date = str(session_obj.date)
-            
-        pdf.cell(0, 8, f"Sesión: {safe_title}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 8, f"Fecha: {formatted_date}", new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(5)
-        
-        # Resumen Ejecutivo
-        if session_obj.raw_summary:
-            pdf.set_fill_color(*color_heading)
-            pdf.set_text_color(255, 255, 255) # Texto blanco sobre fondo de color
-            pdf.set_font("helvetica", "B", 14)
-            # Add some padding and solid fill
-            pdf.cell(0, 10, "Resumen Ejecutivo:", new_x="LMARGIN", new_y="NEXT", fill=True)
-            pdf.ln(3)
-            
-            pdf.set_text_color(*color_text)
-            pdf.set_font("helvetica", "", 11)
-            safe_summary = session_obj.raw_summary.encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(0, 6, safe_summary)
-            pdf.ln(5)
-            
-        # Decisiones Clave
-        if session_obj.processed_decisions:
-            pdf.set_fill_color(*color_heading)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("helvetica", "B", 14)
-            pdf.cell(0, 10, "Decisiones Clave:", new_x="LMARGIN", new_y="NEXT", fill=True)
-            pdf.ln(3)
-            
-            pdf.set_text_color(*color_text)
-            pdf.set_font("helvetica", "", 11)
-            safe_decisions = session_obj.processed_decisions.encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(0, 6, safe_decisions)
-            pdf.ln(5)
-
-        # Riesgos Identificados
-        if session_obj.processed_risks:
-            pdf.set_fill_color(*color_heading)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("helvetica", "B", 14)
-            pdf.cell(0, 10, "Riesgos Identificados:", new_x="LMARGIN", new_y="NEXT", fill=True)
-            pdf.ln(3)
-            
-            pdf.set_text_color(*color_text)
-            pdf.set_font("helvetica", "", 11)
-            safe_risks = session_obj.processed_risks.encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(0, 6, safe_risks)
-            pdf.ln(5)
-
-        # Acuerdos
-        if session_obj.processed_agreements:
-            pdf.set_fill_color(*color_heading)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("helvetica", "B", 14)
-            pdf.cell(0, 10, "Acuerdos:", new_x="LMARGIN", new_y="NEXT", fill=True)
-            pdf.ln(3)
-            
-            pdf.set_text_color(*color_text)
-            pdf.set_font("helvetica", "", 11)
-            safe_agreements = session_obj.processed_agreements.encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(0, 6, safe_agreements)
-            pdf.ln(5)
-            
-        pdf_b64_global = base64.b64encode(bytes(pdf.output())).decode('utf-8')
-    except Exception as e:
-        print(f"Error generating PDF summary: {e}")
-        pdf_b64_global = None
-    
-    for item_id in request.action_item_ids:
-        item = db.get(ActionItem, item_id)
-        if not item or item.session_id != session_id:
-            continue
-            
-        if not item.owner_email:
-            results.append({"id": item_id, "status": "failed", "reason": "No email provided"})
-            continue
-            
-        attachments = []
-        if pdf_b64_global:
-            attachments.append({
-                "filename": "Resumen_Sesion.pdf",
-                "content": pdf_b64_global,
-                "content_type": "application/pdf"
-            })
-            
-        if item.due_date:
-            try:
-                date_clean = str(item.due_date).replace("-", "")
-                if len(date_clean) == 8:
-                    desc_clean = (item.description or "").replace("\n", "\\n").replace("\r", "")
-                    title_clean = item.title.replace("\n", "").replace("\r", "")
-                    ics_lines = [
-                        "BEGIN:VCALENDAR",
-                        "VERSION:2.0",
-                        "PRODID:-//Secretaria AI//ES",
-                        "BEGIN:VEVENT",
-                        f"SUMMARY:{title_clean}",
-                        f"DTSTART;VALUE=DATE:{date_clean}",
-                        f"DTEND;VALUE=DATE:{date_clean}",
-                        f"DESCRIPTION:{desc_clean}",
-                        "END:VEVENT",
-                        "END:VCALENDAR"
-                    ]
-                    ics_raw = "\r\n".join(ics_lines).encode('utf-8')
-                    ics_b64 = base64.b64encode(ics_raw).decode('utf-8')
-                    attachments.append({
-                        "filename": "recordatorio.ics",
-                        "content": ics_b64,
-                        "content_type": "text/calendar"
-                    })
-            except Exception as e:
-                print(f"Error generating ICS: {e}")
-            
-        try:
-            owner_display = item.owner_name if item.owner_name else (item.owner_email.split('@')[0] if item.owner_email else "Asignado")
-            await email_service.send_action_item_email(
-                to_email=item.owner_email,
-                owner_name=owner_display,
-                task_title=item.title,
-                task_description=item.description,
-                project_name=session_obj.title,
-                due_date=item.due_date,
-                attachments=attachments,
-                summary=session_obj.raw_summary,
-                decisions=session_obj.processed_decisions,
-                risks=session_obj.processed_risks,
-                agreements=session_obj.processed_agreements
-            )
-            results.append({"id": item_id, "status": "success"})
-            # Resend Free limit is 2 requests per second. Sleep 0.6s to stay strictly below limit.
-            await asyncio.sleep(0.6)
-        except Exception as e:
-            results.append({"id": item_id, "status": "failed", "reason": str(e)})
-            
-    return {"status": "success", "results": results}
-
-class DispatchPlatformsRequest(BaseModel):
-    action_item_ids: list[int]
-
-@router.post("/{session_id}/dispatch_platforms")
-async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest, db: Session = Depends(get_session)):
-    """Dispatch selected action items to configured platforms (ClickUp, Trello, Jira, Azure)."""
-    from models import ActionItem, Routing, IntegrationSetting
-    import json
-    from sqlmodel import select
-    from services.integrations.trello import TrelloIntegrationService
-    from services.integrations.jira import JiraIntegrationService
-    from services.integrations.clickup import ClickUpIntegrationService
-    from services.integrations.azure_devops import AzureDevOpsIntegrationService
-
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    if not session_obj.project_id:
-        raise HTTPException(status_code=400, detail="Cannot dispatch: Meeting is not related to any project routing.")
-        
-    routings = db.exec(select(Routing).where(Routing.project_id == session_obj.project_id, Routing.is_active == True)).all()
-    if not routings:
-        raise HTTPException(status_code=400, detail="Project has no configured routings.")
-
-    global_settings = db.exec(select(IntegrationSetting)).all()
-    settings_dict = {}
-    for s in global_settings:
-        try:
-            settings_dict[s.provider_name] = json.loads(s.config_json)
-        except:
-            settings_dict[s.provider_name] = {}
-
-    from datetime import datetime
-    
-    results = []
-    for item_id in request.action_item_ids:
-        item = db.get(ActionItem, item_id)
-        if not item or item.session_id != session_id:
-            continue
-        
-        item_success = False
-        
-        eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
-        
-        owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
-        safe_description = f"{item.description}\n\n**Metadatos de Secretaría**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
-        
-        for routing in routings:
-            config = json.loads(routing.destination_config or '{}')
-            dest_type = routing.destination_type.lower()
-            
-            try:
-                if "trello" in dest_type:
-                    t_config = settings_dict.get("trello", {})
-                    if t_config.get("isActive", False) and t_config.get("apiKey") and t_config.get("apiToken"):
-                        trello_service = TrelloIntegrationService(t_config["apiKey"], t_config["apiToken"])
-                        await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
-                        item_success = True
-                elif "jira" in dest_type:
-                    j_config = settings_dict.get("jira", {})
-                    if j_config.get("isActive", False) and j_config.get("domain") and j_config.get("apiToken"):
-                        jira_email = j_config.get("email", "")
-                        jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"]) 
-                        await jira_service.create_issue(config.get("project_key"), item.title, safe_description, due_date=eff_due_date, owner_email=item.owner_email)
-                        item_success = True
-                elif "clickup" in dest_type:
-                    c_config = settings_dict.get("clickup", {})
-                    if c_config.get("isActive", False) and c_config.get("apiToken"):
-                        clickup_service = ClickUpIntegrationService(c_config["apiToken"]) 
-                        await clickup_service.create_task(config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
-                        item_success = True
-                elif "azure" in dest_type:
-                    a_config = settings_dict.get("azure", {})
-                    if a_config.get("isActive", False) and a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
-                        azure_service = AzureDevOpsIntegrationService(a_config["organization"], a_config["project"], a_config["pat"])
-                        desc = safe_description
-                        if config.get("area_path"):
-                            desc += f"\n\n[Destino Específico: {config['area_path']}]"
-                        await azure_service.create_work_item(item.title, desc, due_date=eff_due_date, owner_email=item.owner_email)
-                        item_success = True
-            except Exception as e:
-                print(f"Error dispatching to {dest_type}: {e}")
-                pass # Proceed to next routing iteration
-                
-        if item_success:
-            results.append({"id": item_id, "status": "success"})
-        else:
-            results.append({"id": item_id, "status": "failed"})
-
-    return {"status": "success", "results": results}
-
-@router.get("/{session_id}/export/word")
-def export_word(session_id: int, db: Session = Depends(get_session)):
-    """Generate and return a Microsoft Word (.docx) document with the meeting details."""
-    from models import ActionItem
-    from sqlmodel import select
-    from docx import Document
-    from docx.shared import Pt, RGBColor
-    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-    import io
-
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
-
+def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.BytesIO:
     from models import Template
     from sqlmodel import select
     import requests
     import tempfile
     import os
+    import io
+    from docx import Document
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
     from docxtpl import DocxTemplate
 
     template_obj = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
@@ -631,7 +334,7 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
     
     # 1. Parsear Fecha
     formatted_date = session_obj.date
-    if session_obj.date and session_obj.date.isdigit():
+    if session_obj.date and str(session_obj.date).isdigit():
         dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
         formatted_date = dt.strftime("%d/%m/%Y %H:%M")
         
@@ -641,7 +344,7 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
         "processing": "Procesando IA",
         "pending": "Pendiente de Curación"
     }
-    status_str = status_map.get(session_obj.status, session_obj.status.capitalize())
+    status_str = status_map.get(session_obj.status, session_obj.status.capitalize() if session_obj.status else "Desconocido")
 
     # 3. Eliminar etiquetas en inglés de Fireflies
     clean_summary = ""
@@ -656,7 +359,6 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
             p = d.add_paragraph(text, style=style)
         except Exception:
             p = d.add_paragraph(text)
-        # Removed JUSTIFY alignment as requested by user
         return p
 
     if template_obj and template_obj.file_path:
@@ -685,8 +387,6 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                         pass
                 
                 if mapping_blocks and len(mapping_blocks) > 0:
-                    from docx import Document
-                    from docx.shared import RGBColor, Pt
                     from docx.oxml import OxmlElement
                     from docx.oxml.ns import qn
                     
@@ -885,6 +585,7 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
                     }
                     
                     # --- Parse arrays ---
+                    import json
                     # Attendees
                     try:
                         attendees_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
@@ -1029,6 +730,312 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
             add_justified_paragraph(doc, "No se detectaron tareas para esta sesión.")
             
         doc.save(buffer)
+    return buffer
+
+@router.post("/{session_id}/dispatch_emails")
+async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: Session = Depends(get_session)):
+    """Dispatch emails for the selected action items."""
+    from models import ActionItem
+    from services.email_service import EmailService
+    import asyncio
+    from fpdf import FPDF
+    
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    email_service = EmailService(db=db)
+    results = []
+    
+    action_items_all = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
+    
+    import datetime
+    import base64
+    
+    pdf_b64_global = None
+    docx_b64_global = None
+    
+    if request.custom_pdf_b64:
+        # Usar el PDF provisto por el frontend en en base64
+        pdf_b64_global = request.custom_pdf_b64
+        # Eliminar el prefijo data:application/pdf;base64, si viene incluido
+        if "base64," in pdf_b64_global:
+            pdf_b64_global = pdf_b64_global.split("base64,")[1]
+    elif request.attach_document:
+        try:
+            docx_buffer = generate_word_document_bytes(session_obj, action_items_all, db)
+            docx_b64_global = base64.b64encode(docx_buffer.getvalue()).decode('utf-8')
+        except Exception as e:
+            print(f"Error generating DOCX attachment: {e}")
+    else:
+        # Fallback a generar un PDF genérico básico
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # Encabezado genérico
+            pdf.set_fill_color(0, 51, 102) # Azul oscuro
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("helvetica", "B", 18)
+            pdf.cell(0, 15, "Secretaria AI - Resumen de Sesion", new_x="LMARGIN", new_y="NEXT", align="C", fill=True)
+            pdf.ln(10)
+            
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font("helvetica", "B", 12)
+            safe_title = session_obj.title.encode('latin-1', 'replace').decode('latin-1') if session_obj.title else "Sesión sin título"
+            pdf.cell(0, 8, f"Sesión: {safe_title}", new_x="LMARGIN", new_y="NEXT")
+            
+            formatted_date = session_obj.date.split("T")[0] if session_obj.date else "Fecha desconocida"
+            pdf.set_font("helvetica", "", 11)
+            pdf.cell(0, 8, f"Fecha: {formatted_date}", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(5)
+            
+            # Resumen Ejecutivo
+            if session_obj.raw_summary:
+                pdf.set_fill_color(0, 51, 102)
+                pdf.set_text_color(255, 255, 255) # Texto blanco sobre fondo de color
+                pdf.set_font("helvetica", "B", 14)
+                # Add some padding and solid fill
+                pdf.cell(0, 10, "Resumen Ejecutivo:", new_x="LMARGIN", new_y="NEXT", fill=True)
+                pdf.ln(3)
+                
+                pdf.set_text_color(0, 0, 0)
+                pdf.set_font("helvetica", "", 11)
+                safe_summary = session_obj.raw_summary.encode('latin-1', 'replace').decode('latin-1')
+                pdf.multi_cell(0, 6, safe_summary)
+                pdf.ln(5)
+                
+            # Decisiones Clave
+            if session_obj.processed_decisions:
+                pdf.set_fill_color(0, 51, 102)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font("helvetica", "B", 14)
+                pdf.cell(0, 10, "Decisiones Clave:", new_x="LMARGIN", new_y="NEXT", fill=True)
+                pdf.ln(3)
+                
+                pdf.set_text_color(0,0,0)
+                pdf.set_font("helvetica", "", 11)
+                safe_decisions = session_obj.processed_decisions.encode('latin-1', 'replace').decode('latin-1')
+                pdf.multi_cell(0, 6, safe_decisions)
+                pdf.ln(5)
+
+            # Riesgos Identificados
+            if session_obj.processed_risks:
+                pdf.set_fill_color(0, 51, 102)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font("helvetica", "B", 14)
+                pdf.cell(0, 10, "Riesgos Identificados:", new_x="LMARGIN", new_y="NEXT", fill=True)
+                pdf.ln(3)
+                
+                pdf.set_text_color(0,0,0)
+                pdf.set_font("helvetica", "", 11)
+                safe_risks = session_obj.processed_risks.encode('latin-1', 'replace').decode('latin-1')
+                pdf.multi_cell(0, 6, safe_risks)
+                pdf.ln(5)
+
+            # Acuerdos
+            if session_obj.processed_agreements:
+                pdf.set_fill_color(0, 51, 102)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font("helvetica", "B", 14)
+                pdf.cell(0, 10, "Acuerdos:", new_x="LMARGIN", new_y="NEXT", fill=True)
+                pdf.ln(3)
+                
+                pdf.set_text_color(0,0,0)
+                pdf.set_font("helvetica", "", 11)
+                safe_agreements = session_obj.processed_agreements.encode('latin-1', 'replace').decode('latin-1')
+                pdf.multi_cell(0, 6, safe_agreements)
+                pdf.ln(5)
+                
+            pdf_b64_global = base64.b64encode(bytes(pdf.output())).decode('utf-8')
+        except Exception as e:
+            print(f"Error generating fallback PDF summary: {e}")
+            pdf_b64_global = None
+    
+    for item_id in request.action_item_ids:
+        item = db.get(ActionItem, item_id)
+        if not item or item.session_id != session_id:
+            continue
+            
+        if not item.owner_email:
+            results.append({"id": item_id, "status": "failed", "reason": "No email provided"})
+            continue
+            
+        attachments = []
+        if docx_b64_global:
+            safe_title = session_obj.title[:20].replace(' ', '_')
+            attachments.append({
+                "filename": f"Acta_{session_obj.id}_{safe_title}.docx",
+                "content": docx_b64_global,
+                "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            })
+        elif pdf_b64_global:
+            attachments.append({
+                "filename": "Resumen_Sesion.pdf",
+                "content": pdf_b64_global,
+                "content_type": "application/pdf"
+            })
+            
+        if item.due_date:
+            try:
+                date_clean = str(item.due_date).replace("-", "")
+                if len(date_clean) == 8:
+                    desc_clean = (item.description or "").replace("\n", "\\n").replace("\r", "")
+                    title_clean = item.title.replace("\n", "").replace("\r", "")
+                    ics_lines = [
+                        "BEGIN:VCALENDAR",
+                        "VERSION:2.0",
+                        "PRODID:-//Secretaria AI//ES",
+                        "BEGIN:VEVENT",
+                        f"SUMMARY:{title_clean}",
+                        f"DTSTART;VALUE=DATE:{date_clean}",
+                        f"DTEND;VALUE=DATE:{date_clean}",
+                        f"DESCRIPTION:{desc_clean}",
+                        "END:VEVENT",
+                        "END:VCALENDAR"
+                    ]
+                    ics_raw = "\r\n".join(ics_lines).encode('utf-8')
+                    ics_b64 = base64.b64encode(ics_raw).decode('utf-8')
+                    attachments.append({
+                        "filename": "recordatorio.ics",
+                        "content": ics_b64,
+                        "content_type": "text/calendar"
+                    })
+            except Exception as e:
+                print(f"Error generating ICS: {e}")
+            
+        try:
+            owner_display = item.owner_name if item.owner_name else (item.owner_email.split('@')[0] if item.owner_email else "Asignado")
+            await email_service.send_action_item_email(
+                to_email=item.owner_email,
+                owner_name=owner_display,
+                task_title=item.title,
+                task_description=item.description,
+                project_name=session_obj.title,
+                due_date=item.due_date,
+                attachments=attachments,
+                summary=session_obj.raw_summary,
+                decisions=session_obj.processed_decisions,
+                risks=session_obj.processed_risks,
+                agreements=session_obj.processed_agreements
+            )
+            results.append({"id": item_id, "status": "success"})
+            # Resend Free limit is 2 requests per second. Sleep 0.6s to stay strictly below limit.
+            await asyncio.sleep(0.6)
+        except Exception as e:
+            results.append({"id": item_id, "status": "failed", "reason": str(e)})
+            
+    return {"status": "success", "results": results}
+
+class DispatchPlatformsRequest(BaseModel):
+    action_item_ids: list[int]
+
+@router.post("/{session_id}/dispatch_platforms")
+async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest, db: Session = Depends(get_session)):
+    """Dispatch selected action items to configured platforms (ClickUp, Trello, Jira, Azure)."""
+    from models import ActionItem, Routing, IntegrationSetting
+    import json
+    from sqlmodel import select
+    from services.integrations.trello import TrelloIntegrationService
+    from services.integrations.jira import JiraIntegrationService
+    from services.integrations.clickup import ClickUpIntegrationService
+    from services.integrations.azure_devops import AzureDevOpsIntegrationService
+
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not session_obj.project_id:
+        raise HTTPException(status_code=400, detail="Cannot dispatch: Meeting is not related to any project routing.")
+        
+    routings = db.exec(select(Routing).where(Routing.project_id == session_obj.project_id, Routing.is_active == True)).all()
+    if not routings:
+        raise HTTPException(status_code=400, detail="Project has no configured routings.")
+
+    global_settings = db.exec(select(IntegrationSetting)).all()
+    settings_dict = {}
+    for s in global_settings:
+        try:
+            settings_dict[s.provider_name] = json.loads(s.config_json)
+        except:
+            settings_dict[s.provider_name] = {}
+
+    from datetime import datetime
+    
+    results = []
+    for item_id in request.action_item_ids:
+        item = db.get(ActionItem, item_id)
+        if not item or item.session_id != session_id:
+            continue
+        
+        item_success = False
+        
+        eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
+        
+        owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
+        safe_description = f"{item.description}\n\n**Metadatos de Secretaría**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
+        
+        for routing in routings:
+            config = json.loads(routing.destination_config or '{}')
+            dest_type = routing.destination_type.lower()
+            
+            try:
+                if "trello" in dest_type:
+                    t_config = settings_dict.get("trello", {})
+                    if t_config.get("isActive", False) and t_config.get("apiKey") and t_config.get("apiToken"):
+                        trello_service = TrelloIntegrationService(t_config["apiKey"], t_config["apiToken"])
+                        await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
+                        item_success = True
+                elif "jira" in dest_type:
+                    j_config = settings_dict.get("jira", {})
+                    if j_config.get("isActive", False) and j_config.get("domain") and j_config.get("apiToken"):
+                        jira_email = j_config.get("email", "")
+                        jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"]) 
+                        await jira_service.create_issue(config.get("project_key"), item.title, safe_description, due_date=eff_due_date, owner_email=item.owner_email)
+                        item_success = True
+                elif "clickup" in dest_type:
+                    c_config = settings_dict.get("clickup", {})
+                    if c_config.get("isActive", False) and c_config.get("apiToken"):
+                        clickup_service = ClickUpIntegrationService(c_config["apiToken"]) 
+                        await clickup_service.create_task(config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
+                        item_success = True
+                elif "azure" in dest_type:
+                    a_config = settings_dict.get("azure", {})
+                    if a_config.get("isActive", False) and a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
+                        azure_service = AzureDevOpsIntegrationService(a_config["organization"], a_config["project"], a_config["pat"])
+                        desc = safe_description
+                        if config.get("area_path"):
+                            desc += f"\n\n[Destino Específico: {config['area_path']}]"
+                        await azure_service.create_work_item(item.title, desc, due_date=eff_due_date, owner_email=item.owner_email)
+                        item_success = True
+            except Exception as e:
+                print(f"Error dispatching to {dest_type}: {e}")
+                pass # Proceed to next routing iteration
+                
+        if item_success:
+            results.append({"id": item_id, "status": "success"})
+        else:
+            results.append({"id": item_id, "status": "failed"})
+
+    return {"status": "success", "results": results}
+
+@router.get("/{session_id}/export/word")
+def export_word(session_id: int, db: Session = Depends(get_session)):
+    """Generate and return a Microsoft Word (.docx) document with the meeting details."""
+    from models import ActionItem
+    from sqlmodel import select
+    from docx import Document
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+    import io
+
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
+
+    buffer = generate_word_document_bytes(session_obj, action_items, db)
 
     headers = {
         'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{session_obj.title[:20]}.docx"'
