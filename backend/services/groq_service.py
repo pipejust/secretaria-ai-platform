@@ -150,8 +150,29 @@ class GroqService:
                 # Defensive check: Llama sometimes wraps output in "properties" because of the schema prompt
                 if "properties" in parsed_data and isinstance(parsed_data["properties"], dict) and "summary" in parsed_data.get("properties", {}):
                     parsed_data = parsed_data["properties"]
-                
-                # Defensive check 2: if it wrapped it in a single root object like {"response": {...}}
+                    
+                # Defensive check 2: Llama sometimes includes the type schema inside the response
+                # Example: {"summary": {"type": "string", "value": "Actual text..."}}
+                for key in ["summary", "decisions", "risks", "agreements"]:
+                    if key in parsed_data and isinstance(parsed_data[key], dict) and "value" in parsed_data[key]:
+                        parsed_data[key] = parsed_data[key]["value"]
+                        
+                for key in ["attendees", "themes", "action_items"]:
+                    if key in parsed_data and isinstance(parsed_data[key], dict):
+                        # LLaMA sometimes uses "items": [...]
+                        if "items" in parsed_data[key]:
+                            if isinstance(parsed_data[key]["items"], list):
+                                parsed_data[key] = parsed_data[key]["items"]
+                            elif isinstance(parsed_data[key]["items"], dict) and "properties" in parsed_data[key]["items"]:
+                                parsed_data[key] = []
+                        # Other times it uses "value": [...] for arrays
+                        elif "value" in parsed_data[key]:
+                            if isinstance(parsed_data[key]["value"], list):
+                                parsed_data[key] = parsed_data[key]["value"]
+                            else:
+                                parsed_data[key] = []
+                            
+                # Defensive check 3: if it wrapped it in a single root object like {"response": {...}}
                 if isinstance(parsed_data, dict) and len(parsed_data) == 1:
                     first_key = list(parsed_data.keys())[0]
                     if isinstance(parsed_data[first_key], dict) and ("summary" in parsed_data[first_key] or "action_items" in parsed_data[first_key]):
