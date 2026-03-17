@@ -81,7 +81,7 @@ export class TemplatesComponent implements OnInit {
             }
         });
 
-        this.http.get<any[]>(`${environment.apiUrl}/projects/`, { headers }).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects/`, { headers }).subscribe({
             next: (data) => {
                 this.projects = data;
                 this.cdr.detectChanges();

@@ -1,4 +1,4 @@
 export const environment = {
     production: false,
-    apiUrl: 'https://secretaria-ai-platform.onrender.com' // Render backend
+    apiUrl: 'http://localhost:8009' // Local backend
 };

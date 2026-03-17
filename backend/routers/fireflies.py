@@ -106,13 +106,32 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
 
                 action_items_data = structured_data.get("action_items", [])
                 for item_data in action_items_data:
+                    if isinstance(item_data, str):
+                        # Fallback for LLM hallucinations where it returns a list of strings
+                        title = "Tarea Detectada"
+                        description = item_data.strip()
+                        owner_name = "Unknown"
+                        owner_email = ""
+                        due_date = None
+                    elif isinstance(item_data, dict):
+                        title = str(item_data.get("title") or "").strip()
+                        description = str(item_data.get("description") or "").strip()
+                        owner_name = str(item_data.get("owner_name") or "Unknown")
+                        owner_email = str(item_data.get("owner_email") or "")
+                        due_date = item_data.get("due_date")
+                    else:
+                        continue
+                        
+                    if not title and not description:
+                        continue
+                        
                     action_item = ActionItem(
                         session_id=new_session.id,
-                        owner_name=item_data.get("owner_name", "Unknown"),
-                        owner_email=item_data.get("owner_email", ""),
-                        title=item_data.get("title", "Tarea sin título"),
-                        description=item_data.get("description", ""),
-                        due_date=item_data.get("due_date"),
+                        owner_name=owner_name,
+                        owner_email=owner_email,
+                        title=title or "Tarea sin título",
+                        description=description,
+                        due_date=due_date,
                         is_approved=False
                     )
                     db.add(action_item)

@@ -8,10 +8,15 @@
     <header class="panel-header">
       <div class="header-titles">
         <h1>Curación de la Sesión</h1>
-        <p class="subtitle">
+        <p class="subtitle" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             Sesión: <strong>{{ meetingData.title }}</strong> | 
             Fecha: {{ meetingData.date | date:'dd/MM/yyyy HH:mm' }} | 
-            Estado: <span class="badge badge-primary" style="white-space: nowrap;">{{ getTranslatedStatus(meetingData.status) }}</span>
+            Estado: <span class="badge badge-primary" style="white-space: nowrap;">{{ getTranslatedStatus(meetingData.status) }}</span> |
+            Proyecto:
+            <select class="glass-select" [(ngModel)]="meetingData.project_id" style="width: auto; padding: 2px 24px 2px 8px; font-size: 0.85rem; height: 28px; line-height: 1; margin: 0;">
+                <option [ngValue]="null">--- Sin Proyecto ---</option>
+                <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
+            </select>
         </p>
       </div>
       

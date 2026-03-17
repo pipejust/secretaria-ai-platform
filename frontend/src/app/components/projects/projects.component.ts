@@ -95,7 +95,7 @@ export class ProjectsComponent implements OnInit {
 
     loadProjects() {
         this.isLoading = true;
-        this.http.get<any[]>(`${environment.apiUrl}/projects/`).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects/`).subscribe({
             next: (data) => {
                 this.projects = data;
                 this.isLoading = false;
@@ -128,7 +128,7 @@ export class ProjectsComponent implements OnInit {
             is_active: true
         };
 
-        this.http.post<any>(`${environment.apiUrl}/projects/`, payload).subscribe({
+        this.http.post<any>(`${environment.apiUrl}/api/projects/`, payload).subscribe({
             next: (data) => {
                 this.projects.push(data);
                 this.newProject = { name: '', description: '' };
@@ -175,7 +175,7 @@ export class ProjectsComponent implements OnInit {
             is_active: this.editingProject.is_active
         };
 
-        this.http.put<any>(`${environment.apiUrl}/projects/${this.editingProject.id}`, payload).subscribe({
+        this.http.put<any>(`${environment.apiUrl}/api/projects/${this.editingProject.id}`, payload).subscribe({
             next: (data) => {
                 const index = this.projects.findIndex(p => p.id === data.id);
                 if (index !== -1) {
@@ -205,7 +205,7 @@ export class ProjectsComponent implements OnInit {
         this.errorMsg = '';
         this.successMsg = '';
 
-        this.http.delete(`${environment.apiUrl}/projects/${projectId}`).subscribe({
+        this.http.delete(`${environment.apiUrl}/api/projects/${projectId}`).subscribe({
             next: () => {
                 this.projects = this.projects.filter(p => p.id !== projectId);
                 this.isDeleting = false;
@@ -242,7 +242,7 @@ export class ProjectsComponent implements OnInit {
 
     loadContacts(projectId: number) {
         this.isLoadingContacts = true;
-        this.http.get<any[]>(`${environment.apiUrl}/projects/${projectId}/contacts`).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects/${projectId}/contacts`).subscribe({
             next: (data) => {
                 this.projectContacts = data;
                 this.isLoadingContacts = false;
@@ -270,7 +270,7 @@ export class ProjectsComponent implements OnInit {
             phone: this.newContact.phone
         };
 
-        this.http.post<any>(`${environment.apiUrl}/projects/${this.managingContactsForProject.id}/contacts`, payload).subscribe({
+        this.http.post<any>(`${environment.apiUrl}/api/projects/${this.managingContactsForProject.id}/contacts`, payload).subscribe({
             next: (data) => {
                 this.projectContacts.push(data);
                 this.newContact = { name: '', email: '', role: '', phone: '' };
@@ -294,7 +294,7 @@ export class ProjectsComponent implements OnInit {
         this.errorMsg = '';
         this.successMsg = '';
 
-        this.http.delete(`${environment.apiUrl}/projects/contacts/${contactId}`).subscribe({
+        this.http.delete(`${environment.apiUrl}/api/projects/contacts/${contactId}`).subscribe({
             next: () => {
                 this.projectContacts = this.projectContacts.filter(c => c.id !== contactId);
                 this.isDeletingContactId = null;
@@ -352,7 +352,7 @@ export class ProjectsComponent implements OnInit {
 
     loadRoutings(projectId: number) {
         this.isLoadingRoutings = true;
-        this.http.get<any[]>(`${environment.apiUrl}/projects/${projectId}/routings`).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects/${projectId}/routings`).subscribe({
             next: (data) => {
                 this.projectRoutings = data;
                 this.isLoadingRoutings = false;
@@ -384,7 +384,7 @@ export class ProjectsComponent implements OnInit {
             is_active: true
         };
 
-        this.http.post<any>(`${environment.apiUrl}/projects/${this.managingRoutingsForProject.id}/routings`, payload).subscribe({
+        this.http.post<any>(`${environment.apiUrl}/api/projects/${this.managingRoutingsForProject.id}/routings`, payload).subscribe({
             next: (data) => {
                 this.projectRoutings.push(data);
                 this.resetRoutingForm();
@@ -408,7 +408,7 @@ export class ProjectsComponent implements OnInit {
         this.errorMsg = '';
         this.successMsg = '';
 
-        this.http.delete(`${environment.apiUrl}/projects/${this.managingRoutingsForProject.id}/routings/${routingId}`).subscribe({
+        this.http.delete(`${environment.apiUrl}/api/projects/${this.managingRoutingsForProject.id}/routings/${routingId}`).subscribe({
             next: () => {
                 this.projectRoutings = this.projectRoutings.filter(r => r.id !== routingId);
                 this.isDeletingRoutingId = null;
@@ -427,7 +427,7 @@ export class ProjectsComponent implements OnInit {
     toggleRoutingStatus(routing: any) {
         this.errorMsg = '';
         this.successMsg = '';
-        this.http.patch<any>(`${environment.apiUrl}/projects/routings/${routing.id}/toggle`, {}).subscribe({
+        this.http.patch<any>(`${environment.apiUrl}/api/projects/routings/${routing.id}/toggle`, {}).subscribe({
             next: (data) => {
                 routing.is_active = data.is_active;
                 this.successMsg = `Ruta ${routing.is_active ? 'activada' : 'desactivada'} exitosamente`;

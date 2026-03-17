@@ -78,11 +78,11 @@ class GroqService:
         basada en el JSON schema.
         """
         # Groq Llama 3 70b has an 8k token limit. A full hour transcript can exceed this, causing a 400 error.
-        # We safely truncate to the last 25,000 characters (approx 5000 tokens) because action items and summaries
-        # are heavily weighted towards the end of the meeting, but we also include the first 5000 chars for context.
+        # We safely truncate to the last 25,000 characters (approx 5000 tokens) porque action items y summaries
+        # suelen estar al final.
         safe_transcript = transcript
         if len(transcript) > 25000:
-            safe_transcript = transcript[:5000] + "\n\n[... TRUNCATED ...]\n\n" + transcript[-20000:]
+            safe_transcript = transcript[:3000] + "\n\n[... TEXTO RECORTADO POR LONGITUD ...]\n\n" + transcript[-21000:]
             
         contacts_info = ""
         if project_contacts:
@@ -91,7 +91,15 @@ class GroqService:
 
         prompt = f"""
         Eres un asistente experto que procesa transcripciones de reuniones.
-        Analiza el siguiente texto y extrae un resumen general, los TEMAS ESPECÍFICOS tratados con sus detalles, las decisiones clave globales, los riesgos identificados, los acuerdos generales, las TAREAS accionables y los ASISTENTES de la reunión.
+        Analiza el siguiente texto y extrae un resumen general EXTENSO y DETALLADO, los TEMAS ESPECÍFICOS tratados con sus detalles correspondientes, las decisiones clave globales, los riesgos identificados, los acuerdos generales, las TAREAS accionables y los ASISTENTES de la reunión.
+        
+        INSTRUCCIONES CLAVE PARA EL RESUMEN ('summary'):
+        NUNCA seas breve. Debes crear un resumen extenso, minucioso y muy detallado de toda la reunión, abarcando contexto, problemas identificados, soluciones propuestas y próximos pasos (mínimo unos 3 o 4 párrafos poblados).
+        
+        INSTRUCCIONES CLAVE PARA DECISIONES, RIESGOS Y ACUERDOS:
+        - 'decisions': Extrae y detalla extensamente todas las decisiones clave globales que se tomaron durante la reunión. Si no hay, pon "No se registraron decisiones clave."
+        - 'risks': Identifica y explica cualquier riesgo, problema potencial, cuello de botella o dependencia bloqueante mencionada. Si no hay, pon "No se identificaron riesgos."
+        - 'agreements': Enumera los acuerdos generales a los que llegó el equipo (diferente a tareas, son consensos). Si no hay, pon "No se registraron acuerdos generales."
         
         INSTRUCCIONES CLAVE PARA ASISTENTES ('attendees'):
         Extrae los nombres de las personas que participaron. Si se menciona su cargo o la empresa a la que pertenecen, inclúyelo también.
@@ -99,12 +107,14 @@ class GroqService:
         INSTRUCCIONES CLAVE PARA TEMAS ('themes'):
         Divide la reunión en los diferentes temas puntuales que se trataron. Para cada tema, extrae una lista viñeteada de los puntos de discusión específicos ('discussion_points').
         
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS):
-        ES OBLIGATORIO extraer absolutamente cualquier compromiso, revisión, sugerencia de acción futura, o actividad explícita o implícita discutida, y categorizarla como una Tarea ('action_items'). 
-        Presta especial atención a verbos como 'se debe revisar', 'tengo que hacer', 'enviaré', 'hay que corregir'.
-        
         PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
-        Cuando extraigas tareas, intenta identificar y extraer los correos electrónicos mencionados por los participantes en la transcripción para asignarlos a 'owner_email'. {contacts_info}
+        Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
+        
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS):
+        1. Analiza cuidadosamente la transcripción para buscar todas las tareas, entregables y compromisos.
+        2. Puedes copiarlas de un bloque explícito como 'Action Items' o extraerlas implícitamente del curso de la conversación.
+        3. Para cada tarea, DEBES general obligatoriamente un OBJETO JSON con las claves: 'owner_name', 'owner_email', 'title', 'description'.
+        4. IMPORTANTE: Si NO hay ninguna tarea discutida, debes retornar estrictamente un arreglo Vacio []. NUNCA retornes un arreglo de strings u objetos vacios.
         
         Transcripción:
         {safe_transcript}

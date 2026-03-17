@@ -7,7 +7,7 @@ from models import Project, Routing, MeetingSession, User, ProjectContact
 from routers.auth import get_current_user
 import crud
 
-router = APIRouter(prefix="/projects", tags=["projects"])
+router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 # -----------------
 # Projects

@@ -22,6 +22,7 @@ interface MeetingData {
   id?: number;
   title: string;
   date: string;
+  project_id?: number | null;
   raw_summary: string;
   raw_transcript: string;
   processed_decisions: string;
@@ -58,6 +59,7 @@ export class CurationPanelComponent implements OnInit {
   isDispatchingPlatforms = false;
   isRegeneratingFields = false;
   saveStatusMessage = '';
+  projects: any[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -83,8 +85,17 @@ export class CurationPanelComponent implements OnInit {
       const idParam = params.get('id');
       if (idParam) {
         this.sessionId = parseInt(idParam, 10);
+        this.loadProjects();
         this.loadSessionDetails();
       }
+    });
+  }
+
+  loadProjects() {
+    const headers = this.authService.getAuthHeaders();
+    this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers }).subscribe({
+      next: (data) => this.projects = data,
+      error: (err) => console.error('Error loading projects', err)
     });
   }
 
@@ -109,6 +120,7 @@ export class CurationPanelComponent implements OnInit {
               id: data.session.id,
               title: data.session.title || 'Sesión sin título',
               date: parsedDate,
+              project_id: data.session.project_id || null,
               status: data.session.status || 'pending',
               raw_summary: data.session.raw_summary || '',
               raw_transcript: data.session.raw_transcript || '',
@@ -177,7 +189,8 @@ export class CurationPanelComponent implements OnInit {
       },
       error: (err) => {
         this.isDispatchingEmails = false;
-        this.showSaveMessage('Error enviando correos', true);
+        const msg = err.error && err.error.detail ? err.error.detail : 'Error enviando correos';
+        this.showSaveMessage(msg, true);
         this.cdr.detectChanges();
       }
     });
@@ -197,7 +210,8 @@ export class CurationPanelComponent implements OnInit {
       },
       error: (err) => {
         this.isDispatchingPlatforms = false;
-        this.showSaveMessage('Error enviando a plataformas', true);
+        const msg = err.error && err.error.detail ? err.error.detail : 'Error enviando a plataformas';
+        this.showSaveMessage(msg, true);
         this.cdr.detectChanges();
       }
     });
@@ -282,6 +296,7 @@ export class CurationPanelComponent implements OnInit {
       processed_decisions: this.meetingData.processed_decisions,
       processed_risks: this.meetingData.processed_risks,
       processed_agreements: this.meetingData.processed_agreements,
+      project_id: this.meetingData.project_id,
       status: 'completed'
     };
 

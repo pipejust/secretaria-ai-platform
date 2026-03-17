@@ -65,7 +65,20 @@ class EmailService:
             print("---------------------------------------")
             return True
 
-    async def send_action_item_email(self, to_email: str, owner_name: str, task_title: str, task_description: str, project_name: str, due_date: str = None, attachments: list = None):
+    async def send_action_item_email(
+        self, 
+        to_email: str, 
+        owner_name: str, 
+        task_title: str, 
+        task_description: str, 
+        project_name: str, 
+        due_date: str = None, 
+        attachments: list = None,
+        summary: str = None,
+        decisions: str = None,
+        risks: str = None,
+        agreements: str = None
+    ):
         template = self.jinja_env.get_template('email_action_item.html')
         html_content = template.render(
             owner_name=owner_name,
@@ -73,6 +86,10 @@ class EmailService:
             task_description=task_description,
             project_name=project_name,
             due_date=due_date,
+            summary=summary,
+            decisions=decisions,
+            risks=risks,
+            agreements=agreements,
             current_year=2026
         )
         await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content, attachments=attachments)

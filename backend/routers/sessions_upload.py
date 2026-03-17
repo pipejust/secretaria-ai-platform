@@ -51,6 +51,7 @@ class SessionUpdate(BaseModel):
     processed_risks: Optional[str] = None
     processed_agreements: Optional[str] = None
     status: Optional[str] = None
+    project_id: Optional[int] = None
 
 class RegeneratePayload(BaseModel):
     raw_transcript: Optional[str] = None
@@ -105,16 +106,33 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
         action_items_data = []
 
     for item_data in action_items_data:
-        if not isinstance(item_data, dict):
+        if isinstance(item_data, str):
+            # Fallback for LLM hallucinations where it returns a list of strings
+            title = "Tarea Detectada"
+            description = item_data.strip()
+            owner_name = "Unknown"
+            owner_email = ""
+            due_date = None
+        elif isinstance(item_data, dict):
+            title = str(item_data.get("title") or "").strip()
+            description = str(item_data.get("description") or "").strip()
+            owner_name = str(item_data.get("owner_name") or "Unknown")
+            owner_email = str(item_data.get("owner_email") or "")
+            due_date = item_data.get("due_date")
+        else:
+            continue
+            
+        # Filtro estricto contra tareas vacías alucinadas
+        if not title and not description:
             continue
             
         action_item = ActionItem(
             session_id=session_id,
-            owner_name=item_data.get("owner_name", "Unknown"),
-            owner_email=item_data.get("owner_email", ""),
-            title=item_data.get("title", "Tarea sin título"),
-            description=item_data.get("description", ""),
-            due_date=item_data.get("due_date"),
+            owner_name=owner_name,
+            owner_email=owner_email,
+            title=title or "Tarea sin título",
+            description=description,
+            due_date=due_date,
             is_approved=False
         )
         db.add(action_item)
@@ -164,29 +182,34 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error conectando con la IA (Groq): {str(e)}")
 
+    def _unwrap_ai_field(val):
+        if isinstance(val, dict):
+            if "value" in val: return val["value"]
+            if "items" in val: return val["items"]
+        return val
 
-    summary = structured_data.get("summary")
+    summary = _unwrap_ai_field(structured_data.get("summary"))
     if summary is not None:
-        session_obj.raw_summary = summary
+        session_obj.raw_summary = str(summary)
         
-    decisions = structured_data.get("decisions")
+    decisions = _unwrap_ai_field(structured_data.get("decisions"))
     if decisions is not None:
-        session_obj.processed_decisions = decisions
+        session_obj.processed_decisions = str(decisions)
         
-    risks = structured_data.get("risks")
+    risks = _unwrap_ai_field(structured_data.get("risks"))
     if risks is not None:
-        session_obj.processed_risks = risks
+        session_obj.processed_risks = str(risks)
         
-    agreements = structured_data.get("agreements")
+    agreements = _unwrap_ai_field(structured_data.get("agreements"))
     if agreements is not None:
-        session_obj.processed_agreements = agreements
+        session_obj.processed_agreements = str(agreements)
     
     import json
-    attendees = structured_data.get("attendees")
+    attendees = _unwrap_ai_field(structured_data.get("attendees"))
     if attendees is not None:
         session_obj.processed_attendees = json.dumps(attendees, ensure_ascii=False)
         
-    themes = structured_data.get("themes")
+    themes = _unwrap_ai_field(structured_data.get("themes"))
     if themes is not None:
         session_obj.processed_themes = json.dumps(themes, ensure_ascii=False)
 
@@ -225,6 +248,8 @@ def update_session_content(session_id: int, payload: SessionUpdate, db: Session 
         session_obj.processed_agreements = payload.processed_agreements
     if payload.status is not None:
         session_obj.status = payload.status
+    if hasattr(payload, 'project_id') and payload.project_id is not None:
+        session_obj.project_id = payload.project_id
         
     db.add(session_obj)
     db.commit()
@@ -370,6 +395,48 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             pdf.multi_cell(0, 6, safe_summary)
             pdf.ln(5)
             
+        # Decisiones Clave
+        if session_obj.processed_decisions:
+            pdf.set_fill_color(*color_heading)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, "Decisiones Clave:", new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.ln(3)
+            
+            pdf.set_text_color(*color_text)
+            pdf.set_font("helvetica", "", 11)
+            safe_decisions = session_obj.processed_decisions.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 6, safe_decisions)
+            pdf.ln(5)
+
+        # Riesgos Identificados
+        if session_obj.processed_risks:
+            pdf.set_fill_color(*color_heading)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, "Riesgos Identificados:", new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.ln(3)
+            
+            pdf.set_text_color(*color_text)
+            pdf.set_font("helvetica", "", 11)
+            safe_risks = session_obj.processed_risks.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 6, safe_risks)
+            pdf.ln(5)
+
+        # Acuerdos
+        if session_obj.processed_agreements:
+            pdf.set_fill_color(*color_heading)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, "Acuerdos:", new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.ln(3)
+            
+            pdf.set_text_color(*color_text)
+            pdf.set_font("helvetica", "", 11)
+            safe_agreements = session_obj.processed_agreements.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 6, safe_agreements)
+            pdf.ln(5)
+            
         pdf_b64_global = base64.b64encode(bytes(pdf.output())).decode('utf-8')
     except Exception as e:
         print(f"Error generating PDF summary: {e}")
@@ -421,15 +488,19 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                 print(f"Error generating ICS: {e}")
             
         try:
-            # Pasa los datos extra al nuevo email service (fecha, attachments)
+            owner_display = item.owner_name if item.owner_name else (item.owner_email.split('@')[0] if item.owner_email else "Asignado")
             await email_service.send_action_item_email(
                 to_email=item.owner_email,
-                owner_name=item.owner_name,
+                owner_name=owner_display,
                 task_title=item.title,
                 task_description=item.description,
                 project_name=session_obj.title,
                 due_date=item.due_date,
-                attachments=attachments
+                attachments=attachments,
+                summary=session_obj.raw_summary,
+                decisions=session_obj.processed_decisions,
+                risks=session_obj.processed_risks,
+                agreements=session_obj.processed_agreements
             )
             results.append({"id": item_id, "status": "success"})
             # Resend Free limit is 2 requests per second. Sleep 0.6s to stay strictly below limit.
@@ -484,7 +555,8 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
         
         eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
         
-        safe_description = f"{item.description}\n\n**Metadatos de Secretaría**\n- Asignado Original: {item.owner_email or 'N/A'}\n- Fecha Vencimiento Asignada: {eff_due_date}"
+        owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
+        safe_description = f"{item.description}\n\n**Metadatos de Secretaría**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
         
         for routing in routings:
             config = json.loads(routing.destination_config or '{}')

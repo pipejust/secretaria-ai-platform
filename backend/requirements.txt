@@ -50,3 +50,4 @@ requests
 fpdf2>=2.8.1
 apscheduler
 tzlocal>=3.0
+resend==2.24.0
