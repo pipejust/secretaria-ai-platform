@@ -95,6 +95,10 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
                 structured_data = await groq_svc.process_transcript(raw_transcript, project_contacts)
                 
                 # Guardar datos enriquecidos en session
+                groq_summary = structured_data.get("summary", "")
+                if groq_summary and len(groq_summary) > 20: 
+                    new_session.raw_summary = groq_summary 
+                
                 new_session.processed_decisions = structured_data.get("decisions", "")
                 new_session.processed_risks = structured_data.get("risks", "")
                 new_session.processed_agreements = structured_data.get("agreements", "")

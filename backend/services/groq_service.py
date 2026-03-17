@@ -110,11 +110,12 @@ class GroqService:
         PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS):
-        1. Analiza cuidadosamente la transcripción para buscar todas las tareas, entregables y compromisos.
-        2. Puedes copiarlas de un bloque explícito como 'Action Items' o extraerlas implícitamente del curso de la conversación.
-        3. Para cada tarea, DEBES general obligatoriamente un OBJETO JSON con las claves: 'owner_name', 'owner_email', 'title', 'description'.
-        4. IMPORTANTE: Si NO hay ninguna tarea discutida, debes retornar estrictamente un arreglo Vacio []. NUNCA retornes un arreglo de strings u objetos vacios.
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
+        1. Analiza cuidadosamente la transcripción palabra por palabra buscando TODO compromiso, tarea, solicitud o acción futura que alguna persona deba realizar.
+        2. NO esperes encontrar un bloque explicito que diga "Tareas" o "Action Items". Debes extraer las tareas IMPLÍCITAMENTE de la conversación natural (ej. "Yo te envío ese correo mañana", "Revisemos esto el viernes", "Cristian valida eso").
+        3. DEBES SEPARAR tareas compuestas en tareas individuales por cada accion concreta.
+        4. Para CADA tarea identificada, DEBES generar obligatoriamente un OBJETO JSON con: 'owner_name', 'owner_email', 'title', 'description', y 'due_date' (si se menciona o deduce).
+        5. IMPORTANTE: En el 99% de las reuniones de trabajo hay tareas. Solo si ESTÁS ABSOLUTAMENTE SEGURO de que no hubo NINGÚN compromiso futuro, retorna un arreglo Vacío []. NUNCA retornes un arreglo de strings.
         
         Transcripción:
         {safe_transcript}
