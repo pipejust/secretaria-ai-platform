@@ -231,3 +231,33 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Eliminar Sesión -->
+<div class="modal-backdrop fade-in" *ngIf="showDeleteModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
+    <div class="card glass-panel" style="width: 400px; max-width: 90vw; position:relative;">
+        <div class="card-body" style="text-align: center; padding: 2rem;">
+            <div style="background: rgba(239, 68, 68, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: #ef4444;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            
+            <h3 style="margin-top:0; color:var(--text-main); font-size: 1.25rem; font-weight: 600;">¿Eliminar Sesión?</h3>
+            <p style="color:var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2rem;">
+                Estás a punto de eliminar permanentemente el registro <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>.<br><br>Todas las tareas extraídas directamente relacionadas a esta sesión se borrarán de la base de datos de Secretaria AI. Esta acción es <strong>irreversible</strong>.
+            </p>
+            
+            <div style="display: flex; gap: 1rem; width: 100%;">
+                <button class="btn btn-secondary" style="flex:1; justify-content: center;" (click)="cancelDeleteSession()" [disabled]="isDeleting">
+                    Cancelar
+                </button>
+                <button class="btn btn-danger" style="flex:1; justify-content: center; background: #ef4444; color: white;" (click)="confirmDeleteSession()" [disabled]="isDeleting">
+                    <span *ngIf="!isDeleting">Sí, Eliminar</span>
+                    <span *ngIf="isDeleting">Borrando...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

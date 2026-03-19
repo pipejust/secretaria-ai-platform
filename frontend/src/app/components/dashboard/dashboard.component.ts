@@ -30,6 +30,10 @@ export class DashboardComponent implements OnInit {
         file: null as File | null
     };
 
+    showDeleteModal = false;
+    sessionToDelete: any = null;
+    isDeleting = false;
+
     constructor(
         private http: HttpClient, 
         private authService: AuthService, 
@@ -250,18 +254,33 @@ export class DashboardComponent implements OnInit {
     }
 
     deleteSession(session: any) {
-        if (confirm(`¿Estás seguro de que deseas eliminar la sesión "${session.title || session.id}"? Esta acción no se puede deshacer.`)) {
-            const headers = this.authService.getAuthHeaders();
-            this.http.delete(`${environment.apiUrl}/api/sessions/${session.id}`, { headers }).subscribe({
-                next: () => {
-                    alert('Sesión eliminada correctamente.');
-                    this.loadSessions();
-                },
-                error: (err) => {
-                    console.error('Error eliminando sesión:', err);
-                    alert('Error al intentar eliminar la sesión.');
-                }
-            });
-        }
+        this.sessionToDelete = session;
+        this.showDeleteModal = true;
+    }
+
+    cancelDeleteSession() {
+        this.showDeleteModal = false;
+        this.sessionToDelete = null;
+    }
+
+    confirmDeleteSession() {
+        if (!this.sessionToDelete) return;
+        
+        this.isDeleting = true;
+        const headers = this.authService.getAuthHeaders();
+        this.http.delete(`${environment.apiUrl}/api/sessions/${this.sessionToDelete.id}`, { headers }).subscribe({
+            next: () => {
+                this.isDeleting = false;
+                this.showDeleteModal = false;
+                this.sessionToDelete = null;
+                alert('Sesión eliminada correctamente.');
+                this.loadSessions();
+            },
+            error: (err) => {
+                this.isDeleting = false;
+                console.error('Error eliminando sesión:', err);
+                alert('Error al intentar eliminar la sesión.');
+            }
+        });
     }
 }
