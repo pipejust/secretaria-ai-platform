@@ -16,6 +16,35 @@ class GroqService:
             "Content-Type": "application/json"
         }
         
+    async def transcribe_audio(self, file_bytes: bytes, filename: str) -> str:
+        """Transcribe an audio file using Groq's Whisper."""
+        url = "https://api.groq.com/openai/v1/audio/transcriptions"
+        
+        # Determine language or default to multilingüe for Whisper
+        # We use a Multipart form data request
+        files = {
+            "file": (filename, file_bytes, "audio/mpeg")
+        }
+        data = {
+            "model": "whisper-large-v3",
+            "response_format": "json"
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {settings.groq_api_key}"
+            # Do NOT set Content-Type to application/json, httpx will set multipart/form-data automatically
+        }
+        
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            try:
+                response = await client.post(url, files=files, data=data, headers=headers)
+                response.raise_for_status()
+                return response.json().get("text", "")
+            except Exception as e:
+                import traceback
+                print(f"Error transcribiendo audio con Groq: {e}\n{traceback.format_exc()}")
+                raise Exception(f"Fallo en la transcripción de audio: {e}")
+        
     def _get_json_schema(self) -> Dict[str, Any]:
         """Define la estructura estricta que esperamos de la transcripción"""
         return {

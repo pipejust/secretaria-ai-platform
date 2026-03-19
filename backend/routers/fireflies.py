@@ -63,15 +63,6 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
                         matched_project_id = p.id
                         break
                     
-            # 2. Deducción Nivel 2: Intuición por Contexto via Groq IA
-            if not matched_project_id and raw_summary:
-                groq_svc = GroqService()
-                # Pasamos tanto el nombre como la descripción del proyecto para que deduzca mejor
-                proj_dict_list = [{"id": p.id, "name": p.name, "description": p.description} for p in projects]
-                deduced_id = await groq_svc.deduce_project(raw_summary, proj_dict_list)
-                if deduced_id:
-                    matched_project_id = deduced_id
-            
             new_session.title = title
             new_session.date = date_str
             new_session.project_id = matched_project_id
@@ -99,6 +90,15 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
                 if groq_summary and len(groq_summary) > 20: 
                     new_session.raw_summary = groq_summary 
                 
+                # 2. Deducción Nivel 2: Intuición por Contexto via Groq IA usando el súper resumen
+                if not matched_project_id and new_session.raw_summary:
+                    proj_dict_list = [{"id": p.id, "name": p.name, "description": p.description} for p in projects]
+                    deduced_id = await groq_svc.deduce_project(new_session.raw_summary, proj_dict_list)
+                    if deduced_id:
+                        matched_project_id = deduced_id
+                        new_session.project_id = matched_project_id
+                        
+                new_session.language = structured_data.get("language", "Español")
                 new_session.processed_decisions = structured_data.get("decisions", "")
                 new_session.processed_risks = structured_data.get("risks", "")
                 new_session.processed_agreements = structured_data.get("agreements", "")

@@ -5,8 +5,7 @@
             <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Visualiza sesiones procesadas por
                 inteligencia artificial o carga las tuyas manualmente.</p>
         </div>
-        <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)">
-        <button class="btn btn-primary" (click)="fileInput.click()">
+        <button class="btn btn-primary" (click)="openUploadModal()">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 style="margin-right:0.5rem;">
@@ -14,7 +13,7 @@
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            Subida Manual de Transcripción
+            Nueva Subida Manual
         </button>
     </div>
 
@@ -114,13 +113,20 @@
                             </span>
                         </td>
                         <td>
-                            <div style="display:flex; gap:0.5rem;">
+                            <div style="display:flex; gap:0.5rem; align-items: center;">
                                 <button class="btn btn-sm btn-secondary"
                                     (click)="viewCuration(s.id)">
                                     {{ s.status === 'completed' ? 'Detalle de la Sesión' : 'Ver Curación' }}
                                 </button>
                                 <button class="btn btn-sm btn-primary" (click)="generateActa(s)">
                                     Generar Documento
+                                </button>
+                                <button class="btn btn-sm btn-danger" style="background:#ef4444; border:none; color:white; padding: 0.4rem 0.6rem; border-radius: 4px; display:flex; align-items:center; cursor: pointer;" (click)="deleteSession(s)" title="Eliminar Sesión">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                    </svg>
                                 </button>
                             </div>
                         </td>
@@ -144,6 +150,84 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Upload -->
+<div class="modal-backdrop fade-in" *ngIf="showUploadModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
+    <div class="card glass-panel" style="width: 500px; max-width: 90vw; max-height: 90vh; overflow-y:auto; position:relative;">
+        <button class="btn btn-sm" style="position:absolute; top:1rem; right:1rem; background:transparent; border:none; font-size:1.5rem; line-height:1; cursor:pointer;" (click)="closeUploadModal()">×</button>
+        
+        <div class="card-body">
+            <h3 style="margin-top:0; color:var(--text-main); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Subir Acta Manual
+            </h3>
+
+            <!-- Tabs -->
+            <div style="display:flex; border-bottom: 1px solid var(--glass-border); margin-bottom: 1.25rem;">
+                <button [ngStyle]="{'background': uploadTab === 'audio' ? 'rgba(79, 70, 229, 0.1)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'audio' ? '2px solid var(--primary-color)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'audio' ? 'var(--primary-color)' : 'var(--text-muted)', 'font-weight': uploadTab === 'audio' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'audio'">
+                    Procesar Audio
+                </button>
+                <button [ngStyle]="{'background': uploadTab === 'text' ? 'rgba(79, 70, 229, 0.1)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'text' ? '2px solid var(--primary-color)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'text' ? 'var(--primary-color)' : 'var(--text-muted)', 'font-weight': uploadTab === 'text' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'text'">
+                    Pegar Texto Libre
+                </button>
+            </div>
+
+            <!-- Formularios Generales -->
+            <div class="form-group">
+                <label>Título o Motivo de la Sesión *</label>
+                <input type="text" class="modern-input" [(ngModel)]="uploadForm.title" placeholder="Ej: Comité Estratégico Mensual">
+            </div>
+
+            <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label>Fecha y Hora</label>
+                    <input type="datetime-local" class="modern-input" [(ngModel)]="uploadForm.date">
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label>Idioma Principal</label>
+                    <select class="modern-input" [(ngModel)]="uploadForm.language">
+                        <option value="Español">Español</option>
+                        <option value="Inglés">Inglés</option>
+                        <option value="Portugués">Portugués</option>
+                        <option value="Multilingüe">Múltiples Idiomas</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Proyecto (Opcional, para enrutamiento auto)</label>
+                <select class="modern-input" [(ngModel)]="uploadForm.projectId">
+                    <option value="">-- Sin Proyecto (General) --</option>
+                    <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+                </select>
+            </div>
+
+            <!-- Audio Tab -->
+            <div *ngIf="uploadTab === 'audio'" style="background:rgba(255,255,255,0.02); border:1px dashed var(--glass-border); border-radius:8px; padding:1.5rem; text-align:center; margin-bottom:1.5rem;">
+                <input type="file" #audioUpload style="display:none;" accept="audio/*,video/mp4" (change)="onFileSelected($event)">
+                <button class="btn btn-secondary" (click)="audioUpload.click()" style="margin-bottom:0.5rem;" [disabled]="isUploading">
+                    Seleccionar Archivo (MP3, WAV, M4A)
+                </button>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin:0;" *ngIf="uploadForm.file">Archivo: <strong>{{ uploadForm.file.name }}</strong></p>
+            </div>
+
+            <!-- Text Tab -->
+            <div *ngIf="uploadTab === 'text'" class="form-group">
+                <label>Transcripción o Acta Cruda *</label>
+                <textarea class="modern-input" rows="6" [(ngModel)]="uploadForm.textContent" placeholder="Pega aquí todo el texto discutido en la sesión..." [disabled]="isUploading"></textarea>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;" (click)="submitUpload()" [disabled]="isUploading">
+                <span *ngIf="!isUploading">Procesar e Inteligenciar Sesión</span>
+                <span *ngIf="isUploading">Subiendo y transcribiendo... ⏳</span>
+            </button>
         </div>
     </div>
 </div>

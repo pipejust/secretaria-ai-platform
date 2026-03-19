@@ -15,7 +15,20 @@ import { environment } from '../../../environments/environment';
 })
 export class DashboardComponent implements OnInit {
     sessions: any[] = [];
+    projects: any[] = [];
     isLoading = false;
+    isUploading = false;
+
+    showUploadModal = false;
+    uploadTab: 'audio' | 'text' = 'audio';
+    uploadForm: any = {
+        title: '',
+        date: '',
+        language: 'Español',
+        projectId: '',
+        textContent: '',
+        file: null as File | null
+    };
 
     constructor(
         private http: HttpClient, 
@@ -26,27 +39,102 @@ export class DashboardComponent implements OnInit {
 
     ngOnInit() {
         this.loadSessions();
+        this.loadProjects();
+    }
+
+    loadProjects() {
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers }).subscribe({
+            next: (data) => {
+                this.projects = data;
+                this.cdr.detectChanges();
+            },
+            error: (err) => console.error("Error cargando proyectos", err)
+        });
+    }
+
+    openUploadModal() {
+        // Set default date to now in yyyy-MM-ddThh:mm format for datetime-local input
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        this.uploadForm.date = now.toISOString().slice(0,16);
+        this.uploadForm.title = '';
+        this.uploadForm.language = 'Español';
+        this.uploadForm.projectId = '';
+        this.uploadForm.textContent = '';
+        this.uploadForm.file = null;
+        this.showUploadModal = true;
+    }
+
+    closeUploadModal() {
+        this.showUploadModal = false;
     }
 
     onFileSelected(event: any) {
         const file: File = event.target.files[0];
         if (file) {
-            this.isLoading = true;
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('title', file.name);
-
-            this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData).subscribe({
-                next: (res: any) => {
-                    alert('Archivo subido exitosamente.');
-                    this.loadSessions();
-                },
-                error: (err) => {
-                    alert('Error subiendo el archivo: ' + err.message);
-                    this.isLoading = false;
-                }
-            });
+            this.uploadForm.file = file;
+            if (!this.uploadForm.title) {
+                // Remove extension for default title
+                this.uploadForm.title = file.name.replace(/\.[^/.]+$/, "");
+            }
         }
+    }
+
+    submitUpload() {
+        if (!this.uploadForm.title) {
+            alert('El título/motivo es obligatorio.');
+            return;
+        }
+
+        if (this.uploadTab === 'audio' && !this.uploadForm.file) {
+            alert('Debe subir un archivo de audio para transcribir.');
+            return;
+        }
+        
+        if (this.uploadTab === 'text' && !this.uploadForm.textContent.trim()) {
+            alert('Debe pegar el texto de la transcripción.');
+            return;
+        }
+
+        this.isUploading = true;
+        const formData = new FormData();
+        formData.append('title', this.uploadForm.title);
+        
+        if (this.uploadForm.date) {
+            // Convert back to UTC ISO string if needed, or keep local
+            const d = new Date(this.uploadForm.date);
+            formData.append('date', d.toISOString());
+        }
+        
+        formData.append('language', this.uploadForm.language);
+        
+        if (this.uploadForm.projectId) {
+            formData.append('project_id', this.uploadForm.projectId);
+        }
+
+        if (this.uploadTab === 'audio' && this.uploadForm.file) {
+            formData.append('file', this.uploadForm.file);
+        } else if (this.uploadTab === 'text') {
+            formData.append('text_content', this.uploadForm.textContent);
+        }
+
+        const headers = this.authService.getAuthHeaders();
+        // Angular's HttpClient will automatically set the correct Content-Type for FormData
+        
+        this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers }).subscribe({
+            next: (res: any) => {
+                alert('Sesión creada exitosamente.');
+                this.showUploadModal = false;
+                this.isUploading = false;
+                this.loadSessions();
+            },
+            error: (err) => {
+                console.error('Upload Error:', err);
+                alert('Error subiendo o creando la sesión: ' + (err.error?.detail || err.message));
+                this.isUploading = false;
+            }
+        });
     }
 
     loadSessions() {
@@ -159,5 +247,21 @@ export class DashboardComponent implements OnInit {
 
     viewCuration(sessionId: number) {
         this.router.navigate(['/admin/curation', sessionId]);
+    }
+
+    deleteSession(session: any) {
+        if (confirm(`¿Estás seguro de que deseas eliminar la sesión "${session.title || session.id}"? Esta acción no se puede deshacer.`)) {
+            const headers = this.authService.getAuthHeaders();
+            this.http.delete(`${environment.apiUrl}/api/sessions/${session.id}`, { headers }).subscribe({
+                next: () => {
+                    alert('Sesión eliminada correctamente.');
+                    this.loadSessions();
+                },
+                error: (err) => {
+                    console.error('Error eliminando sesión:', err);
+                    alert('Error al intentar eliminar la sesión.');
+                }
+            });
+        }
     }
 }

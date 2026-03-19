@@ -44,6 +44,22 @@ def get_session_details(session_id: int, db: Session = Depends(get_session)):
         "action_items": action_items
     }
 
+@router.delete("/{session_id}")
+def delete_session(session_id: int, db: Session = Depends(get_session)):
+    from sqlmodel import select
+    from models import ActionItem
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
+    for item in action_items:
+        db.delete(item)
+        
+    db.delete(session_obj)
+    db.commit()
+    return {"status": "success", "message": "Sesión eliminada"}
+
 class SessionUpdate(BaseModel):
     raw_summary: Optional[str] = None
     raw_transcript: Optional[str] = None
@@ -314,23 +330,48 @@ def create_manual_action_item(
 @router.post("/upload")
 async def upload_manual_session(
     title: str = Form(...),
-    file: UploadFile = File(...),
-    session: Session = Depends(get_session)
+    date: Optional[str] = Form(None),
+    language: Optional[str] = Form(None),
+    project_id: Optional[int] = Form(None),
+    text_content: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: Session = Depends(get_session)
 ):
     try:
-        # Extraer el contenido o guardar el archivo
-        content = await file.read()
-        file_size = len(content)
-        
-        # Crear una nueva sesión
         import uuid
+        import datetime
+        from services.groq_service import GroqService
+        
+        session_date = date if date else (datetime.datetime.utcnow().isoformat() + "Z")
+        session_language = language if language else "Desconocido"
+        
+        raw_transcript = ""
+        
+        # 1. Analizar si subieron algo válido
+        if file and file.filename:
+            content = await file.read()
+            # Si es audio, lo pasamos por Whisper API (Groq)
+            if file.filename.lower().endswith(('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm')):
+                groq_svc = GroqService()
+                raw_transcript = await groq_svc.transcribe_audio(content, file.filename)
+            else:
+                # Si es txt plain text
+                raw_transcript = content.decode('utf-8', errors='ignore')
+        elif text_content:
+            raw_transcript = text_content
+            
+        if not raw_transcript or len(raw_transcript) < 5:
+            raise HTTPException(status_code=400, detail="No se pudo extraer texto del archivo o el texto está vacío.")
+            
         new_session = MeetingSession(
             fireflies_id=f"manual_{uuid.uuid4()}",
             title=title,
-            date=datetime.datetime.utcnow().isoformat() + "Z",
-            video_url=f"manual_upload_{file.filename}",
-            raw_transcript=f"Uploaded {file.filename} manually.",  # Changed to raw_transcript to match model
-            status="pending",
+            date=session_date,
+            language=session_language,
+            project_id=project_id,
+            raw_transcript=raw_transcript,
+            status="pending", # Empezamos en pending. Lo pasaremos a process manual o lo lanzamos al background
             raw_summary="",
             processed_decisions="",
             processed_risks="",
@@ -339,12 +380,14 @@ async def upload_manual_session(
             processed_themes="[]"
         )
         
-        session.add(new_session)
-        session.commit()
-        session.refresh(new_session)
+        db.add(new_session)
+        db.commit()
+        db.refresh(new_session)
         
-        return {"status": "success", "session_id": new_session.id, "message": "Archivo subido exitosamente."}
+        return {"status": "success", "session_id": new_session.id, "message": "Sesión creada exitosamente. Diríjase a curación para generar la inteligencia del acta."}
     except Exception as e:
+        import traceback
+        print(f"Error uploading session: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 class DispatchEmailsRequest(BaseModel):
