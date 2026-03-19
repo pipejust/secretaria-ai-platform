@@ -192,6 +192,10 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
     if summary is not None:
         session_obj.raw_summary = str(summary)
         
+    language = _unwrap_ai_field(structured_data.get("language"))
+    if language is not None:
+        session_obj.language = str(language)
+        
     decisions = _unwrap_ai_field(structured_data.get("decisions"))
     if decisions is not None:
         session_obj.processed_decisions = str(decisions)
@@ -220,6 +224,7 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
     return {
         "status": "success",
         "fields": {
+            "language": session_obj.language,
             "raw_summary": session_obj.raw_summary,
             "processed_decisions": session_obj.processed_decisions,
             "processed_risks": session_obj.processed_risks,
@@ -273,6 +278,37 @@ def update_action_item_email(item_id: int, owner_email: Optional[str] = Form(Non
     db.commit()
     db.refresh(item)
     return {"status": "success", "message": "Tarea actualizada", "item": item}
+
+@router.post("/{session_id}/action_items")
+def create_manual_action_item(
+    session_id: int,
+    title: str = Form(...),
+    owner_name: str = Form(""),
+    owner_email: str = Form(""),
+    due_date: str = Form(""),
+    description: str = Form(""),
+    db: Session = Depends(get_session)
+):
+    """Crear una nueva tarea manual."""
+    from models import ActionItem, MeetingSession
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    new_item = ActionItem(
+        session_id=session_id,
+        title=title,
+        owner_name=owner_name,
+        owner_email=owner_email,
+        due_date=due_date,
+        description=description,
+        is_approved=True
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    
+    return {"status": "success", "message": "Tarea agregada correctamente", "item": new_item}
 
 
 @router.post("/upload")

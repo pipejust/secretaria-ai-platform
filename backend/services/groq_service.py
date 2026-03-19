@@ -21,6 +21,7 @@ class GroqService:
         return {
             "type": "object",
             "properties": {
+                "language": {"type": "string", "description": "El idioma original detectado de la transcripción (ej: Inglés, Español, Portugués)"},
                 "summary": {"type": "string"},
                 "decisions": {"type": "string"},
                 "risks": {"type": "string"},
@@ -69,7 +70,7 @@ class GroqService:
                     }
                 }
             },
-            "required": ["summary", "decisions", "risks", "agreements", "attendees", "themes", "action_items"]
+            "required": ["language", "summary", "decisions", "risks", "agreements", "attendees", "themes", "action_items"]
         }
 
     async def process_transcript(self, transcript: str, project_contacts: list = None) -> dict:
@@ -90,11 +91,13 @@ class GroqService:
             contacts_info = f"\n\nTienes acceso a la siguiente lista de personas del proyecto:\n{contacts_str}\nSi una tarea es asignada a una persona de esta lista, debes usar su 'name' y 'email' exactos.\n"
 
         prompt = f"""
-        Eres un asistente experto que procesa transcripciones de reuniones.
-        Analiza el siguiente texto y extrae un resumen general EXTENSO y DETALLADO, los TEMAS ESPECÍFICOS tratados con sus detalles correspondientes, las decisiones clave globales, los riesgos identificados, los acuerdos generales, las TAREAS accionables y los ASISTENTES de la reunión.
+        Eres un asistente experto que procesa transcripciones de reuniones internacionales.
+        Analiza el siguiente texto y detecta el idioma original de la reunión para el campo 'language'. 
+        
+        ¡MUY IMPORTANTE - REGLA DE ORO!: SIN IMPORTAR EL IDIOMA DE LA TRANSCRIPCIÓN, TUS RESPUESTAS PARA TODOS LOS CAMPOS (resumen, decisiones, riesgos, acuerdos, temas, tareas) DEBEN SER GENERADOS EXCLUSIVAMENTE Y ESTRICTAMENTE EN ESPAÑOL. NO utilices el idioma original. TRADUCE TODO TU ANÁLISIS AL ESPAÑOL.
         
         INSTRUCCIONES CLAVE PARA EL RESUMEN ('summary'):
-        NUNCA seas breve. Debes crear un resumen extenso, minucioso y muy detallado de toda la reunión, abarcando contexto, problemas identificados, soluciones propuestas y próximos pasos (mínimo unos 3 o 4 párrafos poblados).
+        NUNCA seas breve. Debes crear un resumen extenso, minucioso y muy detallado en ESPAÑOL de toda la reunión, abarcando contexto, problemas identificados, soluciones propuestas y próximos pasos (mínimo unos 3 o 4 párrafos poblados).
         
         INSTRUCCIONES CLAVE PARA DECISIONES, RIESGOS Y ACUERDOS:
         - 'decisions': Extrae y detalla extensamente todas las decisiones clave globales que se tomaron durante la reunión. Si no hay, pon "No se registraron decisiones clave."

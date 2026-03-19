@@ -12,6 +12,7 @@
             Sesión: <strong>{{ meetingData.title }}</strong> | 
             Fecha: {{ meetingData.date | date:'dd/MM/yyyy HH:mm' }} | 
             Estado: <span class="badge badge-primary" style="white-space: nowrap;">{{ getTranslatedStatus(meetingData.status) }}</span> |
+            Idioma: <span class="badge" style="white-space: nowrap; background-color: #8b5cf6; color: white;">{{ meetingData.language || 'Detectando...' }}</span> |
             Proyecto:
             <select class="glass-select" [(ngModel)]="meetingData.project_id" style="width: auto; padding: 2px 24px 2px 8px; font-size: 0.85rem; height: 28px; line-height: 1; margin: 0;">
                 <option [ngValue]="null">--- Sin Proyecto ---</option>
@@ -80,6 +81,7 @@
           <div class="tasks-header">
             <h3 style="margin-bottom:0;">📋 Tareas Detectadas por IA ({{meetingData.action_items.length}})</h3>
             <div class="batch-actions" style="display:flex; gap:0.5rem;">
+              <button class="btn btn-primary btn-mini" (click)="showManualTaskForm = !showManualTaskForm" style="margin-right:0.5rem;">+ Añadir Tarea Manual</button>
               <button class="btn btn-secondary btn-mini" [disabled]="!hasSelectedTasks || isDispatchingEmails" (click)="dispatchEmails()">
                 <span *ngIf="isDispatchingEmails">Enviando...</span>
                 <span *ngIf="!isDispatchingEmails">📧 Correos</span>
@@ -88,6 +90,25 @@
                 <span *ngIf="isDispatchingPlatforms">Enviando...</span>
                 <span *ngIf="!isDispatchingPlatforms">🔄 Plataformas</span>
               </button>
+            </div>
+          </div>
+          
+          <!-- Formulario Manual Tarea -->
+          <div *ngIf="showManualTaskForm" class="manual-task-form fade-in" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px dashed rgba(255,255,255,0.2);">
+            <h4 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 0.95rem;">Nueva Tarea Manual</h4>
+            <input type="text" class="form-control" [(ngModel)]="newTask.title" placeholder="Título de la tarea o Compromiso..." style="margin-bottom: 0.5rem;" />
+            <textarea class="form-control" [(ngModel)]="newTask.description" placeholder="Descripción detallada de la acción (opcional)..." rows="2" style="margin-bottom: 0.5rem;"></textarea>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+               <input type="text" class="form-control" [(ngModel)]="newTask.owner_name" placeholder="Responsable (Nombre)" />
+               <input type="email" class="form-control" [(ngModel)]="newTask.owner_email" placeholder="Correo electrónico del responsable" />
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+               <input type="date" class="form-control" [(ngModel)]="newTask.due_date" style="flex: 1;" />
+               <button class="btn btn-success btn-mini" (click)="addManualTask()" [disabled]="isAddingTask || !newTask.title">
+                 <span *ngIf="!isAddingTask">Guardar Tarea</span>
+                 <span *ngIf="isAddingTask">Guardando...</span>
+               </button>
+               <button class="btn btn-secondary btn-mini" (click)="showManualTaskForm = false">Cancelar</button>
             </div>
           </div>
           

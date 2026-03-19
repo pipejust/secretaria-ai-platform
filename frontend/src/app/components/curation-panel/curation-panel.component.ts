@@ -22,6 +22,7 @@ interface MeetingData {
   id?: number;
   title: string;
   date: string;
+  language?: string;
   project_id?: number | null;
   raw_summary: string;
   raw_transcript: string;
@@ -62,6 +63,16 @@ export class CurationPanelComponent implements OnInit {
   isRegeneratingFields = false;
   saveStatusMessage = '';
   projects: any[] = [];
+  
+  showManualTaskForm = false;
+  isAddingTask = false;
+  newTask = {
+    title: '',
+    description: '',
+    owner_name: '',
+    owner_email: '',
+    due_date: ''
+  };
 
   constructor(
     private route: ActivatedRoute,
@@ -126,6 +137,7 @@ export class CurationPanelComponent implements OnInit {
               status: data.session.status || 'pending',
               raw_summary: data.session.raw_summary || '',
               raw_transcript: data.session.raw_transcript || '',
+              language: data.session.language || '',
               processed_decisions: data.session.processed_decisions || '',
               processed_risks: data.session.processed_risks || '',
               processed_agreements: data.session.processed_agreements || '',
@@ -160,6 +172,39 @@ export class CurationPanelComponent implements OnInit {
     this.http.put(`${environment.apiUrl}/api/sessions/action_items/${task.id}`, body, { headers: this.authService.getAuthHeaders() }).subscribe({
       next: () => this.showSaveMessage('Tarea actualizada'),
       error: () => this.showSaveMessage('Error guardando tarea', true)
+    });
+  }
+
+  addManualTask() {
+    if (!this.newTask.title || !this.sessionId) return;
+    this.isAddingTask = true;
+    
+    const body = new FormData();
+    body.append('title', this.newTask.title);
+    body.append('description', this.newTask.description);
+    body.append('owner_name', this.newTask.owner_name);
+    body.append('owner_email', this.newTask.owner_email);
+    body.append('due_date', this.newTask.due_date);
+
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/action_items`, body, { headers: this.authService.getAuthHeaders() }).subscribe({
+      next: (res: any) => {
+        this.isAddingTask = false;
+        this.showManualTaskForm = false;
+        this.showSaveMessage('Tarea manual agregada con éxito');
+        if (res.item) {
+          res.item.selected = false;
+          this.meetingData.action_items.unshift(res.item); // Add to beginning of list
+        }
+        // Reset form
+        this.newTask = { title: '', description: '', owner_name: '', owner_email: '', due_date: '' };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isAddingTask = false;
+        console.error('Error adding manual task', err);
+        this.showSaveMessage('Error al agregar la tarea manual', true);
+        this.cdr.detectChanges();
+      }
     });
   }
 

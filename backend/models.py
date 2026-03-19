@@ -76,6 +76,7 @@ class MeetingSession(SQLModel, table=True):
     date: str
     project_id: Optional[int] = Field(default=None, foreign_key="project.id")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    language: str = Field(default="Desconocido", description="Idioma detectado de la transcripción")
     
     # Textos crudos provenientes de IA/API
     raw_transcript: str = Field(default="")
