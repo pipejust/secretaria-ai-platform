@@ -395,421 +395,61 @@ class DispatchEmailsRequest(BaseModel):
     custom_pdf_b64: str = None
     attach_document: bool = False
 
-def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.BytesIO:
-    from models import Template
-    from sqlmodel import select
-    import requests
-    import tempfile
-    import os
-    import io
-    from docx import Document
-    from docx.shared import Pt, RGBColor
-    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-    from docxtpl import DocxTemplate
-
-    template_obj = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
-
+def __build_corporate_data(session_obj, action_items) -> dict:
+    import json
     import datetime
     
-    # 1. Parsear Fecha
     formatted_date = session_obj.date
     if session_obj.date and str(session_obj.date).isdigit():
         dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
         formatted_date = dt.strftime("%d/%m/%Y %H:%M")
-        
-    # 2. Traducir Estado
-    status_map = {
-        "completed": "Completado",
-        "processing": "Procesando IA",
-        "pending": "Pendiente de Curación"
-    }
-    status_str = status_map.get(session_obj.status, session_obj.status.capitalize() if session_obj.status else "Desconocido")
+    elif session_obj.date and "T" in str(session_obj.date):
+        formatted_date = str(session_obj.date).split("T")[0]
 
-    # 3. Eliminar etiquetas en inglés de Fireflies
+    try:
+        attendees = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
+    except Exception:
+        attendees = []
+
     clean_summary = ""
     if session_obj.raw_summary:
         clean_summary = session_obj.raw_summary.replace("Notes", "Notas de la Sesión").replace("Action items", "Elementos de Acción")
 
-    buffer = io.BytesIO()
-    doc_generated = False
+    formatted_items = []
+    if action_items:
+        for item in action_items:
+            formatted_items.append({
+                "title": item.title,
+                "owner_email": f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "Asignado"),
+                "due_date": item.due_date or "Sin fecha",
+                "status": "Pendiente"
+            })
+
+    return {
+        "entidad_principal": "Secretaria AI",
+        "entidad_secundaria": "Gestión Integral de Sesiones",
+        "titulo_documento": "ACTA DE REUNIÓN",
+        "subtitulo_documento": session_obj.title or "Sesión General",
+        "version_documento": "1.0",
+        "clasificacion": "Uso Corporativo",
+        "no_acta": f"ACT-{session_obj.id:04d}",
+        "fecha_documento": formatted_date,
+        "idioma": getattr(session_obj, "language", "Español"),
+        "proyecto": "General" if not hasattr(session_obj, 'project_id') or not session_obj.project_id else f"Proyecto {session_obj.project_id}",
+        "asistentes": attendees,
+        "contexto_antecedentes": clean_summary,
+        "decisiones": session_obj.processed_decisions or "",
+        "riesgos": session_obj.processed_risks or "",
+        "compromisos": formatted_items
+    }
+
+def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.BytesIO:
+    from services.docx_generator import CorporateDocxGenerator
+    import io
     
-    def add_justified_paragraph(d, text, style=None):
-        try:
-            p = d.add_paragraph(text, style=style)
-        except Exception:
-            p = d.add_paragraph(text)
-        return p
-
-    if template_obj and template_obj.file_path:
-        try:
-            tmp_path = None
-            if template_obj.file_path.startswith("http"):
-                r = requests.get(template_obj.file_path, stream=True)
-                r.raise_for_status()
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        tmp.write(chunk)
-                    tmp_path = tmp.name
-                import json
-                mapping_blocks = []
-                style_config = {}
-                if template_obj.mapping_config:
-                    try:
-                        mapping_blocks = json.loads(template_obj.mapping_config)
-                    except Exception:
-                        pass
-                
-                if getattr(template_obj, "style_config", None):
-                    try:
-                        style_config = json.loads(template_obj.style_config)
-                    except Exception:
-                        pass
-                
-                if mapping_blocks and len(mapping_blocks) > 0:
-                    from docx.oxml import OxmlElement
-                    from docx.oxml.ns import qn
-                    
-                    def hex_to_rgb(hex_str):
-                        hex_str = hex_str.lstrip('#')
-                        if len(hex_str) != 6:
-                            return RGBColor(0, 0, 0)
-                        return RGBColor(int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
-                        
-                    def apply_font_styles(run, is_heading=False):
-                        if style_config.get("fontFamily"):
-                            run.font.name = style_config.get("fontFamily")
-                        if not is_heading and style_config.get("fontSize"):
-                            run.font.size = Pt(int(style_config.get("fontSize")))
-                        if is_heading and style_config.get("headingColor"):
-                            run.font.color.rgb = hex_to_rgb(style_config.get("headingColor"))
-                        elif not is_heading and style_config.get("textColor"):
-                            run.font.color.rgb = hex_to_rgb(style_config.get("textColor"))
-                            
-                    def add_styled_heading(d, text, level, align_center=False):
-                        h = d.add_heading(level=level)
-                        if align_center:
-                            from docx.enum.text import WD_ALIGN_PARAGRAPH
-                            h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                            
-                        # Set spacing for headers (12pt before, 6pt after)
-                        h.paragraph_format.space_before = Pt(12)
-                        h.paragraph_format.space_after = Pt(6)
-                        
-                        run = h.add_run(text)
-                        apply_font_styles(run, is_heading=True)
-                        return h
-                        
-                    def add_styled_justified_paragraph(d, text, style=None):
-                        # python-docx ignores \n in text, so we split and add multiple runs with breaks
-                        p = add_justified_paragraph(d, "", style=style)
-                        p.paragraph_format.space_after = Pt(12) # Add spacing between paragraphs
-                        
-                        # Replace unicode line separators (\u2028) with standard newlines before splitting
-                        clean_text = (text or "").replace('\u2028', '\n')
-                        lines = clean_text.split('\n')
-                        for i, line in enumerate(lines):
-                            if line.strip() or i > 0:
-                                run = p.add_run(line)
-                                apply_font_styles(run, is_heading=False)
-                                if i < len(lines) - 1:
-                                    run.add_break()
-                        return p
-
-                    def apply_cell_text(cell, content):
-                        cell.text = ""
-                        p = cell.paragraphs[0]
-                        clean_content = (content or "").replace('\u2028', '\n')
-                        lines = clean_content.split('\n')
-                        for i, line in enumerate(lines):
-                            if line.strip() or i > 0:
-                                run = p.add_run(line)
-                                apply_font_styles(run, is_heading=False)
-                                if i < len(lines) - 1:
-                                    run.add_break()
-
-                    def set_table_borders(table):
-                        from docx.oxml import OxmlElement
-                        from docx.oxml.ns import qn
-                        tblPr = table._element.xpath('w:tblPr')
-                        if tblPr:
-                            e = OxmlElement('w:tblBorders')
-                            for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
-                                border = OxmlElement(f'w:{border_name}')
-                                border.set(qn('w:val'), 'single')
-                                border.set(qn('w:sz'), '4')
-                                border.set(qn('w:space'), '0')
-                                border.set(qn('w:color'), '000000')
-                                e.append(border)
-                            tblPr[0].append(e)
-
-                    def set_cell_bg_color(cell, hex_color):
-                        if hex_color:
-                            hex_color = hex_color.lstrip('#')
-                            shd = OxmlElement('w:shd')
-                            shd.set(qn('w:val'), 'clear')
-                            shd.set(qn('w:color'), 'auto')
-                            shd.set(qn('w:fill'), hex_color)
-                            cell._tc.get_or_add_tcPr().append(shd)
-                    if tmp_path:
-                        doc = Document(tmp_path)
-                    else:
-                        doc = Document(template_obj.file_path)
-                        
-                    # Remove trailing empty paragraphs from the template to prevent content from starting too low
-                    while len(doc.paragraphs) > 0 and not doc.paragraphs[-1].text.strip():
-                        p = doc.paragraphs[-1]._element
-                        p.getparent().remove(p)
-                        # We also need to remove it from doc.paragraphs so the loop updates correctly
-                        # doc.paragraphs is generated dynamically in python-docx, but just to be safe:
-                        pass
-                    
-                    for block_id in mapping_blocks:
-                        if block_id == 'meta':
-                            title_run = add_styled_heading(doc, "Acta de Reunión", level=0, align_center=True).runs[0]
-                            if style_config.get("headingColor"):
-                                title_run.font.color.rgb = hex_to_rgb(style_config.get("headingColor"))
-                            else:
-                                title_run.font.color.rgb = RGBColor(79, 70, 229)
-                                
-                            add_styled_justified_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}")
-                            add_styled_justified_paragraph(doc, f"Fecha: {formatted_date}")
-                            add_styled_justified_paragraph(doc, f"Estado: {status_str}")
-                            doc.add_paragraph()
-                        elif block_id == 'summary' and clean_summary:
-                            add_styled_heading(doc, 'Resumen Ejecutivo', level=1)
-                            add_styled_justified_paragraph(doc, clean_summary)
-                        elif block_id == 'decisions' and session_obj.processed_decisions:
-                            add_styled_heading(doc, 'Decisiones Clave', level=1)
-                            add_styled_justified_paragraph(doc, session_obj.processed_decisions)
-                        elif block_id == 'risks' and session_obj.processed_risks:
-                            add_styled_heading(doc, 'Riesgos Identificados', level=1)
-                            add_styled_justified_paragraph(doc, session_obj.processed_risks)
-                        elif block_id == 'agreements' and session_obj.processed_agreements:
-                            add_styled_heading(doc, 'Acuerdos', level=1)
-                            add_styled_justified_paragraph(doc, session_obj.processed_agreements)
-                        elif block_id == 'attendees':
-                            try:
-                                att_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
-                                if att_list:
-                                    add_styled_heading(doc, 'Asistentes', level=1)
-                                    for att in att_list:
-                                        add_styled_justified_paragraph(doc, f"- {att.get('name', '')} ({att.get('role', '')}) - {att.get('entity', '')}")
-                            except Exception:
-                                pass
-                        elif block_id == 'themes':
-                            try:
-                                thm_list = json.loads(session_obj.processed_themes) if session_obj.processed_themes else []
-                                if thm_list:
-                                    add_styled_heading(doc, 'Temas y Puntos de Discusión', level=1)
-                                    for thm in thm_list:
-                                        add_styled_heading(doc, thm.get('theme_name', ''), level=2)
-                                        for pt in thm.get('discussion_points', []):
-                                            add_styled_justified_paragraph(doc, f"• {pt}")
-                            except Exception:
-                                pass
-                        elif block_id == 'action_items' and action_items:
-                            add_styled_heading(doc, 'Tareas (Action Items)', level=1)
-                            table = doc.add_table(rows=1, cols=4)
-                            try:
-                                table.style = 'Table Grid'
-                            except Exception:
-                                pass
-                            
-                            set_table_borders(table)
-                            
-                            hdr_cells = table.rows[0].cells
-                            headers = ['Responsable', 'Tarea', 'Descripción', 'Vencimiento']
-                            
-                            for i, text in enumerate(headers):
-                                cell = hdr_cells[i]
-                                cell.text = "" # Clean default run
-                                run = cell.paragraphs[0].add_run(text)
-                                run.bold = True
-                                apply_font_styles(run, is_heading=False)
-                                if style_config.get("tableHeaderTextColor"):
-                                    run.font.color.rgb = hex_to_rgb(style_config.get("tableHeaderTextColor"))
-                                if style_config.get("tableHeaderBg"):
-                                    set_cell_bg_color(cell, style_config.get("tableHeaderBg"))
-                                
-                            for item in action_items:
-                                row_cells = table.add_row().cells
-                                row_cells[0].text = ""
-                                apply_font_styles(row_cells[0].paragraphs[0].add_run(f"{item.owner_name} ({item.owner_email})"))
-                                
-                                row_cells[1].text = ""
-                                apply_font_styles(row_cells[1].paragraphs[0].add_run(item.title))
-                                
-                                row_cells[2].text = ""
-                                apply_font_styles(row_cells[2].paragraphs[0].add_run(item.description or ""))
-                                
-                                row_cells[3].text = ""
-                                apply_font_styles(row_cells[3].paragraphs[0].add_run(item.due_date or "Sin fecha"))
-                    
-                    doc.save(buffer)
-                    doc_generated = True
-                else:
-                    if tmp_path:
-                        doc = DocxTemplate(tmp_path)
-                    else:
-                        doc = DocxTemplate(template_obj.file_path)
-    
-                    context = {
-                        "title": session_obj.title,
-                        "date": formatted_date,
-                        "status": status_str,
-                        "summary": clean_summary,
-                        "decisions": session_obj.processed_decisions or "Sin decisiones",
-                        "risks": session_obj.processed_risks or "Sin riesgos",
-                        "agreements": session_obj.processed_agreements or "Sin acuerdos",
-                    }
-                    
-                    # --- Parse arrays ---
-                    import json
-                    # Attendees
-                    try:
-                        attendees_list = json.loads(session_obj.processed_attendees) if session_obj.processed_attendees else []
-                    except Exception:
-                        attendees_list = []
-                    context["attendees"] = attendees_list
-                    
-                    # Themes
-                    try:
-                        themes_list = json.loads(session_obj.processed_themes) if session_obj.processed_themes else []
-                    except Exception:
-                        themes_list = []
-                    context["themes"] = themes_list
-                    
-                    # Action Items
-                    formatted_items = []
-                    for item in action_items:
-                        formatted_items.append({
-                            "owner": item.owner_name,
-                            "email": item.owner_email,
-                            "title": item.title,
-                            "description": item.description or "",
-                            "due_date": item.due_date or "Sin fecha",
-                        })
-                    context["action_items"] = formatted_items
-                    
-                    doc.render(context)
-                    doc.save(buffer)
-                    doc_generated = True
-            
-            if tmp_path and os.path.exists(tmp_path):
-                os.remove(tmp_path)
-        except Exception as e:
-            print(f"Error usando docxtpl: {e}")
-            if 'tmp_path' in locals() and tmp_path and os.path.exists(tmp_path):
-                os.remove(tmp_path)
-
-    if not doc_generated:
-        doc = Document()
-        
-        def add_fallback_paragraph(d, text, style=None):
-            p = add_justified_paragraph(d, "", style=style)
-            from docx.shared import Pt
-            p.paragraph_format.space_after = Pt(12)
-            # Replace unicode line separators (\u2028)
-            clean_text = (text or "").replace('\u2028', '\n')
-            lines = clean_text.split('\n')
-            for i, line in enumerate(lines):
-                if line.strip() or i > 0:
-                    run = p.add_run(line)
-                    if i < len(lines) - 1:
-                        run.add_break()
-            return p
-            
-        def add_fallback_heading(d, text, level):
-            h = d.add_heading(text, level=level)
-            from docx.shared import Pt
-            h.paragraph_format.space_before = Pt(12)
-            h.paragraph_format.space_after = Pt(6)
-            return h
-
-        # Title
-        title_heading = add_fallback_heading(doc, "", level=0)
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
-        title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        title_run = title_heading.add_run("Acta de Reunión")
-        title_run.font.color.rgb = RGBColor(79, 70, 229)
-        
-        # Meta
-        add_fallback_paragraph(doc, f"Proyecto / Sesión: {session_obj.title}")
-        add_fallback_paragraph(doc, f"Fecha: {formatted_date}")
-        add_fallback_paragraph(doc, f"Estado: {status_str}")
-        doc.add_paragraph()
-
-        # Sections
-        if clean_summary:
-            add_fallback_heading(doc, 'Resumen Ejecutivo', level=1)
-            add_fallback_paragraph(doc, clean_summary)
-
-        if session_obj.processed_decisions:
-            add_fallback_heading(doc, 'Decisiones Clave', level=1)
-            add_fallback_paragraph(doc, session_obj.processed_decisions)
-
-        if session_obj.processed_risks:
-            add_fallback_heading(doc, 'Riesgos Identificados', level=1)
-            add_fallback_paragraph(doc, session_obj.processed_risks)
-
-        if session_obj.processed_agreements:
-            add_fallback_heading(doc, 'Acuerdos', level=1)
-            add_fallback_paragraph(doc, session_obj.processed_agreements)
-
-        # Action Items Table
-        add_fallback_heading(doc, 'Tareas (Action Items)', level=1)
-        
-        if action_items:
-            table = doc.add_table(rows=1, cols=4)
-            try:
-                table.style = 'Table Grid'
-            except Exception:
-                pass
-                
-            # Agregamos bordes XML para garantizar que se vean incluso si el estilo falla
-            from docx.oxml import OxmlElement
-            from docx.oxml.ns import qn
-            tblPr = table._element.xpath('w:tblPr')
-            if tblPr:
-                e = OxmlElement('w:tblBorders')
-                for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
-                    border = OxmlElement(f'w:{border_name}')
-                    border.set(qn('w:val'), 'single')
-                    border.set(qn('w:sz'), '4')
-                    border.set(qn('w:space'), '0')
-                    border.set(qn('w:color'), '000000')
-                    e.append(border)
-                tblPr[0].append(e)
-            
-            hdr_cells = table.rows[0].cells
-            hdr_cells[0].text = 'Responsable'
-            hdr_cells[1].text = 'Tarea'
-            hdr_cells[2].text = 'Descripción'
-            hdr_cells[3].text = 'Vencimiento'
-            for item in action_items:
-                row_cells = table.add_row().cells
-                
-                # Process each cell text splitting by \n
-                def apply_fallback_text(cell, content):
-                    cell.text = ""
-                    p = cell.paragraphs[0]
-                    clean_content = (content or "").replace('\u2028', '\n')
-                    lines = clean_content.split('\n')
-                    for i, line in enumerate(lines):
-                        if line.strip() or i > 0:
-                            run = p.add_run(line)
-                            if i < len(lines) - 1:
-                                run.add_break()
-                                
-                apply_fallback_text(row_cells[0], f"{item.owner_name}\n({item.owner_email})")
-                apply_fallback_text(row_cells[1], item.title)
-                apply_fallback_text(row_cells[2], item.description or "")
-                apply_fallback_text(row_cells[3], item.due_date or "Sin fecha")
-        else:
-            add_justified_paragraph(doc, "No se detectaron tareas para esta sesión.")
-            
-        doc.save(buffer)
-    return buffer
+    data = __build_corporate_data(session_obj, action_items)
+    generator = CorporateDocxGenerator(data)
+    return generator.generar_buffer()
 
 @router.post("/{session_id}/dispatch_emails")
 async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: Session = Depends(get_session)):
@@ -847,88 +487,16 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
         except Exception as e:
             print(f"Error generating DOCX attachment: {e}")
     else:
-        # Fallback a generar un PDF genérico básico
+        # Generate robust corporate PDF
         try:
-            pdf = FPDF()
-            pdf.add_page()
-            
-            # Encabezado genérico
-            pdf.set_fill_color(0, 51, 102) # Azul oscuro
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("helvetica", "B", 18)
-            pdf.cell(0, 15, "Secretaria AI - Resumen de Sesion", new_x="LMARGIN", new_y="NEXT", align="C", fill=True)
-            pdf.ln(10)
-            
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font("helvetica", "B", 12)
-            safe_title = session_obj.title.encode('latin-1', 'replace').decode('latin-1') if session_obj.title else "Sesión sin título"
-            pdf.cell(0, 8, f"Sesión: {safe_title}", new_x="LMARGIN", new_y="NEXT")
-            
-            formatted_date = session_obj.date.split("T")[0] if session_obj.date else "Fecha desconocida"
-            pdf.set_font("helvetica", "", 11)
-            pdf.cell(0, 8, f"Fecha: {formatted_date}", new_x="LMARGIN", new_y="NEXT")
-            pdf.ln(5)
-            
-            # Resumen Ejecutivo
-            if session_obj.raw_summary:
-                pdf.set_fill_color(0, 51, 102)
-                pdf.set_text_color(255, 255, 255) # Texto blanco sobre fondo de color
-                pdf.set_font("helvetica", "B", 14)
-                # Add some padding and solid fill
-                pdf.cell(0, 10, "Resumen Ejecutivo:", new_x="LMARGIN", new_y="NEXT", fill=True)
-                pdf.ln(3)
-                
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font("helvetica", "", 11)
-                safe_summary = session_obj.raw_summary.encode('latin-1', 'replace').decode('latin-1')
-                pdf.multi_cell(0, 6, safe_summary)
-                pdf.ln(5)
-                
-            # Decisiones Clave
-            if session_obj.processed_decisions:
-                pdf.set_fill_color(0, 51, 102)
-                pdf.set_text_color(255, 255, 255)
-                pdf.set_font("helvetica", "B", 14)
-                pdf.cell(0, 10, "Decisiones Clave:", new_x="LMARGIN", new_y="NEXT", fill=True)
-                pdf.ln(3)
-                
-                pdf.set_text_color(0,0,0)
-                pdf.set_font("helvetica", "", 11)
-                safe_decisions = session_obj.processed_decisions.encode('latin-1', 'replace').decode('latin-1')
-                pdf.multi_cell(0, 6, safe_decisions)
-                pdf.ln(5)
-
-            # Riesgos Identificados
-            if session_obj.processed_risks:
-                pdf.set_fill_color(0, 51, 102)
-                pdf.set_text_color(255, 255, 255)
-                pdf.set_font("helvetica", "B", 14)
-                pdf.cell(0, 10, "Riesgos Identificados:", new_x="LMARGIN", new_y="NEXT", fill=True)
-                pdf.ln(3)
-                
-                pdf.set_text_color(0,0,0)
-                pdf.set_font("helvetica", "", 11)
-                safe_risks = session_obj.processed_risks.encode('latin-1', 'replace').decode('latin-1')
-                pdf.multi_cell(0, 6, safe_risks)
-                pdf.ln(5)
-
-            # Acuerdos
-            if session_obj.processed_agreements:
-                pdf.set_fill_color(0, 51, 102)
-                pdf.set_text_color(255, 255, 255)
-                pdf.set_font("helvetica", "B", 14)
-                pdf.cell(0, 10, "Acuerdos:", new_x="LMARGIN", new_y="NEXT", fill=True)
-                pdf.ln(3)
-                
-                pdf.set_text_color(0,0,0)
-                pdf.set_font("helvetica", "", 11)
-                safe_agreements = session_obj.processed_agreements.encode('latin-1', 'replace').decode('latin-1')
-                pdf.multi_cell(0, 6, safe_agreements)
-                pdf.ln(5)
-                
-            pdf_b64_global = base64.b64encode(bytes(pdf.output())).decode('utf-8')
+            from services.pdf_generator import CorporatePDFGenerator
+            data = __build_corporate_data(session_obj, action_items_all)
+            pdf_gen = CorporatePDFGenerator(data)
+            pdf_buffer = pdf_gen.generar_buffer()
+            pdf_b64_global = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
         except Exception as e:
-            print(f"Error generating fallback PDF summary: {e}")
+            import traceback
+            print(f"Error generating Corporate PDF summary: {e}\n{traceback.format_exc()}")
             pdf_b64_global = None
     
     for item_id in request.action_item_ids:
@@ -1117,7 +685,10 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
     buffer = generate_word_document_bytes(session_obj, action_items, db)
 
     headers = {
-        'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{session_obj.title[:20]}.docx"'
+        'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{session_obj.title[:20]}.docx"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
     }
 
     return Response(content=buffer.getvalue(), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)
