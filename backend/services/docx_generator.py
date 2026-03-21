@@ -223,14 +223,17 @@ class CorporateDocxGenerator:
                 continue
             
             if linea_str.startswith("### "):
-                p = self.doc.add_paragraph(linea_str[4:], style='estilo_texto_base')
+                clean_line = linea_str[4:].replace("**", "").replace("__", "")
+                p = self.doc.add_paragraph(clean_line, style='estilo_texto_base')
                 if p.runs:
                     p.runs[0].bold = True
             elif linea_str.startswith("- ") or linea_str.startswith("* "):
-                p = self.doc.add_paragraph("• " + linea_str[2:], style='estilo_texto_base')
+                clean_line = linea_str[2:].replace("**", "").replace("__", "")
+                p = self.doc.add_paragraph("• " + clean_line, style='estilo_texto_base')
                 p.paragraph_format.left_indent = Cm(0.6)
             else:
-                self.doc.add_paragraph(linea_str.replace("**", ""), style='estilo_texto_base')
+                clean_line = linea_str.replace("**", "").replace("__", "")
+                self.doc.add_paragraph(clean_line, style='estilo_texto_base')
 
     def construir_secciones_restantes(self):
         # Asistentes

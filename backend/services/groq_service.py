@@ -260,3 +260,41 @@ class GroqService:
             except Exception as e:
                 print(f"Error deduciendo proyecto en Groq: {e}")
                 return None
+
+    async def translate_and_clean_summary(self, dirty_summary: str) -> str:
+        """
+        Limpia un resumen generado por una IA externa (ej. Fireflies Daily Digest),
+        traduce los títulos al español, elimina encabezados redundantes y asteriscos markdown.
+        """
+        prompt = f"""
+        Eres un especialista en edición de actas corporativas de alto nivel gerencial.
+        A continuación se te proporciona un resumen de reunión generado por otra herramienta de IA (como Fireflies), el cual contiene títulos redundantes, encabezados en inglés (como TOPICS, BLOCKERS) y metadatos sucios (como referencias de **[Fuente: ...]**).
+        
+        Tus Reglas Estrictas:
+        1. TRADUCE todos los encabezados al español profesional (ej. "Temas Principales", "Bloqueos y Retrasos").
+        2. ELIMINA por completo títulos introductorios redundantes que digan cosas como "Daily Digest Resumen Ejecutivo Consolidado — Nombre de Proyecto...". Entra directamente a la estructura de la información, el acta ya tiene el título.
+        3. ELIMINA referencias literales de fuentes o corchetes tipo `**[Fuente: nombre, fecha]**`. Queremos el puro contenido.
+        4. ELIMINA asteriscos literales (`**`) dejándolo en texto plano amigable sin ensuciar la visualización corporativa.
+        5. Respeta al 100% los hechos, los responsables, las fechas y los puntos clave discutidos. Solo pule la forma.
+        
+        Texto Original Sucio:
+        {dirty_summary}
+        
+        Responde INMEDIATAMENTE y EXCLUSIVAMENTE con el nuevo texto documentado. No agregues introducciones tuyas ni explicaciones de lo que editaste.
+        """
+        
+        payload = {
+            "model": self.MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+                response.raise_for_status()
+                return response.json()["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                print(f"Error limpiando resumen en Groq: {e}")
+                return dirty_summary # Fallback al puro original si llegara a fallar
+

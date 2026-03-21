@@ -153,17 +153,17 @@ class CorporatePDFGenerator(FPDF):
             
             if linea_str.startswith("### "):
                 self.set_font('helvetica', 'B', 10)
-                self.multi_cell(0, 5, linea_str[4:])
+                self.multi_cell(0, 5, linea_str[4:].replace("**", "").replace("__", ""))
                 self.set_font('helvetica', '', 10)
                 self.ln(1)
             elif linea_str.startswith("- ") or linea_str.startswith("* "):
                 original_x = self.get_x()
                 self.set_x(original_x + 5)
                 # Usamos un guión normal para evitar errores de encoding latin-1
-                self.multi_cell(0, 5, "- " + linea_str[2:].replace("**", ""))
+                self.multi_cell(0, 5, "- " + linea_str[2:].replace("**", "").replace("__", ""))
                 self.set_x(original_x)
             else:
-                self.multi_cell(0, 5, linea_str.replace("**", ""))
+                self.multi_cell(0, 5, linea_str.replace("**", "").replace("__", ""))
                 
         # Identificacion
         self.add_section_bar("1. IDENTIFICACION GENERAL")

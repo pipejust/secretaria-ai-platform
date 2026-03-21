@@ -96,6 +96,13 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
                 mega_summary = overview
                 
             if mega_summary:
+                try:
+                    from services.groq_service import GroqService
+                    groq_svc = GroqService()
+                    mega_summary = await groq_svc.translate_and_clean_summary(mega_summary)
+                except Exception as e:
+                    print(f"Error limpiando formato con Groq en capa de fetching: {e}")
+                    
                 session_obj.raw_summary = mega_summary
                 db.add(session_obj)
                 db.commit()
