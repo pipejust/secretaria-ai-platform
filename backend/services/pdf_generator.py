@@ -160,10 +160,10 @@ class CorporatePDFGenerator(FPDF):
                 original_x = self.get_x()
                 self.set_x(original_x + 5)
                 # Usamos un guión normal para evitar errores de encoding latin-1
-                self.multi_cell(0, 5, "- " + linea_str[2:])
+                self.multi_cell(0, 5, "- " + linea_str[2:].replace("**", ""))
                 self.set_x(original_x)
             else:
-                self.multi_cell(0, 5, linea_str)
+                self.multi_cell(0, 5, linea_str.replace("**", ""))
                 
         # Identificacion
         self.add_section_bar("1. IDENTIFICACION GENERAL")

@@ -230,7 +230,7 @@ class CorporateDocxGenerator:
                 p = self.doc.add_paragraph("• " + linea_str[2:], style='estilo_texto_base')
                 p.paragraph_format.left_indent = Cm(0.6)
             else:
-                self.doc.add_paragraph(linea_str, style='estilo_texto_base')
+                self.doc.add_paragraph(linea_str.replace("**", ""), style='estilo_texto_base')
 
     def construir_secciones_restantes(self):
         # Asistentes
