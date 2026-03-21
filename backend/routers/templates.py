@@ -19,7 +19,8 @@ def list_templates(db: Session = Depends(get_session), admin_user: User = Depend
 
 @router.post("/upload")
 async def upload_template(
-    project_id: int, 
+    project_id: int = Form(...),
+    name: str = Form(None),
     file: UploadFile = File(...), 
     db: Session = Depends(get_session), 
     admin_user: User = Depends(require_admin)
@@ -44,9 +45,10 @@ async def upload_template(
         print(f"Advertencia: No se pudo subir a Supabase. Se usará ruta local. Error: {e}")
         final_file_path = file_path
         
+    actual_name = name if name else file.filename
     template_record = Template(
         project_id=project_id,
-        name=file.filename,
+        name=actual_name,
         file_path=final_file_path
     )
     db_template = crud.template.create(db, obj_in=template_record)
