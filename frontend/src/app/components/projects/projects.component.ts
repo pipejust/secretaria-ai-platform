@@ -33,6 +33,8 @@ export class ProjectsComponent implements OnInit {
     isLoadingContacts = false;
     newContact = { name: '', email: '', role: '', phone: '', entity: '' };
     isAddingContact = false;
+    isUpdatingContact = false;
+    editingContactId: number | null = null;
     isDeletingContactId: number | null = null;
 
     // Routing Management State
@@ -235,7 +237,7 @@ export class ProjectsComponent implements OnInit {
     closeContacts() {
         this.managingContactsForProject = null;
         this.projectContacts = [];
-        this.newContact = { name: '', email: '', role: '', phone: '', entity: '' };
+        this.cancelEditContact();
         this.errorMsg = '';
         this.successMsg = '';
     }
@@ -257,11 +259,28 @@ export class ProjectsComponent implements OnInit {
         });
     }
 
-    addContact() {
-        if (!this.managingContactsForProject) return;
-        this.isAddingContact = true;
+    editContact(contact: any) {
+        this.editingContactId = contact.id;
+        this.newContact = {
+            name: contact.name,
+            email: contact.email,
+            role: contact.role,
+            phone: contact.phone || '',
+            entity: contact.entity || ''
+        };
         this.errorMsg = '';
         this.successMsg = '';
+    }
+
+    cancelEditContact() {
+        this.editingContactId = null;
+        this.newContact = { name: '', email: '', role: '', phone: '', entity: '' };
+        this.errorMsg = '';
+        this.successMsg = '';
+    }
+
+    submitContact() {
+        if (!this.managingContactsForProject) return;
 
         const payload = {
             name: this.newContact.name,
@@ -271,21 +290,50 @@ export class ProjectsComponent implements OnInit {
             entity: this.newContact.entity || null
         };
 
-        this.http.post<any>(`${environment.apiUrl}/api/projects/${this.managingContactsForProject.id}/contacts`, payload).subscribe({
-            next: (data) => {
-                this.projectContacts.push(data);
-                this.newContact = { name: '', email: '', role: '', phone: '', entity: '' };
-                this.isAddingContact = false;
-                this.successMsg = 'Contacto agregado exitosamente';
-                this.cdr.detectChanges();
-            },
-            error: (err) => {
-                console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al agregar el contacto';
-                this.isAddingContact = false;
-                this.cdr.detectChanges();
-            }
-        });
+        if (this.editingContactId) {
+            this.isUpdatingContact = true;
+            this.errorMsg = '';
+            this.successMsg = '';
+
+            this.http.put<any>(`${environment.apiUrl}/api/projects/contacts/${this.editingContactId}`, payload).subscribe({
+                next: (data) => {
+                    const idx = this.projectContacts.findIndex(c => c.id === this.editingContactId);
+                    if (idx !== -1) {
+                        this.projectContacts[idx] = data;
+                    }
+                    this.cancelEditContact();
+                    this.isUpdatingContact = false;
+                    this.successMsg = 'Contacto actualizado exitosamente';
+                    this.cdr.detectChanges();
+                },
+                error: (err) => {
+                    console.error(err);
+                    this.errorMsg = err.error?.detail || 'Error al actualizar el contacto';
+                    this.isUpdatingContact = false;
+                    this.cdr.detectChanges();
+                }
+            });
+        } else {
+            this.isAddingContact = true;
+            this.errorMsg = '';
+            this.successMsg = '';
+
+            this.http.post<any>(`${environment.apiUrl}/api/projects/${this.managingContactsForProject.id}/contacts`, payload).subscribe({
+                next: (data) => {
+                    this.projectContacts.push(data);
+                    this.cancelEditContact();
+                    this.isAddingContact = false;
+                    this.successMsg = 'Contacto agregado exitosamente';
+                    this.cdr.detectChanges();
+                },
+                error: (err) => {
+                    console.error(err);
+                    this.errorMsg = err.error?.detail || 'Error al agregar el contacto';
+                    this.isAddingContact = false;
+                    this.cdr.detectChanges();
+                }
+            });
+        }
     }
 
     deleteContact(contactId: number) {

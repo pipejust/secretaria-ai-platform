@@ -51,7 +51,7 @@
                     Sin contactos guardados para este proyecto.
                 </div>
                 <ul *ngIf="!isLoadingContacts && projectContacts.length > 0" style="padding: 0; margin: 0; list-style: none;">
-                    <li *ngFor="let contact of projectContacts" style="background: white; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <li *ngFor="let contact of projectContacts" [style]="'background: white; border: ' + (editingContactId === contact.id ? '2px solid #2563eb' : '1px solid #e2e8f0') + '; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'">
                         <div>
                             <strong style="display: block; color: var(--text-main);">{{ contact.name }}</strong>
                             <small style="color: var(--text-muted);">{{ contact.email }} | {{ contact.role }}</small>
@@ -61,16 +61,21 @@
                                 <span *ngIf="contact.entity">Entidad: {{ contact.entity }}</span>
                             </small>
                         </div>
-                        <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteContact(contact.id)" [disabled]="isDeletingContactId === contact.id">
-                            Eliminar
-                        </button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-sm" style="color: #2563eb; background: #eff6ff; border:none;" (click)="editContact(contact)" [disabled]="editingContactId === contact.id">
+                                Editar
+                            </button>
+                            <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteContact(contact.id)" [disabled]="isDeletingContactId === contact.id">
+                                Eliminar
+                            </button>
+                        </div>
                     </li>
                 </ul>
             </div>
 
             <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                <h4 style="margin-bottom: 1rem; color: var(--text-main); font-size: 1.1rem;">Agregar Nuevo Contacto</h4>
-                <form (ngSubmit)="addContact()" #contactForm="ngForm">
+                <h4 style="margin-bottom: 1rem; color: var(--text-main); font-size: 1.1rem;">{{ editingContactId ? 'Editar Contacto' : 'Agregar Nuevo Contacto' }}</h4>
+                <form (ngSubmit)="submitContact()" #contactForm="ngForm">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div class="form-group mb-4">
                             <label>Nombre <span class="text-danger">*</span></label>
@@ -93,10 +98,15 @@
                             <input type="text" name="contactPhone" [(ngModel)]="newContact.phone" placeholder="+12345678" />
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success w-full" [disabled]="!contactForm.form.valid || isAddingContact">
-                        <span *ngIf="!isAddingContact">Guardar Contacto</span>
-                        <span *ngIf="isAddingContact">Guardando...</span>
-                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-secondary w-full" *ngIf="editingContactId" (click)="cancelEditContact()" [disabled]="isUpdatingContact">
+                            Cancelar Edición
+                        </button>
+                        <button type="submit" class="btn btn-success w-full" [disabled]="!contactForm.form.valid || isAddingContact || isUpdatingContact">
+                            <span *ngIf="!isAddingContact && !isUpdatingContact">{{ editingContactId ? 'Actualizar Contacto' : 'Guardar Contacto' }}</span>
+                            <span *ngIf="isAddingContact || isUpdatingContact">{{ editingContactId ? 'Actualizando...' : 'Guardando...' }}</span>
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
