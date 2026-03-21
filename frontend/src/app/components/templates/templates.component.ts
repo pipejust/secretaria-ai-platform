@@ -68,7 +68,7 @@ export class TemplatesComponent implements OnInit {
         this.isLoading = true;
         const headers = this.authService.getAuthHeaders();
 
-        this.http.get<any[]>(`${environment.apiUrl}/api/templates`, { headers }).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/templates`, { headers }).subscribe({
             next: (data) => {
                 this.templates = data;
                 this.isLoading = false;
@@ -147,8 +147,8 @@ export class TemplatesComponent implements OnInit {
         formData.append('name', this.templateName);
 
         const url = this.editingTemplateId 
-            ? `${environment.apiUrl}/api/templates/${this.editingTemplateId}`
-            : `${environment.apiUrl}/api/templates/upload`;
+            ? `${environment.apiUrl}/templates/${this.editingTemplateId}`
+            : `${environment.apiUrl}/templates/upload`;
             
         const requestBase = this.editingTemplateId
             ? this.http.put<any>(url, formData, { headers: this.authService.getAuthHeaders() })
@@ -265,7 +265,7 @@ export class TemplatesComponent implements OnInit {
             style_config: JSON.stringify(this.styleConfig)
         };
 
-        this.http.put(`${environment.apiUrl}/api/templates/${this.lastUploadedTemplateId}/mapping`, mappingPayload, {
+        this.http.put(`${environment.apiUrl}/templates/${this.lastUploadedTemplateId}/mapping`, mappingPayload, {
             headers: this.authService.getAuthHeaders()
         }).subscribe({
             next: () => {
@@ -293,7 +293,7 @@ export class TemplatesComponent implements OnInit {
         this.errorMsg = '';
         this.successMsg = '';
 
-        this.http.delete(`${environment.apiUrl}/api/templates/${templateId}`, {
+        this.http.delete(`${environment.apiUrl}/templates/${templateId}`, {
             headers: this.authService.getAuthHeaders()
         }).subscribe({
             next: () => {
