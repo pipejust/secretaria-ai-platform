@@ -132,16 +132,6 @@ class CorporatePDFGenerator(FPDF):
                 self.ln()
             self.ln(2)
 
-    def render_all(self):
-        self.add_page()
-        # Portada Simple
-        self.set_font('helvetica', 'B', 10)
-        safe_sub = self.data.get("subtitulo_documento", "Asunto no especificado").encode('latin-1', 'replace').decode('latin-1')
-        self.cell(0, 6, safe_sub, ln=1)
-        self.set_font('helvetica', '', 10)
-        self.cell(0, 6, f"Fecha: {self.data.get('fecha_documento', '')}", ln=1)
-        self.ln(5)
-        
     def _parsear_texto_markdown(self, texto: str):
         if not texto:
             return
@@ -175,7 +165,17 @@ class CorporatePDFGenerator(FPDF):
                 self.set_x(original_x)
             else:
                 self.multi_cell(0, 5, linea_str.replace("**", "").replace("__", ""))
-                
+
+    def render_all(self):
+        self.add_page()
+        # Portada Simple
+        self.set_font('helvetica', 'B', 10)
+        safe_sub = self.data.get("subtitulo_documento", "Asunto no especificado").encode('latin-1', 'replace').decode('latin-1')
+        self.cell(0, 6, safe_sub, ln=1)
+        self.set_font('helvetica', '', 10)
+        self.cell(0, 6, f"Fecha: {self.data.get('fecha_documento', '')}", ln=1)
+        self.ln(5)
+        
         # Determinar el orden de bloques
         mapping_config = self.data.get("mapping_config", [])
         if not mapping_config:
