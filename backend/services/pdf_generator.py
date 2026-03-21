@@ -21,7 +21,7 @@ class CorporatePDFGenerator(FPDF):
         self.cell(60, 4, self.data.get("entidad_secundaria", "Gestión Integral")[:40], ln=0)
         
         self.set_xy(75, 10)
-        self.cell(60, 8, "[ ESPACIO LOGO ]", align='C')
+        self.cell(60, 8, "", align='C')
         
         self.set_xy(140, 10)
         self.set_font('helvetica', 'B', 10)
@@ -167,7 +167,6 @@ class CorporatePDFGenerator(FPDF):
                 self.multi_cell(0, 5, linea_str.replace("**", "").replace("__", ""))
 
     def render_all(self):
-        self.add_page()
         # Portada Simple
         self.set_font('helvetica', 'B', 10)
         safe_sub = self.data.get("subtitulo_documento", "Asunto no especificado").encode('latin-1', 'replace').decode('latin-1')

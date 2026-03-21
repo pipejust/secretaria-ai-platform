@@ -113,7 +113,7 @@ class WordGeneratorService:
                     add_custom_paragraph(f"Asunto: {meeting_data.get('title', '')}")
                 elif block_id == "summary":
                     add_custom_heading("RESUMEN EJECUTIVO / CONTEXTO")
-                    add_custom_paragraph(meeting_data.get("summary", ""))
+                    add_custom_paragraph(meeting_data.get("contexto_antecedentes", ""))
                 elif block_id == "attendees":
                     add_custom_heading("LISTA DE ASISTENTES")
                     attendees = meeting_data.get("asistentes", [])
@@ -126,16 +126,16 @@ class WordGeneratorService:
                         add_custom_paragraph("No hay asistentes registrados.")
                 elif block_id == "decisions":
                     add_custom_heading("DECISIONES CLAVE")
-                    add_custom_paragraph(meeting_data.get("decisions", ""))
+                    add_custom_paragraph(meeting_data.get("decisiones", ""))
                 elif block_id == "risks":
                     add_custom_heading("RIESGOS IDENTIFICADOS")
-                    add_custom_paragraph(meeting_data.get("risks", ""))
+                    add_custom_paragraph(meeting_data.get("riesgos", ""))
                 elif block_id == "agreements" or block_id == "themes":
                     add_custom_heading("ACUERDOS Y TEMAS")
                     add_custom_paragraph(meeting_data.get("agreements", ""))
                 elif block_id == "action_items":
                     add_custom_heading("TAREAS Y COMPROMISOS")
-                    items = meeting_data.get("action_items", [])
+                    items = meeting_data.get("compromisos", [])
                     if items:
                         for i, ai in enumerate(items):
                             act_title = ai.get("title", "")
