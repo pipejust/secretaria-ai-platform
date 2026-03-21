@@ -34,8 +34,13 @@
         <button class="btn" style="background: white; color: #4b5563; border: 1px solid #d1d5db;" (click)="goBack()">
           ← Volver a Sesiones
         </button>
-        <button class="btn btn-primary" (click)="approveAct()">
-          📄 Generar Documento
+        <button class="btn btn-primary" (click)="approveAct('word')" [disabled]="isGeneratingDoc" style="background-color: #2563eb; color: white;">
+          <span *ngIf="isGeneratingDoc">⌛ Word...</span>
+          <span *ngIf="!isGeneratingDoc">📄 Word</span>
+        </button>
+        <button class="btn btn-danger" (click)="approveAct('pdf')" [disabled]="isGeneratingDoc" style="background-color: #ef4444; color: white;">
+          <span *ngIf="isGeneratingDoc">⌛ PDF...</span>
+          <span *ngIf="!isGeneratingDoc">📄 PDF</span>
         </button>
         <button class="btn btn-success" style="background: #10b981;" (click)="saveManualEdits()">
           💾 Guardar Cambios

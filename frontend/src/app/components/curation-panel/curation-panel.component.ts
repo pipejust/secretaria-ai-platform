@@ -58,6 +58,7 @@ export class CurationPanelComponent implements OnInit {
   sessionId: number | null = null;
   isLoading = true;
   isRegenerating = false;
+  isGeneratingDoc = false;
   isEditingTitle = false;
   isDispatchingEmails = false;
   isDispatchingPlatforms = false;
@@ -403,32 +404,37 @@ export class CurationPanelComponent implements OnInit {
     this.router.navigate(['/admin/dashboard']);
   }
 
-  approveAct() {
-    this.showSaveMessage('Generando Documento en Word...');
+  approveAct(format: 'word' | 'pdf' = 'word') {
+    this.isGeneratingDoc = true;
+    this.showSaveMessage(`Generando Documento en ${format.toUpperCase()}...`);
     const headers = this.authService.getAuthHeaders();
     
-    this.http.get(`${environment.apiUrl}/api/sessions/${this.sessionId}/export/word`, {
+    this.http.get(`${environment.apiUrl}/api/sessions/${this.sessionId}/export/${format}`, {
       headers,
       responseType: 'blob'
     }).subscribe({
       next: (blob) => {
+        this.isGeneratingDoc = false;
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         const safeTitle = (this.meetingData.title || 'Sesion').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-        a.download = `Sesion_${this.sessionId}_${safeTitle}.docx`;
+        const ext = format === 'word' ? 'docx' : 'pdf';
+        a.download = `Sesion_${this.sessionId}_${safeTitle}.${ext}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
         this.meetingData.status = 'approved';
-        this.showSaveMessage('Documento descargado con éxito');
+        this.showSaveMessage(`Documento ${format.toUpperCase()} descargado con éxito`);
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Error downloading word', err);
-        this.showSaveMessage('Error descargando el Documento', true);
+        this.isGeneratingDoc = false;
+        console.error(`Error downloading ${format}`, err);
+        this.showSaveMessage(`Error descargando el Documento ${format.toUpperCase()}`, true);
+        this.cdr.detectChanges();
       }
     });
   }
