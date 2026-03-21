@@ -781,15 +781,14 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
 
     return {"status": "success", "results": results}
 
-@router.get("/{session_id}/export/word")
-def export_word(session_id: int, db: Session = Depends(get_session)):
-    """Generate and return a Microsoft Word (.docx) document with the meeting details."""
-    from models import ActionItem
+@router.get("/{session_id}/export/{format}")
+def export_document(session_id: int, format: str, db: Session = Depends(get_session)):
+    """Generate and return a document with the meeting details."""
+    from models import ActionItem, Template
     from sqlmodel import select
-    from docx import Document
-    from docx.shared import Pt, RGBColor
-    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
     import io
+    import json
+    import os
 
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
@@ -797,13 +796,102 @@ def export_word(session_id: int, db: Session = Depends(get_session)):
 
     action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
 
-    buffer = generate_word_document_bytes(session_obj, action_items, db)
+    # Check for template
+    template = None
+    if session_obj.project_id:
+        template = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
 
-    headers = {
-        'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{session_obj.title[:20]}.docx"',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-    }
+    safe_title = (session_obj.title or "Reunion").replace(" ", "_").replace("/", "").replace("\\", "")[:30]
 
-    return Response(content=buffer.getvalue(), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)
+    if format == 'word':
+        if template and template.file_path:
+            from services.word_generator import WordGeneratorService
+            generator = WordGeneratorService()
+            
+            # Format date gracefully
+            formatted_date = ""
+            if session_obj.date:
+                try:
+                    import datetime
+                    if str(session_obj.date).isdigit():
+                        dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
+                        formatted_date = dt.strftime("%d/%m/%Y")
+                    elif "T" in str(session_obj.date):
+                        formatted_date = str(session_obj.date).split("T")[0]
+                    else:
+                        formatted_date = str(session_obj.date)
+                except Exception:
+                    formatted_date = str(session_obj.date)
+            
+            meeting_data = {
+                "title": session_obj.title,
+                "date": formatted_date,
+                "summary": session_obj.raw_summary,
+                "decisions": session_obj.processed_decisions,
+                "risks": session_obj.processed_risks,
+                "agreements": session_obj.processed_agreements,
+                "action_items": []
+            }
+            for act in action_items:
+                meeting_data["action_items"].append({
+                    "title": act.title,
+                    "owner_name": act.owner_name,
+                    "description": act.description,
+                    "due_date": act.due_date
+                })
+            try:
+                out_path = f"/tmp/Gen_{session_obj.id}.docx"
+                generator.generate_document(template.file_path, meeting_data, out_path)
+                with open(out_path, "rb") as f:
+                    content = f.read()
+                return Response(
+                    content=content,
+                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    headers={
+                        'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.docx"',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    }
+                )
+            except Exception as e:
+                import traceback
+                print(f"Template docxtpl failed: {e}\n{traceback.format_exc()}")
+                # Fallbacks to plain docx below
+
+        # Fallback
+        buffer = generate_word_document_bytes(session_obj, action_items, db)
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.docx"',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            }
+        )
+
+    elif format == 'pdf':
+        from services.pdf_generator import CorporatePDFGenerator
+        data = __build_corporate_data(session_obj, action_items, db)
+        
+        # Override theme if template has style_config
+        if template and template.style_config:
+            try:
+                data["theme"] = json.loads(template.style_config)
+            except:
+                pass
+
+        pdf_gen = CorporatePDFGenerator(data)
+        pdf_gen.build_document()
+        content = pdf_gen.output(dest='S')
+        if type(content) == str:
+            content = content.encode('latin1')
+
+        return Response(
+            content=content,
+            media_type="application/pdf",
+            headers={
+                'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.pdf"',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            }
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Formato no soportado")
