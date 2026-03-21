@@ -15,9 +15,9 @@ class AzureDevOpsIntegrationService:
         
         # Format the fallback description
         final_desc = description
-        final_desc += f"<br><br><b>Metadatos de Secretaría:</b>"
-        if owner_email:
-            final_desc += f"<br>Asignado Original: {owner_email}"
+        # Add Notiva Metadata footer string
+        final_desc += f"<br><br><b>Metadatos de Notiva:</b>"
+        final_desc += f"<br>- Asignado Original: {action_item.owner_name} ({action_item.owner_email})"
         
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         final_desc += f"<br>Fecha de Inicio: {now_iso[:10]}"

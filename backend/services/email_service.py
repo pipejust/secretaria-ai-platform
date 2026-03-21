@@ -6,9 +6,9 @@ from sqlmodel import Session, select
 from models import IntegrationSetting
 
 # En un entorno real, manejar la config via `config.py/settings`
-DEFAULT_RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-DEFAULT_FROM_EMAIL = os.environ.get("FROM_EMAIL", "no-reply@secretaria-ai.com")
-
+DEFAULT_RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+DEFAULT_FROM_EMAIL = os.environ.get("FROM_EMAIL", "no-reply@notiva.com")
+DEFAULT_TO_EMAIL = os.environ.get("TO_EMAIL", "felipesof@gmail.com")
 class EmailService:
     def __init__(self, db: Session = None):
         # Configurar Jinja2 para cargar plantillas desde el directorio local `templates`

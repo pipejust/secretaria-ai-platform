@@ -635,7 +635,7 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
         eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
         
         owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
-        safe_description = f"{item.description}\n\n**Metadatos de Secretaría**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
+        safe_description = f"{item.description}\n\n**Metadatos de Notiva**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
         
         for routing in routings:
             config = json.loads(routing.destination_config or '{}')
