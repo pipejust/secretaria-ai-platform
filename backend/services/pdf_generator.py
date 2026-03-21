@@ -175,47 +175,102 @@ class CorporatePDFGenerator(FPDF):
             else:
                 self.multi_cell(0, 5, linea_str.replace("**", "").replace("__", ""))
                 
-        # Identificacion
-        self.add_section_bar("1. IDENTIFICACION GENERAL")
-        self.add_kv_table([
-            ("Acta No.:", self.data.get("no_acta", ""), "Fecha:", self.data.get("fecha_documento", "")),
-            ("Idioma:", self.data.get("idioma", "Español"), "Proyecto:", self.data.get("proyecto", "General")),
-            ("Asunto:", self.data.get("subtitulo_documento", ""))
-        ])
-        
-        # Asistentes
-        asistentes = self.data.get("asistentes", [])
-        if asistentes:
-            self.add_section_bar("2. ASISTENTES IDENTIFICADOS")
-            filas_asis = [["", a.get("name", "")[:40], a.get("role", "")[:30], a.get("entity", "")[:30]] for a in asistentes]
-            self.add_data_table(["No", "Nombre y Apellidos", "Cargo / Rol", "Entidad"], filas_asis, col_widths=(15, 65, 50, 60))
+        # Determinar el orden de bloques
+        mapping_config = self.data.get("mapping_config", [])
+        if not mapping_config:
+            # Fallback a estructura estándar y original
+            mapping_config = ["meta", "attendees", "summary", "decisions", "risks", "action_items", "approval"]
             
-        summary = self.data.get("contexto_antecedentes", "").encode('latin-1', 'replace').decode('latin-1')
-        if summary:
-            self.add_section_bar("3. RESUMEN EJECUTIVO / CONTEXTO")
-            self.set_font('helvetica', '', 10)
-            self.set_text_color(17, 17, 17)
-            self._parsear_texto_markdown(summary)
-
-        decisiones = self.data.get("decisiones", "").encode('latin-1', 'replace').decode('latin-1')
-        if decisiones:
-            self.add_section_bar("4. DECISIONES Y DEFINICIONES")
-            self._parsear_texto_markdown(decisiones)
-
-        riesgos = self.data.get("riesgos", "").encode('latin-1', 'replace').decode('latin-1')
-        if riesgos:
-            self.add_section_bar("5. RIESGOS Y ALERTAS CLAVE")
-            self._parsear_texto_markdown(riesgos)
-
-        action_items = self.data.get("compromisos", [])
-        if action_items:
-            self.add_section_bar("6. COMPROMISOS Y TAREAS")
-            filas_tareas = [["", ai.get("title", ""), ai.get("owner_email", ""), ai.get("due_date", "")] for ai in action_items]
-            self.add_data_table(["No", "Descripcion", "Responsable", "Fecha"], filas_tareas, col_widths=(15, 95, 50, 30))
-
-        self.add_section_bar("7. APROBACION")
-        self.set_font('helvetica', '', 10)
-        self.multi_cell(0, 5, "Los registros arriba mencionados constituyen el cuerpo del acta inteligenciada.")
+        section_idx = 1
+        
+        for block in mapping_config:
+            block_id = block.get("id") if isinstance(block, dict) else block
+            
+            if block_id == "meta":
+                self.add_section_bar(f"{section_idx}. IDENTIFICACION GENERAL")
+                self.add_kv_table([
+                    ("Acta No.:", self.data.get("no_acta", ""), "Fecha:", self.data.get("fecha_documento", "")),
+                    ("Idioma:", self.data.get("idioma", "Español"), "Proyecto:", self.data.get("proyecto", "General")),
+                    ("Asunto:", self.data.get("subtitulo_documento", ""))
+                ])
+                section_idx += 1
+                
+            elif block_id == "attendees":
+                asistentes = self.data.get("asistentes", [])
+                self.add_section_bar(f"{section_idx}. ASISTENTES IDENTIFICADOS")
+                if asistentes:
+                    filas_asis = [["", a.get("name", "")[:40], a.get("role", "")[:30], a.get("entity", "")[:30]] for a in asistentes]
+                    self.add_data_table(["No", "Nombre y Apellidos", "Cargo / Rol", "Entidad"], filas_asis, col_widths=(15, 65, 50, 60))
+                else:
+                    self.set_font('helvetica', '', 10)
+                    self.multi_cell(0, 5, "No hay asistentes registrados.")
+                    self.ln(2)
+                section_idx += 1
+                
+            elif block_id == "summary":
+                summary = self.data.get("contexto_antecedentes", "").encode('latin-1', 'replace').decode('latin-1')
+                self.add_section_bar(f"{section_idx}. RESUMEN EJECUTIVO / CONTEXTO")
+                if summary:
+                    self.set_font('helvetica', '', 10)
+                    self.set_text_color(17, 17, 17)
+                    self._parsear_texto_markdown(summary)
+                else:
+                    self.set_font('helvetica', '', 10)
+                    self.multi_cell(0, 5, "No hay resumen ejecutivo.")
+                    self.ln(2)
+                section_idx += 1
+                
+            elif block_id == "decisions":
+                decisiones = self.data.get("decisiones", "").encode('latin-1', 'replace').decode('latin-1')
+                self.add_section_bar(f"{section_idx}. DECISIONES CLAVE")
+                if decisiones:
+                    self._parsear_texto_markdown(decisiones)
+                else:
+                    self.set_font('helvetica', '', 10)
+                    self.multi_cell(0, 5, "No hay decisiones registradas.")
+                    self.ln(2)
+                section_idx += 1
+                
+            elif block_id == "risks":
+                riesgos = self.data.get("riesgos", "").encode('latin-1', 'replace').decode('latin-1')
+                self.add_section_bar(f"{section_idx}. RIESGOS IDENTIFICADOS")
+                if riesgos:
+                    self._parsear_texto_markdown(riesgos)
+                else:
+                    self.set_font('helvetica', '', 10)
+                    self.multi_cell(0, 5, "No hay riesgos detectados.")
+                    self.ln(2)
+                section_idx += 1
+                
+            elif block_id == "agreements" or block_id == "themes":
+                agreements = self.data.get("agreements", "").encode('latin-1', 'replace').decode('latin-1')
+                title_bar = "ACUERDOS" if block_id == "agreements" else "ACUERDOS Y TEMAS CLAVE"
+                self.add_section_bar(f"{section_idx}. {title_bar}")
+                if agreements:
+                    self._parsear_texto_markdown(agreements)
+                else:
+                    self.set_font('helvetica', '', 10)
+                    self.multi_cell(0, 5, "No hay acuerdos registrados.")
+                    self.ln(2)
+                section_idx += 1
+                
+            elif block_id == "action_items":
+                action_items = self.data.get("compromisos", [])
+                self.add_section_bar(f"{section_idx}. COMPROMISOS Y TAREAS")
+                if action_items:
+                    filas_tareas = [["", ai.get("title", ""), ai.get("owner_email", ""), ai.get("due_date", "")] for ai in action_items]
+                    self.add_data_table(["No", "Descripcion", "Responsable", "Fecha"], filas_tareas, col_widths=(15, 95, 50, 30))
+                else:
+                    self.set_font('helvetica', '', 10)
+                    self.multi_cell(0, 5, "No hay compromisos pendientes.")
+                    self.ln(2)
+                section_idx += 1
+                
+            elif block_id == "approval":
+                self.add_section_bar(f"{section_idx}. APROBACION")
+                self.set_font('helvetica', '', 10)
+                self.multi_cell(0, 5, "Los registros arriba mencionados constituyen el cuerpo del acta inteligenciada.")
+                section_idx += 1
         
     def generar_buffer(self) -> io.BytesIO:
         self.render_all()

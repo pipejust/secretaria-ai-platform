@@ -525,6 +525,7 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
             })
 
     theme = None
+    mapping_config = []
     project_name = "General"
     if db and hasattr(session_obj, "project_id") and session_obj.project_id:
         from models import Project
@@ -533,11 +534,17 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
             project_name = proj.name
             
         template_obj = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
-        if template_obj and template_obj.style_config:
-            try:
-                theme = json.loads(template_obj.style_config)
-            except Exception:
-                pass
+        if template_obj:
+            if template_obj.style_config:
+                try:
+                    theme = json.loads(template_obj.style_config)
+                except Exception:
+                    pass
+            if getattr(template_obj, "mapping_config", None):
+                try:
+                    mapping_config = json.loads(template_obj.mapping_config)
+                except Exception:
+                    pass
 
     return {
         "entidad_principal": "Notiva",
@@ -554,8 +561,10 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
         "contexto_antecedentes": clean_summary,
         "decisiones": session_obj.processed_decisions or "",
         "riesgos": session_obj.processed_risks or "",
+        "agreements": session_obj.processed_agreements or "",
         "compromisos": formatted_items,
-        "theme": theme
+        "theme": theme,
+        "mapping_config": mapping_config
     }
 
 def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.BytesIO:
@@ -830,7 +839,11 @@ def export_document(session_id: int, format: str, db: Session = Depends(get_sess
                 "decisions": session_obj.processed_decisions,
                 "risks": session_obj.processed_risks,
                 "agreements": session_obj.processed_agreements,
-                "action_items": []
+                "action_items": [],
+                "mapping_config": __build_corporate_data(session_obj, action_items, db).get("mapping_config", []),
+                "theme": __build_corporate_data(session_obj, action_items, db).get("theme", {}),
+                "asistentes": __build_corporate_data(session_obj, action_items, db).get("asistentes", []),
+                "no_acta": __build_corporate_data(session_obj, action_items, db).get("no_acta", "")
             }
             for act in action_items:
                 meeting_data["action_items"].append({

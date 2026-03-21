@@ -42,4 +42,100 @@ class WordGeneratorService:
         
         doc.render(context)
         doc.save(output_path)
+        
+        # Post-process: Append visual builder blocks if present
+        mapping_config = meeting_data.get("mapping_config", [])
+        if mapping_config:
+            import docx
+            from docx.shared import Pt, RGBColor
+            from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+            
+            final_doc = docx.Document(output_path)
+            
+            theme = meeting_data.get("theme", {})
+            font_family = theme.get("fontFamily", "Arial")
+            try:
+                font_size = int(theme.get("fontSize", 10))
+            except:
+                font_size = 10
+            heading_color_hex = str(theme.get("primaryColor", "#1e293b")).lstrip("#")
+            if len(heading_color_hex) != 6:
+                heading_color_hex = "1e293b"
+                
+            hc_r = int(heading_color_hex[0:2], 16)
+            hc_g = int(heading_color_hex[2:4], 16)
+            hc_b = int(heading_color_hex[4:6], 16)
+            
+            def add_custom_heading(text):
+                final_doc.add_paragraph() # Spacing
+                p = final_doc.add_paragraph()
+                run = p.add_run(text)
+                run.bold = True
+                run.font.name = font_family
+                run.font.size = Pt(font_size + 2)
+                run.font.color.rgb = RGBColor(hc_r, hc_g, hc_b)
+                p.paragraph_format.space_after = Pt(6)
+                
+            def add_custom_paragraph(text, bullet=False):
+                if not text:
+                    return
+                clean_text = str(text).replace("**", "").replace("###", "").replace("##", "")
+                for line in clean_text.split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith("- "):
+                        line = line[2:]
+                        bullet = True
+                    p = final_doc.add_paragraph(style='List Bullet' if bullet else 'Normal')
+                    run = p.add_run(line)
+                    run.font.name = font_family
+                    run.font.size = Pt(font_size)
+                    p.paragraph_format.space_after = Pt(4)
+
+            # Block Appender
+            for block in mapping_config:
+                block_id = block.get("id") if isinstance(block, dict) else block
+                
+                if block_id == "meta":
+                    add_custom_heading("1. IDENTIFICACIÓN GENERAL")
+                    add_custom_paragraph(f"Acta No.: {meeting_data.get('no_acta', 'ACT-0000')}")
+                    add_custom_paragraph(f"Fecha: {meeting_data.get('date', '')}")
+                    add_custom_paragraph(f"Asunto: {meeting_data.get('title', '')}")
+                elif block_id == "summary":
+                    add_custom_heading("RESUMEN EJECUTIVO / CONTEXTO")
+                    add_custom_paragraph(meeting_data.get("summary", ""))
+                elif block_id == "attendees":
+                    add_custom_heading("LISTA DE ASISTENTES")
+                    attendees = meeting_data.get("asistentes", [])
+                    if attendees:
+                        for a in attendees:
+                            name = a.get("name", "")
+                            role = a.get("role", "")
+                            add_custom_paragraph(f"{name} ({role})", bullet=True)
+                    else:
+                        add_custom_paragraph("No hay asistentes registrados.")
+                elif block_id == "decisions":
+                    add_custom_heading("DECISIONES CLAVE")
+                    add_custom_paragraph(meeting_data.get("decisions", ""))
+                elif block_id == "risks":
+                    add_custom_heading("RIESGOS IDENTIFICADOS")
+                    add_custom_paragraph(meeting_data.get("risks", ""))
+                elif block_id == "agreements" or block_id == "themes":
+                    add_custom_heading("ACUERDOS Y TEMAS")
+                    add_custom_paragraph(meeting_data.get("agreements", ""))
+                elif block_id == "action_items":
+                    add_custom_heading("TAREAS Y COMPROMISOS")
+                    items = meeting_data.get("action_items", [])
+                    if items:
+                        for i, ai in enumerate(items):
+                            act_title = ai.get("title", "")
+                            act_owner = ai.get("owner_name") or ai.get("owner_email") or "Sin asignar"
+                            act_due = ai.get("due_date", "Sin fecha")
+                            add_custom_paragraph(f"{i+1}. {act_title} - {act_owner} (Vence: {act_due})")
+                    else:
+                        add_custom_paragraph("No hay compromisos.")
+                        
+            final_doc.save(output_path)
+            
         return output_path
