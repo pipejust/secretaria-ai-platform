@@ -133,6 +133,7 @@ class CorporatePDFGenerator(FPDF):
             self.ln(2)
 
     def render_all(self):
+        self.add_page()
         # Portada Simple
         self.set_font('helvetica', 'B', 10)
         safe_sub = self.data.get("subtitulo_documento", "Asunto no especificado").encode('latin-1', 'replace').decode('latin-1')

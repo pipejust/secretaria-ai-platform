@@ -14,13 +14,20 @@ class WordGeneratorService:
         """
         local_template_path = template_path
         if template_path.startswith("http://") or template_path.startswith("https://"):
-            local_template_path = f"/tmp/{os.path.basename(template_path)}"
+            import hashlib
+            safe_name = hashlib.md5(template_path.encode()).hexdigest() + ".docx"
+            local_template_path = f"/tmp/{safe_name}"
             if not os.path.exists(local_template_path):
                 import urllib.request
                 try:
-                    urllib.request.urlretrieve(template_path, local_template_path)
+                    req = urllib.request.Request(
+                        template_path, 
+                        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                    )
+                    with urllib.request.urlopen(req) as response, open(local_template_path, 'wb') as out_file:
+                        out_file.write(response.read())
                 except Exception as e:
-                    raise Exception(f"Failed to download remote template from {template_path}: {e}")
+                    raise Exception(f"Error downloading template from Supabase: {e}")
         
         if not os.path.exists(local_template_path):
             raise FileNotFoundError(f"No se encontró la plantilla en {local_template_path}")
