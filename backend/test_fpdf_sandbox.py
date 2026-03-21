@@ -19,7 +19,7 @@ try:
     # Titulo Principal
     pdf.set_text_color(*color_heading)
     pdf.set_font("helvetica", "B", 18)
-    pdf.cell(0, 10, "Secretaria AI - Resumen de Sesion", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.cell(0, 10, "Notiva - Resumen de Sesion", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(10)
     
     # Meta Info

@@ -1,6 +1,6 @@
-# Secretaría AI - Sistema Multi-Agente
+# Notiva - Sistema Multi-Agente
 
-Secretaría AI es un sistema diseñado para automatizar la captura, procesamiento, curación humana y distribución de actas y tareas provenientes de reuniones de Fireflies.ai.
+Notiva es un sistema diseñado para automatizar la captura, procesamiento, curación humana y distribución de actas y tareas provenientes de reuniones de Fireflies.ai.
 
 ## Arquitectura
 

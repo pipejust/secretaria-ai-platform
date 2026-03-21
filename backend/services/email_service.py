@@ -104,7 +104,7 @@ class EmailService:
             login_url=login_url or f"{frontend_url}/login",
             current_year=2026
         )
-        await self._send_html_email(to_email, f"¡Bienvenido a Secretaría AI!", html_content)
+        await self._send_html_email(to_email, f"¡Bienvenido a Notiva!", html_content)
 
     async def send_forgot_password_email(self, to_email: str, user_name: str, reset_token: str):
         frontend_url = getattr(settings, "frontend_url", "http://localhost:4200").rstrip('/')
@@ -115,4 +115,4 @@ class EmailService:
             reset_url=reset_url,
             current_year=2026
         )
-        await self._send_html_email(to_email, f"Restablecer Contraseña - Secretaría AI", html_content)
+        await self._send_html_email(to_email, f"Restablecer Contraseña - Notiva", html_content)

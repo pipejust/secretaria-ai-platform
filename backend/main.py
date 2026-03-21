@@ -11,7 +11,7 @@ from routers import templates
 from routers import projects
 
 app = FastAPI(
-    title="Secretaría AI Backend",
+    title="Notiva Backend",
     description="Orquestador principal para procesamiento de actas y tareas",
     version="1.0.0"
 )
@@ -65,4 +65,4 @@ app.include_router(sessions_upload.router)
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "Secretaría AI Backend está corriendo"}
+    return {"status": "ok", "message": "Notiva Backend está corriendo"}

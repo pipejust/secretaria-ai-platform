@@ -16,7 +16,7 @@ class CorporatePDFGenerator(FPDF):
         
         self.set_y(10)
         self.set_x(10)
-        self.cell(60, 4, self.data.get("entidad_principal", "Secretaria AI")[:40], ln=1)
+        self.cell(60, 4, self.data.get("entidad_principal", "Notiva")[:40], ln=1)
         self.set_x(10)
         self.cell(60, 4, self.data.get("entidad_secundaria", "Gestión Integral")[:40], ln=0)
         
@@ -36,11 +36,22 @@ class CorporatePDFGenerator(FPDF):
         self.set_y(-15)
         self.set_font('helvetica', '', 8)
         self.set_text_color(122, 122, 122)
-        self.cell(0, 10, f"{self.data.get('entidad_principal', 'Secretaria AI')} | {self.data.get('titulo_documento', 'Acta')} | Generado automáticamente", align='C')
+        self.cell(0, 10, f"{self.data.get('entidad_principal', 'Notiva')} | {self.data.get('titulo_documento', 'Acta')} | Generado automáticamente", align='C')
+
+    def _get_color(self, hex_val, default_rgb):
+        if not hex_val: return default_rgb
+        try:
+            h = hex_val.lstrip("#")
+            return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+        except Exception:
+            return default_rgb
 
     def add_section_bar(self, title):
         self.ln(5)
-        self.set_fill_color(198, 40, 40) # C62828
+        theme = self.data.get("theme") or {}
+        r, g, b = self._get_color(theme.get("headingColor", "#C62828"), (198, 40, 40))
+        self.set_fill_color(r, g, b)
+        
         self.set_text_color(255, 255, 255)
         self.set_font('helvetica', 'B', 10)
         self.cell(0, 8, f"  {title.upper()}", fill=True, ln=1)
@@ -123,10 +134,6 @@ class CorporatePDFGenerator(FPDF):
 
     def render_all(self):
         # Portada Simple
-        self.set_font('helvetica', 'B', 16)
-        self.set_text_color(17, 17, 17)
-        safe_title = self.data.get("titulo_documento", "ACTA DE REUNIÓN").upper().encode('latin-1', 'replace').decode('latin-1')
-        self.cell(0, 10, safe_title, ln=1)
         self.set_font('helvetica', 'B', 10)
         safe_sub = self.data.get("subtitulo_documento", "Asunto no especificado").encode('latin-1', 'replace').decode('latin-1')
         self.cell(0, 6, safe_sub, ln=1)

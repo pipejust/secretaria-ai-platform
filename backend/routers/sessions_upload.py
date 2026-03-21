@@ -395,9 +395,11 @@ class DispatchEmailsRequest(BaseModel):
     custom_pdf_b64: str = None
     attach_document: bool = False
 
-def __build_corporate_data(session_obj, action_items) -> dict:
+def __build_corporate_data(session_obj, action_items, db=None) -> dict:
     import json
     import datetime
+    from models import Template
+    from sqlmodel import select
     
     formatted_date = session_obj.date
     if session_obj.date and str(session_obj.date).isdigit():
@@ -425,8 +427,17 @@ def __build_corporate_data(session_obj, action_items) -> dict:
                 "status": "Pendiente"
             })
 
+    theme = None
+    if db and hasattr(session_obj, "project_id") and session_obj.project_id:
+        template_obj = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
+        if template_obj and template_obj.style_config:
+            try:
+                theme = json.loads(template_obj.style_config)
+            except Exception:
+                pass
+
     return {
-        "entidad_principal": "Secretaria AI",
+        "entidad_principal": "Notiva",
         "entidad_secundaria": "Gestión Integral de Sesiones",
         "titulo_documento": "ACTA DE REUNIÓN",
         "subtitulo_documento": session_obj.title or "Sesión General",
@@ -440,14 +451,15 @@ def __build_corporate_data(session_obj, action_items) -> dict:
         "contexto_antecedentes": clean_summary,
         "decisiones": session_obj.processed_decisions or "",
         "riesgos": session_obj.processed_risks or "",
-        "compromisos": formatted_items
+        "compromisos": formatted_items,
+        "theme": theme
     }
 
 def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.BytesIO:
     from services.docx_generator import CorporateDocxGenerator
     import io
     
-    data = __build_corporate_data(session_obj, action_items)
+    data = __build_corporate_data(session_obj, action_items, db)
     generator = CorporateDocxGenerator(data)
     return generator.generar_buffer()
 
@@ -490,7 +502,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
         # Generate robust corporate PDF
         try:
             from services.pdf_generator import CorporatePDFGenerator
-            data = __build_corporate_data(session_obj, action_items_all)
+            data = __build_corporate_data(session_obj, action_items_all, db)
             pdf_gen = CorporatePDFGenerator(data)
             pdf_buffer = pdf_gen.generar_buffer()
             pdf_b64_global = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
@@ -532,7 +544,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                     ics_lines = [
                         "BEGIN:VCALENDAR",
                         "VERSION:2.0",
-                        "PRODID:-//Secretaria AI//ES",
+                        "PRODID:-//Notiva//ES",
                         "BEGIN:VEVENT",
                         f"SUMMARY:{title_clean}",
                         f"DTSTART;VALUE=DATE:{date_clean}",

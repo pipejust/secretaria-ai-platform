@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 
 class Settings(BaseSettings):
-    project_name: str = "Secretaría AI"
+    project_name: str = "Notiva"
     database_url: str = ""
     groq_api_key: str = ""
     fireflies_api_key: str = ""

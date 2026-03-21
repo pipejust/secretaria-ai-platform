@@ -15,7 +15,7 @@ class LandingContent(BaseModel):
 @router.get("/landing_page_content", response_model=LandingContent)
 def get_landing_content():
     return {
-        "title": "Bienvenido a Secretaría AI MoshWasi",
+        "title": "Bienvenido a Notiva MoshWasi",
         "description": "Orquestador principal para procesamiento de actas y tareas. Todo tu trabajo documental en un solo lugar.",
         "features": [
             "Transcripción Automática",

@@ -107,7 +107,7 @@ class CorporateDocxGenerator:
         
         p_izq1 = col_izq.paragraphs[0]
         p_izq1.style = 'estilo_encabezado_institucional'
-        p_izq1.add_run(self.data.get("entidad_principal", "Secretaria AI"))
+        p_izq1.add_run(self.data.get("entidad_principal", "Notiva"))
         p_izq2 = col_izq.add_paragraph(self.data.get("entidad_secundaria", "Gestión Integral"), style='estilo_encabezado_institucional')
 
         p_cen = col_cen.paragraphs[0]
@@ -123,15 +123,10 @@ class CorporateDocxGenerator:
         footer = section.footer
         p_foot = footer.paragraphs[0]
         p_foot.style = 'estilo_pie_pagina'
-        p_foot.add_run(f"{self.data.get('entidad_principal', 'Secretaria AI')} | {self.data.get('titulo_documento', 'Acta')} | Generado automáticamente")
+        p_foot.add_run(f"{self.data.get('entidad_principal', 'Notiva')} | {self.data.get('titulo_documento', 'Acta')} | Generado automáticamente")
 
     def construir_portada_simple(self):
         self.doc.add_paragraph()
-        p = self.doc.add_paragraph(style='estilo_titulo_documento')
-        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run = p.runs[0] if p.runs else p.add_run(self.data.get("titulo_documento", "ACTA DE REUNIÓN").upper())
-        run.font.size = Pt(16)
-        
         safe_title = self.data.get("subtitulo_documento", "Asunto no especificado")
         self.doc.add_paragraph(safe_title, style='estilo_subtitulo')
         self.doc.add_paragraph(f"Fecha: {self.data.get('fecha_documento', '')}", style='estilo_texto_base')
@@ -143,8 +138,12 @@ class CorporateDocxGenerator:
         table.autofit = False
         table.columns[0].width = Cm(16.5)
         
+        # Color dinámico
+        theme = self.data.get("theme") or {}
+        bg_col = theme.get("headingColor", "#C62828").lstrip("#")
+        
         cell = table.cell(0, 0)
-        set_cell_background_color(cell, "C62828") # Rojo corporativo
+        set_cell_background_color(cell, bg_col)
         
         tbl = table._tbl
         tblPr = tbl.tblPr

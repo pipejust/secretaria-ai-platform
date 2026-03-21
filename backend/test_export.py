@@ -27,7 +27,7 @@ def test():
         
         # Test PDF
         print("Generating PDF...")
-        data = __build_corporate_data(session_obj, action_items)
+        data = __build_corporate_data(session_obj, action_items, db)
         pdf_gen = CorporatePDFGenerator(data)
         pdf_buffer = pdf_gen.generar_buffer()
         with open("test_export.pdf", "wb") as f:

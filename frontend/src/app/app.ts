@@ -10,7 +10,7 @@ import { filter, map, mergeMap } from 'rxjs/operators';
   styleUrl: './app.css'
 })
 export class App implements OnInit {
-  protected readonly title = signal('Secretaria AI');
+  protected readonly title = signal('Notiva');
 
   constructor(
     private router: Router,
