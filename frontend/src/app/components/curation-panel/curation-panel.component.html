@@ -8,8 +8,17 @@
     <header class="panel-header">
       <div class="header-titles">
         <h1>Curación de la Sesión</h1>
+        
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <h2 *ngIf="!isEditingTitle" style="margin: 0; font-size: 1.3rem;">{{ meetingData.title }}</h2>
+          <input *ngIf="isEditingTitle" type="text" [(ngModel)]="meetingData.title" class="form-control" style="font-size: 1.2rem; font-weight: bold; width: 100%; max-width: 400px; padding: 4px 8px; height: auto;" (keyup.enter)="isEditingTitle = false">
+          
+          <button class="btn btn-icon" (click)="isEditingTitle = !isEditingTitle" title="Editar Título" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 0 4px;">
+            ✏️
+          </button>
+        </div>
+
         <p class="subtitle" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            Sesión: <strong>{{ meetingData.title }}</strong> | 
             Fecha: {{ meetingData.date | date:'dd/MM/yyyy HH:mm' }} | 
             Estado: <span class="badge badge-primary" style="white-space: nowrap;">{{ getTranslatedStatus(meetingData.status) }}</span> |
             Idioma: <span class="badge" style="white-space: nowrap; background-color: #8b5cf6; color: white;">{{ meetingData.language || 'Detectando...' }}</span> |

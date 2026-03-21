@@ -45,3 +45,25 @@
 .btn-primary:hover {
     background: var(--accent-hover);
 }
+
+@media (max-width: 768px) {
+    .header-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .header-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+    .filter-row {
+        flex-direction: column;
+    }
+    .filter-row select {
+        width: 100% !important;
+    }
+    .data-table th, .data-table td {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}

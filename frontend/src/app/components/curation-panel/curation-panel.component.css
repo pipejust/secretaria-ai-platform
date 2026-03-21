@@ -318,3 +318,37 @@
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 768px) {
+    .curation-container {
+        padding: 1rem;
+    }
+    .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .header-actions button {
+        flex: 1;
+        text-align: center;
+        padding: 0.6rem;
+    }
+    .task-meta-modern {
+        flex-direction: column;
+        padding: 0.5rem;
+    }
+    .meta-field {
+        min-width: 100%;
+    }
+    .task-header-row {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+    .task-title-input {
+        width: 100%;
+    }
+}

@@ -58,6 +58,7 @@ export class CurationPanelComponent implements OnInit {
   sessionId: number | null = null;
   isLoading = true;
   isRegenerating = false;
+  isEditingTitle = false;
   isDispatchingEmails = false;
   isDispatchingPlatforms = false;
   isRegeneratingFields = false;
@@ -347,6 +348,7 @@ export class CurationPanelComponent implements OnInit {
     this.showSaveMessage('Guardando cambios...');
     const headers = this.authService.getAuthHeaders();
     const payload = {
+      title: this.meetingData.title,
       raw_summary: this.meetingData.raw_summary,
       raw_transcript: this.meetingData.raw_transcript,
       processed_decisions: this.meetingData.processed_decisions,

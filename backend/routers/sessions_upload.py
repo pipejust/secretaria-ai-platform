@@ -61,6 +61,7 @@ def delete_session(session_id: int, db: Session = Depends(get_session)):
     return {"status": "success", "message": "Sesión eliminada"}
 
 class SessionUpdate(BaseModel):
+    title: Optional[str] = None
     raw_summary: Optional[str] = None
     raw_transcript: Optional[str] = None
     processed_decisions: Optional[str] = None
@@ -257,6 +258,8 @@ def update_session_content(session_id: int, payload: SessionUpdate, db: Session 
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
         
+    if payload.title is not None:
+        session_obj.title = payload.title
     if payload.raw_summary is not None:
         session_obj.raw_summary = payload.raw_summary
     if payload.raw_transcript is not None:
