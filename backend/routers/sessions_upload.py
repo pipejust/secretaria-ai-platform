@@ -50,10 +50,67 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
     if not session_obj:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
         
-    if session_obj.fireflies_id and session_obj.fireflies_id.startswith("MANUAL-"):
+    def _fallback_to_groq():
         if not session_obj.raw_transcript:
-            raise HTTPException(status_code=400, detail="No hay transcripción para analizar con IA")
+            raise HTTPException(status_code=400, detail="El ID de Fireflies es inválido o no existe, y no hay transcripción local para analizar con IA.")
+        return True
+
+    from services.fireflies_service import FirefliesService
+    svc = FirefliesService()
+    force_groq = False
+    
+    if session_obj.fireflies_id and session_obj.fireflies_id.startswith("MANUAL-"):
+        force_groq = True
+    else:
+        try:
+            data = await svc.get_transcript_data(session_obj.fireflies_id)
             
+            summary_obj = data.get("summary", {})
+            apps_layer = data.get("apps_layer", {})
+            
+            mega_summary = ""
+            
+            # 1. Apps outputs (ej. Daily Digest, Executive Summary custom)
+            app_outputs = apps_layer.get("outputs", [])
+            for out in app_outputs:
+                if out.get("title") and out.get("response"):
+                    mega_summary += f"### {out['title']}\n{out['response']}\n\n"
+                    
+            # 2. Summary estándar
+            if isinstance(summary_obj, dict):
+                overview = summary_obj.get("overview", "")
+                if overview and overview not in mega_summary:
+                    mega_summary += f"### Resumen General\n{overview}\n\n"
+                    
+                bullet_gist = summary_obj.get("bullet_gist", "")
+                if bullet_gist:
+                    mega_summary += f"### Puntos Clave\n{bullet_gist}\n\n"
+                    
+                notes = summary_obj.get("notes", "")
+                if notes:
+                    mega_summary += f"### Notas Entendidas\n{notes}\n\n"
+            
+            mega_summary = mega_summary.strip()
+            if not mega_summary:
+                overview = str(summary_obj or "")
+                mega_summary = overview
+                
+            if mega_summary:
+                session_obj.raw_summary = mega_summary
+                db.add(session_obj)
+                db.commit()
+                db.refresh(session_obj)
+                return {"summary": mega_summary}
+            else:
+                force_groq = True
+                
+        except Exception as e:
+            # Si lanza error (ej. Transcript not found u object_not_found), aplicamos fallback a Groq
+            print(f"Fireflies API falló (posiblemente borrado en su nube). Fallback a IA. Detalle: {str(e)}")
+            force_groq = True
+
+    if force_groq:
+        _fallback_to_groq()
         from services.groq_service import GroqService
         groq_svc = GroqService()
         
@@ -73,23 +130,6 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
             db.refresh(session_obj)
             
         return {"summary": summary}
-    else:
-        from services.fireflies_service import FirefliesService
-        svc = FirefliesService()
-        try:
-            data = await svc.get_transcript_data(session_obj.fireflies_id)
-            summary_obj = data.get("summary", {})
-            overview = summary_obj.get("overview", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
-                
-            if overview:
-                session_obj.raw_summary = overview
-                db.add(session_obj)
-                db.commit()
-                db.refresh(session_obj)
-            
-            return {"summary": overview}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{session_id}")
 def delete_session(session_id: int, db: Session = Depends(get_session)):

@@ -8,18 +8,45 @@ class FirefliesService:
     async def get_transcript_data(self, transcript_id: str) -> Dict[str, Any]:
         """Consulta la API de Fireflies para obtener datos detallados de una reunión."""
         query = """
-        query Transcript($transcriptId: String!) {
+        query MeetingRichOutput($transcriptId: String!) {
             transcript(id: $transcriptId) {
                 id
                 title
-                date
+                dateString
+                duration
                 summary {
-                    action_items
                     overview
+                    short_summary
+                    notes
+                    action_items
+                    topics_discussed
+                    keywords
+                    outline
+                    bullet_gist
                 }
                 sentences {
                     text
                     speaker_name
+                }
+                analytics {
+                    sentiments {
+                        positive_pct
+                        neutral_pct
+                        negative_pct
+                    }
+                    speakers {
+                        speaker_id
+                        name
+                        duration
+                        word_count
+                    }
+                }
+            }
+            apps(transcript_id: $transcriptId, limit: 10) {
+                outputs {
+                    title
+                    response
+                    created_at
                 }
             }
         }
@@ -52,6 +79,9 @@ class FirefliesService:
             
             # Manejo de errores de GraphQL
             if "errors" in data:
-                raise Exception(f"GraphQL Error: {data['errors']}")
+                # Retornamos el error para que la ruta pueda atraparlo si es object_not_found
+                raise Exception(data["errors"])
                 
-            return data["data"]["transcript"]
+            result = data["data"].get("transcript") or {}
+            result["apps_layer"] = data["data"].get("apps", {})
+            return result
