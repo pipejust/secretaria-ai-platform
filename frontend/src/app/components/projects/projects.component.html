@@ -55,7 +55,11 @@
                         <div>
                             <strong style="display: block; color: var(--text-main);">{{ contact.name }}</strong>
                             <small style="color: var(--text-muted);">{{ contact.email }} | {{ contact.role }}</small>
-                            <small *ngIf="contact.phone" style="display: block; color: var(--text-muted);">Tel: {{ contact.phone }}</small>
+                            <small *ngIf="contact.phone || contact.entity" style="display: block; color: var(--text-muted);">
+                                <span *ngIf="contact.phone">Tel: {{ contact.phone }}</span>
+                                <span *ngIf="contact.phone && contact.entity"> • </span>
+                                <span *ngIf="contact.entity">Entidad: {{ contact.entity }}</span>
+                            </small>
                         </div>
                         <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteContact(contact.id)" [disabled]="isDeletingContactId === contact.id">
                             Eliminar
@@ -81,6 +85,10 @@
                             <input type="text" name="contactRole" [(ngModel)]="newContact.role" required placeholder="ej: Gerente IT" />
                         </div>
                         <div class="form-group mb-4">
+                            <label>Entidad (Opcional)</label>
+                            <input type="text" name="contactEntity" [(ngModel)]="newContact.entity" placeholder="ej: Secretaria AI, Ministerio..." />
+                        </div>
+                        <div class="form-group mb-4" style="grid-column: span 2;">
                             <label>Teléfono (Opcional)</label>
                             <input type="text" name="contactPhone" [(ngModel)]="newContact.phone" placeholder="+12345678" />
                         </div>

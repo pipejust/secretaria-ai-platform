@@ -44,6 +44,53 @@ def get_session_details(session_id: int, db: Session = Depends(get_session)):
         "action_items": action_items
     }
 
+@router.post("/{session_id}/fetch_summary")
+async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+        
+    if session_obj.fireflies_id and session_obj.fireflies_id.startswith("MANUAL-"):
+        if not session_obj.raw_transcript:
+            raise HTTPException(status_code=400, detail="No hay transcripción para analizar con IA")
+            
+        from services.groq_service import GroqService
+        groq_svc = GroqService()
+        
+        project_contacts = []
+        if session_obj.project_id:
+            from models import ProjectContact
+            db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
+            project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
+            
+        structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+        summary = structured_data.get("summary", "")
+        
+        if summary:
+            session_obj.raw_summary = summary
+            db.add(session_obj)
+            db.commit()
+            db.refresh(session_obj)
+            
+        return {"summary": summary}
+    else:
+        from services.fireflies_service import FirefliesService
+        svc = FirefliesService()
+        try:
+            data = await svc.get_transcript_data(session_obj.fireflies_id)
+            summary_obj = data.get("summary", {})
+            overview = summary_obj.get("overview", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
+                
+            if overview:
+                session_obj.raw_summary = overview
+                db.add(session_obj)
+                db.commit()
+                db.refresh(session_obj)
+            
+            return {"summary": overview}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
 @router.delete("/{session_id}")
 def delete_session(session_id: int, db: Session = Depends(get_session)):
     from sqlmodel import select
@@ -431,7 +478,13 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
             })
 
     theme = None
+    project_name = "General"
     if db and hasattr(session_obj, "project_id") and session_obj.project_id:
+        from models import Project
+        proj = db.exec(select(Project).where(Project.id == session_obj.project_id)).first()
+        if proj:
+            project_name = proj.name
+            
         template_obj = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
         if template_obj and template_obj.style_config:
             try:
@@ -449,7 +502,7 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
         "no_acta": f"ACT-{session_obj.id:04d}",
         "fecha_documento": formatted_date,
         "idioma": getattr(session_obj, "language", "Español"),
-        "proyecto": "General" if not hasattr(session_obj, 'project_id') or not session_obj.project_id else f"Proyecto {session_obj.project_id}",
+        "proyecto": project_name,
         "asistentes": attendees,
         "contexto_antecedentes": clean_summary,
         "decisiones": session_obj.processed_decisions or "",

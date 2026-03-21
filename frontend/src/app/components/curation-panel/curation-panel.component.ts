@@ -61,6 +61,7 @@ export class CurationPanelComponent implements OnInit {
   isEditingTitle = false;
   isDispatchingEmails = false;
   isDispatchingPlatforms = false;
+  isFetchingSummary = false;
   isRegeneratingFields = false;
   saveStatusMessage = '';
   projects: any[] = [];
@@ -328,7 +329,6 @@ export class CurationPanelComponent implements OnInit {
         this.isRegeneratingFields = false;
         this.showSaveMessage('Campos regenerados correctamente.');
         if (res.fields) {
-          this.meetingData.raw_summary = res.fields.raw_summary;
           this.meetingData.processed_decisions = res.fields.processed_decisions;
           this.meetingData.processed_risks = res.fields.processed_risks;
           this.meetingData.processed_agreements = res.fields.processed_agreements;
@@ -339,6 +339,33 @@ export class CurationPanelComponent implements OnInit {
         this.isRegeneratingFields = false;
         console.error('Error regenerating fields', err);
         this.showSaveMessage('Error al sugerir los campos con IA.', true);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  fetchSummaryFromAPI() {
+    this.isFetchingSummary = true;
+    this.showSaveMessage('Obteniendo resumen ejecutivo original...');
+    this.cdr.detectChanges();
+    
+    const headers = this.authService.getAuthHeaders();
+    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/fetch_summary`, {}, { headers }).subscribe({
+      next: (res: any) => {
+        this.isFetchingSummary = false;
+        if (res.summary) {
+          this.meetingData.raw_summary = res.summary;
+          this.showSaveMessage('Resumen ejecutivo recuperado exitosamente.');
+        } else {
+          this.showSaveMessage('No se detectó resumen ejecutivo disponible.', true);
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isFetchingSummary = false;
+        console.error('Error fetching executive summary', err);
+        const detailMessage = err.error && err.error.detail ? err.error.detail : 'Error al obtener resumen ejecutivo desde el API.';
+        this.showSaveMessage(detailMessage, true);
         this.cdr.detectChanges();
       }
     });

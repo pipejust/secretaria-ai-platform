@@ -31,7 +31,7 @@ export class ProjectsComponent implements OnInit {
     managingContactsForProject: any = null;
     projectContacts: any[] = [];
     isLoadingContacts = false;
-    newContact = { name: '', email: '', role: '', phone: '' };
+    newContact = { name: '', email: '', role: '', phone: '', entity: '' };
     isAddingContact = false;
     isDeletingContactId: number | null = null;
 
@@ -235,7 +235,7 @@ export class ProjectsComponent implements OnInit {
     closeContacts() {
         this.managingContactsForProject = null;
         this.projectContacts = [];
-        this.newContact = { name: '', email: '', role: '', phone: '' };
+        this.newContact = { name: '', email: '', role: '', phone: '', entity: '' };
         this.errorMsg = '';
         this.successMsg = '';
     }
@@ -267,13 +267,14 @@ export class ProjectsComponent implements OnInit {
             name: this.newContact.name,
             email: this.newContact.email,
             role: this.newContact.role,
-            phone: this.newContact.phone
+            phone: this.newContact.phone,
+            entity: this.newContact.entity || null
         };
 
         this.http.post<any>(`${environment.apiUrl}/api/projects/${this.managingContactsForProject.id}/contacts`, payload).subscribe({
             next: (data) => {
                 this.projectContacts.push(data);
-                this.newContact = { name: '', email: '', role: '', phone: '' };
+                this.newContact = { name: '', email: '', role: '', phone: '', entity: '' };
                 this.isAddingContact = false;
                 this.successMsg = 'Contacto agregado exitosamente';
                 this.cdr.detectChanges();

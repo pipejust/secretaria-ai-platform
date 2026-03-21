@@ -39,6 +39,7 @@ class ProjectContact(SQLModel, table=True):
     email: str
     role: str
     phone: Optional[str] = Field(default=None)
+    entity: Optional[str] = Field(default=None)
 
     project: Optional[Project] = Relationship(back_populates="contacts")
 
