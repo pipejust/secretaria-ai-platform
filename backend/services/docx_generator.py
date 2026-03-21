@@ -212,6 +212,26 @@ class CorporateDocxGenerator:
                 row.cells[i].text = str(val) if val else ""
                 row.cells[i].paragraphs[0].style = 'estilo_texto_tabla'
 
+    def _parsear_texto_markdown(self, texto: str):
+        if not texto:
+            return
+        lineas = texto.split('\n')
+        for linea in lineas:
+            linea_str = linea.strip()
+            if not linea_str:
+                self.doc.add_paragraph("", style='estilo_texto_base')
+                continue
+            
+            if linea_str.startswith("### "):
+                p = self.doc.add_paragraph(linea_str[4:], style='estilo_texto_base')
+                if p.runs:
+                    p.runs[0].bold = True
+            elif linea_str.startswith("- ") or linea_str.startswith("* "):
+                p = self.doc.add_paragraph("• " + linea_str[2:], style='estilo_texto_base')
+                p.paragraph_format.left_indent = Cm(0.6)
+            else:
+                self.doc.add_paragraph(linea_str, style='estilo_texto_base')
+
     def construir_secciones_restantes(self):
         # Asistentes
         asistentes = self.data.get("asistentes", [])
@@ -225,17 +245,17 @@ class CorporateDocxGenerator:
         summary = self.data.get("contexto_antecedentes", "")
         if summary:
             self.agregar_barra_seccion("3. RESUMEN EJECUTIVO / CONTEXTO")
-            self.doc.add_paragraph(summary, style='estilo_texto_base')
+            self._parsear_texto_markdown(summary)
 
         decisiones = self.data.get("decisiones", "")
         if decisiones:
             self.agregar_barra_seccion("4. DECISIONES Y DEFINICIONES")
-            self.doc.add_paragraph(decisiones, style='estilo_texto_base')
+            self._parsear_texto_markdown(decisiones)
 
         riesgos = self.data.get("riesgos", "")
         if riesgos:
             self.agregar_barra_seccion("5. RIESGOS Y ALERTAS CLAVE")
-            self.doc.add_paragraph(riesgos, style='estilo_texto_base')
+            self._parsear_texto_markdown(riesgos)
 
         # Compromisos / Tareas (Action Items)
         action_items = self.data.get("compromisos", [])

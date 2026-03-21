@@ -141,6 +141,30 @@ class CorporatePDFGenerator(FPDF):
         self.cell(0, 6, f"Fecha: {self.data.get('fecha_documento', '')}", ln=1)
         self.ln(5)
         
+    def _parsear_texto_markdown(self, texto: str):
+        if not texto:
+            return
+        lineas = texto.split('\n')
+        for linea in lineas:
+            linea_str = linea.strip()
+            if not linea_str:
+                self.ln(2)
+                continue
+            
+            if linea_str.startswith("### "):
+                self.set_font('helvetica', 'B', 10)
+                self.multi_cell(0, 5, linea_str[4:])
+                self.set_font('helvetica', '', 10)
+                self.ln(1)
+            elif linea_str.startswith("- ") or linea_str.startswith("* "):
+                original_x = self.get_x()
+                self.set_x(original_x + 5)
+                # Usamos un guión normal para evitar errores de encoding latin-1
+                self.multi_cell(0, 5, "- " + linea_str[2:])
+                self.set_x(original_x)
+            else:
+                self.multi_cell(0, 5, linea_str)
+                
         # Identificacion
         self.add_section_bar("1. IDENTIFICACION GENERAL")
         self.add_kv_table([
@@ -161,17 +185,17 @@ class CorporatePDFGenerator(FPDF):
             self.add_section_bar("3. RESUMEN EJECUTIVO / CONTEXTO")
             self.set_font('helvetica', '', 10)
             self.set_text_color(17, 17, 17)
-            self.multi_cell(0, 5, summary)
+            self._parsear_texto_markdown(summary)
 
         decisiones = self.data.get("decisiones", "").encode('latin-1', 'replace').decode('latin-1')
         if decisiones:
             self.add_section_bar("4. DECISIONES Y DEFINICIONES")
-            self.multi_cell(0, 5, decisiones)
+            self._parsear_texto_markdown(decisiones)
 
         riesgos = self.data.get("riesgos", "").encode('latin-1', 'replace').decode('latin-1')
         if riesgos:
             self.add_section_bar("5. RIESGOS Y ALERTAS CLAVE")
-            self.multi_cell(0, 5, riesgos)
+            self._parsear_texto_markdown(riesgos)
 
         action_items = self.data.get("compromisos", [])
         if action_items:
