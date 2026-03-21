@@ -94,8 +94,10 @@ class WordGeneratorService:
                     if line.startswith("- "):
                         line = line[2:]
                         bullet = True
-                    p = final_doc.add_paragraph(style='List Bullet' if bullet else 'Normal')
-                    run = p.add_run(line)
+                        
+                    p = final_doc.add_paragraph()
+                    text_to_add = f"• {line}" if bullet else line
+                    run = p.add_run(text_to_add)
                     run.font.name = font_family
                     run.font.size = Pt(font_size)
                     p.paragraph_format.space_after = Pt(4)
