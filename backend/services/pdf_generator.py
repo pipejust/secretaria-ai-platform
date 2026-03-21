@@ -156,6 +156,16 @@ class CorporatePDFGenerator(FPDF):
                 self.multi_cell(0, 5, linea_str[4:].replace("**", "").replace("__", ""))
                 self.set_font('helvetica', '', 10)
                 self.ln(1)
+            elif linea_str.startswith("## "):
+                self.set_font('helvetica', 'B', 10)
+                self.multi_cell(0, 5, linea_str[3:].replace("**", "").replace("__", ""))
+                self.set_font('helvetica', '', 10)
+                self.ln(1)
+            elif linea_str.startswith("# "):
+                self.set_font('helvetica', 'B', 10)
+                self.multi_cell(0, 5, linea_str[2:].replace("**", "").replace("__", ""))
+                self.set_font('helvetica', '', 10)
+                self.ln(1)
             elif linea_str.startswith("- ") or linea_str.startswith("* "):
                 original_x = self.get_x()
                 self.set_x(original_x + 5)

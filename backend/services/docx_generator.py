@@ -227,6 +227,16 @@ class CorporateDocxGenerator:
                 p = self.doc.add_paragraph(clean_line, style='estilo_texto_base')
                 if p.runs:
                     p.runs[0].bold = True
+            elif linea_str.startswith("## "):
+                clean_line = linea_str[3:].replace("**", "").replace("__", "")
+                p = self.doc.add_paragraph(clean_line, style='estilo_texto_base')
+                if p.runs:
+                    p.runs[0].bold = True
+            elif linea_str.startswith("# "):
+                clean_line = linea_str[2:].replace("**", "").replace("__", "")
+                p = self.doc.add_paragraph(clean_line, style='estilo_texto_base')
+                if p.runs:
+                    p.runs[0].bold = True
             elif linea_str.startswith("- ") or linea_str.startswith("* "):
                 clean_line = linea_str[2:].replace("**", "").replace("__", "")
                 p = self.doc.add_paragraph("• " + clean_line, style='estilo_texto_base')
