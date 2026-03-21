@@ -880,10 +880,8 @@ def export_document(session_id: int, format: str, db: Session = Depends(get_sess
                 pass
 
         pdf_gen = CorporatePDFGenerator(data)
-        pdf_gen.build_document()
-        content = pdf_gen.output(dest='S')
-        if type(content) == str:
-            content = content.encode('latin1')
+        buffer = pdf_gen.generar_buffer()
+        content = buffer.getvalue()
 
         return Response(
             content=content,
