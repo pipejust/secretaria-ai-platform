@@ -21,7 +21,10 @@ def upload_file_to_bucket(bucket_name: str, file_path: str, destination_path: st
             response = supabase.storage.from_(bucket_name).upload(
                 file=f,
                 path=destination_path,
-                file_options={"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+                file_options={
+                    "content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "upsert": "true"
+                }
             )
         except Exception as e:
             import traceback

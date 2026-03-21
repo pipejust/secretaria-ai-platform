@@ -42,8 +42,9 @@ async def upload_template(
         public_url = upload_file_to_bucket("templates", file_path, supabase_path)
         final_file_path = public_url
     except Exception as e:
-        print(f"Advertencia: No se pudo subir a Supabase. Se usará ruta local. Error: {e}")
-        final_file_path = file_path
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar la plantilla en la nube: {e}")
         
     actual_name = name if name else file.filename
     template_record = Template(
@@ -90,8 +91,9 @@ async def update_template(
             public_url = upload_file_to_bucket("templates", file_path, supabase_path)
             update_data["file_path"] = public_url
         except Exception as e:
-            print(f"Advertencia: No se pudo subir a Supabase. Se usará ruta local. Error: {e}")
-            update_data["file_path"] = file_path
+            import traceback
+            print(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=f"No se pudo reemplazar la plantilla en la nube publicamente: {e}")
 
     crud.template.update(db, db_obj=template, obj_in=update_data)
     
