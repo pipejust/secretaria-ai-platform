@@ -46,6 +46,17 @@ class CorporatePDFGenerator(FPDF):
         except Exception:
             return default_rgb
 
+    def _apply_text_theme(self, size_offset=0):
+        theme = self.data.get("theme") or {}
+        r, g, b = self._get_color(theme.get("textColor", "#111111"), (17, 17, 17))
+        self.set_text_color(r, g, b)
+        
+        try:
+            base_size = int(theme.get("fontSize", 10))
+        except:
+            base_size = 10
+        return base_size + size_offset
+
     def add_section_bar(self, title):
         self.ln(5)
         theme = self.data.get("theme") or {}
@@ -58,8 +69,8 @@ class CorporatePDFGenerator(FPDF):
         self.ln(3)
 
     def add_kv_table(self, rows):
-        self.set_font('helvetica', '', 9)
-        self.set_text_color(17, 17, 17)
+        base_size = self._apply_text_theme()
+        self.set_font('helvetica', '', base_size - 1)
         self.set_draw_color(128, 128, 128)
         self.set_line_width(0.2)
         
@@ -67,29 +78,29 @@ class CorporatePDFGenerator(FPDF):
         for row in rows:
             if len(row) == 2:
                 # Merge last 3 columns for v1
-                self.set_font('helvetica', 'B', 9)
+                self.set_font('helvetica', 'B', base_size - 1)
                 self.cell(col_w[0], 7, row[0], border=1)
-                self.set_font('helvetica', '', 9)
+                self.set_font('helvetica', '', base_size - 1)
                 safe_v = str(row[1]).encode('latin-1', 'replace').decode('latin-1')[:110]
                 self.cell(col_w[1] + col_w[2] + col_w[3], 7, safe_v, border=1, ln=1)
             else:
                 l1, v1, l2, v2 = row
-                self.set_font('helvetica', 'B', 9)
+                self.set_font('helvetica', 'B', base_size - 1)
                 self.cell(col_w[0], 7, l1, border=1)
-                self.set_font('helvetica', '', 9)
+                self.set_font('helvetica', '', base_size - 1)
                 safe_v1 = str(v1).encode('latin-1', 'replace').decode('latin-1')[:50]
                 self.cell(col_w[1], 7, safe_v1, border=1)
                 
-                self.set_font('helvetica', 'B', 9)
+                self.set_font('helvetica', 'B', base_size - 1)
                 self.cell(col_w[2], 7, l2, border=1)
-                self.set_font('helvetica', '', 9)
+                self.set_font('helvetica', '', base_size - 1)
                 safe_v2 = str(v2).encode('latin-1', 'replace').decode('latin-1')[:50]
                 self.cell(col_w[3], 7, safe_v2, border=1, ln=1)
         self.ln(2)
 
     def add_data_table(self, headers, data_rows, col_widths=None):
+        base_size = self._apply_text_theme()
         self.set_fill_color(217, 217, 217)
-        self.set_text_color(17, 17, 17)
         self.set_draw_color(128, 128, 128)
         self.set_line_width(0.2)
         
@@ -102,10 +113,10 @@ class CorporatePDFGenerator(FPDF):
             with self.table(col_widths=col_widths, text_align="LEFT") as table:
                 header_row = table.row()
                 for header in headers:
-                    self.set_font('helvetica', 'B', 8)
+                    self.set_font('helvetica', 'B', base_size - 2)
                     header_row.cell(header.encode('latin-1', 'replace').decode('latin-1'))
                 
-                self.set_font('helvetica', '', 8)
+                self.set_font('helvetica', '', base_size - 2)
                 for index, item in enumerate(data_rows):
                     data_row = table.row()
                     for i, val in enumerate(item):
@@ -117,12 +128,12 @@ class CorporatePDFGenerator(FPDF):
             return
         except AttributeError:
             # Fallback for old FPDF
-            self.set_font('helvetica', 'B', 8)
+            self.set_font('helvetica', 'B', base_size - 2)
             for i, header in enumerate(headers):
                 self.cell(col_widths[i], 7, header.encode('latin-1', 'replace').decode('latin-1'), border=1, fill=True, align='C')
             self.ln()
             
-            self.set_font('helvetica', '', 8)
+            self.set_font('helvetica', '', base_size - 2)
             for idx, row in enumerate(data_rows):
                 for i, val in enumerate(row):
                     if i == 0 and not val:
@@ -136,6 +147,7 @@ class CorporatePDFGenerator(FPDF):
         if not texto:
             return
         lineas = texto.split('\n')
+        base_size = self._apply_text_theme()
         for linea in lineas:
             linea_str = linea.strip()
             if not linea_str:
