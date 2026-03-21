@@ -1,5 +1,5 @@
 import os
-from docx import Document
+from docxtpl import DocxTemplate
 from typing import Dict, Any
 
 class WordGeneratorService:
@@ -8,42 +8,38 @@ class WordGeneratorService:
         if not os.path.exists(self.templates_dir):
             os.makedirs(self.templates_dir)
 
-    def generate_document(self, template_name: str, meeting_data: Dict[str, Any], output_path: str) -> str:
+    def generate_document(self, template_path: str, meeting_data: Dict[str, Any], output_path: str) -> str:
         """
-        Genera un acta en Word incrustando los datos extraídos por Groq.
-        En un entorno real, usaría una plantilla existente y reemplazaría variables (ej {{Resumen}}).
-        Por simplicidad del Agente, crearemos un documento desde cero estructurándolo.
+        Genera un acta en Word incrustando los datos extraídos en la plantilla seleccionada.
         """
-        # Si hubiera plantilla usaríamos: doc = Document(f"{self.templates_dir}/{template_name}.docx")
-        doc = Document()
+        local_template_path = template_path
+        if template_path.startswith("http://") or template_path.startswith("https://"):
+            local_template_path = f"/tmp/{os.path.basename(template_path)}"
+            if not os.path.exists(local_template_path):
+                import urllib.request
+                try:
+                    urllib.request.urlretrieve(template_path, local_template_path)
+                except Exception as e:
+                    raise Exception(f"Failed to download remote template from {template_path}: {e}")
         
-        # Título
-        doc.add_heading(f"Acta de Reunión: {meeting_data.get('title', 'Sin Título')}", 0)
-        
-        doc.add_heading("Resumen Ejecutivo", level=1)
-        doc.add_paragraph(meeting_data.get("summary", "Sin resumen"))
-        
-        doc.add_heading("Decisiones Clave", level=1)
-        doc.add_paragraph(meeting_data.get("decisions", "Ninguna decisión registrada"))
-        
-        doc.add_heading("Riesgos Identificados", level=1)
-        doc.add_paragraph(meeting_data.get("risks", "Ningún riesgo detectado"))
-        
-        doc.add_heading("Acuerdos", level=1)
-        doc.add_paragraph(meeting_data.get("agreements", "Ningún acuerdo"))
-        
-        doc.add_heading("Tareas y Compromisos (Action Items)", level=1)
-        
-        items = meeting_data.get("action_items", [])
-        if items:
-            for item in items:
-                p = doc.add_paragraph(style='List Bullet')
-                p.add_run(f"{item['title']} - {item['owner_name']} ").bold = True
-                p.add_run(f"(Vence: {item.get('due_date', 'N/A')})\n")
-                p.add_run(item.get("description", ""))
-        else:
-            doc.add_paragraph("No se detectaron tareas.")
+        if not os.path.exists(local_template_path):
+            raise FileNotFoundError(f"No se encontró la plantilla en {local_template_path}")
+
+        try:
+            doc = DocxTemplate(local_template_path)
+        except Exception as e:
+            raise Exception(f"La plantilla proporcionada no es un documento Word (.docx) válido o está corrupta. Error: {e}")
             
-        # Guardar Documento
+        context = {
+            "title": meeting_data.get("title", "Sin Título"),
+            "date": meeting_data.get("date", ""),
+            "summary": meeting_data.get("summary", "Sin resumen"),
+            "decisions": meeting_data.get("decisions", "Ninguna decisión registrada"),
+            "risks": meeting_data.get("risks", "Ningún riesgo detectado"),
+            "agreements": meeting_data.get("agreements", "Ningún acuerdo"),
+            "action_items": meeting_data.get("action_items", [])
+        }
+        
+        doc.render(context)
         doc.save(output_path)
         return output_path

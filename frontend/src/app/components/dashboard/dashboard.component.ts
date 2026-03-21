@@ -227,24 +227,24 @@ export class DashboardComponent implements OnInit {
         });
     }
 
-    generateActa(session: any) {
-        // Enforce the headers and get the blob stream directly from Dashboard
+    generateActa(session: any, format: 'word' | 'pdf' = 'word') {
         const headers = this.authService.getAuthHeaders();
-        this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/word`, { headers, responseType: 'blob' }).subscribe({
+        this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/${format}`, { headers, responseType: 'blob' }).subscribe({
             next: (blob: Blob) => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 const safeTitle = (session.title || 'Sesion').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-                a.download = `Sesion_${session.id}_${safeTitle}.docx`;
+                const ext = format === 'word' ? 'docx' : 'pdf';
+                a.download = `Sesion_${session.id}_${safeTitle}.${ext}`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
             },
             error: (err) => {
-                console.error('Error generando documento', err);
-                alert('Error descargando el documento. Asegúrese de tener conexión.');
+                console.error(`Error generando documento ${format}`, err);
+                alert(`Error descargando el documento ${format.toUpperCase()}. Asegúrese de tener conexión.`);
             }
         });
     }

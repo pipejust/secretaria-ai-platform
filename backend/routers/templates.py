@@ -157,6 +157,7 @@ def generate_document_from_template(
     # Reconstruir meeting_data a partir del MeetingSession para el WordGenerator
     meeting_data = {
         "title": session.title,
+        "date": session.date.strftime("%d/%m/%Y") if session.date else "",
         "summary": session.raw_summary,
         "decisions": session.processed_decisions,
         "risks": session.processed_risks,
@@ -178,7 +179,7 @@ def generate_document_from_template(
     
     try:
         generated_path = generator.generate_document(
-            template_name=template.name, 
+            template_path=template.file_path, 
             meeting_data=meeting_data, 
             output_path=output_path
         )
