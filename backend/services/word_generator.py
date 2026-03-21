@@ -44,7 +44,7 @@ class WordGeneratorService:
         doc.save(output_path)
         
         # Post-process: Append visual builder blocks if present
-        mapping_config = meeting_data.get("mapping_config", [])
+        mapping_config = meeting_data.get("mapping_config") or []
         if mapping_config:
             import docx
             from docx.shared import Pt, RGBColor
@@ -52,7 +52,7 @@ class WordGeneratorService:
             
             final_doc = docx.Document(output_path)
             
-            theme = meeting_data.get("theme", {})
+            theme = meeting_data.get("theme") or {}
             font_family = theme.get("fontFamily", "Arial")
             try:
                 font_size = int(theme.get("fontSize", 10))
