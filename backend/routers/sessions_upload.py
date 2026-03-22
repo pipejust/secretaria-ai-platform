@@ -545,7 +545,8 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
                     mapping_config = json.loads(template_obj.mapping_config)
                 except Exception:
                     pass
-
+            template_path = getattr(template_obj, "file_path", None)
+                    
     return {
         "entidad_principal": "Notiva",
         "entidad_secundaria": "Gestión Integral de Sesiones",
@@ -564,7 +565,8 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
         "agreements": session_obj.processed_agreements or "",
         "compromisos": formatted_items,
         "theme": theme,
-        "mapping_config": mapping_config
+        "mapping_config": mapping_config,
+        "template_path": template_path if 'template_path' in locals() else None
     }
 
 def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.BytesIO:
@@ -899,6 +901,9 @@ def export_document(session_id: int, format: str, db: Session = Depends(get_sess
                 data["theme"] = json.loads(template.style_config)
             except:
                 pass
+                
+        if template and template.file_path:
+            data["template_path"] = template.file_path
 
         pdf_gen = CorporatePDFGenerator(data)
         buffer = pdf_gen.generar_buffer()
