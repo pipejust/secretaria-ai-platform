@@ -7,10 +7,60 @@ class CorporatePDFGenerator(FPDF):
         super().__init__(orientation='P', unit='mm', format='A4')
         self.data = data
         self.set_auto_page_break(auto=True, margin=15)
+        
+        self.header_img = None
+        self.footer_img = None
+        
+        template_path = data.get("template_path")
+        if template_path:
+            self._extract_template_images(template_path)
+            
         self.add_page()
         
+    def _extract_template_images(self, docx_path):
+        import zipfile
+        import os
+        
+        if not docx_path or not os.path.exists(docx_path):
+            return
+            
+        try:
+            with zipfile.ZipFile(docx_path, 'r') as z:
+                images = [n for n in z.namelist() if n.startswith('word/media/image')]
+                images.sort()
+                
+                if len(images) > 0:
+                    ext = images[0].split('.')[-1]
+                    out_path = f"/tmp/fpdf_hdr_{os.path.basename(docx_path)}.{ext}"
+                    with open(out_path, 'wb') as f:
+                        f.write(z.read(images[0]))
+                    self.header_img = out_path
+                    
+                if len(images) > 1:
+                    ext = images[1].split('.')[-1]
+                    out_path = f"/tmp/fpdf_ftr_{os.path.basename(docx_path)}.{ext}"
+                    with open(out_path, 'wb') as f:
+                        f.write(z.read(images[1]))
+                    self.footer_img = out_path
+        except Exception as e:
+            print("Could not extract pdf bg images:", e)
+        
     def header(self):
-        # 3 columns header like DOCX
+        if self.header_img:
+            try:
+                from PIL import Image
+                with Image.open(self.header_img) as img:
+                    w, h = img.size
+                    ratio = h / w
+                    h_mm = 210 * ratio
+                self.image(self.header_img, x=0, y=0, w=210, h=h_mm)
+                # Adjust Y so text starts below the image banner
+                self.set_y(h_mm + 5)
+                return
+            except Exception:
+                pass
+                
+        # Fallback text header
         self.set_font('helvetica', 'B', 8)
         self.set_text_color(122, 122, 122)
         
@@ -19,9 +69,6 @@ class CorporatePDFGenerator(FPDF):
         self.cell(60, 4, self.data.get("entidad_principal", "Notiva")[:40], ln=1)
         self.set_x(10)
         self.cell(60, 4, self.data.get("entidad_secundaria", "Gestión Integral")[:40], ln=0)
-        
-        self.set_xy(75, 10)
-        self.cell(60, 8, "", align='C')
         
         self.set_xy(140, 10)
         self.set_font('helvetica', 'B', 10)
@@ -33,6 +80,18 @@ class CorporatePDFGenerator(FPDF):
         self.ln(15)
 
     def footer(self):
+        if self.footer_img:
+            try:
+                from PIL import Image
+                with Image.open(self.footer_img) as img:
+                    w, h = img.size
+                    ratio = h / w
+                    h_mm = 210 * ratio
+                self.image(self.footer_img, x=0, y=297-h_mm, w=210, h=h_mm)
+                return
+            except Exception:
+                pass
+                
         self.set_y(-15)
         self.set_font('helvetica', '', 8)
         self.set_text_color(122, 122, 122)
@@ -109,12 +168,13 @@ class CorporatePDFGenerator(FPDF):
             col_widths = [w] * len(headers)
             
         theme = self.data.get("theme") or {}
-        r, g, b = self._get_color(theme.get("headingColor", "#C62828"), (198, 40, 40))
+        r, g, b = self._get_color(theme.get("tableHeaderBg", "#D9D9D9"), (217, 217, 217))
+        tc_r, tc_g, tc_b = self._get_color(theme.get("tableHeaderTextColor", "#111111"), (17, 17, 17))
         
         try:
             # Requires fpdf2>=2.8.0
             from fpdf.fonts import FontFace
-            headings_style = FontFace(fill_color=(r, g, b), color=(255, 255, 255))
+            headings_style = FontFace(fill_color=(r, g, b), color=(tc_r, tc_g, tc_b))
             
             with self.table(col_widths=col_widths, text_align="LEFT", headings_style=headings_style) as table:
                 header_row = table.row()
@@ -135,7 +195,7 @@ class CorporatePDFGenerator(FPDF):
         except AttributeError:
             # Fallback for old FPDF
             self.set_fill_color(r, g, b)
-            self.set_text_color(255, 255, 255)
+            self.set_text_color(tc_r, tc_g, tc_b)
             self.set_font('helvetica', 'B', base_size - 2)
             for i, header in enumerate(headers):
                 self.cell(col_widths[i], 7, header.encode('latin-1', 'replace').decode('latin-1'), border=1, fill=True, align='C')

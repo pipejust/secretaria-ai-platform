@@ -71,6 +71,13 @@ class WordGeneratorService:
             if len(heading_color_hex) != 6:
                 heading_color_hex = "1e293b"
                 
+            table_bg = str(theme.get("tableHeaderBg", "D9D9D9")).lstrip("#")
+            if len(table_bg) != 6: table_bg = "D9D9D9"
+            
+            table_tc = str(theme.get("tableHeaderTextColor", "111111")).lstrip("#")
+            if len(table_tc) != 6: table_tc = "111111"
+            tc_r, tc_g, tc_b = int(table_tc[0:2], 16), int(table_tc[2:4], 16), int(table_tc[4:6], 16)
+            
             hc_r = int(heading_color_hex[0:2], 16)
             hc_g = int(heading_color_hex[2:4], 16)
             hc_b = int(heading_color_hex[4:6], 16)
@@ -132,12 +139,12 @@ class WordGeneratorService:
                 # Header
                 for i, header in enumerate(headers):
                     cell = table.cell(0, i)
-                    set_cell_background_color(cell, heading_color_hex)
+                    set_cell_background_color(cell, table_bg)
                     p = cell.paragraphs[0]
                     run = p.add_run(header)
                     run.bold = True
                     run.font.name = font_family
-                    run.font.color.rgb = RGBColor(255, 255, 255)
+                    run.font.color.rgb = RGBColor(tc_r, tc_g, tc_b)
                     run.font.size = Pt(font_size - 1)
                     
                 # Data
