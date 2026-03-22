@@ -814,108 +814,116 @@ def export_document(session_id: int, format: str, db: Session = Depends(get_sess
 
     safe_title = (session_obj.title or "Reunion").replace(" ", "_").replace("/", "").replace("\\", "")[:30]
 
-    if format == 'word':
-        if template and template.file_path:
-            from services.word_generator import WordGeneratorService
-            generator = WordGeneratorService()
-            
-            # Format date gracefully
-            formatted_date = ""
-            if session_obj.date:
-                try:
-                    import datetime
-                    if str(session_obj.date).isdigit():
-                        dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
-                        formatted_date = dt.strftime("%d/%m/%Y")
-                    elif "T" in str(session_obj.date):
-                        formatted_date = str(session_obj.date).split("T")[0]
-                    else:
-                        formatted_date = str(session_obj.date)
-                except Exception:
-                    formatted_date = str(session_obj.date)
-            
-            meeting_data = {
-                "title": session_obj.title,
-                "date": formatted_date,
-                "summary": session_obj.raw_summary,
-                "decisions": session_obj.processed_decisions,
-                "risks": session_obj.processed_risks,
-                "agreements": session_obj.processed_agreements,
-                "action_items": [],
-                "contexto_antecedentes": session_obj.raw_summary,
-                "decisiones": session_obj.processed_decisions,
-                "riesgos": session_obj.processed_risks,
-                "compromisos": __build_corporate_data(session_obj, action_items, db).get("compromisos", []),
-                "mapping_config": __build_corporate_data(session_obj, action_items, db).get("mapping_config", []),
-                "theme": __build_corporate_data(session_obj, action_items, db).get("theme", {}),
-                "asistentes": __build_corporate_data(session_obj, action_items, db).get("asistentes", []),
-                "no_acta": __build_corporate_data(session_obj, action_items, db).get("no_acta", ""),
-                "fecha_documento": __build_corporate_data(session_obj, action_items, db).get("fecha_documento", ""),
-                "idioma": __build_corporate_data(session_obj, action_items, db).get("idioma", "Español"),
-                "proyecto": __build_corporate_data(session_obj, action_items, db).get("proyecto", "General"),
-                "subtitulo_documento": __build_corporate_data(session_obj, action_items, db).get("subtitulo_documento", session_obj.title)
-            }
-            for act in action_items:
-                meeting_data["action_items"].append({
-                    "title": act.title,
-                    "owner_name": act.owner_name,
-                    "description": act.description,
-                    "due_date": act.due_date
-                })
+    # Ensure format is supported
+    if format not in ['word', 'pdf']:
+        raise HTTPException(status_code=400, detail="Formato no soportado")
+
+    docx_bytes = None
+    
+    if template and template.file_path:
+        from services.word_generator import WordGeneratorService
+        generator = WordGeneratorService()
+        
+        formatted_date = ""
+        if session_obj.date:
             try:
-                out_path = f"/tmp/Gen_{session_obj.id}.docx"
-                generator.generate_document(template.file_path, meeting_data, out_path)
-                with open(out_path, "rb") as f:
-                    content = f.read()
+                import datetime
+                if str(session_obj.date).isdigit():
+                    dt = datetime.datetime.fromtimestamp(int(session_obj.date) / 1000)
+                    formatted_date = dt.strftime("%d/%m/%Y")
+                elif "T" in str(session_obj.date):
+                    formatted_date = str(session_obj.date).split("T")[0]
+                else:
+                    formatted_date = str(session_obj.date)
+            except Exception:
+                formatted_date = str(session_obj.date)
+        
+        meeting_data = {
+            "title": session_obj.title,
+            "date": formatted_date,
+            "summary": session_obj.raw_summary,
+            "decisions": session_obj.processed_decisions,
+            "risks": session_obj.processed_risks,
+            "agreements": session_obj.processed_agreements,
+            "action_items": [],
+            "contexto_antecedentes": session_obj.raw_summary,
+            "decisiones": session_obj.processed_decisions,
+            "riesgos": session_obj.processed_risks,
+            "compromisos": __build_corporate_data(session_obj, action_items, db).get("compromisos", []),
+            "mapping_config": __build_corporate_data(session_obj, action_items, db).get("mapping_config", []),
+            "theme": __build_corporate_data(session_obj, action_items, db).get("theme", {}),
+            "asistentes": __build_corporate_data(session_obj, action_items, db).get("asistentes", []),
+            "no_acta": __build_corporate_data(session_obj, action_items, db).get("no_acta", ""),
+            "fecha_documento": __build_corporate_data(session_obj, action_items, db).get("fecha_documento", ""),
+            "idioma": __build_corporate_data(session_obj, action_items, db).get("idioma", "Español"),
+            "proyecto": __build_corporate_data(session_obj, action_items, db).get("proyecto", "General"),
+            "subtitulo_documento": __build_corporate_data(session_obj, action_items, db).get("subtitulo_documento", session_obj.title)
+        }
+        for act in action_items:
+            meeting_data["action_items"].append({
+                "title": act.title,
+                "owner_name": act.owner_name,
+                "description": act.description,
+                "due_date": act.due_date
+            })
+            
+        try:
+            out_path = f"/tmp/Gen_{session_obj.id}.docx"
+            generator.generate_document(template.file_path, meeting_data, out_path)
+            with open(out_path, "rb") as f:
+                docx_bytes = f.read()
+        except Exception as e:
+            import traceback
+            print(f"Template DOCX generation failed: {e}\n{traceback.format_exc()}")
+            
+    # Fallback if generation failed or no template exists
+    if docx_bytes is None:
+        buffer = generate_word_document_bytes(session_obj, action_items, db)
+        docx_bytes = buffer.getvalue()
+
+    if format == 'pdf':
+        import requests
+        try:
+            r = requests.post(
+                "https://demo.gotenberg.dev/forms/libreoffice/convert",
+                files={"files": ("acta.docx", docx_bytes)},
+                timeout=60
+            )
+            if r.ok:
+                pdf_bytes = r.content
                 return Response(
-                    content=content,
-                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    content=pdf_bytes,
+                    media_type="application/pdf",
                     headers={
-                        'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.docx"',
+                        'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.pdf"',
                         'Cache-Control': 'no-cache, no-store, must-revalidate'
                     }
                 )
-            except Exception as e:
-                import traceback
-                print(f"Template docxtpl failed: {e}\n{traceback.format_exc()}")
-                # Fallbacks to plain docx below
-
-        # Fallback
-        buffer = generate_word_document_bytes(session_obj, action_items, db)
+            else:
+                print(f"Gotenberg API Error: {r.status_code} {r.text}")
+                # Optional fallback to original PDF engine if Gotenberg fails
+                from services.pdf_generator import CorporatePDFGenerator
+                data = __build_corporate_data(session_obj, action_items, db)
+                if template and template.style_config:
+                    try: data["theme"] = json.loads(template.style_config)
+                    except: pass
+                if template and template.file_path: data["template_path"] = template.file_path
+                return Response(
+                    content=CorporatePDFGenerator(data).generar_buffer().getvalue(),
+                    media_type="application/pdf",
+                    headers={'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.pdf"'}
+                )
+        except Exception as e:
+            print(f"Failed to reach Gotenberg: {e}")
+            raise HTTPException(status_code=500, detail="Error interno al convertir PDF. La API de conversión no responde.")
+            
+    else:
+        # Provide Word format
         return Response(
-            content=buffer.getvalue(),
+            content=docx_bytes,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={
                 'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.docx"',
                 'Cache-Control': 'no-cache, no-store, must-revalidate'
             }
         )
-
-    elif format == 'pdf':
-        from services.pdf_generator import CorporatePDFGenerator
-        data = __build_corporate_data(session_obj, action_items, db)
-        
-        # Override theme if template has style_config
-        if template and template.style_config:
-            try:
-                data["theme"] = json.loads(template.style_config)
-            except:
-                pass
-                
-        if template and template.file_path:
-            data["template_path"] = template.file_path
-
-        pdf_gen = CorporatePDFGenerator(data)
-        buffer = pdf_gen.generar_buffer()
-        content = buffer.getvalue()
-
-        return Response(
-            content=content,
-            media_type="application/pdf",
-            headers={
-                'Content-Disposition': f'attachment; filename="Acta_{session_obj.id}_{safe_title}.pdf"',
-                'Cache-Control': 'no-cache, no-store, must-revalidate'
-            }
-        )
-    else:
-        raise HTTPException(status_code=400, detail="Formato no soportado")
