@@ -257,4 +257,69 @@ class WordGeneratorService:
                         
             final_doc.save(output_path)
             
+        theme = meeting_data.get("theme") or {}
+        self._repaint_static_docx_headers(output_path, theme)
         return output_path
+
+    def _repaint_static_docx_headers(self, doc_path: str, theme: dict):
+        from docx import Document
+        from docx.shared import RGBColor
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+        
+        bg_hex = str(theme.get("headingColor", "000000")).lstrip("#")
+        if len(bg_hex) != 6: bg_hex = "000000"
+        
+        text_hex = str(theme.get("headingTextColor", "FFFFFF")).lstrip("#")
+        if len(text_hex) != 6: text_hex = "FFFFFF"
+        
+        try:
+            t_r, t_g, t_b = int(text_hex[0:2], 16), int(text_hex[2:4], 16), int(text_hex[4:6], 16)
+        except Exception:
+            t_r, t_g, t_b = 255, 255, 255
+            
+        try:
+            doc = Document(doc_path)
+        except Exception:
+            return
+            
+        targets = [
+            "IDENTIFICACIÓN GENERAL",
+            "IDENTIFICACION GENERAL",
+            "RESUMEN EJECUTIVO / CONTEXTO",
+            "RESUMEN EJECUTIVO",
+            "LISTA DE ASISTENTES",
+            "DECISIONES CLAVE",
+            "RIESGOS IDENTIFICADOS",
+            "ACUERDOS Y TEMAS",
+            "TAREAS Y COMPROMISOS"
+        ]
+        
+        def set_bg(cell, color):
+            tc = cell._tc
+            tcPr = tc.get_or_add_tcPr()
+            shd = tcPr.first_child_found_in("w:shd")
+            if shd is None:
+                shd = OxmlElement('w:shd')
+                tcPr.append(shd)
+            shd.set(qn('w:val'), 'clear')
+            shd.set(qn('w:color'), 'auto')
+            shd.set(qn('w:fill'), color)
+
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    try:
+                        text_val = cell.text.strip().upper()
+                        # Allow partial matches as long as the exact user phrase is in the cell
+                        if any(t in text_val for t in targets):
+                            set_bg(cell, bg_hex)
+                            for p in cell.paragraphs:
+                                for run in p.runs:
+                                    run.font.color.rgb = RGBColor(t_r, t_g, t_b)
+                    except Exception:
+                        pass
+        try:
+            doc.save(doc_path)
+        except Exception:
+            pass
