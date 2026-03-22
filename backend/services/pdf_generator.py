@@ -108,9 +108,15 @@ class CorporatePDFGenerator(FPDF):
             w = 190 / len(headers)
             col_widths = [w] * len(headers)
             
+        theme = self.data.get("theme") or {}
+        r, g, b = self._get_color(theme.get("headingColor", "#C62828"), (198, 40, 40))
+        
         try:
             # Requires fpdf2>=2.8.0
-            with self.table(col_widths=col_widths, text_align="LEFT") as table:
+            from fpdf.fonts import FontFace
+            headings_style = FontFace(fill_color=(r, g, b), color=(255, 255, 255))
+            
+            with self.table(col_widths=col_widths, text_align="LEFT", headings_style=headings_style) as table:
                 header_row = table.row()
                 for header in headers:
                     self.set_font('helvetica', 'B', base_size - 2)
@@ -128,10 +134,14 @@ class CorporatePDFGenerator(FPDF):
             return
         except AttributeError:
             # Fallback for old FPDF
+            self.set_fill_color(r, g, b)
+            self.set_text_color(255, 255, 255)
             self.set_font('helvetica', 'B', base_size - 2)
             for i, header in enumerate(headers):
                 self.cell(col_widths[i], 7, header.encode('latin-1', 'replace').decode('latin-1'), border=1, fill=True, align='C')
             self.ln()
+            
+            self._apply_text_theme()
             
             self.set_font('helvetica', '', base_size - 2)
             for idx, row in enumerate(data_rows):

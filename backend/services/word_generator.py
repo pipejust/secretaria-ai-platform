@@ -132,11 +132,12 @@ class WordGeneratorService:
                 # Header
                 for i, header in enumerate(headers):
                     cell = table.cell(0, i)
-                    set_cell_background_color(cell, "D9D9D9")
+                    set_cell_background_color(cell, heading_color_hex)
                     p = cell.paragraphs[0]
                     run = p.add_run(header)
                     run.bold = True
                     run.font.name = font_family
+                    run.font.color.rgb = RGBColor(255, 255, 255)
                     run.font.size = Pt(font_size - 1)
                     
                 # Data
