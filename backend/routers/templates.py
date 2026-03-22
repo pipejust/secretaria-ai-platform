@@ -8,6 +8,15 @@ from database import get_session
 from models import User, Template
 from routers.auth import require_admin
 import crud
+import unicodedata
+import re
+
+def sanitize_filename(filename: str) -> str:
+    """Removes special characters and spaces for Supabase Storage compatibility."""
+    # Remove accents
+    normalized = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore').decode('utf-8')
+    # Replace non-alphanumeric (except dots and dashes) with underscores
+    return re.sub(r'[^a-zA-Z0-9_.-]', '_', normalized)
 
 router = APIRouter(prefix="/templates", tags=["Gestión de Plantillas"])
 UPLOAD_DIR = "uploads/templates"
@@ -38,7 +47,8 @@ async def upload_template(
     try:
         from services.supabase_service import upload_file_to_bucket
         # Subir a Supabase bucket 'templates'
-        supabase_path = f"project_{project_id}/{file.filename}"
+        safe_filename = sanitize_filename(file.filename)
+        supabase_path = f"project_{project_id}/{safe_filename}"
         public_url = upload_file_to_bucket("templates", file_path, supabase_path)
         final_file_path = public_url
     except Exception as e:
@@ -87,7 +97,8 @@ async def update_template(
             
         try:
             from services.supabase_service import upload_file_to_bucket
-            supabase_path = f"project_{project_id}/{file.filename}"
+            safe_filename = sanitize_filename(file.filename)
+            supabase_path = f"project_{project_id}/{safe_filename}"
             public_url = upload_file_to_bucket("templates", file_path, supabase_path)
             update_data["file_path"] = public_url
         except Exception as e:
