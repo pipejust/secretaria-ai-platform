@@ -45,7 +45,6 @@ export class TemplatesComponent implements OnInit {
         { id: 'meta', label: 'Cabecera (Título, Fecha, Estado)' },
         { id: 'summary', label: 'Resumen Ejecutivo' },
         { id: 'attendees', label: 'Lista de Asistentes' },
-        { id: 'themes', label: 'Temas y Puntos de Discusión' },
         { id: 'decisions', label: 'Decisiones Clave' },
         { id: 'risks', label: 'Riesgos Identificados' },
         { id: 'agreements', label: 'Acuerdos' },
@@ -218,7 +217,7 @@ export class TemplatesComponent implements OnInit {
             if (template.mapping_config) {
                 const parsed = JSON.parse(template.mapping_config);
                 if (Array.isArray(parsed)) {
-                    loadedMapping = parsed;
+                    loadedMapping = parsed.filter((id: string) => id !== 'themes');
                 }
             }
         } catch (e) {
