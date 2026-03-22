@@ -117,14 +117,25 @@ class CorporatePDFGenerator(FPDF):
         return base_size + size_offset
 
     def add_section_bar(self, title):
-        self.ln(5)
         theme = self.data.get("theme") or {}
+        
+        try:
+            heading_margin = float(theme.get("headingMargin", 10))
+        except:
+            heading_margin = 10.0
+            
+        self.ln(heading_margin / 2)
+        
         r, g, b = self._get_color(theme.get("headingColor", "#C62828"), (198, 40, 40))
+        tc_r, tc_g, tc_b = self._get_color(theme.get("headingTextColor", "#FFFFFF"), (255, 255, 255))
+        
         self.set_fill_color(r, g, b)
         
-        self.set_text_color(255, 255, 255)
+        self.set_text_color(tc_r, tc_g, tc_b)
         self.set_font('helvetica', 'B', 10)
         self.cell(0, 8, f"  {title.upper()}", fill=True, ln=1)
+        
+        self.ln(heading_margin / 2)
         self.ln(3)
 
     def add_kv_table(self, rows):

@@ -196,12 +196,13 @@ export class TemplatesComponent implements OnInit {
     }
 
     lastUploadedTemplateId: number | null = null;
-    
     styleConfig = {
         fontFamily: 'Arial',
         fontSize: '11',
         textColor: '#000000',
         headingColor: '#000000',
+        headingTextColor: '#FFFFFF',
+        headingMargin: 10,
         tableHeaderBg: '#EFEFEF',
         tableHeaderTextColor: '#000000'
     };

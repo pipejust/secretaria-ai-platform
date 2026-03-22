@@ -78,6 +78,15 @@ class WordGeneratorService:
             if len(table_tc) != 6: table_tc = "111111"
             tc_r, tc_g, tc_b = int(table_tc[0:2], 16), int(table_tc[2:4], 16), int(table_tc[4:6], 16)
             
+            htc_hex = str(theme.get("headingTextColor", "FFFFFF")).lstrip("#")
+            if len(htc_hex) != 6: htc_hex = "FFFFFF"
+            htc_r, htc_g, htc_b = int(htc_hex[0:2], 16), int(htc_hex[2:4], 16), int(htc_hex[4:6], 16)
+            
+            try:
+                heading_margin = float(theme.get("headingMargin", 10))
+            except:
+                heading_margin = 10.0
+            
             hc_r = int(heading_color_hex[0:2], 16)
             hc_g = int(heading_color_hex[2:4], 16)
             hc_b = int(heading_color_hex[4:6], 16)
@@ -85,6 +94,10 @@ class WordGeneratorService:
             from services.docx_table_utils import set_cell_background_color, set_table_borders
             
             def add_custom_heading(text):
+                p_space = final_doc.add_paragraph()
+                p_space.paragraph_format.space_before = Pt(heading_margin)
+                p_space.paragraph_format.space_after = Pt(0)
+                
                 table = final_doc.add_table(rows=1, cols=1)
                 table.autofit = False
                 table.columns[0].width = Cm(16.5)
@@ -107,7 +120,11 @@ class WordGeneratorService:
                 run.bold = True
                 run.font.name = font_family
                 run.font.size = Pt(font_size + 1)
-                run.font.color.rgb = RGBColor(255, 255, 255)
+                run.font.color.rgb = RGBColor(htc_r, htc_g, htc_b)
+                
+                p_space2 = final_doc.add_paragraph()
+                p_space2.paragraph_format.space_before = Pt(heading_margin / 2)
+                p_space2.paragraph_format.space_after = Pt(0)
                 
             def add_custom_paragraph(text, bullet=False):
                 if not text:
