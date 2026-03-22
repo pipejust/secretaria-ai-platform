@@ -298,10 +298,25 @@ class WordGeneratorService:
         def set_bg(cell, color):
             tc = cell._tc
             tcPr = tc.get_or_add_tcPr()
-            shd = tcPr.first_child_found_in("w:shd")
-            if shd is None:
+            shdList = tcPr.xpath('w:shd')
+            if shdList:
+                shd = shdList[0]
+            else:
                 shd = OxmlElement('w:shd')
-                tcPr.append(shd)
+                tags_after = [
+                    'noWrap', 'tcMargin', 'tcTextDir', 'tcFitText',
+                    'vAlign', 'hideMark', 'headers'
+                ]
+                inserted = False
+                for i, child in enumerate(tcPr):
+                    tag_name = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                    if tag_name in tags_after:
+                        tcPr.insert(i, shd)
+                        inserted = True
+                        break
+                if not inserted:
+                    tcPr.append(shd)
+                    
             shd.set(qn('w:val'), 'clear')
             shd.set(qn('w:color'), 'auto')
             shd.set(qn('w:fill'), color)
