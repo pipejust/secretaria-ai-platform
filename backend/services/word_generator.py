@@ -14,8 +14,8 @@ class WordGeneratorService:
         """
         local_template_path = template_path
         if template_path.startswith("http://") or template_path.startswith("https://"):
-            import hashlib
-            safe_name = hashlib.md5(template_path.encode()).hexdigest() + ".docx"
+            import uuid
+            safe_name = str(uuid.uuid4()) + ".docx"
             local_template_path = f"/tmp/{safe_name}"
             if not os.path.exists(local_template_path):
                 import urllib.request
@@ -57,7 +57,7 @@ class WordGeneratorService:
             from docx.shared import Pt, RGBColor, Cm
             from docx.oxml import OxmlElement
             from docx.oxml.ns import qn
-            from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
             
             final_doc = docx.Document(output_path)
             
@@ -85,7 +85,6 @@ class WordGeneratorService:
             from services.docx_table_utils import set_cell_background_color, set_table_borders
             
             def add_custom_heading(text):
-                final_doc.add_paragraph() # Spacing
                 table = final_doc.add_table(rows=1, cols=1)
                 table.autofit = False
                 table.columns[0].width = Cm(16.5)
@@ -109,7 +108,6 @@ class WordGeneratorService:
                 run.font.name = font_family
                 run.font.size = Pt(font_size + 1)
                 run.font.color.rgb = RGBColor(255, 255, 255)
-                final_doc.add_paragraph()
                 
             def add_custom_paragraph(text, bullet=False):
                 if not text:
@@ -124,6 +122,7 @@ class WordGeneratorService:
                         bullet = True
                         
                     p = final_doc.add_paragraph()
+                    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     text_to_add = f"• {line}" if bullet else line
                     run = p.add_run(text_to_add)
                     run.font.name = font_family
@@ -158,7 +157,6 @@ class WordGeneratorService:
                         run = p.add_run(str(val))
                         run.font.name = font_family
                         run.font.size = Pt(font_size - 1)
-                final_doc.add_paragraph()
 
             # Block Appender
             for block in mapping_config:
@@ -176,11 +174,15 @@ class WordGeneratorService:
                     ]
                     for i, (l1, v1, l2, v2) in enumerate(datos):
                         row = table.rows[i]
+                        
+                        set_cell_background_color(row.cells[0], table_bg)
+                        
                         p1 = row.cells[0].paragraphs[0]
                         r1 = p1.add_run(l1)
                         r1.bold = True
                         r1.font.name = font_family
                         r1.font.size = Pt(font_size - 1)
+                        r1.font.color.rgb = RGBColor(tc_r, tc_g, tc_b)
                         
                         p2 = row.cells[1].paragraphs[0]
                         r2 = p2.add_run(v1)
@@ -188,11 +190,13 @@ class WordGeneratorService:
                         r2.font.size = Pt(font_size - 1)
                         
                         if l2:
+                            set_cell_background_color(row.cells[2], table_bg)
                             p3 = row.cells[2].paragraphs[0]
                             r3 = p3.add_run(l2)
                             r3.bold = True
                             r3.font.name = font_family
                             r3.font.size = Pt(font_size - 1)
+                            r3.font.color.rgb = RGBColor(tc_r, tc_g, tc_b)
                             
                             p4 = row.cells[3].paragraphs[0]
                             r4 = p4.add_run(v2)
