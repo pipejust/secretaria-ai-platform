@@ -18,6 +18,7 @@ export class DashboardComponent implements OnInit {
     projects: any[] = [];
     isLoading = false;
     isUploading = false;
+    generatingIds: { [key: string]: boolean } = {};
 
     showUploadModal = false;
     uploadTab: 'audio' | 'text' = 'audio';
@@ -228,6 +229,11 @@ export class DashboardComponent implements OnInit {
     }
 
     generateActa(session: any, format: 'word' | 'pdf' = 'word') {
+        const genKey = `${session.id}_${format}`;
+        if (this.generatingIds[genKey]) return;
+        this.generatingIds[genKey] = true;
+        this.cdr.detectChanges();
+        
         const headers = this.authService.getAuthHeaders();
         this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/${format}`, { headers, responseType: 'blob' }).subscribe({
             next: (blob: Blob) => {
@@ -241,10 +247,14 @@ export class DashboardComponent implements OnInit {
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
+                this.generatingIds[genKey] = false;
+                this.cdr.detectChanges();
             },
             error: (err) => {
                 console.error(`Error generando documento ${format}`, err);
                 alert(`Error descargando el documento ${format.toUpperCase()}. Asegúrese de tener conexión.`);
+                this.generatingIds[genKey] = false;
+                this.cdr.detectChanges();
             }
         });
     }
