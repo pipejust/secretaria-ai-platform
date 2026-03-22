@@ -66,6 +66,9 @@
                                 <div class="skeleton skeleton-text" style="width: 100px;"></div>
                             </td>
                             <td>
+                                <div class="skeleton skeleton-text" style="width: 80px;"></div>
+                            </td>
+                            <td>
                                 <div class="flex gap-2">
                                     <div class="skeleton skeleton-text" style="width: 80px; height: 32px;"></div>
                                     <div class="skeleton skeleton-text" style="width: 100px; height: 32px;"></div>
@@ -87,6 +90,10 @@
                             Reunión / Título
                             <span *ngIf="sortColumn === 'title'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
                         </th>
+                        <th style="cursor:pointer;" (click)="sortBy('project_id')">
+                            Proyecto
+                            <span *ngIf="sortColumn === 'project_id'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+                        </th>
                         <th style="cursor:pointer;" (click)="sortBy('date')">
                             Fecha
                             <span *ngIf="sortColumn === 'date'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
@@ -104,6 +111,9 @@
                                 s.id }}</span></td>
                         <td>
                             <strong style="color:var(--text-main);">{{ s.title }}</strong>
+                        </td>
+                        <td style="color: var(--text-light); font-size: 0.9em;">
+                            <i class="fas fa-folder-open" style="opacity: 0.5; margin-right: 4px;"></i> {{ getProjectName(s.project_id) }}
                         </td>
                         <td>{{ s.date | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td>

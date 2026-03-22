@@ -58,6 +58,12 @@ export class DashboardComponent implements OnInit {
         });
     }
 
+    getProjectName(projectId: any): string {
+        if (!projectId) return 'General';
+        const p = this.projects.find(proj => proj.id === projectId);
+        return p ? p.name : 'General';
+    }
+
     openUploadModal() {
         // Set default date to now in yyyy-MM-ddThh:mm format for datetime-local input
         const now = new Date();
@@ -205,7 +211,10 @@ export class DashboardComponent implements OnInit {
             let valB = b[this.sortColumn];
 
             // Normalize values for sorting
-            if (this.sortColumn === 'date') {
+            if (this.sortColumn === 'project_id') {
+                valA = this.getProjectName(a.project_id).toLowerCase();
+                valB = this.getProjectName(b.project_id).toLowerCase();
+            } else if (this.sortColumn === 'date') {
                 if (typeof valA === 'string' && !isNaN(Number(valA))) valA = Number(valA);
                 if (typeof valB === 'string' && !isNaN(Number(valB))) valB = Number(valB);
                 valA = new Date(valA).getTime() || 0;
