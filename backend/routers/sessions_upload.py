@@ -840,10 +840,18 @@ def export_document(session_id: int, format: str, db: Session = Depends(get_sess
                 "risks": session_obj.processed_risks,
                 "agreements": session_obj.processed_agreements,
                 "action_items": [],
+                "contexto_antecedentes": session_obj.raw_summary,
+                "decisiones": session_obj.processed_decisions,
+                "riesgos": session_obj.processed_risks,
+                "compromisos": __build_corporate_data(session_obj, action_items, db).get("compromisos", []),
                 "mapping_config": __build_corporate_data(session_obj, action_items, db).get("mapping_config", []),
                 "theme": __build_corporate_data(session_obj, action_items, db).get("theme", {}),
                 "asistentes": __build_corporate_data(session_obj, action_items, db).get("asistentes", []),
-                "no_acta": __build_corporate_data(session_obj, action_items, db).get("no_acta", "")
+                "no_acta": __build_corporate_data(session_obj, action_items, db).get("no_acta", ""),
+                "fecha_documento": __build_corporate_data(session_obj, action_items, db).get("fecha_documento", ""),
+                "idioma": __build_corporate_data(session_obj, action_items, db).get("idioma", "Español"),
+                "proyecto": __build_corporate_data(session_obj, action_items, db).get("proyecto", "General"),
+                "subtitulo_documento": __build_corporate_data(session_obj, action_items, db).get("subtitulo_documento", session_obj.title)
             }
             for act in action_items:
                 meeting_data["action_items"].append({
