@@ -94,7 +94,9 @@ class WordGeneratorService:
             from services.docx_table_utils import set_cell_background_color, set_table_borders
             
             def add_custom_heading(text):
+                from docx.shared import Pt
                 p_space = final_doc.add_paragraph()
+                p_space.style.font.size = Pt(1)
                 p_space.paragraph_format.space_before = Pt(heading_margin)
                 p_space.paragraph_format.space_after = Pt(0)
                 
@@ -123,6 +125,7 @@ class WordGeneratorService:
                 run.font.color.rgb = RGBColor(htc_r, htc_g, htc_b)
                 
                 p_space2 = final_doc.add_paragraph()
+                p_space2.style.font.size = Pt(1)
                 p_space2.paragraph_format.space_before = Pt(heading_margin / 2)
                 p_space2.paragraph_format.space_after = Pt(0)
                 
