@@ -53,9 +53,9 @@ class GroqService:
             "properties": {
                 "language": {"type": "string", "description": "El idioma original detectado de la transcripción (ej: Inglés, Español, Portugués)"},
                 "summary": {"type": "string", "description": "Un resumen extenso, minucioso y muy detallado de toda la reunión."},
-                "decisions": {"type": "string", "description": "Lista en formato Markdown (viñetas) extremadamente detallada de TODAS las decisiones clave tomadas. Cada viñeta debe tener contexto exhaustivo."},
-                "risks": {"type": "string", "description": "Lista en formato Markdown (viñetas) altamente granular de CADA riesgo, bloqueo o preocupación. No omitas ningún detalle."},
-                "agreements": {"type": "string", "description": "Lista en formato Markdown (viñetas) exhaustiva de TODOS los acuerdos generales, consensos y compromisos informales discutidos."},
+                "decisions": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que detalle todas las decisiones clave tomadas, con alto contexto humano."},
+                "risks": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que explique profundamente CADA riesgo, bloqueo o preocupación detectada."},
+                "agreements": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) de todos los acuerdos generales y consensos logrados."},
                 "attendees": {
                     "type": "array",
                     "description": "Lista de participantes de la reunión, extrayendo nombre, cargo y entidad/empresa si se mencionan.",
@@ -85,6 +85,10 @@ class GroqService:
                         "required": ["theme_name", "discussion_points"]
                     }
                 },
+                "thinking_process": {
+                    "type": "string",
+                    "description": "ANTES de llenar 'action_items', ESCRIBE AQUÍ UN LISTADO MENTAL de TODAS las tareas explícitas e implícitas (se estiman más de 20 en la charla). Anota responsables y fechas clave. Analiza a profundidad para no olvidar ninguna tarea."
+                },
                 "action_items": {
                     "type": "array",
                     "items": {
@@ -94,13 +98,13 @@ class GroqService:
                             "owner_email": {"type": "string"},
                             "title": {"type": "string"},
                             "description": {"type": "string"},
-                            "due_date": {"type": "string", "description": "Formato YYYY-MM-DD"}
+                            "due_date": {"type": "string", "description": "FECHA EXACTA mencionada (ej: YYYY-MM-DD). Si no se dice cuándo, déjalo vacío o pon 'No definida'"}
                         },
-                        "required": ["owner_name", "owner_email", "title", "description"]
+                        "required": ["owner_name", "owner_email", "title", "description", "due_date"]
                     }
                 }
             },
-            "required": ["language", "summary", "decisions", "risks", "agreements", "attendees", "themes", "action_items"]
+            "required": ["language", "summary", "decisions", "risks", "agreements", "attendees", "themes", "thinking_process", "action_items"]
         }
 
     def _get_tasks_only_json_schema(self) -> Dict[str, Any]:
@@ -108,23 +112,27 @@ class GroqService:
         return {
             "type": "object",
             "properties": {
+                "thinking_process": {
+                    "type": "string",
+                    "description": "PASO 1: Analiza CUIDADOSAMENTE toda la transcripción y anota aquí CADA petición, compromiso futuro o tarea implícita que detectes (suelen ser 20+). Haz un borrador mental de la fecha de cada tarea y su responsable ANTES de pasar a action_items."
+                },
                 "action_items": {
                     "type": "array",
-                    "description": "Lista detallada de TODAS las tareas, compromisos o acciones futuras a realizar.",
+                    "description": "PASO 2: Lista detallada en formato JSON de las tareas identificadas en 'thinking_process'.",
                     "items": {
                         "type": "object",
                         "properties": {
                             "owner_name": {"type": "string"},
                             "owner_email": {"type": "string"},
                             "title": {"type": "string", "description": "Título claro y descriptivo de la tarea"},
-                            "description": {"type": "string", "description": "Descripción exhaustiva de qué hay que hacer, con todo el contexto necesario"},
-                            "due_date": {"type": "string", "description": "Formato YYYY-MM-DD"}
+                            "description": {"type": "string", "description": "Descripción MUY exhaustiva de qué hay que hacer, detallando el contexto"},
+                            "due_date": {"type": "string", "description": "Revisa tu thinking_process para colocar la fecha o día exacto acordado en formato YYYY-MM-DD."}
                         },
-                        "required": ["owner_name", "owner_email", "title", "description"]
+                        "required": ["owner_name", "owner_email", "title", "description", "due_date"]
                     }
                 }
             },
-            "required": ["action_items"]
+            "required": ["thinking_process", "action_items"]
         }
 
     async def process_transcript_for_tasks_only(self, transcript: str, project_contacts: list = None) -> dict:
@@ -157,13 +165,11 @@ class GroqService:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
         INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
-        Eres un analista implacable y exhaustivo. Tu trabajo es desglosar la reunión con pinzas quirúrgicas.
-        1. Analiza cuidadosamente la transcripción palabra por palabra buscando TODO compromiso, tarea, solicitud o acción futura que alguna persona deba realizar. No omitas nada, por más pequeño que sea.
-        2. NO esperes encontrar un bloque explícito que diga "Tareas" o "Action Items". Debes extraer CADA tarea IMPLÍCITAMENTE de la conversación natural (ej. "Yo te envío ese correo mañana", "Revisemos esto el viernes", "Cristian valida eso").
-        3. DEBES SEPARAR absolutamente todas las tareas compuestas en múltiples tareas individuales por cada acción concreta. Una línea de código o un requerimiento es una tarea independiente.
-        4. Las descripciones de las tareas deben ser EXTREMADAMENTE DETALLADAS y EXHAUSTIVAS, conservando todo el contexto importante y los detalles para que otra persona entienda exactamente qué hacer sin recurrir a la grabación.
-        5. Para CADA tarea identificada, DEBES generar obligatoriamente un OBJETO JSON con: 'owner_name', 'owner_email', 'title', 'description', y 'due_date' (si se menciona o deduce).
-        6. IMPORTANTE: En el 99% de las reuniones de trabajo hay entre 5 y 25 tareas. Tu meta es encontrar tantas tareas accionables como sean posibles. Solo si ESTÁS ABSOLUTAMENTE SEGURO de que no hubo NINGÚN compromiso, retorna un arreglo Vacío []. NUNCA retornes un arreglo de strings.
+        Eres un analista implacable. Tu meta es alcanzar la cifra real de tareas que casi siempre SUPERA LAS 20 O 30 EN ESTE TIPO DE LLAMADAS.
+        1. NO omitas ninguna tarea por pereza. Divide requerimientos grandes en micro-tareas asignadas.
+        2. FECHAS: Muchísimas tareas tienen fecha o límites de tiempo mencionados. Busca pistas como "la próxima semana", "para el martes 14", "en dos días". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
+        3. Obligatorio llenar el campo 'thinking_process' PRIMERO. Escribe un borrador de todas las tareas y fechas que encuentres a medida que pasas por el texto.
+        4. Las descripciones de las tareas en 'action_items' deben tener contexto absoluto y humano (1 o 2 párrafos de contexto si es necesario) para que el desarrollador entienda DE QUÉ hablan.
         
         Transcripción:
         {safe_transcript}
@@ -250,32 +256,23 @@ class GroqService:
         La fecha actual es {current_date}. Utiliza esta información para inferir correctamente los años y fechas relativas (ej. si dicen "el próximo martes" o "para el 15 de marzo", usa el año actual o el correspondiente). NUNCA asumas años pasados si no se dicen explícitamente.
         
         INSTRUCCIONES CLAVE PARA EL RESUMEN ('summary'):
-        NUNCA seas breve. Debes crear un resumen extenso, minucioso y muy detallado en ESPAÑOL de toda la reunión, abarcando contexto profundo, problemas identificados, soluciones propuestas y próximos pasos (mínimo unos 4 o 5 párrafos poblados y completos).
+        Debes crear un resumen denso, extenso y en ESPAÑOL abarcando todo contexto profundo. (Mínimo 4 o 5 párrafos ricos en detalles).
         
         INSTRUCCIONES CLAVE PARA DECISIONES, RIESGOS Y ACUERDOS:
-        Eres un analista organizacional implacable y exhaustivo. Todo lo que extraigas debe ser una LISTA EXTREMADAMENTE DETALLADA en formato Markdown (viñetas).
-        - 'decisions': Extrae y detalla extensamente en viñetas TODAS las decisiones clave que se tomaron durante la reunión, por más pequeñas que sean. Dale un contexto profundo a cada decisión.
-        - 'risks': Identifica y explica de forma altamente granular en viñetas CUALQUIER riesgo, problema potencial, cuello de botella o dependencia bloqueante mencionada en la charla.
-        - 'agreements': Enumera detalladamente en viñetas los acuerdos generales a los que llegó el equipo (diferente a tareas, son consensos, metodologías, fechas límite holísticas).
-        Si no hay nada para una categoría (lo cual es raro), pon "No se identificaron elementos."
+        Eres un redactor humano de actas maestras. El usuario odia las listas o viñetas para estas 3 secciones.
+        - 'decisions': REDACTA UN TEXTO GRANDE Y FLUIDO (uno o varios párrafos, SIN VIÑETAS) contando con muchísimo detalle TODAS las decisiones clave tomadas, sus motivaciones y resultados esperados.
+        - 'risks': REDACTA UN TEXTO EN PROSA (SIN VIÑETAS) explicando de forma altamente granular los bloqueos, preocupaciones o cuellos de botella mencionados.
+        - 'agreements': REDACTA UN TEXTO PROFUNDO (SIN VIÑETAS) con las metodologías, consensos o fechas límite holísticas que se acordaron.
+        Si no hay información de alguna categoría, escribe "No se identificó ninguna información relevante en la transcripción." en lugar de arrojar un error.
         
-        INSTRUCCIONES CLAVE PARA ASISTENTES ('attendees'):
-        Extrae los nombres de las personas que participaron. Si se menciona su cargo o la empresa a la que pertenecen, inclúyelo también.
+        INSTRUCCIONES CLAVE PARA ASISTENTES Y TEMAS:
+        Extrae asistentes ('attendees'). Divide la junta en temas ('themes') con puntos altamente detallados.
         
-        INSTRUCCIONES CLAVE PARA TEMAS ('themes'):
-        Divide la reunión en los diferentes temas puntuales que se trataron. Para cada tema, extrae una lista viñeteada ALTAMENTE DETALLADA de los puntos de discusión específicos ('discussion_points').
-        
-        PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
-        Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
-        
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
-        Eres un analista exhaustivo. Tu trabajo es desglosar la reunión identificando CADA ACCIÓN.
-        1. Analiza cuidadosamente la transcripción palabra por palabra buscando TODO compromiso, tarea, solicitud o acción futura que alguna persona deba realizar. No omitas nada.
-        2. NO esperes encontrar un bloque explicito que diga "Tareas" o "Action Items". Debes extraer las tareas IMPLÍCITAMENTE de la conversación natural (ej. "Yo te envío ese correo", "Cristian valida eso").
-        3. DEBES SEPARAR tareas compuestas en múltiples tareas individuales por cada accion concreta.
-        4. Las descripciones de las tareas deben ser EXTREMADAMENTE DETALLADAS y EXHAUSTIVAS.
-        5. Para CADA tarea identificada, DEBES generar obligatoriamente un OBJETO JSON con: 'owner_name', 'owner_email', 'title', 'description', y 'due_date'.
-        6. IMPORTANTE: En el 99% de las reuniones de trabajo hay tareas. Retorna todas las que encuentres.
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS):
+        1. LLEGA HASTA EL FINAL: Las transcripciones largas esconden más de 20 o 30 tareas e implícitos.
+        2. 'thinking_process': Úsalo de inmediato y antes de crear tareas. Haz tu inventario mental allí de fechas, tareas, personas. Te sirve para no olvidar nada.
+        3. FECHAS: Agudiza la mente en extraer o deducir la fecha EXACTA (año {current_date.split('-')[0]}) en base a {current_date} si dicen "el otro martes", "marzo 15", "la otra semana".
+        4. ESPECIFICIDAD: Al llenar 'action_items', sé colosalmente descriptivo. Contextualiza cada tarea para que no tengan que oír el audio de nuevo.
         
         Transcripción:
         {safe_transcript}
