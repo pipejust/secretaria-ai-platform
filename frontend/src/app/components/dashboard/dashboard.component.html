@@ -18,13 +18,21 @@
     </div>
 
     <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
-        <input type="text" class="modern-search" placeholder="🔍 Buscar por título o ID de sesión..." [(ngModel)]="searchText" style="flex:1;">
-        <select class="glass-select" [(ngModel)]="statusFilter" style="width:250px;">
+        <input type="text" class="modern-search" placeholder="🔍 Buscar por título o ID de sesión..." [(ngModel)]="searchText" (keyup.enter)="currentPage = 1; loadSessions()" style="flex:1;">
+        
+        <select class="glass-select" [(ngModel)]="filterProjectId" (change)="currentPage = 1; loadSessions()" style="width:250px;">
+            <option value="">Todos los Proyectos</option>
+            <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+        </select>
+        
+        <select class="glass-select" [(ngModel)]="statusFilter" (change)="currentPage = 1; loadSessions()" style="width:250px;">
             <option value="">Todos los Estados</option>
             <option value="pending">Pendiente de Curación</option>
             <option value="processing">Procesando IA</option>
             <option value="completed">Completado</option>
         </select>
+        
+        <button class="btn btn-secondary" (click)="currentPage = 1; loadSessions()">Buscar</button>
     </div>
 
     <div class="card glass-panel flex-2">
@@ -167,6 +175,21 @@
                     </tr>
                 </tbody>
             </table>
+            
+            <!-- Pagination Controls -->
+            <div *ngIf="totalPages > 1 && !isLoading" style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border);">
+                <span style="color:var(--text-muted); font-size: 0.9rem;">
+                    Mostrando página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} sesiones)
+                </span>
+                <div style="display:flex; gap: 0.5rem;">
+                    <button class="btn btn-sm btn-secondary" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">
+                        Anterior
+                    </button>
+                    <button class="btn btn-sm btn-secondary" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">
+                        Siguiente
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

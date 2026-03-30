@@ -24,8 +24,10 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
                 return
 
             # Extraer datos nativos enviados en el Webhook (como indica el usuario de que Fireflies envía esto)
-            title = payload_data.get("title", "Reunión Sin Título")
-            date_str = str(payload_data.get("date", payload_data.get("createdAt", "")))
+            data_obj = payload_data.get("data", {}) if isinstance(payload_data.get("data"), dict) else {}
+            title = payload_data.get("title") or data_obj.get("title") or "Reunión Sin Título"
+            date_val = payload_data.get("date") or payload_data.get("createdAt") or data_obj.get("date") or data_obj.get("createdAt")
+            date_str = str(date_val) if date_val else ""
             
             raw_transcript = str(payload_data.get("transcript", ""))
             raw_summary = str(payload_data.get("summary", ""))
@@ -221,8 +223,10 @@ async def receive_fireflies_webhook(
     print(f"Dispatching background task for transcript: {transcript_id}")
     
     # Creamos la sesión inmediatamente con estado processing para que el UI la muestre en tiempo real
-    title = payload.get("title", "Reunión Procesando...")
-    date_str = str(payload.get("date", payload.get("createdAt", "")))
+    data_obj = payload.get("data", {}) if isinstance(payload.get("data"), dict) else {}
+    title = payload.get("title") or data_obj.get("title") or "Reunión Procesando..."
+    date_val = payload.get("date") or payload.get("createdAt") or data_obj.get("date") or data_obj.get("createdAt")
+    date_str = str(date_val) if date_val else ""
     
     new_session = MeetingSession(
         fireflies_id=transcript_id,

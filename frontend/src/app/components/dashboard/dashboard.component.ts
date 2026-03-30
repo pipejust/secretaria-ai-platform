@@ -151,16 +151,29 @@ export class DashboardComponent implements OnInit {
     loadSessions() {
         this.isLoading = true;
 
-        this.http.get<any[]>(`${environment.apiUrl}/api/sessions/`).subscribe({
+        let params = `?page=${this.currentPage}&limit=${this.limit}`;
+        if (this.statusFilter) params += `&status=${this.statusFilter}`;
+        if (this.searchText.trim()) params += `&search=${encodeURIComponent(this.searchText.trim())}`;
+        if (this.filterProjectId) params += `&project_id=${this.filterProjectId}`;
+        
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<any>(`${environment.apiUrl}/api/sessions/${params}`, { headers }).subscribe({
             next: (data) => {
+                const items = data.items || data;
                 // Ensure dates are parsed correctly
-                this.sessions = data.map(s => {
+                this.sessions = items.map((s: any) => {
                     let parsedDate = s.date;
                     if (typeof parsedDate === 'string' && !isNaN(Number(parsedDate))) {
                         parsedDate = Number(parsedDate);
                     }
                     return { ...s, date: parsedDate };
                 });
+                
+                this.currentPage = data.page || 1;
+                this.totalPages = data.pages || 1;
+                this.totalItems = data.total || items.length;
+                this.limit = data.limit || 20;
+
                 this.isLoading = false;
                 this.cdr.detectChanges();
             },
@@ -175,8 +188,20 @@ export class DashboardComponent implements OnInit {
 
     searchText: string = '';
     statusFilter: string = '';
-    sortColumn: string = 'date';
+    filterProjectId: string = '';
+    currentPage: number = 1;
+    limit: number = 20;
+    totalPages: number = 1;
+    totalItems: number = 0;
+    sortColumn: string = 'id';
     sortDirection: 'asc' | 'desc' = 'desc';
+
+    changePage(page: number) {
+        if (page >= 1 && page <= this.totalPages) {
+            this.currentPage = page;
+            this.loadSessions();
+        }
+    }
 
     sortBy(column: string) {
         if (this.sortColumn === column) {

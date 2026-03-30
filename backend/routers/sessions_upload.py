@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.responses import Response
 from sqlmodel import Session, select
 from models import MeetingSession, ActionItem, IntegrationSetting, Routing
@@ -21,11 +21,51 @@ router = APIRouter(
 )
 
 @router.get("/")
-def get_sessions(db: Session = Depends(get_session)):
-    """Fetch all meeting sessions (Actas) from the database."""
-    from sqlmodel import select
-    sessions = db.exec(select(MeetingSession).order_by(MeetingSession.id.desc())).all()
-    return sessions
+def get_sessions(
+    project_id: int = Query(None, description="Filter by project ID"),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    search: str = Query(None, description="Search by title or id"),
+    status: str = Query(None, description="Filter by status"),
+    db: Session = Depends(get_session)
+):
+    """Fetch paginated meeting sessions (Actas) from the database."""
+    from sqlmodel import select, func, or_
+    import math
+    
+    query = select(MeetingSession)
+    
+    if project_id is not None:
+        query = query.where(MeetingSession.project_id == project_id)
+        
+    if status:
+        query = query.where(MeetingSession.status == status)
+        
+    if search:
+        search_filter = f"%{search}%"
+        conditions = [MeetingSession.title.ilike(search_filter)]
+        if search.isdigit():
+            conditions.append(MeetingSession.id == int(search))
+        query = query.where(or_(*conditions))
+        
+    # Count total items for this filter
+    total_query = select(func.count()).select_from(query.subquery())
+    total_items = db.exec(total_query).one()
+    
+    # Apply pagination
+    sessions = db.exec(
+        query.order_by(MeetingSession.id.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    ).all()
+    
+    return {
+        "items": sessions,
+        "total": total_items,
+        "page": page,
+        "limit": limit,
+        "pages": math.ceil(total_items / limit) if limit > 0 else 1
+    }
 
 @router.get("/{session_id}")
 def get_session_details(session_id: int, db: Session = Depends(get_session)):
