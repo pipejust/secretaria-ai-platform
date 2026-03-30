@@ -177,7 +177,7 @@
             </table>
             
             <!-- Pagination Controls -->
-            <div *ngIf="totalPages > 1 && !isLoading" style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border);">
+            <div *ngIf="totalItems > 0 && !isLoading" style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border);">
                 <span style="color:var(--text-muted); font-size: 0.9rem;">
                     Mostrando página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} sesiones)
                 </span>

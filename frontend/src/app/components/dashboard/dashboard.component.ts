@@ -159,9 +159,11 @@ export class DashboardComponent implements OnInit {
         const headers = this.authService.getAuthHeaders();
         this.http.get<any>(`${environment.apiUrl}/api/sessions/${params}`, { headers }).subscribe({
             next: (data) => {
-                const items = data.items || data;
+                const isPaginatedResponse = !!data.items;
+                const items = isPaginatedResponse ? data.items : data;
+                
                 // Ensure dates are parsed correctly
-                this.sessions = items.map((s: any) => {
+                let parsedSessions = items.map((s: any) => {
                     let parsedDate = s.date;
                     if (typeof parsedDate === 'string' && !isNaN(Number(parsedDate))) {
                         parsedDate = Number(parsedDate);
@@ -169,10 +171,18 @@ export class DashboardComponent implements OnInit {
                     return { ...s, date: parsedDate };
                 });
                 
-                this.currentPage = data.page || 1;
-                this.totalPages = data.pages || 1;
-                this.totalItems = data.total || items.length;
                 this.limit = data.limit || 20;
+                this.totalItems = data.total || parsedSessions.length;
+                this.totalPages = data.pages || Math.ceil(this.totalItems / this.limit) || 1;
+                // Si la respuesta no es paginada (backend viejo), aplicamos rebanado local
+                if (!isPaginatedResponse) {
+                    const startIdx = (this.currentPage - 1) * this.limit;
+                    const endIdx = startIdx + this.limit;
+                    this.sessions = parsedSessions.slice(startIdx, endIdx);
+                } else {
+                    this.sessions = parsedSessions;
+                    this.currentPage = data.page || 1;
+                }
 
                 this.isLoading = false;
                 this.cdr.detectChanges();
