@@ -1,4 +1,5 @@
 import json
+import asyncio
 from base64 import b64encode
 import httpx
 from typing import Dict, Any, List
@@ -46,16 +47,13 @@ class GroqService:
                 print(f"Error transcribiendo audio con Groq: {e}\n{traceback.format_exc()}")
                 raise Exception(f"Fallo en la transcripción de audio: {e}")
         
-    def _get_json_schema(self) -> Dict[str, Any]:
-        """Define la estructura estricta que esperamos de la transcripción"""
+    def _get_fundamentals_schema(self) -> Dict[str, Any]:
+        """Schema para Agent 1: Resumen y metadatos"""
         return {
             "type": "object",
             "properties": {
                 "language": {"type": "string", "description": "El idioma original detectado de la transcripción (ej: Inglés, Español, Portugués)"},
                 "summary": {"type": "string", "description": "Un resumen extenso, minucioso y muy detallado de toda la reunión."},
-                "decisions": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que detalle todas las decisiones clave tomadas, con alto contexto humano."},
-                "risks": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que explique profundamente CADA riesgo, bloqueo o preocupación detectada."},
-                "agreements": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) de todos los acuerdos generales y consensos logrados."},
                 "attendees": {
                     "type": "array",
                     "description": "Lista de participantes de la reunión, extrayendo nombre, cargo y entidad/empresa si se mencionan.",
@@ -84,27 +82,21 @@ class GroqService:
                         },
                         "required": ["theme_name", "discussion_points"]
                     }
-                },
-                "thinking_process": {
-                    "type": "string",
-                    "description": "ANTES de llenar 'action_items', ESCRIBE AQUÍ UN LISTADO MENTAL de TODAS las tareas explícitas e implícitas (se estiman más de 20 en la charla). Anota responsables y fechas clave. Analiza a profundidad para no olvidar ninguna tarea."
-                },
-                "action_items": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "owner_name": {"type": "string"},
-                            "owner_email": {"type": "string"},
-                            "title": {"type": "string"},
-                            "description": {"type": "string"},
-                            "due_date": {"type": "string", "description": "FECHA EXACTA mencionada (ej: YYYY-MM-DD). Si no se dice cuándo, déjalo vacío o pon 'No definida'"}
-                        },
-                        "required": ["owner_name", "owner_email", "title", "description", "due_date"]
-                    }
                 }
             },
-            "required": ["language", "summary", "decisions", "risks", "agreements", "attendees", "themes", "thinking_process", "action_items"]
+            "required": ["language", "summary", "attendees", "themes"]
+        }
+
+    def _get_insights_schema(self) -> Dict[str, Any]:
+        """Schema para Agent 2: Textos narrativos profundos"""
+        return {
+            "type": "object",
+            "properties": {
+                "decisions": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que detalle todas las decisiones clave tomadas, con alto contexto humano."},
+                "risks": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que explique profundamente CADA riesgo, bloqueo o preocupación detectada."},
+                "agreements": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) de todos los acuerdos generales y consensos logrados."}
+            },
+            "required": ["decisions", "risks", "agreements"]
         }
 
     def _get_tasks_only_json_schema(self) -> Dict[str, Any]:
@@ -222,19 +214,81 @@ class GroqService:
                 if not isinstance(parsed_data, dict):
                     return {"action_items": []}
                     
+                # Clean up thinking_process to prevent cluttering responses
+                if "thinking_process" in parsed_data:
+                    del parsed_data["thinking_process"]
+                    
                 return parsed_data
             except Exception as e:
-                print(f"Error procesando JSON de Groq en fallback tareas: {result_json}")
-                raise e
+                print(f"Error procesando JSON de Groq en fallback tareas: {result_json}\nTransito Fallido: {str(e)}")
+                # Retornamos dict vacío en vez de raise para evitar romper la UI si falla
+                return {"action_items": []}
+
+    async def _execute_agent(self, client: httpx.AsyncClient, system_prompt: str, user_prompt: str) -> dict:
+        """Helper to execute an LLM agent and safely parse its JSON response"""
+        payload = {
+            "model": self.MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1
+        }
+        
+        try:
+            response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+            response.raise_for_status()
+            result_json = response.json()
+            content_str = result_json["choices"][0]["message"]["content"]
+            parsed_data = json.loads(content_str)
+            
+            # Root wrap defensive programming ("properties", "response", etc)
+            if "properties" in parsed_data and isinstance(parsed_data["properties"], dict):
+                for key in ["summary", "action_items", "language", "decisions", "themes"]:
+                    if key in parsed_data.get("properties", {}):
+                        parsed_data = parsed_data["properties"]
+                        break
+                        
+            if isinstance(parsed_data, dict) and len(parsed_data) == 1:
+                first_key = list(parsed_data.keys())[0]
+                if isinstance(parsed_data[first_key], dict):
+                    for key in ["summary", "action_items", "language", "decisions", "themes"]:
+                        if key in parsed_data[first_key]:
+                            parsed_data = parsed_data[first_key]
+                            break
+                            
+            # Value wrapper defensive programming 
+            for key in ["summary", "decisions", "risks", "agreements"]:
+                if key in parsed_data and isinstance(parsed_data[key], dict) and "value" in parsed_data[key]:
+                    parsed_data[key] = parsed_data[key]["value"]
+                    
+            for key in ["attendees", "themes", "action_items"]:
+                if key in parsed_data and isinstance(parsed_data[key], dict):
+                    if "items" in parsed_data[key]:
+                        if isinstance(parsed_data[key]["items"], list):
+                            parsed_data[key] = parsed_data[key]["items"]
+                        elif isinstance(parsed_data[key]["items"], dict) and "properties" in parsed_data[key]["items"]:
+                            parsed_data[key] = []
+                    elif "value" in parsed_data[key]:
+                        if isinstance(parsed_data[key]["value"], list):
+                            parsed_data[key] = parsed_data[key]["value"]
+                        else:
+                            parsed_data[key] = []
+                            
+            if not isinstance(parsed_data, dict):
+                return {}
+                
+            return parsed_data
+        except Exception as e:
+            print(f"Error procesando JSON de un Agente Groq: {str(e)}")
+            return {}
 
     async def process_transcript(self, transcript: str, project_contacts: list = None) -> dict:
         """
-        Envía el transcript completo a Groq para extraer información estructurada
-        basada en el JSON schema.
+        Arquitectura Multi-Agente: Ejecuta 3 promps paralelos para evitar el Colapso de Contexto (Context Collapse)
+        y garantizar extrema fidelidad y volumen en cada sección (Fundamentales, Insights, Tareas).
         """
-        # Groq Llama 3 70b has an 8k token limit. A full hour transcript can exceed this, causing a 400 error.
-        # We safely truncate to the last 25,000 characters (approx 5000 tokens) porque action items y summaries
-        # suelen estar al final.
         safe_transcript = transcript
         if len(transcript) > 25000:
             safe_transcript = transcript[:3000] + "\n\n[... TEXTO RECORTADO POR LONGITUD ...]\n\n" + transcript[-21000:]
@@ -242,107 +296,73 @@ class GroqService:
         contacts_info = ""
         if project_contacts:
             contacts_str = json.dumps(project_contacts, ensure_ascii=False)
-            contacts_info = f"\n\nTienes acceso a la siguiente lista de personas del proyecto:\n{contacts_str}\nSi una tarea es asignada a una persona de esta lista, debes usar su 'name' y 'email' exactos.\n"
+            contacts_info = f"\nTienes acceso a la siguiente lista de personas del proyecto:\n{contacts_str}\n"
 
         current_date = datetime.now().strftime("%Y-%m-%d")
 
-        prompt = f"""
-        Eres un asistente experto que procesa transcripciones de reuniones internacionales.
-        Analiza el siguiente texto y detecta el idioma original de la reunión para el campo 'language'. 
+        # --- Base Prompts ---
+        system_base = f"""Eres un coordinador de proyecto experto analizando una reunión. REGLA DE ORO: TUS RESPUESTAS DEBEN SER EXCLUSIVAMENTE EN ESPAÑOL, INDEPENDIENTEMENTE DEL IDIOMA DE LA REUNIÓN. La fecha actual es {current_date} (año {current_date.split('-')[0]})."""
         
-        ¡MUY IMPORTANTE - REGLA DE ORO!: SIN IMPORTAR EL IDIOMA DE LA TRANSCRIPCIÓN, TUS RESPUESTAS PARA TODOS LOS CAMPOS (resumen, decisiones, riesgos, acuerdos, temas, tareas) DEBEN SER GENERADOS EXCLUSIVAMENTE Y ESTRICTAMENTE EN ESPAÑOL. NO utilices el idioma original. TRADUCE TODO TU ANÁLISIS AL ESPAÑOL.
-        
-        DATO CLAVE DE CONTEXTO TEMPORAL:
-        La fecha actual es {current_date}. Utiliza esta información para inferir correctamente los años y fechas relativas (ej. si dicen "el próximo martes" o "para el 15 de marzo", usa el año actual o el correspondiente). NUNCA asumas años pasados si no se dicen explícitamente.
-        
-        INSTRUCCIONES CLAVE PARA EL RESUMEN ('summary'):
-        Debes crear un resumen denso, extenso y en ESPAÑOL abarcando todo contexto profundo. (Mínimo 4 o 5 párrafos ricos en detalles).
-        
-        INSTRUCCIONES CLAVE PARA DECISIONES, RIESGOS Y ACUERDOS:
-        Eres un redactor humano de actas maestras. El usuario odia las listas o viñetas para estas 3 secciones.
-        - 'decisions': REDACTA UN TEXTO GRANDE Y FLUIDO (uno o varios párrafos, SIN VIÑETAS) contando con muchísimo detalle TODAS las decisiones clave tomadas, sus motivaciones y resultados esperados.
-        - 'risks': REDACTA UN TEXTO EN PROSA (SIN VIÑETAS) explicando de forma altamente granular los bloqueos, preocupaciones o cuellos de botella mencionados.
-        - 'agreements': REDACTA UN TEXTO PROFUNDO (SIN VIÑETAS) con las metodologías, consensos o fechas límite holísticas que se acordaron.
-        Si no hay información de alguna categoría, escribe "No se identificó ninguna información relevante en la transcripción." en lugar de arrojar un error.
-        
-        INSTRUCCIONES CLAVE PARA ASISTENTES Y TEMAS:
-        Extrae asistentes ('attendees'). Divide la junta en temas ('themes') con puntos altamente detallados.
-        
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS):
-        1. LLEGA HASTA EL FINAL: Las transcripciones largas esconden más de 20 o 30 tareas e implícitos.
-        2. 'thinking_process': Úsalo de inmediato y antes de crear tareas. Haz tu inventario mental allí de fechas, tareas, personas. Te sirve para no olvidar nada.
-        3. FECHAS: Agudiza la mente en extraer o deducir la fecha EXACTA (año {current_date.split('-')[0]}) en base a {current_date} si dicen "el otro martes", "marzo 15", "la otra semana".
-        4. ESPECIFICIDAD: Al llenar 'action_items', sé colosalmente descriptivo. Contextualiza cada tarea para que no tengan que oír el audio de nuevo.
+        # AGENT 1: Fundamentals (Language, Summary, Attendees, Themes)
+        prompt_fundamentals = f"""
+        Analiza el texto y extrae:
+        - Idioma original (language). Todo lo demás de tu JSON debe estar en ESPAÑOL.
+        - Un resumen ('summary') muy extenso, denso y profundo de toda la reunión (mínimo 4 o 5 párrafos ricos en contexto).
+        - Participantes ('attendees'), sus cargos y empresas si se mencionan.
+        - Los temas discutidos ('themes') y sus elaborados puntos de conversación.
         
         Transcripción:
         {safe_transcript}
         """
-
-        payload = {
-            "model": self.MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "response_format": {"type": "json_object"},
-            "temperature": 0.1
-        }
+        sys_fundamentals = f"{system_base} Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_fundamentals_schema())}"
         
-        # Hay diferentes formas de forzar schema. Aquí usamos un prompt fuerte combinado con json_object.
-        # Alternativamente podríamos usar el endpoint nativo de structured outputs the Groq si la libreria oficial estuviera disponible y configurada.
-        # Pero con requests puras, anexamos el esquema esperado.
-        payload["messages"].insert(0, {
-            "role": "system",
-            "content": f"Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_json_schema())}"
-        })
+        # AGENT 2: Insights (Decisions, Risks, Agreements)
+        prompt_insights = f"""
+        Como redactor experto en actas:
+        - 'decisions': REDACTA UN TEXTO GRANDE Y FLUIDO (uno o varios párrafos, SIN VIÑETAS) contando con muchísimo detalle TODAS las decisiones clave tomadas, motivos y resultados.
+        - 'risks': REDACTA UN TEXTO EN PROSA (SIN VIÑETAS) explicando de forma altamente granular los bloqueos o preocupaciones mencionadas.
+        - 'agreements': REDACTA UN TEXTO PROFUNDO (SIN VIÑETAS) con las metodologías, consensos generales o fechas límite holísticas, con máximo contexto.
+        Sé exhaustivo. El usuario odia las viñetas en estas secciones, redacta párrafos completos de lectura continua.
+        
+        Transcripción:
+        {safe_transcript}
+        """
+        sys_insights = f"{system_base} Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_insights_schema())}"
+
+        # AGENT 3: Tasks (Action Items + Thinking Process JSON Chain of Thought)
+        prompt_tasks = f"""
+        INSTRUCCIONES CLAVE PARA TAREAS:
+        DATO: La fecha actual es {current_date}. 
+        {contacts_info}
+        1. LLEGA HASTA EL FINAL: Eres implacable. Extrae MÁS de 20 TAREAS. No omitas ningún compromiso por ínfimo que sea, el equipo habló de MUCHAS tareas.
+        2. 'thinking_process': ÚSalo PRIMERO en tu JSON. Inventaría mentalmente todas las personas, fechas clave y compromisos. Solo un LLM flojo extrae menos de 15 tareas.
+        3. FECHAS: INFIERE la fecha exacta de 'due_date' interpretando textos como "la otra semana", "para el viernes" calculando desde la fecha actual. Usa YYYY-MM-DD.
+        4. ESPECIFICIDAD: Al llenar 'action_items', sé colosalmente exhaustivo. El desarrollador necesita entender el QUÉ y el PARA QUÉ de la tarea en la descripción.
+        
+        Transcripción:
+        {safe_transcript}
+        """
+        sys_tasks = f"{system_base} Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_tasks_only_json_schema())}"
 
         async with httpx.AsyncClient(timeout=None) as client:
-            response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
-            if response.status_code != 200:
-                print(f"Groq API Error: {response.text}")
-            response.raise_for_status()
+            aws = [
+                self._execute_agent(client, sys_fundamentals, prompt_fundamentals),
+                self._execute_agent(client, sys_insights, prompt_insights),
+                self._execute_agent(client, sys_tasks, prompt_tasks)
+            ]
+            results = await asyncio.gather(*aws)
             
-            result_json = response.json()
-            try:
-                content_str = result_json["choices"][0]["message"]["content"]
-                parsed_data = json.loads(content_str)
+            # Merge the dicts
+            merged_payload = {}
+            for res in results:
+                if isinstance(res, dict):
+                    merged_payload.update(res)
+            
+            # Limpiar rastro de IA cognitiva
+            if "thinking_process" in merged_payload:
+                del merged_payload["thinking_process"]
                 
-                # Defensive check: Llama sometimes wraps output in "properties" because of the schema prompt
-                if "properties" in parsed_data and isinstance(parsed_data["properties"], dict) and "summary" in parsed_data.get("properties", {}):
-                    parsed_data = parsed_data["properties"]
-                    
-                # Defensive check 2: Llama sometimes includes the type schema inside the response
-                # Example: {"summary": {"type": "string", "value": "Actual text..."}}
-                for key in ["summary", "decisions", "risks", "agreements"]:
-                    if key in parsed_data and isinstance(parsed_data[key], dict) and "value" in parsed_data[key]:
-                        parsed_data[key] = parsed_data[key]["value"]
-                        
-                for key in ["attendees", "themes", "action_items"]:
-                    if key in parsed_data and isinstance(parsed_data[key], dict):
-                        # LLaMA sometimes uses "items": [...]
-                        if "items" in parsed_data[key]:
-                            if isinstance(parsed_data[key]["items"], list):
-                                parsed_data[key] = parsed_data[key]["items"]
-                            elif isinstance(parsed_data[key]["items"], dict) and "properties" in parsed_data[key]["items"]:
-                                parsed_data[key] = []
-                        # Other times it uses "value": [...] for arrays
-                        elif "value" in parsed_data[key]:
-                            if isinstance(parsed_data[key]["value"], list):
-                                parsed_data[key] = parsed_data[key]["value"]
-                            else:
-                                parsed_data[key] = []
-                            
-                # Defensive check 3: if it wrapped it in a single root object like {"response": {...}}
-                if isinstance(parsed_data, dict) and len(parsed_data) == 1:
-                    first_key = list(parsed_data.keys())[0]
-                    if isinstance(parsed_data[first_key], dict) and ("summary" in parsed_data[first_key] or "action_items" in parsed_data[first_key]):
-                        parsed_data = parsed_data[first_key]
-                        
-                if not isinstance(parsed_data, dict):
-                    return {"summary": str(parsed_data)}
-                    
-                return parsed_data
-            except Exception as e:
-                # Si falla el parseo, lanzar error
-                print(f"Error procesando JSON de Groq: {result_json}")
-                raise e
+            return merged_payload
 
     async def deduce_project(self, summary: str, projects: List[Dict[str, Any]]) -> int | None:
         """
