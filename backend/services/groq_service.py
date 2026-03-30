@@ -5,6 +5,7 @@ from typing import Dict, Any, List
 
 from config import settings
 from models import ActionItem
+from datetime import datetime
 
 class GroqService:
     BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -102,6 +103,123 @@ class GroqService:
             "required": ["language", "summary", "decisions", "risks", "agreements", "attendees", "themes", "action_items"]
         }
 
+    def _get_tasks_only_json_schema(self) -> Dict[str, Any]:
+        """Define la estructura estricta enfocada exclusivamente en tareas para no diluir el contexto de la IA"""
+        return {
+            "type": "object",
+            "properties": {
+                "action_items": {
+                    "type": "array",
+                    "description": "Lista detallada de TODAS las tareas, compromisos o acciones futuras a realizar.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "owner_name": {"type": "string"},
+                            "owner_email": {"type": "string"},
+                            "title": {"type": "string", "description": "Título claro y descriptivo de la tarea"},
+                            "description": {"type": "string", "description": "Descripción exhaustiva de qué hay que hacer, con todo el contexto necesario"},
+                            "due_date": {"type": "string", "description": "Formato YYYY-MM-DD"}
+                        },
+                        "required": ["owner_name", "owner_email", "title", "description"]
+                    }
+                }
+            },
+            "required": ["action_items"]
+        }
+
+    async def process_transcript_for_tasks_only(self, transcript: str, project_contacts: list = None) -> dict:
+        """
+        Envía el transcript a Groq pidiendo EXCLUSIVAMENTE action_items.
+        Ésto permite que la IA dedique todos sus tokens/atención a generar tareas altamente detalladas
+        y no pierda calidad al regenerar.
+        """
+        safe_transcript = transcript
+        if len(transcript) > 25000:
+            safe_transcript = transcript[:3000] + "\n\n[... TEXTO RECORTADO POR LONGITUD ...]\n\n" + transcript[-21000:]
+            
+        contacts_info = ""
+        if project_contacts:
+            contacts_str = json.dumps(project_contacts, ensure_ascii=False)
+            contacts_info = f"\n\nTienes acceso a la siguiente lista de personas del proyecto:\n{contacts_str}\nSi una tarea es asignada a una persona de esta lista, debes usar su 'name' y 'email' exactos.\n"
+
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
+        prompt = f"""
+        Eres un asistente experto que procesa transcripciones de reuniones internacionales.
+        Tu ÚNICO OBJETIVO es extraer los compromisos y tareas con el MÁXIMO detalle posible.
+        
+        ¡MUY IMPORTANTE - REGLA DE ORO!: SIN IMPORTAR EL IDIOMA DE LA TRANSCRIPCIÓN, LAS TAREAS DEBEN SER GENERADAS EXCLUSIVAMENTE Y ESTRICTAMENTE EN ESPAÑOL.
+        
+        DATO CLAVE DE CONTEXTO TEMPORAL:
+        La fecha actual es {current_date}. Utiliza esta información para inferir correctamente los años y fechas relativas (ej. si dicen "el próximo martes" o "para el 15 de marzo", usa el año actual o el correspondiente). NUNCA asumas años pasados si no se dicen explícitamente.
+        
+        PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
+        Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
+        
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
+        1. Analiza cuidadosamente la transcripción palabra por palabra buscando TODO compromiso, tarea, solicitud o acción futura que alguna persona deba realizar.
+        2. NO esperes encontrar un bloque explícito que diga "Tareas" o "Action Items". Debes extraer las tareas IMPLÍCITAMENTE de la conversación natural.
+        3. DEBES SEPARAR tareas compuestas en tareas individuales por cada acción concreta.
+        4. Las descripciones de las tareas deben ser EXHAUSTIVAS, conservando todo el contexto importante y los detalles para que otra persona entienda exactamente qué hacer.
+        5. Para CADA tarea identificada, DEBES generar obligatoriamente un OBJETO JSON con: 'owner_name', 'owner_email', 'title', 'description', y 'due_date' (si se menciona o deduce).
+        6. IMPORTANTE: En el 99% de las reuniones de trabajo hay tareas. Solo si ESTÁS ABSOLUTAMENTE SEGURO de que no hubo NINGÚN compromiso futuro, retorna un arreglo Vacío []. NUNCA retornes un arreglo de strings.
+        
+        Transcripción:
+        {safe_transcript}
+        """
+
+        payload = {
+            "model": self.MODEL,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_tasks_only_json_schema())}"
+                },
+                {"role": "user", "content": prompt}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1
+        }
+        
+        async with httpx.AsyncClient(timeout=None) as client:
+            response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+            if response.status_code != 200:
+                print(f"Groq API Error: {response.text}")
+            response.raise_for_status()
+            
+            result_json = response.json()
+            try:
+                content_str = result_json["choices"][0]["message"]["content"]
+                parsed_data = json.loads(content_str)
+                
+                if "properties" in parsed_data and isinstance(parsed_data["properties"], dict) and "action_items" in parsed_data.get("properties", {}):
+                    parsed_data = parsed_data["properties"]
+                    
+                if "action_items" in parsed_data and isinstance(parsed_data["action_items"], dict):
+                    if "items" in parsed_data["action_items"]:
+                        if isinstance(parsed_data["action_items"]["items"], list):
+                            parsed_data["action_items"] = parsed_data["action_items"]["items"]
+                        else:
+                            parsed_data["action_items"] = []
+                    elif "value" in parsed_data["action_items"]:
+                        if isinstance(parsed_data["action_items"]["value"], list):
+                            parsed_data["action_items"] = parsed_data["action_items"]["value"]
+                        else:
+                            parsed_data["action_items"] = []
+                            
+                if isinstance(parsed_data, dict) and len(parsed_data) == 1:
+                    first_key = list(parsed_data.keys())[0]
+                    if isinstance(parsed_data[first_key], dict) and "action_items" in parsed_data[first_key]:
+                        parsed_data = parsed_data[first_key]
+                        
+                if not isinstance(parsed_data, dict):
+                    return {"action_items": []}
+                    
+                return parsed_data
+            except Exception as e:
+                print(f"Error procesando JSON de Groq en fallback tareas: {result_json}")
+                raise e
+
     async def process_transcript(self, transcript: str, project_contacts: list = None) -> dict:
         """
         Envía el transcript completo a Groq para extraer información estructurada
@@ -119,11 +237,16 @@ class GroqService:
             contacts_str = json.dumps(project_contacts, ensure_ascii=False)
             contacts_info = f"\n\nTienes acceso a la siguiente lista de personas del proyecto:\n{contacts_str}\nSi una tarea es asignada a una persona de esta lista, debes usar su 'name' y 'email' exactos.\n"
 
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
         prompt = f"""
         Eres un asistente experto que procesa transcripciones de reuniones internacionales.
         Analiza el siguiente texto y detecta el idioma original de la reunión para el campo 'language'. 
         
         ¡MUY IMPORTANTE - REGLA DE ORO!: SIN IMPORTAR EL IDIOMA DE LA TRANSCRIPCIÓN, TUS RESPUESTAS PARA TODOS LOS CAMPOS (resumen, decisiones, riesgos, acuerdos, temas, tareas) DEBEN SER GENERADOS EXCLUSIVAMENTE Y ESTRICTAMENTE EN ESPAÑOL. NO utilices el idioma original. TRADUCE TODO TU ANÁLISIS AL ESPAÑOL.
+        
+        DATO CLAVE DE CONTEXTO TEMPORAL:
+        La fecha actual es {current_date}. Utiliza esta información para inferir correctamente los años y fechas relativas (ej. si dicen "el próximo martes" o "para el 15 de marzo", usa el año actual o el correspondiente). NUNCA asumas años pasados si no se dicen explícitamente.
         
         INSTRUCCIONES CLAVE PARA EL RESUMEN ('summary'):
         NUNCA seas breve. Debes crear un resumen extenso, minucioso y muy detallado en ESPAÑOL de toda la reunión, abarcando contexto, problemas identificados, soluciones propuestas y próximos pasos (mínimo unos 3 o 4 párrafos poblados).

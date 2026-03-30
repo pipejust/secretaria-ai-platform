@@ -193,7 +193,7 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
     # 2. Llamamos a Groq
     groq_svc = GroqService()
     try:
-        structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+        structured_data = await groq_svc.process_transcript_for_tasks_only(session_obj.raw_transcript, project_contacts)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error conectando con la IA (Groq): {str(e)}")
 
@@ -606,24 +606,107 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
         # Eliminar el prefijo data:application/pdf;base64, si viene incluido
         if "base64," in pdf_b64_global:
             pdf_b64_global = pdf_b64_global.split("base64,")[1]
-    elif request.attach_document:
-        try:
-            docx_buffer = generate_word_document_bytes(session_obj, action_items_all, db)
-            docx_b64_global = base64.b64encode(docx_buffer.getvalue()).decode('utf-8')
-        except Exception as e:
-            print(f"Error generating DOCX attachment: {e}")
     else:
-        # Generate robust corporate PDF
+        # Generar siempre el PDF usando la plantilla + Gotenberg, 
+        # igual que en export_document (el usuario pidió explícitamente el PDF templado)
         try:
-            from services.pdf_generator import CorporatePDFGenerator
-            data = __build_corporate_data(session_obj, action_items_all, db)
-            pdf_gen = CorporatePDFGenerator(data)
-            pdf_buffer = pdf_gen.generar_buffer()
-            pdf_b64_global = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
+            from models import Template
+            from sqlmodel import select
+            import requests
+            import json
+            
+            # Default to FPDF fallback if Gotenberg fails
+            template = None
+            if session_obj.project_id:
+                template = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
+            
+            docx_bytes = None
+            
+            if template and template.file_path:
+                from services.word_generator import WordGeneratorService
+                generator = WordGeneratorService()
+                
+                formatted_date = ""
+                if session_obj.date:
+                    try:
+                        import datetime as dt_lib
+                        if str(session_obj.date).isdigit():
+                            dt = dt_lib.datetime.fromtimestamp(int(session_obj.date) / 1000)
+                            formatted_date = dt.strftime("%d/%m/%Y")
+                        elif "T" in str(session_obj.date):
+                            formatted_date = str(session_obj.date).split("T")[0]
+                        else:
+                            formatted_date = str(session_obj.date)
+                    except Exception:
+                        formatted_date = str(session_obj.date)
+                
+                meeting_data = {
+                    "title": session_obj.title,
+                    "date": formatted_date,
+                    "summary": session_obj.raw_summary,
+                    "decisions": session_obj.processed_decisions,
+                    "risks": session_obj.processed_risks,
+                    "agreements": session_obj.processed_agreements,
+                    "action_items": [],
+                    "contexto_antecedentes": session_obj.raw_summary,
+                    "decisiones": session_obj.processed_decisions,
+                    "riesgos": session_obj.processed_risks,
+                    "compromisos": __build_corporate_data(session_obj, action_items_all, db).get("compromisos", []),
+                    "mapping_config": __build_corporate_data(session_obj, action_items_all, db).get("mapping_config", []),
+                    "theme": __build_corporate_data(session_obj, action_items_all, db).get("theme", {}),
+                    "asistentes": __build_corporate_data(session_obj, action_items_all, db).get("asistentes", []),
+                    "no_acta": __build_corporate_data(session_obj, action_items_all, db).get("no_acta", ""),
+                    "fecha_documento": __build_corporate_data(session_obj, action_items_all, db).get("fecha_documento", ""),
+                    "idioma": __build_corporate_data(session_obj, action_items_all, db).get("idioma", "Español"),
+                    "proyecto": __build_corporate_data(session_obj, action_items_all, db).get("proyecto", "General"),
+                    "subtitulo_documento": __build_corporate_data(session_obj, action_items_all, db).get("subtitulo_documento", session_obj.title)
+                }
+                for act in action_items_all:
+                    meeting_data["action_items"].append({
+                        "title": act.title,
+                        "owner_name": act.owner_name,
+                        "description": act.description,
+                        "due_date": act.due_date
+                    })
+                    
+                try:
+                    out_path = f"/tmp/Gen_{session_obj.id}_email.docx"
+                    generator.generate_document(template.file_path, meeting_data, out_path)
+                    with open(out_path, "rb") as f:
+                        docx_bytes = f.read()
+                except Exception as e:
+                    print(f"Template DOCX generation failed for email: {e}")
+            
+            if not docx_bytes:
+                docx_buffer = generate_word_document_bytes(session_obj, action_items_all, db)
+                docx_bytes = docx_buffer.getvalue()
+                
+            try:
+                r = requests.post(
+                    "https://demo.gotenberg.dev/forms/libreoffice/convert",
+                    files={"files": ("acta.docx", docx_bytes)},
+                    timeout=60
+                )
+                if r.ok:
+                    pdf_b64_global = base64.b64encode(r.content).decode('utf-8')
+            except Exception as e:
+                print(f"Gotenberg error in dispatch email: {e}")
+                
+            if not pdf_b64_global:
+                # Fallback to local FPDF generator
+                from services.pdf_generator import CorporatePDFGenerator
+                data = __build_corporate_data(session_obj, action_items_all, db)
+                if template and template.style_config:
+                    try: data["theme"] = json.loads(template.style_config)
+                    except: pass
+                if template and template.file_path: data["template_path"] = template.file_path
+                pdf_gen = CorporatePDFGenerator(data)
+                pdf_buffer = pdf_gen.generar_buffer()
+                pdf_b64_global = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
+                
         except Exception as e:
             import traceback
-            print(f"Error generating Corporate PDF summary: {e}\n{traceback.format_exc()}")
-            pdf_b64_global = None
+            print(f"Error generating PDF attachment for email: {e}\n{traceback.format_exc()}")
     
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
