@@ -642,20 +642,17 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
     docx_b64_global = None
     
     if request.custom_pdf_b64:
-        # Usar el PDF provisto por el frontend en en base64
+        # Usar el PDF provisto por el frontend en base64
         pdf_b64_global = request.custom_pdf_b64
-        # Eliminar el prefijo data:application/pdf;base64, si viene incluido
         if "base64," in pdf_b64_global:
             pdf_b64_global = pdf_b64_global.split("base64,")[1]
     else:
-        # Generar siempre el PDF usando la plantilla + Gotenberg, 
-        # igual que en export_document (el usuario pidió explícitamente el PDF templado)
+        # Generar siempre el PDF usando la plantilla + Gotenberg, igual que en export_document
         try:
             from models import Template
             import requests
             import json
             
-            # Default to FPDF fallback if Gotenberg fails
             template = None
             if session_obj.project_id:
                 template = db.exec(select(Template).where(Template.project_id == session_obj.project_id)).first()
@@ -680,6 +677,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                     except Exception:
                         formatted_date = str(session_obj.date)
                 
+                # We need __build_corporate_data which is available in the current scope
                 meeting_data = {
                     "title": session_obj.title,
                     "date": formatted_date,
@@ -715,9 +713,11 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                     with open(out_path, "rb") as f:
                         docx_bytes = f.read()
                 except Exception as e:
-                    print(f"Template DOCX generation failed for email: {e}")
+                    import traceback
+                    print(f"Template DOCX generation failed for email: {e}\n{traceback.format_exc()}")
             
-            if not docx_bytes:
+            # Fallback if generation failed or no template exists
+            if docx_bytes is None:
                 docx_buffer = generate_word_document_bytes(session_obj, action_items_all, db)
                 docx_bytes = docx_buffer.getvalue()
                 
@@ -729,6 +729,8 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                 )
                 if r.ok:
                     pdf_b64_global = base64.b64encode(r.content).decode('utf-8')
+                else:
+                    print(f"Gotenberg API Error in dispatch: {r.status_code} {r.text}")
             except Exception as e:
                 print(f"Gotenberg error in dispatch email: {e}")
                 

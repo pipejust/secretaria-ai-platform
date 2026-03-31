@@ -106,11 +106,11 @@ class GroqService:
             "properties": {
                 "thinking_process": {
                     "type": "string",
-                    "description": "PASO 1: HAZ UN ANÁLISIS RENGLÓN POR RENGLÓN de toda la transcripción para extraer ABSOLUTAMENTE TODAS las tareas. No omitas ningún detalle y NO LAS AGRUPES. Para obligarte a extraer MÍNIMO 23 TAREAS, anota aquí CADA pequeño compromiso o paso a seguir de forma individual ANTES de pasar a action_items."
+                    "description": "PASO 1: HAZ UN ANÁLISIS RENGLÓN POR RENGLÓN de toda la transcripción para identificar ABSOLUTAMENTE TODAS las tareas reales y compromisos mencionados. NO INVENTES NI REPITAS TAREAS. Anota aquí cada compromiso real encontrado antes de pasar a action_items."
                 },
                 "action_items": {
                     "type": "array",
-                    "description": "PASO 2: Lista detallada en formato JSON de TODAS las tareas individuales identificadas. DEBEN SER MÍNIMO 23 TAREAS. ¡NO las agrupes, crea un ítem por cada tarea!",
+                    "description": "PASO 2: Lista detallada en formato JSON de TODAS las tareas individuales identificadas. ¡EXTRAE SÓLO TAREAS REALES MENCIONADAS EN EL TEXTO, NO ALUCINES NI INVENTES TAREAS, NO LAS AGRUPES!",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -157,11 +157,11 @@ class GroqService:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
         INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
-        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es extraer ABSOLUTAMENTE TODAS las tareas individuales sin excepción (MÍNIMO DEBEN SER 23 TAREAS). 
-        1. NO AGRUPES LAS TAREAS. Crea un registro individual ('action_item') en el arreglo para cada requerimiento, compromiso o paso a seguir mencionado, por ínfimo que parezca.
+        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es extraer ABSOLUTAMENTE TODAS las tareas reales o compromisos explícitamente mencionados, por ínfimos que parezcan. EXPLICA CADA TAREA CON MÁXIMO GRADO DE DETALLE.
+        1. REGLA DE ORO ANTI-ALUCINACIÓN: NO inventes tareas que no estén en el texto. NO repitas tareas. Si la reunión es corta, extrae solo lo real. NO AGRUPES LAS TAREAS, mantenlas individuales.
         2. FECHAS: Muchísimas tareas tienen fecha o límites de tiempo mencionados. Busca pistas como "la próxima semana". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
-        3. Obligatorio llenar el campo 'thinking_process' PRIMERO como un borrador larguísimo documentando cada una de las 23+ tareas sueltas que encuentres. NO resumas.
-        4. Las descripciones de TODAS LAS TAREAS INDIVIDUALES DEBEN usar estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON.
+        3. Obligatorio llenar el campo 'thinking_process' PRIMERO como un borrador larguísimo documentando la lógica de por qué consideras que cada punto es una tarea real.
+        4. Las descripciones de TODAS LAS TAREAS INDIVIDUALES DEBEN usar estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON. NO PUEDES OMITIR NINGUNA PARTE DE LA PLANTILLA.
         
         Transcripción:
         {safe_transcript}
@@ -339,10 +339,10 @@ class GroqService:
         DATO: La fecha actual es {current_date}. 
         {contacts_info}
         1. ANÁLISIS RENGLÓN POR RENGLÓN: Lee y procesa la transcripción línea por línea.
-        2. EXTRACCIÓN MASIVA E INDIVIDUAL: Eres implacable. Extrae TODAS las tareas sueltas. No omitas ningún compromiso. ¡NO AGRUPES LAS TAREAS! REGLA DE ORO: DEBES EXTRAER MÍNIMO 23 TAREAS INDIVIDUALES.
-        3. 'thinking_process': ÚSalo PRIMERO en tu JSON. Es un diario detallado donde extraes línea a línea TODAS las 23+ iniciativas individuales ANTES de pasarlas al arreglo.
+        2. EXTRACCIÓN FIEL Y DETALLADA: Extrae TODAS las tareas y compromisos explícitamente mencionados, por ínfimos que parezcan. REGLA ANTI-ALUCINACIÓN: NO INVENTES NI REPITAS TAREAS. EXPANDE EL DETALLE DE CADA UNA AL MÁXIMO. ¡NO LAS AGRUPES!
+        3. 'thinking_process': ÚSalo PRIMERO en tu JSON. Es un diario detallado donde analizas línea a línea por qué cada iniciativa es una tarea real ANTES de pasarla al arreglo.
         4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde la fecha actual {current_date}.
-        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON (Objetivo, Detalle, etc.) para CADA UNA de las tareas individuales extraídas.
+        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON (Objetivo, Detalle, Actividades puntuales, Entregable, Criterio de cierre) rellenando cada campo con abundante información contextual para CADA UNA de las tareas individuales extraídas.
         
         Transcripción:
         {safe_transcript}
