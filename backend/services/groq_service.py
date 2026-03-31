@@ -258,10 +258,14 @@ class GroqService:
                             parsed_data = parsed_data[first_key]
                             break
                             
-            # Value wrapper defensive programming 
+            # Value or Description wrapper defensive programming 
             for key in ["summary", "decisions", "risks", "agreements"]:
-                if key in parsed_data and isinstance(parsed_data[key], dict) and "value" in parsed_data[key]:
-                    parsed_data[key] = parsed_data[key]["value"]
+                if key in parsed_data and isinstance(parsed_data[key], dict):
+                    if "value" in parsed_data[key]:
+                        parsed_data[key] = parsed_data[key]["value"]
+                    elif "description" in parsed_data[key]:
+                        # Handle schema hallucination where LLM returns {"type": "...", "description": "Respuesta"}
+                        parsed_data[key] = parsed_data[key]["description"]
                     
             for key in ["attendees", "themes", "action_items"]:
                 if key in parsed_data and isinstance(parsed_data[key], dict):
