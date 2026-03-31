@@ -169,6 +169,9 @@ export class CurationPanelComponent implements OnInit {
   updateTaskField(task: ActionItem) {
     if (!task.id) return;
     const body = new FormData();
+    if (task.title != null) body.append('title', task.title);
+    if (task.description != null) body.append('description', task.description);
+    if (task.owner_name != null) body.append('owner_name', task.owner_name);
     if (task.owner_email != null) body.append('owner_email', task.owner_email);
     if (task.due_date != null) body.append('due_date', task.due_date);
 

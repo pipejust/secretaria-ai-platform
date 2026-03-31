@@ -64,7 +64,7 @@ class GroqService:
                             "role": {"type": "string", "description": "Cargo o rol del participante"},
                             "entity": {"type": "string", "description": "Empresa o entidad a la que pertenece"}
                         },
-                        "required": ["name"]
+                        "required": ["name", "role", "entity"]
                     }
                 },
                 "themes": {

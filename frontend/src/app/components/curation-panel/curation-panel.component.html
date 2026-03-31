@@ -142,15 +142,15 @@
             <div class="task-card fade-in" *ngFor="let task of meetingData.action_items; let i = index" [class.selected]="task.selected">
               <div class="task-header-row">
                 <input type="checkbox" class="task-checkbox" [(ngModel)]="task.selected" />
-                <input type="text" class="task-title-input" [(ngModel)]="task.title" placeholder="Título de Tarea" />
+                <input type="text" class="task-title-input" [(ngModel)]="task.title" placeholder="Título de Tarea" (blur)="updateTaskField(task)" />
               </div>
               
-              <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción detallada de la tarea" rows="2"></textarea>
+              <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción detallada de la tarea" rows="2" (blur)="updateTaskField(task)"></textarea>
               
               <div class="task-meta-modern">
                  <div class="meta-field">
                    <div class="meta-icon">👤</div>
-                   <input type="text" [(ngModel)]="task.owner_name" placeholder="Responsable" />
+                   <input type="text" [(ngModel)]="task.owner_name" placeholder="Responsable" (blur)="updateTaskField(task)" />
                  </div>
                  <div class="meta-field">
                    <div class="meta-icon">✉️</div>
