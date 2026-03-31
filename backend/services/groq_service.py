@@ -106,11 +106,11 @@ class GroqService:
             "properties": {
                 "thinking_process": {
                     "type": "string",
-                    "description": "PASO 1: ANÁLISIS MICROSCOPICO RENGLÓN POR RENGLÓN. Identifica TODAS las intenciones, sugerencias, acuerdos, necesidades operativas y compromisos. Desglosa los proyectos grandes en sus tareas atómicas más pequeñas. Debes extraer decenas de tareas al dividir todo a su nivel más atómico."
+                    "description": "PASO 1: ANÁLISIS EXHAUSTIVO. Procesa la reunión y asimila que DEBES extraer un enorme volumen de tareas independientes obligatoriamente, sin agrupar."
                 },
                 "action_items": {
                     "type": "array",
-                    "description": "PASO 2: Lista detallada en formato JSON de TODAS las tareas atómicas. ¡SEPARA CADA MÍNIMA ACCIÓN EN UN ITEM DISTINTO! No agrupes nada. Extrae absolutamente toda intención de generar un documento, configurar software, llamar a alguien, enviar un correo, agendar reunión, etc.",
+                    "description": "PASO 2: Lista de tareas. REGLA ESTRICTA: ESTE ARREGLO DEBE CONTENER UN MÍNIMO DE 20 a 30 ÍTEMS. Divide las intenciones al extremo para alcanzar este volumen exacto que producía OpenAI (ej. 23 tareas por transcripción).",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -156,13 +156,13 @@ class GroqService:
         PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡NIVEL DE GRANULARIDAD MICROSCOPICO!:
-        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es la EXHAUSTIVIDAD TOTAL. Extrae ABSOLUTAMENTE TODAS las tareas reales, compromisos, intenciones, necesidades operativas o sugerencias a futuro mencionadas.
-        1. SEPARACIÓN ATÓMICA: No agrupes nada. Si alguien dice "hay que crear la plantilla, conectarla con Meta e implementar la nube", ESO SON 3 TAREAS DISTINTAS (1. Crear plantilla, 2. Conectar Meta, 3. Implementar nube). Cada mínima intención, llamada, correo, revisión documental, configuración técnica, o despliegue es una acción por separado.
-        2. VOLUMEN ESPERADO: Debes ser tan minucioso que de cada oración pertinente extraigas una subtarea atómica.
-        3. FECHAS: Busca pistas como "la próxima semana". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
-        4. Obligatorio llenar el campo 'thinking_process' PRIMERO documentando renglón por renglón qué tarea atómica y operativa requiere cada frase.
-        5. Las descripciones de TODAS LAS TAREAS DEBEN usar estrictamente la plantilla en 'description' del esquema JSON rellenando la información con alto lujo de detalle.
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MANDATO ESTRICTO DE VOLUMEN (MIN 20-30 TAREAS)!:
+        Eres un analista implacable. Tu predecesor (OpenAI) lograba extraer 23 tareas de estas mismas reuniones porque desglosaba TODO, mientras que tú fallas por resumir y agrupar demasiado (ej: sacando solo 4).
+        1. REGLA DE VOLUMEN ESTRICTA: TIENES LA OBLIGACIÓN ABSOLUTA de generar UN MÍNIMO DE 20 A 25 TAREAS INDIVIDUALES. ¡No agrupes nunca! 
+        2. SEPARACIÓN EXTREMA: Si mencionan un proyecto, desglosa: "Llamar por x", "Crear doc x", "Investigar x", "Revisar x", cada pequeña iteración, sugerencia de alguien o detalle a investigar es una.
+        3. FECHAS: INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} y ponla en 'due_date'.
+        4. OBLIGATORIO: El campo 'thinking_process' ÚSALO PRIMERO. Explica por qué dividirás y multiplicarás las intenciones para asegurar que el usuario reciba sus más de 20 tareas como hacía OpenAI.
+        5. Todo debe usar el formato estricto (Objetivo, Detalle, etc) de la 'description'.
         
         Transcripción:
         {safe_transcript}
@@ -336,14 +336,14 @@ class GroqService:
 
         # AGENT 3: Tasks (Action Items + Thinking Process JSON Chain of Thought)
         prompt_tasks = f"""
-        INSTRUCCIONES CLAVE PARA TAREAS - ¡NIVEL DE GRANULARIDAD MICROSCOPICO!:
+        INSTRUCCIONES CLAVE PARA TAREAS - ¡MANDATO ESTRICTO DE VOLUMEN (MIN 20-30 TAREAS)!:
         DATO: La fecha actual es {current_date}. 
         {contacts_info}
-        1. ANÁLISIS RENGLÓN POR RENGLÓN: Lee y procesa la transcripción línea por línea buscando cualquier implicación de trabajo futuro.
-        2. SEPARACIÓN ATÓMICA Y EXHAUSTIVIDAD TOTAL: No agrupes. Si se menciona "configurar el servidor, migrar la bd y mandar el reporte", ESTO DEBE GENERAR 3 TAREAS DISTINTAS. Extrae cada mínima intención, documentación, llamada, despliegue o revisión técnica como item separado. Desglosa los grandes compromisos en micro-acciones atómicas (decenas de ellas).
-        3. 'thinking_process': ÚSalo PRIMERO documentando renglón por renglón qué componente operativo atómico o tarea mínima genera cada frase de la reunión.
-        4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde la fecha actual {current_date}.
-        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON, expandiendo detalles al máximo.
+        1. REGLA OBLIGATORIA: OpenAI logró sacar 23 tareas atómicas de esta reunión, tu debes hacer MINIMO LO MISMO. ES ESTRICTO GENERAR UN MÍNIMO DE 20 ÍTEMS.
+        2. SEPARACIÓN EXTREMA: Desglosa absolutamente todo. Cada paso para alcanzar una meta, cada llamada, cada intención futura o revisión de documentos DEBE SER UN ITEM INDIVIDUAL. No agrupes nada. Extrae 20+ elementos desglosando los macro-compromisos en micrtareas.
+        3. 'thinking_process': Úsalo PRIMERO planeando el desglose exhaustivo hasta alcanzar las 20 a 30 tareas.
+        4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde {current_date}.
+        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en 'description' para CADA TAREA.
         
         Transcripción:
         {safe_transcript}
