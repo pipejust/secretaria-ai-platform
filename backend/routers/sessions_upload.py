@@ -415,13 +415,27 @@ def update_session_content(session_id: int, payload: SessionUpdate, db: Session 
     return {"status": "success", "message": "Manual edits saved successfully"}
 
 @router.put("/action_items/{item_id}")
-def update_action_item_email(item_id: int, owner_email: Optional[str] = Form(None), due_date: Optional[str] = Form(None), db: Session = Depends(get_session)):
-    """Update the owner email or due_date of an action item manually."""
+def update_action_item_manual(
+    item_id: int,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    owner_name: Optional[str] = Form(None),
+    owner_email: Optional[str] = Form(None),
+    due_date: Optional[str] = Form(None),
+    db: Session = Depends(get_session)
+):
+    """Update details of an action item manually."""
     from models import ActionItem
     item = db.get(ActionItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Action Item not found")
     
+    if title is not None:
+        item.title = title
+    if description is not None:
+        item.description = description
+    if owner_name is not None:
+        item.owner_name = owner_name
     if owner_email is not None:
         item.owner_email = owner_email
     if due_date is not None:

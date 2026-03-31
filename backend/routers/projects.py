@@ -156,6 +156,20 @@ def add_project_contact(
     contact.project_id = project_id
     return crud.project_contact.create(session, obj_in=contact)
 
+@router.put("/contacts/{contact_id}", response_model=ProjectContact)
+def update_project_contact(
+    contact_id: int,
+    contact_update: ProjectContact,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Actualiza un contacto del proyecto"""
+    contact_obj = crud.project_contact.get(session, contact_id)
+    if not contact_obj:
+        raise HTTPException(status_code=404, detail="Contacto no encontrado")
+        
+    return crud.project_contact.update(session, db_obj=contact_obj, obj_in=contact_update)
+
 @router.delete("/contacts/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project_contact(
     contact_id: int,
