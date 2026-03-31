@@ -624,6 +624,7 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
     from services.email_service import EmailService
     import asyncio
     from fpdf import FPDF
+    from sqlmodel import select
     
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
@@ -651,7 +652,6 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
         # igual que en export_document (el usuario pidió explícitamente el PDF templado)
         try:
             from models import Template
-            from sqlmodel import select
             import requests
             import json
             
