@@ -9,12 +9,12 @@ from models import ActionItem
 from datetime import datetime
 
 class GroqService:
-    BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
-    MODEL = "llama-3.3-70b-versatile" # Groq soporta multiples, este es bueno para schemas
+    BASE_URL = "https://api.openai.com/v1/chat/completions"
+    MODEL = "gpt-4o" # Cambiado a GPT-4o para extrema fidelidad en extracción JSON
     
     def __init__(self):
         self.headers = {
-            "Authorization": f"Bearer {settings.groq_api_key}",
+            "Authorization": f"Bearer {settings.openai_api_key}",
             "Content-Type": "application/json"
         }
         
@@ -181,10 +181,10 @@ class GroqService:
             "temperature": 0.1
         }
         
-        async with httpx.AsyncClient(timeout=None) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
             if response.status_code != 200:
-                print(f"Groq API Error: {response.text}")
+                print(f"OpenAI API Error: {response.text}")
             response.raise_for_status()
             
             result_json = response.json()
@@ -238,7 +238,8 @@ class GroqService:
         }
         
         try:
-            response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+            # Quitamos el print de error de "Groq" si da timeout.
+            response = await client.post(self.BASE_URL, json=payload, headers=self.headers, timeout=120.0)
             response.raise_for_status()
             result_json = response.json()
             content_str = result_json["choices"][0]["message"]["content"]
@@ -350,7 +351,7 @@ class GroqService:
         """
         sys_tasks = f"{system_base} Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_tasks_only_json_schema())}"
 
-        async with httpx.AsyncClient(timeout=None) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             aws = [
                 self._execute_agent(client, sys_fundamentals, prompt_fundamentals),
                 self._execute_agent(client, sys_insights, prompt_insights),
