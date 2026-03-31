@@ -92,9 +92,9 @@ class GroqService:
         return {
             "type": "object",
             "properties": {
-                "decisions": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que detalle todas las decisiones clave tomadas, con alto contexto humano."},
-                "risks": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) que explique profundamente CADA riesgo, bloqueo o preocupación detectada."},
-                "agreements": {"type": "string", "description": "TEXTO EXHAUSTIVO (párrafos grandes, NO listas ni viñetas) de todos los acuerdos generales y consensos logrados."}
+                "decisions": {"type": "string", "description": "TEXTO EXHAUSTIVO Y GIGANTE (mínimo 3 a 5 párrafos grandes, NO listas ni viñetas). Analiza todas las decisiones, sus motivaciones y el contexto con lujo de detalles."},
+                "risks": {"type": "string", "description": "TEXTO EXHAUSTIVO Y GIGANTE (mínimo 3 a 5 párrafos grandes, NO listas ni viñetas). Explica profundamente cada riesgo, bloqueo o preocupación detectada, su gravedad y contexto."},
+                "agreements": {"type": "string", "description": "TEXTO EXHAUSTIVO Y GIGANTE (mínimo 3 a 5 párrafos grandes, NO listas ni viñetas). Detalla largamente y en prosa todos los acuerdos generales y consensos logrados."}
             },
             "required": ["decisions", "risks", "agreements"]
         }
@@ -106,7 +106,7 @@ class GroqService:
             "properties": {
                 "thinking_process": {
                     "type": "string",
-                    "description": "PASO 1: Analiza CUIDADOSAMENTE toda la transcripción y anota aquí CADA petición, compromiso futuro o tarea implícita que detectes (suelen ser 20+). Haz un borrador mental de la fecha de cada tarea y su responsable ANTES de pasar a action_items."
+                    "description": "PASO 1: HAZ UN ANÁLISIS RENGLÓN POR RENGLÓN de toda la transcripción. Para obligarte a extraer MÍNIMO 21 tareas, anota aquí CADA petición, paso a seguir, compromiso futuro o tarea implícita que detectes. Haz un borrador detallado renglón por renglón con la fecha exacta y su responsable ANTES de pasar a action_items."
                 },
                 "action_items": {
                     "type": "array",
@@ -157,11 +157,11 @@ class GroqService:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
         INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
-        Eres un analista implacable. Tu meta es alcanzar la cifra real de tareas que casi siempre SUPERA LAS 20 O 30 EN ESTE TIPO DE LLAMADAS.
-        1. NO omitas ninguna tarea por pereza. Divide requerimientos grandes en micro-tareas asignadas.
-        2. FECHAS: Muchísimas tareas tienen fecha o límites de tiempo mencionados. Busca pistas como "la próxima semana", "para el martes 14", "en dos días". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
-        3. Obligatorio llenar el campo 'thinking_process' PRIMERO. Escribe un borrador de todas las tareas y fechas que encuentres a medida que pasas por el texto.
-        4. Las descripciones de las tareas en 'action_items' deben tener contexto absoluto y humano (1 o 2 párrafos de contexto si es necesario) para que el desarrollador entienda DE QUÉ hablan.
+        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es alcanzar la cifra real de tareas que siempre ES GIGANTE (MÍNIMO DEBEN SER 21 TAREAS EN ESTE TIPO DE LLAMADAS).
+        1. NO omitas ninguna tarea por pereza. Divide requerimientos grandes en micro-tareas asignadas. Analiza RENGLÓN POR RENGLÓN y extrae TODO.
+        2. FECHAS: Muchísimas tareas tienen fecha o límites de tiempo mencionados. Busca pistas como "la próxima semana", "para el martes 14". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
+        3. Obligatorio llenar el campo 'thinking_process' PRIMERO. Escribe un borrador larguísimo de TODAS las tareas que encuentres renglón por renglón y escrutina el texto completo.
+        4. Las descripciones de las tareas en 'action_items' deben tener contexto absoluto y humano (1 o 2 párrafos de contexto si es necesario).
         
         Transcripción:
         {safe_transcript}
@@ -319,10 +319,10 @@ class GroqService:
         # AGENT 2: Insights (Decisions, Risks, Agreements)
         prompt_insights = f"""
         Como redactor experto en actas:
-        - 'decisions': REDACTA UN TEXTO GRANDE Y FLUIDO (uno o varios párrafos, SIN VIÑETAS) contando con muchísimo detalle TODAS las decisiones clave tomadas, motivos y resultados.
-        - 'risks': REDACTA UN TEXTO EN PROSA (SIN VIÑETAS) explicando de forma altamente granular los bloqueos o preocupaciones mencionadas.
-        - 'agreements': REDACTA UN TEXTO PROFUNDO (SIN VIÑETAS) con las metodologías, consensos generales o fechas límite holísticas, con máximo contexto.
-        Sé exhaustivo. El usuario odia las viñetas en estas secciones, redacta párrafos completos de lectura continua.
+        - 'decisions': REDACTA UN TEXTO MONUMENTAL, GIGANTE Y FLUIDO (mínimo 3 a 5 párrafos grandes, SIN VIÑETAS) contando con muchísimo detalle TODAS las decisiones clave tomadas, motivos y resultados. 
+        - 'risks': REDACTA UN TEXTO EN PROSA GIGANTE (mínimo 3 a 5 párrafos grandes, SIN VIÑETAS) explicando de forma altamente granular los bloqueos o preocupaciones mencionadas.
+        - 'agreements': REDACTA UN TEXTO PROFUNDO Y EXTENSO (mínimo 3 a 5 párrafos grandes, SIN VIÑETAS) con las metodologías, consensos generales o fechas límite holísticas, con máximo contexto.
+        ES OBLIGATORIO que los tres textos sean MUY LARGOS, descriptivos, y llenos de contexto. El usuario odia las viñetas y odia los resúmenes cortos, desarrolla ideas largas y completas.
         
         Transcripción:
         {safe_transcript}
@@ -334,10 +334,11 @@ class GroqService:
         INSTRUCCIONES CLAVE PARA TAREAS:
         DATO: La fecha actual es {current_date}. 
         {contacts_info}
-        1. LLEGA HASTA EL FINAL: Eres implacable. Extrae MÁS de 20 TAREAS. No omitas ningún compromiso por ínfimo que sea, el equipo habló de MUCHAS tareas.
-        2. 'thinking_process': ÚSalo PRIMERO en tu JSON. Inventaría mentalmente todas las personas, fechas clave y compromisos. Solo un LLM flojo extrae menos de 15 tareas.
-        3. FECHAS: INFIERE la fecha exacta de 'due_date' interpretando textos como "la otra semana", "para el viernes" calculando desde la fecha actual. Usa YYYY-MM-DD.
-        4. ESPECIFICIDAD: Al llenar 'action_items', sé colosalmente exhaustivo. El desarrollador necesita entender el QUÉ y el PARA QUÉ de la tarea en la descripción.
+        1. ANÁLISIS RENGLÓN POR RENGLÓN: Lee y procesa la transcripción línea por línea.
+        2. EXTRACCIÓN MASIVA: Eres implacable. Extrae TODAS las tareas. No omitas ningún compromiso por ínfimo que sea. REGLA DE ORO: DEBES EXTRAER MÍNIMO 21 TAREAS en esta conversación.
+        3. 'thinking_process': ÚSalo PRIMERO en tu JSON. Es un diario detallado donde extraes línea a línea los compromisos. Un análisis superficial generará 10 tareas. Hazlo a fondo para conseguir más de 20.
+        4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde la fecha actual {current_date}.
+        5. ESPECIFICIDAD: Al llenar 'action_items', sé colosalmente exhaustivo en la descripción.
         
         Transcripción:
         {safe_transcript}
