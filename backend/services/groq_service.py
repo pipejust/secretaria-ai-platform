@@ -133,9 +133,7 @@ class GroqService:
         Ésto permite que la IA dedique todos sus tokens/atención a generar tareas altamente detalladas
         y no pierda calidad al regenerar.
         """
-        safe_transcript = transcript
-        if len(transcript) > 25000:
-            safe_transcript = transcript[:3000] + "\n\n[... TEXTO RECORTADO POR LONGITUD ...]\n\n" + transcript[-21000:]
+        safe_transcript = transcript # REMOVED TRUNCATION, GPT-4o handles 128k context
             
         contacts_info = ""
         if project_contacts:
@@ -168,16 +166,39 @@ class GroqService:
         {safe_transcript}
         """
 
+        schema = self._get_tasks_only_json_schema()
+        def strictify_schema(sch):
+            if isinstance(sch, dict):
+                if sch.get("type") == "object":
+                    sch["additionalProperties"] = False
+                    if "properties" in sch:
+                        for k, v in sch.get("properties", {}).items():
+                            strictify_schema(v)
+                elif sch.get("type") == "array":
+                    if "items" in sch:
+                        strictify_schema(sch["items"])
+                        
+        import copy
+        strict_schema = copy.deepcopy(schema)
+        strictify_schema(strict_schema)
+        
         payload = {
             "model": self.MODEL,
             "messages": [
                 {
                     "role": "system",
-                    "content": f"Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_tasks_only_json_schema())}"
+                    "content": "Eres un asistente experto. Extrae todas las tareas como se te solicita."
                 },
                 {"role": "user", "content": prompt}
             ],
-            "response_format": {"type": "json_object"},
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "extraction",
+                    "strict": True,
+                    "schema": strict_schema
+                }
+            },
             "temperature": 0.1
         }
         
@@ -225,7 +246,7 @@ class GroqService:
                 # Retornamos dict vacío en vez de raise para evitar romper la UI si falla
                 return {"action_items": []}
 
-    async def _execute_agent(self, client: httpx.AsyncClient, system_prompt: str, user_prompt: str) -> dict:
+    async def _execute_agent(self, client: httpx.AsyncClient, system_prompt: str, user_prompt: str, schema: dict = None) -> dict:
         """Helper to execute an LLM agent and safely parse its JSON response"""
         payload = {
             "model": self.MODEL,
@@ -233,10 +254,37 @@ class GroqService:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            "response_format": {"type": "json_object"},
             "temperature": 0.1
         }
         
+        if schema:
+            # Para OpenAI Structured Outputs, additionalProperties debe ser False
+            def strictify_schema(sch):
+                if isinstance(sch, dict):
+                    if sch.get("type") == "object":
+                        sch["additionalProperties"] = False
+                        if "properties" in sch:
+                            for k, v in sch.get("properties", {}).items():
+                                strictify_schema(v)
+                    elif sch.get("type") == "array":
+                        if "items" in sch:
+                            strictify_schema(sch["items"])
+            
+            import copy
+            strict_schema = copy.deepcopy(schema)
+            strictify_schema(strict_schema)
+            
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "extraction",
+                    "strict": True,
+                    "schema": strict_schema
+                }
+            }
+        else:
+            payload["response_format"] = {"type": "json_object"}
+            
         try:
             # Quitamos el print de error de "Groq" si da timeout.
             response = await client.post(self.BASE_URL, json=payload, headers=self.headers, timeout=120.0)
@@ -295,9 +343,7 @@ class GroqService:
         Arquitectura Multi-Agente: Ejecuta 3 promps paralelos para evitar el Colapso de Contexto (Context Collapse)
         y garantizar extrema fidelidad y volumen en cada sección (Fundamentales, Insights, Tareas).
         """
-        safe_transcript = transcript
-        if len(transcript) > 25000:
-            safe_transcript = transcript[:3000] + "\n\n[... TEXTO RECORTADO POR LONGITUD ...]\n\n" + transcript[-21000:]
+        safe_transcript = transcript # REMOVED TRUNCATION, GPT-4o handles 128k context natively to catch all tasks
             
         contacts_info = ""
         if project_contacts:
@@ -314,13 +360,15 @@ class GroqService:
         Analiza el texto y extrae:
         - Idioma original (language). Todo lo demás de tu JSON debe estar en ESPAÑOL.
         - Un resumen ('summary') muy extenso, denso y profundo de toda la reunión (mínimo 4 o 5 párrafos ricos en contexto).
-        - Participantes ('attendees'), sus cargos y empresas si se mencionan.
+        - Participantes ('attendees'). REGLA OBLIGATORIA: Consulta estrictamente la 'lista de personas del proyecto' provista abajo para identificar su 'role' y 'entity' reales. Si el participante mencionado en la reunión figura en la lista, copia EXÁCTAMENTE el rol y entidad de la base de datos, NO LOS INVENTES.
         - Los temas discutidos ('themes') y sus elaborados puntos de conversación.
+        
+        {contacts_info}
         
         Transcripción:
         {safe_transcript}
         """
-        sys_fundamentals = f"{system_base} Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_fundamentals_schema())}"
+        schema_fund = self._get_fundamentals_schema()
         
         # AGENT 2: Insights (Decisions, Risks, Agreements)
         prompt_insights = f"""
@@ -333,7 +381,7 @@ class GroqService:
         Transcripción:
         {safe_transcript}
         """
-        sys_insights = f"{system_base} Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_insights_schema())}"
+        schema_ins = self._get_insights_schema()
 
         # AGENT 3: Tasks (Action Items + Thinking Process JSON Chain of Thought)
         prompt_tasks = f"""
@@ -349,13 +397,13 @@ class GroqService:
         Transcripción:
         {safe_transcript}
         """
-        sys_tasks = f"{system_base} Responde EXCLUSIVAMENTE en formato JSON con la siguiente estructura: {json.dumps(self._get_tasks_only_json_schema())}"
+        schema_tasks = self._get_tasks_only_json_schema()
 
         async with httpx.AsyncClient(timeout=180.0) as client:
             aws = [
-                self._execute_agent(client, sys_fundamentals, prompt_fundamentals),
-                self._execute_agent(client, sys_insights, prompt_insights),
-                self._execute_agent(client, sys_tasks, prompt_tasks)
+                self._execute_agent(client, system_base, prompt_fundamentals, schema_fund),
+                self._execute_agent(client, system_base, prompt_insights, schema_ins),
+                self._execute_agent(client, system_base, prompt_tasks, schema_tasks)
             ]
             results = await asyncio.gather(*aws)
             

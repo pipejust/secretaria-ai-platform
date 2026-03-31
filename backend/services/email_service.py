@@ -93,6 +93,45 @@ class EmailService:
             current_year=2026
         )
         await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content, attachments=attachments)
+
+    async def send_action_items_batch_email(
+        self, 
+        to_email: str, 
+        owner_name: str, 
+        tasks: list, 
+        project_name: str, 
+        attachments: list = None,
+        summary: str = None,
+        decisions: str = None,
+        risks: str = None,
+        agreements: str = None
+    ):
+        template = self.jinja_env.get_template('email_action_items_batch.html')
+        
+        # Prepare tasks for rendering
+        rendered_tasks = []
+        for t in tasks:
+            rendered_tasks.append({
+                "title": getattr(t, 'title', ''),
+                "description": getattr(t, 'description', ''),
+                "due_date": getattr(t, 'due_date', None)
+            })
+            
+        task_count = len(rendered_tasks)
+        plural = "s" if task_count > 1 else ""
+
+        html_content = template.render(
+            owner_name=owner_name,
+            tasks=rendered_tasks,
+            task_count=task_count,
+            project_name=project_name,
+            summary=summary,
+            decisions=decisions,
+            risks=risks,
+            agreements=agreements,
+            current_year=2026
+        )
+        await self._send_html_email(to_email, f"Tienes {task_count} nueva{plural} tarea{plural} asignada{plural} en: {project_name}", html_content, attachments=attachments)
         
     async def send_welcome_email(self, to_email: str, user_name: str, role: str, login_url: str = ""):
         template = self.jinja_env.get_template('email_welcome.html')

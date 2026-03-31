@@ -228,7 +228,7 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
     if session_obj.project_id:
         from sqlmodel import select
         db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
-        project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
+        project_contacts = [{"name": c.name, "email": c.email, "role": c.role, "entity": c.entity} for c in db_contacts]
 
     # 2. Llamamos a Groq
     groq_svc = GroqService()
@@ -325,7 +325,7 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
         from sqlmodel import select
         from models import ProjectContact
         db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
-        project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
+        project_contacts = [{"name": c.name, "email": c.email, "role": c.role, "entity": c.entity} for c in db_contacts]
 
     structured_data = {}
     try:
@@ -750,6 +750,8 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             import traceback
             print(f"Error generating PDF attachment for email: {e}\n{traceback.format_exc()}")
     
+    # 1. Agrupar items por owner_email
+    tasks_by_email = {}
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
         if not item or item.session_id != session_id:
@@ -759,6 +761,16 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
             results.append({"id": item_id, "status": "failed", "reason": "No email provided"})
             continue
             
+        email = item.owner_email.lower().strip()
+        if email not in tasks_by_email:
+            tasks_by_email[email] = {
+                "owner_name": item.owner_name if item.owner_name else email.split('@')[0],
+                "items": []
+            }
+        tasks_by_email[email]["items"].append(item)
+        
+    # 2. Iterar por cada persona
+    for email, data in tasks_by_email.items():
         attachments = []
         if docx_b64_global:
             safe_title = session_obj.title[:20].replace(' ', '_')
@@ -774,54 +786,62 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                 "content_type": "application/pdf"
             })
             
-        if item.due_date:
-            try:
-                date_clean = str(item.due_date).replace("-", "")
-                if len(date_clean) == 8:
-                    desc_clean = (item.description or "").replace("\n", "\\n").replace("\r", "")
-                    title_clean = item.title.replace("\n", "").replace("\r", "")
-                    ics_lines = [
-                        "BEGIN:VCALENDAR",
-                        "VERSION:2.0",
-                        "PRODID:-//Notiva//ES",
-                        "BEGIN:VEVENT",
-                        f"SUMMARY:{title_clean}",
-                        f"DTSTART;VALUE=DATE:{date_clean}",
-                        f"DTEND;VALUE=DATE:{date_clean}",
-                        f"DESCRIPTION:{desc_clean}",
-                        "END:VEVENT",
-                        "END:VCALENDAR"
-                    ]
-                    ics_raw = "\r\n".join(ics_lines).encode('utf-8')
-                    ics_b64 = base64.b64encode(ics_raw).decode('utf-8')
-                    attachments.append({
-                        "filename": "recordatorio.ics",
-                        "content": ics_b64,
-                        "content_type": "text/calendar"
-                    })
-            except Exception as e:
-                print(f"Error generating ICS: {e}")
+        # Generar ICS consolidado
+        ics_events = []
+        for item in data["items"]:
+            if item.due_date:
+                try:
+                    date_clean = str(item.due_date).replace("-", "")
+                    if len(date_clean) == 8:
+                        desc_clean = (item.description or "").replace("\n", "\\n").replace("\r", "")
+                        title_clean = item.title.replace("\n", "").replace("\r", "")
+                        ics_events.extend([
+                            "BEGIN:VEVENT",
+                            f"SUMMARY:{title_clean}",
+                            f"DTSTART;VALUE=DATE:{date_clean}",
+                            f"DTEND;VALUE=DATE:{date_clean}",
+                            f"DESCRIPTION:{desc_clean}",
+                            "END:VEVENT"
+                        ])
+                except Exception as e:
+                    print(f"Error parseando fecha para ICS de {item.id}: {e}")
+                    
+        if ics_events:
+            ics_lines = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "PRODID:-//Notiva//ES"
+            ] + ics_events + [
+                "END:VCALENDAR"
+            ]
+            ics_raw = "\r\n".join(ics_lines).encode('utf-8')
+            ics_b64 = base64.b64encode(ics_raw).decode('utf-8')
+            attachments.append({
+                "filename": "recordatorio_tareas.ics",
+                "content": ics_b64,
+                "content_type": "text/calendar"
+            })
             
         try:
-            owner_display = item.owner_name if item.owner_name else (item.owner_email.split('@')[0] if item.owner_email else "Asignado")
-            await email_service.send_action_item_email(
-                to_email=item.owner_email,
-                owner_name=owner_display,
-                task_title=item.title,
-                task_description=item.description,
+            await email_service.send_action_items_batch_email(
+                to_email=email,
+                owner_name=data["owner_name"],
+                tasks=data["items"],
                 project_name=session_obj.title,
-                due_date=item.due_date,
                 attachments=attachments,
                 summary=session_obj.raw_summary,
                 decisions=session_obj.processed_decisions,
                 risks=session_obj.processed_risks,
                 agreements=session_obj.processed_agreements
             )
-            results.append({"id": item_id, "status": "success"})
+            for item in data["items"]:
+                results.append({"id": item.id, "status": "success"})
+                
             # Resend Free limit is 2 requests per second. Sleep 0.6s to stay strictly below limit.
             await asyncio.sleep(0.6)
         except Exception as e:
-            results.append({"id": item_id, "status": "failed", "reason": str(e)})
+            for item in data["items"]:
+                results.append({"id": item.id, "status": "failed", "reason": str(e)})
             
     return {"status": "success", "results": results}
 
