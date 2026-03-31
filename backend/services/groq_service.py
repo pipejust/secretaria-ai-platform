@@ -106,18 +106,18 @@ class GroqService:
             "properties": {
                 "thinking_process": {
                     "type": "string",
-                    "description": "PASO 1: HAZ UN ANÁLISIS RENGLÓN POR RENGLÓN de toda la transcripción para agrupar las iniciativas dispersas en MACRO TAREAS ESTRATÉGICAS. No omitas ningún detalle. Lista aquí los posibles frentes, proyectos y responsables ANTES de pasar a action_items."
+                    "description": "PASO 1: HAZ UN ANÁLISIS RENGLÓN POR RENGLÓN de toda la transcripción para extraer ABSOLUTAMENTE TODAS las tareas. No omitas ningún detalle y NO LAS AGRUPES. Para obligarte a extraer MÍNIMO 23 TAREAS, anota aquí CADA pequeño compromiso o paso a seguir de forma individual ANTES de pasar a action_items."
                 },
                 "action_items": {
                     "type": "array",
-                    "description": "PASO 2: Lista detallada en formato JSON de MACRO TAREAS ESTRATÉGICAS (Agrupa tareas pequeñas en frentes de trabajo).",
+                    "description": "PASO 2: Lista detallada en formato JSON de TODAS las tareas individuales identificadas. DEBEN SER MÍNIMO 23 TAREAS. ¡NO las agrupes, crea un ítem por cada tarea!",
                     "items": {
                         "type": "object",
                         "properties": {
                             "owner_name": {"type": "string"},
                             "owner_email": {"type": "string"},
-                            "title": {"type": "string", "description": "Título claro y descriptivo de la macro-tarea o frente de acción."},
-                            "description": {"type": "string", "description": "Usa ESTRICTAMENTE el siguiente formato separador con saltos de línea y texto:\nObjetivo: [texto]\nDetalle específico: [texto]\nActividades puntuales: [texto]\nEntregable: [texto]\nCriterio de cierre: [texto]"},
+                            "title": {"type": "string", "description": "Título claro y descriptivo de la tarea específica."},
+                            "description": {"type": "string", "description": "Usa ESTRICTAMENTE el siguiente formato separador con saltos de línea y texto para estructurar esta tarea específica:\nObjetivo: [texto]\nDetalle específico: [texto]\nActividades puntuales: [texto]\nEntregable: [texto]\nCriterio de cierre: [texto]"},
                             "due_date": {"type": "string", "description": "Revisa tu thinking_process para colocar la fecha o día exacto acordado en formato YYYY-MM-DD."}
                         },
                         "required": ["owner_name", "owner_email", "title", "description", "due_date"]
@@ -157,11 +157,11 @@ class GroqService:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
         INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
-        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es estructurar formalmente MACRO TAREAS ESTRATÉGICAS.
-        1. Agrupa las tareas sueltas, requerimientos y compromisos en frentes de trabajo o MACRO TAREAS.
+        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es extraer ABSOLUTAMENTE TODAS las tareas individuales sin excepción (MÍNIMO DEBEN SER 23 TAREAS). 
+        1. NO AGRUPES LAS TAREAS. Crea un registro individual ('action_item') en el arreglo para cada requerimiento, compromiso o paso a seguir mencionado, por ínfimo que parezca.
         2. FECHAS: Muchísimas tareas tienen fecha o límites de tiempo mencionados. Busca pistas como "la próxima semana". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
-        3. Obligatorio llenar el campo 'thinking_process' PRIMERO como un borrador larguísimo documentando cómo vas a agrupar todo en frentes y grandes tareas conjuntas.
-        4. Las descripciones de las tareas DEBEN usar estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON.
+        3. Obligatorio llenar el campo 'thinking_process' PRIMERO como un borrador larguísimo documentando cada una de las 23+ tareas sueltas que encuentres. NO resumas.
+        4. Las descripciones de TODAS LAS TAREAS INDIVIDUALES DEBEN usar estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON.
         
         Transcripción:
         {safe_transcript}
@@ -338,11 +338,11 @@ class GroqService:
         INSTRUCCIONES CLAVE PARA TAREAS:
         DATO: La fecha actual es {current_date}. 
         {contacts_info}
-        1. ANÁLISIS RENGLÓN POR RENGLÓN para estructurar formalmente MACRO TAREAS ESTRATÉGICAS agrupando tareas sueltas.
-        2. EXTRACCIÓN MASIVA: Eres implacable. Extrae TODOS los compromisos y agrúpalos en grandes frentes de trabajo o MACRO TAREAS.
-        3. 'thinking_process': ÚSalo PRIMERO en tu JSON como un diario detallado para bosquejar las macro tareas.
+        1. ANÁLISIS RENGLÓN POR RENGLÓN: Lee y procesa la transcripción línea por línea.
+        2. EXTRACCIÓN MASIVA E INDIVIDUAL: Eres implacable. Extrae TODAS las tareas sueltas. No omitas ningún compromiso. ¡NO AGRUPES LAS TAREAS! REGLA DE ORO: DEBES EXTRAER MÍNIMO 23 TAREAS INDIVIDUALES.
+        3. 'thinking_process': ÚSalo PRIMERO en tu JSON. Es un diario detallado donde extraes línea a línea TODAS las 23+ iniciativas individuales ANTES de pasarlas al arreglo.
         4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde la fecha actual {current_date}.
-        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON (Objetivo, Detalle, etc.).
+        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON (Objetivo, Detalle, etc.) para CADA UNA de las tareas individuales extraídas.
         
         Transcripción:
         {safe_transcript}
