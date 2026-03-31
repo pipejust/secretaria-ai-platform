@@ -106,11 +106,11 @@ class GroqService:
             "properties": {
                 "thinking_process": {
                     "type": "string",
-                    "description": "PASO 1: ANÁLISIS EXHAUSTIVO. Procesa la reunión y asimila que DEBES extraer un enorme volumen de tareas independientes obligatoriamente, sin agrupar."
+                    "description": "PASO 1: ANÁLISIS EXHAUSTIVO. Procesa la reunión y asimila que DEBES extraer LAS TAREAS EXACTAS que haya en la transcripción, sin importar cuántas sean. Ni inventes, ni omitas."
                 },
                 "action_items": {
                     "type": "array",
-                    "description": "PASO 2: Lista de tareas. REGLA ESTRICTA: ESTE ARREGLO DEBE CONTENER UN MÍNIMO DE 20 a 30 ÍTEMS. Divide las intenciones al extremo para alcanzar este volumen exacto que producía OpenAI (ej. 23 tareas por transcripción).",
+                    "description": "PASO 2: Lista de tareas. Extrae EXACTAMENTE las tareas que estén en la transcripción, desglosando al máximo nivel de detalle para no agrupar iniciativas, igual que lo haría GPT-4. No tienes un mínimo ni un máximo, guíate al 100% por la realidad del texto.",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -156,12 +156,12 @@ class GroqService:
         PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MANDATO ESTRICTO DE VOLUMEN (MIN 20-30 TAREAS)!:
-        Eres un analista implacable. Tu predecesor (OpenAI) lograba extraer 23 tareas de estas mismas reuniones porque desglosaba TODO, mientras que tú fallas por resumir y agrupar demasiado (ej: sacando solo 4).
-        1. REGLA DE VOLUMEN ESTRICTA: TIENES LA OBLIGACIÓN ABSOLUTA de generar UN MÍNIMO DE 20 A 25 TAREAS INDIVIDUALES. ¡No agrupes nunca! 
-        2. SEPARACIÓN EXTREMA: Si mencionan un proyecto, desglosa: "Llamar por x", "Crear doc x", "Investigar x", "Revisar x", cada pequeña iteración, sugerencia de alguien o detalle a investigar es una.
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - FIDELIDAD ABSOLUTA A LA TRANSCRIPCIÓN:
+        Eres un analista implacable. Tu principal objetivo es la FIDELIDAD EXACTA. Extrae LAS TAREAS EXACTAS que de verdad haya en la transcripción, ni una más, ni una menos.
+        1. NO AGRUPES TAREAS: Tu principal debilidad es que resumes. Si se mencionan 10 cosas distintas sobre un proyecto, ESO SON 10 TAREAS, no 1 sola agrupada. Compórtate como OpenAI (GPT-4o) que saca la lista exacta de tareas (ej. 23) sin agrupar cosas independientes.
+        2. NO INVENTES TAREAS: Solo crea tareas que estén explícita o implícitamente comprometidas en la grabación. No hay un mínimo de tareas estricto, hay que respetar la realidad de la reunión.
         3. FECHAS: INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} y ponla en 'due_date'.
-        4. OBLIGATORIO: El campo 'thinking_process' ÚSALO PRIMERO. Explica por qué dividirás y multiplicarás las intenciones para asegurar que el usuario reciba sus más de 20 tareas como hacía OpenAI.
+        4. OBLIGATORIO: El campo 'thinking_process' ÚSALO PRIMERO para justificar cada tarea extraída demostrando su origen en el texto real.
         5. Todo debe usar el formato estricto (Objetivo, Detalle, etc) de la 'description'.
         
         Transcripción:
@@ -336,14 +336,14 @@ class GroqService:
 
         # AGENT 3: Tasks (Action Items + Thinking Process JSON Chain of Thought)
         prompt_tasks = f"""
-        INSTRUCCIONES CLAVE PARA TAREAS - ¡MANDATO ESTRICTO DE VOLUMEN (MIN 20-30 TAREAS)!:
+        INSTRUCCIONES CLAVE PARA TAREAS - FIDELIDAD ABSOLUTA A LA TRANSCRIPCIÓN:
         DATO: La fecha actual es {current_date}. 
         {contacts_info}
-        1. REGLA OBLIGATORIA: OpenAI logró sacar 23 tareas atómicas de esta reunión, tu debes hacer MINIMO LO MISMO. ES ESTRICTO GENERAR UN MÍNIMO DE 20 ÍTEMS.
-        2. SEPARACIÓN EXTREMA: Desglosa absolutamente todo. Cada paso para alcanzar una meta, cada llamada, cada intención futura o revisión de documentos DEBE SER UN ITEM INDIVIDUAL. No agrupes nada. Extrae 20+ elementos desglosando los macro-compromisos en micrtareas.
-        3. 'thinking_process': Úsalo PRIMERO planeando el desglose exhaustivo hasta alcanzar las 20 a 30 tareas.
+        1. REGLA OBLIGATORIA: Extrae las tareas EXACTAS que tiene la transcripción. Ni inventes cuotas arbitrarias ni omitas cosas reales.
+        2. NO AGRUPES: El problema es que resumes demasiado. Desglosa todo en sus tareas atómicas sin agrupar detalles independientes, logrando la misma exactitud microscópica que lograría OpenAI GPT-4.
+        3. 'thinking_process': Úsalo PRIMERO para listar mentalmente los compromisos reales que hay en el texto sin inventar nada.
         4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde {current_date}.
-        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en 'description' para CADA TAREA.
+        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en 'description' para CADA TAREA sin omitir nada.
         
         Transcripción:
         {safe_transcript}
