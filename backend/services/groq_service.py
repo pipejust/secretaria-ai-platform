@@ -106,11 +106,11 @@ class GroqService:
             "properties": {
                 "thinking_process": {
                     "type": "string",
-                    "description": "PASO 1: HAZ UN ANÁLISIS RENGLÓN POR RENGLÓN de toda la transcripción para identificar ABSOLUTAMENTE TODAS las tareas reales y compromisos mencionados. NO INVENTES NI REPITAS TAREAS. Anota aquí cada compromiso real encontrado antes de pasar a action_items."
+                    "description": "PASO 1: ANÁLISIS MICROSCOPICO RENGLÓN POR RENGLÓN. Identifica TODAS las intenciones, sugerencias, acuerdos, necesidades operativas y compromisos. Desglosa los proyectos grandes en sus tareas atómicas más pequeñas. Debes extraer decenas de tareas al dividir todo a su nivel más atómico."
                 },
                 "action_items": {
                     "type": "array",
-                    "description": "PASO 2: Lista detallada en formato JSON de TODAS las tareas individuales identificadas. ¡EXTRAE SÓLO TAREAS REALES MENCIONADAS EN EL TEXTO, NO ALUCINES NI INVENTES TAREAS, NO LAS AGRUPES!",
+                    "description": "PASO 2: Lista detallada en formato JSON de TODAS las tareas atómicas. ¡SEPARA CADA MÍNIMA ACCIÓN EN UN ITEM DISTINTO! No agrupes nada. Extrae absolutamente toda intención de generar un documento, configurar software, llamar a alguien, enviar un correo, agendar reunión, etc.",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -156,12 +156,13 @@ class GroqService:
         PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
         
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡MUY IMPORTANTE!:
-        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es extraer ABSOLUTAMENTE TODAS las tareas reales o compromisos explícitamente mencionados, por ínfimos que parezcan. EXPLICA CADA TAREA CON MÁXIMO GRADO DE DETALLE.
-        1. REGLA DE ORO ANTI-ALUCINACIÓN: NO inventes tareas que no estén en el texto. NO repitas tareas. Si la reunión es corta, extrae solo lo real. NO AGRUPES LAS TAREAS, mantenlas individuales.
-        2. FECHAS: Muchísimas tareas tienen fecha o límites de tiempo mencionados. Busca pistas como "la próxima semana". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
-        3. Obligatorio llenar el campo 'thinking_process' PRIMERO como un borrador larguísimo documentando la lógica de por qué consideras que cada punto es una tarea real.
-        4. Las descripciones de TODAS LAS TAREAS INDIVIDUALES DEBEN usar estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON. NO PUEDES OMITIR NINGUNA PARTE DE LA PLANTILLA.
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - ¡NIVEL DE GRANULARIDAD MICROSCOPICO!:
+        Eres un analista implacable que lee la transcripción renglón por renglón. Tu meta es la EXHAUSTIVIDAD TOTAL. Extrae ABSOLUTAMENTE TODAS las tareas reales, compromisos, intenciones, necesidades operativas o sugerencias a futuro mencionadas.
+        1. SEPARACIÓN ATÓMICA: No agrupes nada. Si alguien dice "hay que crear la plantilla, conectarla con Meta e implementar la nube", ESO SON 3 TAREAS DISTINTAS (1. Crear plantilla, 2. Conectar Meta, 3. Implementar nube). Cada mínima intención, llamada, correo, revisión documental, configuración técnica, o despliegue es una acción por separado.
+        2. VOLUMEN ESPERADO: Debes ser tan minucioso que de cada oración pertinente extraigas una subtarea atómica.
+        3. FECHAS: Busca pistas como "la próxima semana". INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} (año {current_date.split('-')[0]}) y ponla en 'due_date'.
+        4. Obligatorio llenar el campo 'thinking_process' PRIMERO documentando renglón por renglón qué tarea atómica y operativa requiere cada frase.
+        5. Las descripciones de TODAS LAS TAREAS DEBEN usar estrictamente la plantilla en 'description' del esquema JSON rellenando la información con alto lujo de detalle.
         
         Transcripción:
         {safe_transcript}
@@ -335,14 +336,14 @@ class GroqService:
 
         # AGENT 3: Tasks (Action Items + Thinking Process JSON Chain of Thought)
         prompt_tasks = f"""
-        INSTRUCCIONES CLAVE PARA TAREAS:
+        INSTRUCCIONES CLAVE PARA TAREAS - ¡NIVEL DE GRANULARIDAD MICROSCOPICO!:
         DATO: La fecha actual es {current_date}. 
         {contacts_info}
-        1. ANÁLISIS RENGLÓN POR RENGLÓN: Lee y procesa la transcripción línea por línea.
-        2. EXTRACCIÓN FIEL Y DETALLADA: Extrae TODAS las tareas y compromisos explícitamente mencionados, por ínfimos que parezcan. REGLA ANTI-ALUCINACIÓN: NO INVENTES NI REPITAS TAREAS. EXPANDE EL DETALLE DE CADA UNA AL MÁXIMO. ¡NO LAS AGRUPES!
-        3. 'thinking_process': ÚSalo PRIMERO en tu JSON. Es un diario detallado donde analizas línea a línea por qué cada iniciativa es una tarea real ANTES de pasarla al arreglo.
+        1. ANÁLISIS RENGLÓN POR RENGLÓN: Lee y procesa la transcripción línea por línea buscando cualquier implicación de trabajo futuro.
+        2. SEPARACIÓN ATÓMICA Y EXHAUSTIVIDAD TOTAL: No agrupes. Si se menciona "configurar el servidor, migrar la bd y mandar el reporte", ESTO DEBE GENERAR 3 TAREAS DISTINTAS. Extrae cada mínima intención, documentación, llamada, despliegue o revisión técnica como item separado. Desglosa los grandes compromisos en micro-acciones atómicas (decenas de ellas).
+        3. 'thinking_process': ÚSalo PRIMERO documentando renglón por renglón qué componente operativo atómico o tarea mínima genera cada frase de la reunión.
         4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde la fecha actual {current_date}.
-        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON (Objetivo, Detalle, Actividades puntuales, Entregable, Criterio de cierre) rellenando cada campo con abundante información contextual para CADA UNA de las tareas individuales extraídas.
+        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en la propiedad 'description' del esquema JSON, expandiendo detalles al máximo.
         
         Transcripción:
         {safe_transcript}
