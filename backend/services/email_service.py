@@ -16,6 +16,32 @@ class EmailService:
         templates_dir = os.path.join(os.path.dirname(current_dir), 'templates')
         self.jinja_env = Environment(loader=FileSystemLoader(templates_dir))
         
+        import re
+        import html
+        def filter_linkify(text):
+            if not text: return text
+            safe_text = html.escape(str(text)).replace('\n', '<br>')
+            regex = r'(?P<email>[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(?P<whatsapp>(?P<wa_prefix>(?i)[wW]hats[aA]pp|[wW]pp|[wW]a\b|[wW]s\b)(?P<wa_sep>\s*[:\-#]*\s*)(?P<wa_num>\+?[\d][\d\s\-\.]{6,15}\d))|(?P<phone>(?<!\w)\+?[\d][\d\s\-\.]{6,15}\d(?!\w))'
+            def replacer(m):
+                if m.group('email'):
+                    addr = m.group('email')
+                    return f'<a href="mailto:{addr}" style="color: #2563eb; text-decoration: underline;">{addr}</a>'
+                elif m.group('whatsapp'):
+                    prefix = m.group('wa_prefix')
+                    sep = m.group('wa_sep')
+                    raw_num = m.group('wa_num')
+                    digits = re.sub(r"[^\d]", "", raw_num)
+                    return f'{prefix}{sep}<a href="https://wa.me/{digits}" style="color: #16a34a; text-decoration: underline; font-weight: bold;">{raw_num}</a>'
+                elif m.group('phone'):
+                    raw_num = m.group('phone')
+                    digits = re.sub(r"[^\d]", "", raw_num)
+                    if len(digits) < 7: return raw_num
+                    return f'<a href="tel:{digits}" style="color: #2563eb; text-decoration: underline; font-weight: bold;">{raw_num}</a>'
+                return m.group(0)
+            return re.sub(regex, replacer, safe_text)
+            
+        self.jinja_env.filters['linkify'] = filter_linkify
+        
         self.api_key = DEFAULT_RESEND_API_KEY
         self.from_email = DEFAULT_FROM_EMAIL
 

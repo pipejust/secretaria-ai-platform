@@ -8,7 +8,7 @@
   <div class="box">
     <h3 class="box-title">{{ task_title }}</h3>
     <p class="box-text" style="margin-bottom: 8px;"><strong>👤 Asignado a:</strong> {{ owner_name }}</p>
-    <p class="box-text">{{ task_description }}</p>
+    <p class="box-text">{{ task_description | linkify | safe }}</p>
     {% if due_date %}
     <p class="box-text" style="margin-top: 12px; font-size: 14px; color: #059669; font-weight: 600;">
       📅 Fecha límite: {{ due_date }}
@@ -19,28 +19,28 @@
   {% if summary %}
   <div style="margin-top: 20px; margin-bottom: 20px;">
     <h4 style="margin-bottom: 5px; color: #222;">📋 Resumen Ejecutivo</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ summary }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ summary | linkify | safe }}</p>
   </div>
   {% endif %}
 
   {% if decisions %}
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <h4 style="margin-bottom: 5px; color: #222;">⚖️ Decisiones Clave</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ decisions }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ decisions | linkify | safe }}</p>
   </div>
   {% endif %}
 
   {% if risks %}
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <h4 style="margin-bottom: 5px; color: #222;">⚠️ Riesgos Identificados</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ risks }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ risks | linkify | safe }}</p>
   </div>
   {% endif %}
 
   {% if agreements %}
   <div style="margin-top: 10px; margin-bottom: 25px;">
     <h4 style="margin-bottom: 5px; color: #222;">🤝 Acuerdos</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ agreements }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ agreements | linkify | safe }}</p>
   </div>
   {% endif %}
 

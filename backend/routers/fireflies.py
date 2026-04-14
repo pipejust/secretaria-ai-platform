@@ -26,8 +26,9 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
             # Extraer datos nativos enviados en el Webhook (como indica el usuario de que Fireflies envía esto)
             data_obj = payload_data.get("data", {}) if isinstance(payload_data.get("data"), dict) else {}
             title = payload_data.get("title") or data_obj.get("title") or "Reunión Sin Título"
+            import time
             date_val = payload_data.get("date") or payload_data.get("createdAt") or data_obj.get("date") or data_obj.get("createdAt")
-            date_str = str(date_val) if date_val else ""
+            date_str = str(date_val) if date_val else str(int(time.time() * 1000))
             
             raw_transcript = str(payload_data.get("transcript", ""))
             raw_summary = str(payload_data.get("summary", ""))
@@ -37,7 +38,7 @@ async def process_transcript_background(session_id: int, transcript_id: str, pay
                 service = FirefliesService()
                 data = await service.get_transcript_data(transcript_id)
                 title = data.get("title", title)
-                date_str = str(data.get("date", date_str))
+                date_str = str(data.get("date")) if data.get("date") else date_str
                 sentences = [f"{s.get('speaker_name', 'Anon')}: {s.get('text', '')}" for s in data.get("sentences", [])]
                 raw_transcript = "\n".join(sentences)
                 
@@ -225,8 +226,9 @@ async def receive_fireflies_webhook(
     # Creamos la sesión inmediatamente con estado processing para que el UI la muestre en tiempo real
     data_obj = payload.get("data", {}) if isinstance(payload.get("data"), dict) else {}
     title = payload.get("title") or data_obj.get("title") or "Reunión Procesando..."
+    import time
     date_val = payload.get("date") or payload.get("createdAt") or data_obj.get("date") or data_obj.get("createdAt")
-    date_str = str(date_val) if date_val else ""
+    date_str = str(date_val) if date_val else str(int(time.time() * 1000))
     
     new_session = MeetingSession(
         fireflies_id=transcript_id,

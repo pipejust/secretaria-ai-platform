@@ -1,4 +1,4 @@
 export const environment = {
     production: true,
-    apiUrl: 'https://secretaria-ai-platform.onrender.com' // Render backend
+    apiUrl: '/api' // Redirigido por Nginx proxy en Docker
 };

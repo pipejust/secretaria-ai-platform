@@ -494,7 +494,8 @@ async def upload_manual_session(
         import datetime
         from services.groq_service import GroqService
         
-        session_date = date if date else (datetime.datetime.utcnow().isoformat() + "Z")
+        import time
+        session_date = date if date else str(int(time.time() * 1000))
         session_language = language if language else "Desconocido"
         
         raw_transcript = ""

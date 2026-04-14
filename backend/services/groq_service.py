@@ -19,8 +19,8 @@ class GroqService:
         }
         
     async def transcribe_audio(self, file_bytes: bytes, filename: str) -> str:
-        """Transcribe an audio file using Groq's Whisper."""
-        url = "https://api.groq.com/openai/v1/audio/transcriptions"
+        """Transcribe an audio file using OpenAI's Whisper."""
+        url = "https://api.openai.com/v1/audio/transcriptions"
         
         # Determine language or default to multilingüe for Whisper
         # We use a Multipart form data request
@@ -28,12 +28,12 @@ class GroqService:
             "file": (filename, file_bytes, "audio/mpeg")
         }
         data = {
-            "model": "whisper-large-v3",
+            "model": "whisper-1",
             "response_format": "json"
         }
         
         headers = {
-            "Authorization": f"Bearer {settings.groq_api_key}"
+            "Authorization": f"Bearer {settings.openai_api_key}"
             # Do NOT set Content-Type to application/json, httpx will set multipart/form-data automatically
         }
         
@@ -302,9 +302,11 @@ class GroqService:
             response = None
             for attempt in range(3):
                 response = await client.post(self.BASE_URL, json=payload, headers=self.headers, timeout=120.0)
-                if response.status_code == 429 and attempt < 2:
-                    await asyncio.sleep(2 + attempt * 2)
-                    continue
+                if response.status_code == 429:
+                    print(f"Intento {attempt+1} - OPENAI 429 RATELIMIT DETALLE: {response.text}")
+                    if attempt < 2:
+                        await asyncio.sleep(2 + attempt * 2)
+                        continue
                 response.raise_for_status()
                 break
             result_json = response.json()

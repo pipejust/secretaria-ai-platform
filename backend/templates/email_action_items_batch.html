@@ -12,7 +12,7 @@
   {% for task in tasks %}
   <div class="box" style="margin-bottom: 20px; padding: 15px; border-left: 4px solid #3b82f6; background-color: #f8fafc;">
     <h4 class="box-title" style="margin-top: 0; margin-bottom: 8px; color: #1e40af; font-size: 16px;">{{ task.title }}</h4>
-    <p class="box-text" style="color: #475569; margin-bottom: 10px; font-size: 14px;">{{ task.description }}</p>
+    <p class="box-text" style="color: #475569; margin-bottom: 10px; font-size: 14px;">{{ task.description | linkify | safe }}</p>
     {% if task.due_date %}
     <p class="box-text" style="margin-top: 5px; margin-bottom: 0; font-size: 13px; color: #059669; font-weight: bold;">
       📅 Fecha límite: {{ task.due_date }}
@@ -30,28 +30,28 @@
   {% if summary %}
   <div style="margin-top: 30px; margin-bottom: 20px;">
     <h4 style="margin-bottom: 5px; color: #222;">📋 Resumen Ejecutivo del Acta</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ summary }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ summary | linkify | safe }}</p>
   </div>
   {% endif %}
 
   {% if decisions %}
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <h4 style="margin-bottom: 5px; color: #222;">⚖️ Decisiones Clave</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ decisions }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ decisions | linkify | safe }}</p>
   </div>
   {% endif %}
 
   {% if risks %}
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <h4 style="margin-bottom: 5px; color: #222;">⚠️ Riesgos Identificados</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ risks }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ risks | linkify | safe }}</p>
   </div>
   {% endif %}
 
   {% if agreements %}
   <div style="margin-top: 10px; margin-bottom: 25px;">
     <h4 style="margin-bottom: 5px; color: #222;">🤝 Acuerdos</h4>
-    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ agreements }}</p>
+    <p style="font-size: 14px; color: #4a4a4a; line-height: 1.5;">{{ agreements | linkify | safe }}</p>
   </div>
   {% endif %}
 
