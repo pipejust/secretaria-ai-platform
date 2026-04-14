@@ -39,8 +39,14 @@ class GroqService:
         
         async with httpx.AsyncClient(timeout=180.0) as client:
             try:
-                response = await client.post(url, files=files, data=data, headers=headers)
-                response.raise_for_status()
+                response = None
+                for attempt in range(3):
+                    response = await client.post(url, files=files, data=data, headers=headers)
+                    if response.status_code == 429 and attempt < 2:
+                        await asyncio.sleep(2 + attempt * 2)
+                        continue
+                    response.raise_for_status()
+                    break
                 return response.json().get("text", "")
             except Exception as e:
                 import traceback
@@ -203,10 +209,16 @@ class GroqService:
         }
         
         async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
-            if response.status_code != 200:
-                print(f"OpenAI API Error: {response.text}")
-            response.raise_for_status()
+            response = None
+            for attempt in range(3):
+                response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+                if response.status_code == 429 and attempt < 2:
+                    await asyncio.sleep(2 + attempt * 2)
+                    continue
+                if response.status_code != 200:
+                    print(f"OpenAI API Error: {response.text}")
+                response.raise_for_status()
+                break
             
             result_json = response.json()
             try:
@@ -287,8 +299,14 @@ class GroqService:
             
         try:
             # Quitamos el print de error de "Groq" si da timeout.
-            response = await client.post(self.BASE_URL, json=payload, headers=self.headers, timeout=120.0)
-            response.raise_for_status()
+            response = None
+            for attempt in range(3):
+                response = await client.post(self.BASE_URL, json=payload, headers=self.headers, timeout=120.0)
+                if response.status_code == 429 and attempt < 2:
+                    await asyncio.sleep(2 + attempt * 2)
+                    continue
+                response.raise_for_status()
+                break
             result_json = response.json()
             content_str = result_json["choices"][0]["message"]["content"]
             parsed_data = json.loads(content_str)
@@ -360,7 +378,7 @@ class GroqService:
         Analiza el texto y extrae:
         - Idioma original (language). Todo lo demás de tu JSON debe estar en ESPAÑOL.
         - Un resumen ('summary') muy extenso, denso y profundo de toda la reunión (mínimo 4 o 5 párrafos ricos en contexto).
-        - Participantes ('attendees'). REGLA OBLIGATORIA: Consulta estrictamente la 'lista de personas del proyecto' provista abajo para identificar su 'role' y 'entity' reales. Si el participante mencionado en la reunión figura en la lista, copia EXÁCTAMENTE el rol y entidad de la base de datos, NO LOS INVENTES.
+        - Participantes ('attendees'). REGLA OBLIGATORIA: Extrae A TODOS LOS PARTICIPANTES mencionados en la reunión o transcripción, sin importar cuántos sean. Usa la 'lista de personas del proyecto' REGLA DE ORO SOLAMENTE COMO APOYO para enriquecer los datos (copiando su 'role' y 'entity' de la DB si los identificas ahí), pero SI NO ESTÁN EN LA LISTA, extraelos igual e infiere su rol y entidad por contexto. NUNCA limites la extracción a la lista.
         - Los temas discutidos ('themes') y sus elaborados puntos de conversación.
         
         {contacts_info}
@@ -400,12 +418,12 @@ class GroqService:
         schema_tasks = self._get_tasks_only_json_schema()
 
         async with httpx.AsyncClient(timeout=180.0) as client:
-            aws = [
-                self._execute_agent(client, system_base, prompt_fundamentals, schema_fund),
-                self._execute_agent(client, system_base, prompt_insights, schema_ins),
-                self._execute_agent(client, system_base, prompt_tasks, schema_tasks)
-            ]
-            results = await asyncio.gather(*aws)
+            # Ejecutamos llamadas LLM de forma secuencial en lugar de paralela (asyncio.gather) para 
+            # reducir radicalmente la posibilidad de recibir error 429 Too Many Requests de OpenAI o Groq.
+            results = []
+            results.append(await self._execute_agent(client, system_base, prompt_fundamentals, schema_fund))
+            results.append(await self._execute_agent(client, system_base, prompt_insights, schema_ins))
+            results.append(await self._execute_agent(client, system_base, prompt_tasks, schema_tasks))
             
             # Merge the dicts
             merged_payload = {}
@@ -452,8 +470,14 @@ class GroqService:
         
         async with httpx.AsyncClient(timeout=None) as client:
             try:
-                response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
-                response.raise_for_status()
+                response = None
+                for attempt in range(3):
+                    response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+                    if response.status_code == 429 and attempt < 2:
+                        await asyncio.sleep(2 + attempt * 2)
+                        continue
+                    response.raise_for_status()
+                    break
                 content_str = response.json()["choices"][0]["message"]["content"]
                 parsed = json.loads(content_str)
                 return parsed.get("project_id")
@@ -491,8 +515,14 @@ class GroqService:
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
-                response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
-                response.raise_for_status()
+                response = None
+                for attempt in range(3):
+                    response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+                    if response.status_code == 429 and attempt < 2:
+                        await asyncio.sleep(2 + attempt * 2)
+                        continue
+                    response.raise_for_status()
+                    break
                 return response.json()["choices"][0]["message"]["content"].strip()
             except Exception as e:
                 print(f"Error limpiando resumen en Groq: {e}")
