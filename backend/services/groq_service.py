@@ -43,7 +43,16 @@ class GroqService:
                 for attempt in range(3):
                     response = await client.post(url, files=files, data=data, headers=headers)
                     if response.status_code == 429 and attempt < 2:
-                        await asyncio.sleep(2 + attempt * 2)
+                        import re
+                        wait_seconds = 2 + attempt * 2
+                        try:
+                            match = re.search(r'try again in (\d+\.?\d*)s', response.text)
+                            if match:
+                                wait_seconds = float(match.group(1)) + 1.0
+                        except:
+                            pass
+                        print(f"Durmiendo {wait_seconds}s antes de reintentar transcripción...")
+                        await asyncio.sleep(wait_seconds)
                         continue
                     response.raise_for_status()
                     break
@@ -213,7 +222,16 @@ class GroqService:
             for attempt in range(3):
                 response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
                 if response.status_code == 429 and attempt < 2:
-                    await asyncio.sleep(2 + attempt * 2)
+                    import re
+                    wait_seconds = 2 + attempt * 2
+                    try:
+                        match = re.search(r'try again in (\d+\.?\d*)s', response.text)
+                        if match:
+                            wait_seconds = float(match.group(1)) + 1.0
+                    except:
+                        pass
+                    print(f"Durmiendo {wait_seconds}s antes de reintentar fallback tareas...")
+                    await asyncio.sleep(wait_seconds)
                     continue
                 if response.status_code != 200:
                     print(f"OpenAI API Error: {response.text}")
@@ -258,10 +276,10 @@ class GroqService:
                 # Retornamos dict vacío en vez de raise para evitar romper la UI si falla
                 return {"action_items": []}
 
-    async def _execute_agent(self, client: httpx.AsyncClient, system_prompt: str, user_prompt: str, schema: dict = None) -> dict:
+    async def _execute_agent(self, client: httpx.AsyncClient, system_prompt: str, user_prompt: str, schema: dict = None, model_override: str = None) -> dict:
         """Helper to execute an LLM agent and safely parse its JSON response"""
         payload = {
-            "model": self.MODEL,
+            "model": model_override or self.MODEL,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -305,7 +323,16 @@ class GroqService:
                 if response.status_code == 429:
                     print(f"Intento {attempt+1} - OPENAI 429 RATELIMIT DETALLE: {response.text}")
                     if attempt < 2:
-                        await asyncio.sleep(2 + attempt * 2)
+                        import re
+                        wait_seconds = 2 + attempt * 2
+                        try:
+                            match = re.search(r'try again in (\d+\.?\d*)s', response.text)
+                            if match:
+                                wait_seconds = float(match.group(1)) + 1.0
+                        except:
+                            pass
+                        print(f"Durmiendo {wait_seconds}s antes de reintentar...")
+                        await asyncio.sleep(wait_seconds)
                         continue
                 response.raise_for_status()
                 break
@@ -423,9 +450,9 @@ class GroqService:
             # Ejecutamos llamadas LLM de forma secuencial en lugar de paralela (asyncio.gather) para 
             # reducir radicalmente la posibilidad de recibir error 429 Too Many Requests de OpenAI o Groq.
             results = []
-            results.append(await self._execute_agent(client, system_base, prompt_fundamentals, schema_fund))
-            results.append(await self._execute_agent(client, system_base, prompt_insights, schema_ins))
-            results.append(await self._execute_agent(client, system_base, prompt_tasks, schema_tasks))
+            results.append(await self._execute_agent(client, system_base, prompt_fundamentals, schema_fund, model_override="gpt-4o-mini"))
+            results.append(await self._execute_agent(client, system_base, prompt_insights, schema_ins, model_override="gpt-4o-mini"))
+            results.append(await self._execute_agent(client, system_base, prompt_tasks, schema_tasks)) # Este sí usará gpt-4o
             
             # Merge the dicts
             merged_payload = {}
@@ -476,7 +503,16 @@ class GroqService:
                 for attempt in range(3):
                     response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
                     if response.status_code == 429 and attempt < 2:
-                        await asyncio.sleep(2 + attempt * 2)
+                        import re
+                        wait_seconds = 2 + attempt * 2
+                        try:
+                            match = re.search(r'try again in (\d+\.?\d*)s', response.text)
+                            if match:
+                                wait_seconds = float(match.group(1)) + 1.0
+                        except:
+                            pass
+                        print(f"Durmiendo {wait_seconds}s antes de reintentar deducir proyecto...")
+                        await asyncio.sleep(wait_seconds)
                         continue
                     response.raise_for_status()
                     break
@@ -521,7 +557,16 @@ class GroqService:
                 for attempt in range(3):
                     response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
                     if response.status_code == 429 and attempt < 2:
-                        await asyncio.sleep(2 + attempt * 2)
+                        import re
+                        wait_seconds = 2 + attempt * 2
+                        try:
+                            match = re.search(r'try again in (\d+\.?\d*)s', response.text)
+                            if match:
+                                wait_seconds = float(match.group(1)) + 1.0
+                        except:
+                            pass
+                        print(f"Durmiendo {wait_seconds}s antes de reintentar limpiar resumen...")
+                        await asyncio.sleep(wait_seconds)
                         continue
                     response.raise_for_status()
                     break
