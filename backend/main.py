@@ -37,6 +37,20 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
+    
+    # Restablecer reuniones atascadas de corridas anteriores
+    from sqlmodel import Session, select
+    from database import engine
+    from models import MeetingSession
+    with Session(engine) as session:
+        stuck_sessions = session.exec(select(MeetingSession).where(MeetingSession.status == "processing")).all()
+        for s in stuck_sessions:
+            s.status = "pending"
+            session.add(s)
+        if stuck_sessions:
+            session.commit()
+            print(f"Server Startup: Restored {len(stuck_sessions)} stuck sessions from 'processing' to 'pending'.")
+
     start_cron()
 
 @app.on_event("shutdown")
