@@ -107,7 +107,7 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
             
             summary_obj = data.get("summary", {})
             apps_layer = data.get("apps_layer", {})
-            sentences = data.get("sentences", [])
+            sentences = data.get("sentences") or []
             
             transcript_text = ""
             if sentences:
@@ -115,6 +115,9 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
             
             if transcript_text:
                 session_obj.raw_transcript = transcript_text
+                db.add(session_obj)
+                db.commit()
+                db.refresh(session_obj)
             
             mega_summary = ""
             
@@ -175,8 +178,14 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
             db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
             project_contacts = [{"name": c.name, "email": c.email, "role": c.role} for c in db_contacts]
             
-        structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
-        summary = structured_data.get("summary", "")
+        summary = ""
+        try:
+            structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+            summary = structured_data.get("summary", "")
+        except Exception as e:
+            print(f"Groq API Error en fallback fetch_summary: {e}")
+            # Even if Groq fails (e.g. rate limit), we return the transcript instead of 500 error
+            pass
         
         if summary:
             session_obj.raw_summary = summary
