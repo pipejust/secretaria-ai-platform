@@ -357,8 +357,13 @@ export class CurationPanelComponent implements OnInit {
     this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/fetch_summary`, {}, { headers }).subscribe({
       next: (res: any) => {
         this.isFetchingSummary = false;
-        if (res.summary) {
-          this.meetingData.raw_summary = res.summary;
+        if (res.summary || res.transcript) {
+          if (res.summary) {
+            this.meetingData.raw_summary = res.summary;
+          }
+          if (res.transcript) {
+            this.meetingData.raw_transcript = res.transcript;
+          }
           this.showSaveMessage('Resumen ejecutivo recuperado exitosamente.');
         } else {
           this.showSaveMessage('No se detectó resumen ejecutivo disponible.', true);

@@ -107,6 +107,14 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
             
             summary_obj = data.get("summary", {})
             apps_layer = data.get("apps_layer", {})
+            sentences = data.get("sentences", [])
+            
+            transcript_text = ""
+            if sentences:
+                transcript_text = "\n".join([f"[{s.get('speaker_name', 'Speaker')}] {s.get('text', '')}" for s in sentences])
+            
+            if transcript_text:
+                session_obj.raw_transcript = transcript_text
             
             mega_summary = ""
             
@@ -147,7 +155,7 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
                 db.add(session_obj)
                 db.commit()
                 db.refresh(session_obj)
-                return {"summary": mega_summary}
+                return {"summary": mega_summary, "transcript": session_obj.raw_transcript}
             else:
                 force_groq = True
                 
@@ -176,7 +184,7 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
             db.commit()
             db.refresh(session_obj)
             
-        return {"summary": summary}
+        return {"summary": summary, "transcript": session_obj.raw_transcript}
 
 @router.delete("/{session_id}")
 def delete_session(session_id: int, db: Session = Depends(get_session)):
