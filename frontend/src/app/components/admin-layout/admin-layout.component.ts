@@ -1,8 +1,15 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
+
+interface CurrentUser {
+    email?: string;
+    full_name?: string;
+    role?: string | null;
+}
 
 @Component({
     selector: 'app-admin-layout',
@@ -11,41 +18,50 @@ import { AuthService } from '../../services/auth.service';
     templateUrl: './admin-layout.component.html',
     styleUrls: ['./admin-layout.component.css']
 })
-export class AdminLayoutComponent implements OnInit {
-    user: any = null;
+export class AdminLayoutComponent implements OnInit, OnDestroy {
+    user: CurrentUser | null = null;
     isAdmin = false;
     isCollapsed = false;
     isMobileOpen = false;
     isProfileDropdownOpen = false;
 
+    private readonly destroy$ = new Subject<void>();
+
     constructor(private authService: AuthService, private router: Router, private cdr: ChangeDetectorRef) { }
 
-    ngOnInit() {
-        this.authService.currentUser$.subscribe(u => {
-            if (u === null && !this.authService.token) {
-                setTimeout(() => this.router.navigate(['/login']), 100);
-                return;
-            }
-            console.log('User from AuthService:', u);
-            this.user = u;
-            this.isAdmin = u?.role === 'admin';
-            console.log('isAdmin computed:', this.isAdmin);
-            this.cdr.detectChanges(); // Forzar el update visual
-        });
+    ngOnInit(): void {
+        this.authService.currentUser$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((u: CurrentUser | null) => {
+                if (u === null && !this.authService.token) {
+                    setTimeout(() => this.router.navigate(['/login']), 100);
+                    return;
+                }
+                this.user = u;
+                this.isAdmin = u?.role === 'admin';
+                this.cdr.detectChanges();
+            });
 
-        // Cerrar los menús al navegar a otra ruta
-        this.router.events.pipe(
-            filter(event => event instanceof NavigationEnd)
-        ).subscribe(() => {
-            if (this.isMobileOpen) {
-                this.isMobileOpen = false;
-                this.cdr.detectChanges();
-            }
-            if (this.isProfileDropdownOpen) {
-                this.isProfileDropdownOpen = false;
-                this.cdr.detectChanges();
-            }
-        });
+        this.router.events
+            .pipe(
+                filter(event => event instanceof NavigationEnd),
+                takeUntil(this.destroy$)
+            )
+            .subscribe(() => {
+                if (this.isMobileOpen) {
+                    this.isMobileOpen = false;
+                    this.cdr.detectChanges();
+                }
+                if (this.isProfileDropdownOpen) {
+                    this.isProfileDropdownOpen = false;
+                    this.cdr.detectChanges();
+                }
+            });
+    }
+
+    ngOnDestroy(): void {
+        this.destroy$.next();
+        this.destroy$.complete();
     }
 
     toggleProfileDropdown() {

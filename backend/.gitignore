@@ -1,2 +1,29 @@
-.vercel
 .env
+.env.*
+!.env.example
+.vercel
+__pycache__/
+*.pyc
+
+# Bases de datos locales (la real está en Supabase)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Generados / scratch
+test_*.py
+debug_*.py
+fix_*.py
+add_column.py
+check_admin_hash.py
+init_db.py
+rehash_passwords.py
+update_schema.py
+dummy.docx
+test.pdf
+test_export.pdf
+test_export.docx

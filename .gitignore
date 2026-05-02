@@ -1,2 +1,67 @@
-supabase_backup.sql
+# Sistema
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Node / Frontend
+node_modules/
+dist/
+.angular/
+.vercel
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Bases de datos locales (la de producción vive en Supabase)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+supabase_backup.sql
+
+# Logs
+*.log
+server.log
+
+# Archivos de prueba / scratch / generados
+test_*.py
+debug_*.py
+fix_*.py
+patch_*.py
+add_column.py
+check_admin_hash.py
+init_db.py
+rehash_passwords.py
+update_schema.py
+dummy.docx
+
+# Documentos generados o de prueba (datos sensibles)
+*.pdf
+*.docx
+!**/templates/**/*.docx
+!**/templates/**/*.pdf
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

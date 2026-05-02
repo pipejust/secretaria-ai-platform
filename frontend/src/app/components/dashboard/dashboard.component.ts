@@ -1,9 +1,12 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -13,7 +16,7 @@ import { environment } from '../../../environments/environment';
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
     sessions: any[] = [];
     projects: any[] = [];
     isLoading = false;
@@ -35,21 +38,29 @@ export class DashboardComponent implements OnInit {
     sessionToDelete: any = null;
     isDeleting = false;
 
+    private readonly destroy$ = new Subject<void>();
+
     constructor(
-        private http: HttpClient, 
-        private authService: AuthService, 
+        private http: HttpClient,
+        private authService: AuthService,
         private cdr: ChangeDetectorRef,
-        private router: Router
+        private router: Router,
+        private toast: ToastService,
     ) { }
 
-    ngOnInit() {
+    ngOnInit(): void {
         this.loadSessions();
         this.loadProjects();
     }
 
+    ngOnDestroy(): void {
+        this.destroy$.next();
+        this.destroy$.complete();
+    }
+
     loadProjects() {
         const headers = this.authService.getAuthHeaders();
-        this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers }).subscribe({
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
             next: (data) => {
                 this.projects = data;
                 this.cdr.detectChanges();
@@ -94,17 +105,17 @@ export class DashboardComponent implements OnInit {
 
     submitUpload() {
         if (!this.uploadForm.title) {
-            alert('El título/motivo es obligatorio.');
+            this.toast.warning('El título/motivo es obligatorio.');
             return;
         }
 
         if (this.uploadTab === 'audio' && !this.uploadForm.file) {
-            alert('Debe subir un archivo de audio para transcribir.');
+            this.toast.warning('Debe subir un archivo de audio para transcribir.');
             return;
         }
-        
+
         if (this.uploadTab === 'text' && !this.uploadForm.textContent.trim()) {
-            alert('Debe pegar el texto de la transcripción.');
+            this.toast.warning('Debe pegar el texto de la transcripción.');
             return;
         }
 
@@ -133,16 +144,17 @@ export class DashboardComponent implements OnInit {
         const headers = this.authService.getAuthHeaders();
         // Angular's HttpClient will automatically set the correct Content-Type for FormData
         
-        this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers }).subscribe({
-            next: (res: any) => {
-                alert('Sesión creada exitosamente.');
+        this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => {
+                this.toast.success('Sesión creada exitosamente.');
                 this.showUploadModal = false;
                 this.isUploading = false;
                 this.loadSessions();
             },
             error: (err) => {
-                console.error('Upload Error:', err);
-                alert('Error subiendo o creando la sesión: ' + (err.error?.detail || err.message));
+                this.toast.error(
+                    'Error subiendo o creando la sesión: ' + (err?.error?.detail || err?.message || 'desconocido'),
+                );
                 this.isUploading = false;
             }
         });
@@ -157,7 +169,7 @@ export class DashboardComponent implements OnInit {
         if (this.filterProjectId) params += `&project_id=${this.filterProjectId}`;
         
         const headers = this.authService.getAuthHeaders();
-        this.http.get<any>(`${environment.apiUrl}/api/sessions/${params}`, { headers }).subscribe({
+        this.http.get<any>(`${environment.apiUrl}/api/sessions/${params}`, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
             next: (data) => {
                 const isPaginatedResponse = !!data.items;
                 const items = isPaginatedResponse ? data.items : data;
@@ -279,7 +291,7 @@ export class DashboardComponent implements OnInit {
         this.cdr.detectChanges();
         
         const headers = this.authService.getAuthHeaders();
-        this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/${format}`, { headers, responseType: 'blob' }).subscribe({
+        this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/${format}`, { headers, responseType: 'blob' }).pipe(takeUntil(this.destroy$)).subscribe({
             next: (blob: Blob) => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -294,9 +306,10 @@ export class DashboardComponent implements OnInit {
                 this.generatingIds[genKey] = false;
                 this.cdr.detectChanges();
             },
-            error: (err) => {
-                console.error(`Error generando documento ${format}`, err);
-                alert(`Error descargando el documento ${format.toUpperCase()}. Asegúrese de tener conexión.`);
+            error: () => {
+                this.toast.error(
+                    `Error descargando el documento ${format.toUpperCase()}. Verifique su conexión.`,
+                );
                 this.generatingIds[genKey] = false;
                 this.cdr.detectChanges();
             }
@@ -322,18 +335,17 @@ export class DashboardComponent implements OnInit {
         
         this.isDeleting = true;
         const headers = this.authService.getAuthHeaders();
-        this.http.delete(`${environment.apiUrl}/api/sessions/${this.sessionToDelete.id}`, { headers }).subscribe({
+        this.http.delete(`${environment.apiUrl}/api/sessions/${this.sessionToDelete.id}`, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
             next: () => {
                 this.isDeleting = false;
                 this.showDeleteModal = false;
                 this.sessionToDelete = null;
-                alert('Sesión eliminada correctamente.');
+                this.toast.success('Sesión eliminada correctamente.');
                 this.loadSessions();
             },
-            error: (err) => {
+            error: () => {
                 this.isDeleting = false;
-                console.error('Error eliminando sesión:', err);
-                alert('Error al intentar eliminar la sesión.');
+                this.toast.error('Error al intentar eliminar la sesión.');
             }
         });
     }

@@ -1,0 +1,25 @@
+<div class="toast-stack" role="region" aria-label="Notificaciones" aria-live="polite">
+    <article
+        *ngFor="let toast of toasts; trackBy: trackById"
+        class="toast toast--{{ toast.kind }}"
+        role="status"
+    >
+        <span class="toast__icon" aria-hidden="true">
+            <ng-container [ngSwitch]="toast.kind">
+                <ng-container *ngSwitchCase="'success'">✓</ng-container>
+                <ng-container *ngSwitchCase="'error'">✕</ng-container>
+                <ng-container *ngSwitchCase="'warning'">!</ng-container>
+                <ng-container *ngSwitchDefault>i</ng-container>
+            </ng-container>
+        </span>
+        <p class="toast__message">{{ toast.message }}</p>
+        <button
+            type="button"
+            class="toast__close"
+            aria-label="Cerrar notificación"
+            (click)="dismiss(toast.id)"
+        >
+            ×
+        </button>
+    </article>
+</div>
