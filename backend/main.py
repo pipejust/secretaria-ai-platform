@@ -1,14 +1,18 @@
+import logging
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from pydantic import BaseModel
 from database import create_db_and_tables
+from routers import auth, fireflies, projects, templates, users
 from services.cron_service import start_cron, stop_cron
-from routers import fireflies
-from routers import auth
-from routers import users
-from routers import templates
-from routers import projects
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Notiva Backend",
@@ -49,7 +53,10 @@ def on_startup():
             session.add(s)
         if stuck_sessions:
             session.commit()
-            print(f"Server Startup: Restored {len(stuck_sessions)} stuck sessions from 'processing' to 'pending'.")
+            logger.info(
+                "Restauradas %d sesiones atascadas (processing -> pending).",
+                len(stuck_sessions),
+            )
 
     start_cron()
 

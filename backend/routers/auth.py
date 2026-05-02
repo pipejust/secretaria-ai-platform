@@ -1,13 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlmodel import Session, select
+import logging
 from datetime import timedelta
 
-from database import get_session
-from models import User, Role
-from auth_utils import verify_password, create_access_token, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
+from sqlmodel import Session, select
+
+from auth_utils import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    ALGORITHM,
+    SECRET_KEY,
+    create_access_token,
+    get_password_hash,
+    verify_password,
+)
+from database import get_session
+from models import Role, User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -144,17 +155,18 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
         
     token = create_password_reset_token(user.email)
     
-    # Send email
+    # Send email. Cualquier fallo se loguea para alerting; al cliente le devolvemos
+    # la misma respuesta neutra para no filtrar si el correo existe.
     try:
         email_svc = EmailService(db=db)
         await email_svc.send_forgot_password_email(
             to_email=user.email,
             user_name=user.full_name,
-            reset_token=token
+            reset_token=token,
         )
-    except Exception as e:
-        print(f"Error sending forgot password email: {e}")
-        
+    except Exception:
+        logger.exception("Error enviando correo de recuperación a %s", user.email)
+
     return {"msg": "If the email is registered, you will receive a password reset link."}
 
 class ResetPasswordRequest(BaseModel):

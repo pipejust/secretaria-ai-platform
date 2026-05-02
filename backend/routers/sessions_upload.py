@@ -771,9 +771,12 @@ async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: S
                 from services.pdf_generator import CorporatePDFGenerator
                 data = __build_corporate_data(session_obj, action_items_all, db)
                 if template and template.style_config:
-                    try: data["theme"] = json.loads(template.style_config)
-                    except: pass
-                if template and template.file_path: data["template_path"] = template.file_path
+                    try:
+                        data["theme"] = json.loads(template.style_config)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                if template and template.file_path:
+                    data["template_path"] = template.file_path
                 pdf_gen = CorporatePDFGenerator(data)
                 pdf_buffer = pdf_gen.generar_buffer()
                 pdf_b64_global = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
@@ -907,7 +910,7 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
     for s in global_settings:
         try:
             settings_dict[s.provider_name] = json.loads(s.config_json)
-        except:
+        except (json.JSONDecodeError, TypeError):
             settings_dict[s.provider_name] = {}
 
     from datetime import datetime
@@ -1082,9 +1085,12 @@ def export_document(session_id: int, format: str, db: Session = Depends(get_sess
                 from services.pdf_generator import CorporatePDFGenerator
                 data = __build_corporate_data(session_obj, action_items, db)
                 if template and template.style_config:
-                    try: data["theme"] = json.loads(template.style_config)
-                    except: pass
-                if template and template.file_path: data["template_path"] = template.file_path
+                    try:
+                        data["theme"] = json.loads(template.style_config)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                if template and template.file_path:
+                    data["template_path"] = template.file_path
                 return Response(
                     content=CorporatePDFGenerator(data).generar_buffer().getvalue(),
                     media_type="application/pdf",

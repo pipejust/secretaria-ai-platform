@@ -1,6 +1,11 @@
-import httpx
-from typing import Dict, Any
+import logging
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
 
 class AzureDevOpsIntegrationService:
     def __init__(self, organization: str, project: str, pat: str):
@@ -9,16 +14,25 @@ class AzureDevOpsIntegrationService:
         self.pat = pat
         self.base_url = f"https://dev.azure.com/{organization}/{project}/_apis/wit/workitems"
 
-    async def create_work_item(self, title: str, description: str, wi_type: str = "Task", assigned_to: str = "", due_date: str = None, owner_email: str = None) -> Dict[str, Any]:
+    async def create_work_item(
+        self,
+        title: str,
+        description: str,
+        wi_type: str = "Task",
+        assigned_to: str = "",
+        due_date: Optional[str] = None,
+        owner_email: Optional[str] = None,
+        owner_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Crea un Work Item en Azure DevOps."""
         url = f"{self.base_url}/${wi_type}?api-version=7.0"
-        
-        # Format the fallback description
+
         final_desc = description
-        # Add Notiva Metadata footer string
-        final_desc += f"<br><br><b>Metadatos de Notiva:</b>"
-        final_desc += f"<br>- Asignado Original: {action_item.owner_name} ({action_item.owner_email})"
-        
+        owner_label = owner_name or owner_email or assigned_to or "Sin asignar"
+        owner_email_label = owner_email or assigned_to or "n/a"
+        final_desc += "<br><br><b>Metadatos de Notiva:</b>"
+        final_desc += f"<br>- Asignado Original: {owner_label} ({owner_email_label})"
+
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         final_desc += f"<br>Fecha de Inicio: {now_iso[:10]}"
         if due_date:
@@ -72,8 +86,11 @@ class AzureDevOpsIntegrationService:
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as e:
-                print(f"ADO Strict payload failed ({e.response.status_code}): {e.response.text}. Retrying with safe payload.")
-                # Intento 2: Fallback (solo título y descripción)
+                logger.warning(
+                    "ADO strict payload falló (%s): %s. Reintentando con payload seguro.",
+                    e.response.status_code,
+                    e.response.text,
+                )
                 fallback = await client.post(url, json=base_payload, auth=auth, headers=headers)
                 fallback.raise_for_status()
                 return fallback.json()

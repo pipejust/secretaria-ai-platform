@@ -112,16 +112,16 @@ class CorporatePDFGenerator(FPDF):
         
         try:
             base_size = int(theme.get("fontSize", 10))
-        except:
+        except (TypeError, ValueError):
             base_size = 10
         return base_size + size_offset
 
     def add_section_bar(self, title):
         theme = self.data.get("theme") or {}
-        
+
         try:
             heading_margin = float(theme.get("headingMargin", 10))
-        except:
+        except (TypeError, ValueError):
             heading_margin = 10.0
             
         self.ln(heading_margin / 2)

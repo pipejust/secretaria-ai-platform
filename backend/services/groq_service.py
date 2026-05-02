@@ -1,16 +1,26 @@
-import json
 import asyncio
-from base64 import b64encode
+import json
+import logging
+import re
+from datetime import datetime
+from typing import Any, Dict, List
+
 import httpx
-from typing import Dict, Any, List
 
 from config import settings
-from models import ActionItem
-from datetime import datetime
 
-class GroqService:
+logger = logging.getLogger(__name__)
+
+
+class OpenAIService:
+    """
+    Servicio LLM. Históricamente se llamó `GroqService`; el nombre se conserva
+    como alias al final del módulo por compatibilidad de imports, pero la
+    implementación real apunta a OpenAI (gpt-4o / gpt-4o-mini / Whisper).
+    """
+
     BASE_URL = "https://api.openai.com/v1/chat/completions"
-    MODEL = "gpt-4o" # Cambiado a GPT-4o para extrema fidelidad en extracción JSON
+    MODEL = "gpt-4o"  # Alta fidelidad en extracción JSON
     
     def __init__(self):
         self.headers = {
@@ -43,24 +53,22 @@ class GroqService:
                 for attempt in range(3):
                     response = await client.post(url, files=files, data=data, headers=headers)
                     if response.status_code == 429 and attempt < 2:
-                        import re
                         wait_seconds = 2 + attempt * 2
                         try:
                             match = re.search(r'try again in (\d+\.?\d*)s', response.text)
                             if match:
                                 wait_seconds = float(match.group(1)) + 1.0
-                        except:
-                            pass
-                        print(f"Durmiendo {wait_seconds}s antes de reintentar transcripción...")
+                        except (AttributeError, ValueError, TypeError) as parse_err:
+                            logger.debug("No se pudo parsear retry-after: %s", parse_err)
+                        logger.info("Durmiendo %ss antes de reintentar transcripción...", wait_seconds)
                         await asyncio.sleep(wait_seconds)
                         continue
                     response.raise_for_status()
                     break
                 return response.json().get("text", "")
             except Exception as e:
-                import traceback
-                print(f"Error transcribiendo audio con Groq: {e}\n{traceback.format_exc()}")
-                raise Exception(f"Fallo en la transcripción de audio: {e}")
+                logger.exception("Error transcribiendo audio")
+                raise RuntimeError(f"Fallo en la transcripción de audio: {e}") from e
         
     def _get_fundamentals_schema(self) -> Dict[str, Any]:
         """Schema para Agent 1: Resumen y metadatos"""
@@ -222,19 +230,18 @@ class GroqService:
             for attempt in range(3):
                 response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
                 if response.status_code == 429 and attempt < 2:
-                    import re
                     wait_seconds = 2 + attempt * 2
                     try:
                         match = re.search(r'try again in (\d+\.?\d*)s', response.text)
                         if match:
                             wait_seconds = float(match.group(1)) + 1.0
-                    except:
-                        pass
-                    print(f"Durmiendo {wait_seconds}s antes de reintentar fallback tareas...")
+                    except (AttributeError, ValueError, TypeError) as parse_err:
+                        logger.debug("No se pudo parsear retry-after: %s", parse_err)
+                    logger.info("Durmiendo %ss antes de reintentar fallback tareas...", wait_seconds)
                     await asyncio.sleep(wait_seconds)
                     continue
                 if response.status_code != 200:
-                    print(f"OpenAI API Error: {response.text}")
+                    logger.warning("OpenAI API Error: %s", response.text)
                 response.raise_for_status()
                 break
             
@@ -272,7 +279,7 @@ class GroqService:
                     
                 return parsed_data
             except Exception as e:
-                print(f"Error procesando JSON de Groq en fallback tareas: {result_json}\nTransito Fallido: {str(e)}")
+                logger.exception("Error procesando JSON en fallback tareas")
                 # Retornamos dict vacío en vez de raise para evitar romper la UI si falla
                 return {"action_items": []}
 
@@ -321,17 +328,16 @@ class GroqService:
             for attempt in range(3):
                 response = await client.post(self.BASE_URL, json=payload, headers=self.headers, timeout=120.0)
                 if response.status_code == 429:
-                    print(f"Intento {attempt+1} - OPENAI 429 RATELIMIT DETALLE: {response.text}")
+                    logger.warning("Intento %s - OpenAI 429 ratelimit: %s", attempt+1, response.text)
                     if attempt < 2:
-                        import re
                         wait_seconds = 2 + attempt * 2
                         try:
                             match = re.search(r'try again in (\d+\.?\d*)s', response.text)
                             if match:
                                 wait_seconds = float(match.group(1)) + 1.0
-                        except:
-                            pass
-                        print(f"Durmiendo {wait_seconds}s antes de reintentar...")
+                        except (AttributeError, ValueError, TypeError) as parse_err:
+                            logger.debug("No se pudo parsear retry-after: %s", parse_err)
+                        logger.info("Durmiendo %ss antes de reintentar...", wait_seconds)
                         await asyncio.sleep(wait_seconds)
                         continue
                 response.raise_for_status()
@@ -382,7 +388,7 @@ class GroqService:
                 
             return parsed_data
         except Exception as e:
-            print(f"Error procesando JSON de un Agente Groq: {str(e)}")
+            logger.exception("Error procesando JSON de un agente LLM")
             return {}
 
     async def process_transcript(self, transcript: str, project_contacts: list = None) -> dict:
@@ -503,15 +509,14 @@ class GroqService:
                 for attempt in range(3):
                     response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
                     if response.status_code == 429 and attempt < 2:
-                        import re
                         wait_seconds = 2 + attempt * 2
                         try:
                             match = re.search(r'try again in (\d+\.?\d*)s', response.text)
                             if match:
                                 wait_seconds = float(match.group(1)) + 1.0
-                        except:
-                            pass
-                        print(f"Durmiendo {wait_seconds}s antes de reintentar deducir proyecto...")
+                        except (AttributeError, ValueError, TypeError) as parse_err:
+                            logger.debug("No se pudo parsear retry-after: %s", parse_err)
+                        logger.info("Durmiendo %ss antes de reintentar deducir proyecto...", wait_seconds)
                         await asyncio.sleep(wait_seconds)
                         continue
                     response.raise_for_status()
@@ -520,7 +525,7 @@ class GroqService:
                 parsed = json.loads(content_str)
                 return parsed.get("project_id")
             except Exception as e:
-                print(f"Error deduciendo proyecto en Groq: {e}")
+                logger.exception("Error deduciendo proyecto")
                 return None
 
     async def translate_and_clean_summary(self, dirty_summary: str) -> str:
@@ -557,21 +562,24 @@ class GroqService:
                 for attempt in range(3):
                     response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
                     if response.status_code == 429 and attempt < 2:
-                        import re
                         wait_seconds = 2 + attempt * 2
                         try:
                             match = re.search(r'try again in (\d+\.?\d*)s', response.text)
                             if match:
                                 wait_seconds = float(match.group(1)) + 1.0
-                        except:
-                            pass
-                        print(f"Durmiendo {wait_seconds}s antes de reintentar limpiar resumen...")
+                        except (AttributeError, ValueError, TypeError) as parse_err:
+                            logger.debug("No se pudo parsear retry-after: %s", parse_err)
+                        logger.info("Durmiendo %ss antes de reintentar limpiar resumen...", wait_seconds)
                         await asyncio.sleep(wait_seconds)
                         continue
                     response.raise_for_status()
                     break
                 return response.json()["choices"][0]["message"]["content"].strip()
             except Exception as e:
-                print(f"Error limpiando resumen en Groq: {e}")
-                return dirty_summary # Fallback al puro original si llegara a fallar
+                logger.exception("Error limpiando resumen")
+                return dirty_summary  # Fallback al original si falla
+
+
+# Alias retro-compatible: el código heredado importa `GroqService` desde este módulo.
+GroqService = OpenAIService
 

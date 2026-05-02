@@ -65,7 +65,7 @@ class WordGeneratorService:
             font_family = theme.get("fontFamily", "Arial")
             try:
                 font_size = int(theme.get("fontSize", 10))
-            except:
+            except (TypeError, ValueError):
                 font_size = 10
             heading_color_hex = str(theme.get("primaryColor", "#1e293b")).lstrip("#")
             if len(heading_color_hex) != 6:
@@ -84,7 +84,7 @@ class WordGeneratorService:
             
             try:
                 heading_margin = float(theme.get("headingMargin", 10))
-            except:
+            except (TypeError, ValueError):
                 heading_margin = 10.0
             
             hc_r = int(heading_color_hex[0:2], 16)
