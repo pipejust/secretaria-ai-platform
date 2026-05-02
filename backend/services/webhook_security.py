@@ -1,6 +1,12 @@
-"""Helpers para validar firmas HMAC de webhooks entrantes (Fireflies, etc.)."""
+"""Helpers para validar webhooks entrantes (Fireflies).
 
-import hashlib
+Fireflies no firma sus webhooks con HMAC; lo que sí permite es que la URL
+del webhook sea libre. Aprovechamos eso: incluimos un token aleatorio como
+query param (`?token=...`) en la URL que el usuario pega en Fireflies, y
+validamos ese token contra el valor persistido en `IntegrationSetting`
+(provider_name='fireflies', config_json.webhook_token).
+"""
+
 import hmac
 import json
 import logging
@@ -18,8 +24,8 @@ def _is_production() -> bool:
     return os.getenv("ENVIRONMENT", "").lower() in ("prod", "production")
 
 
-def _load_fireflies_secret(db: Session) -> str:
-    """Lee el `webhook_secret` desde IntegrationSetting(provider_name='fireflies')."""
+def _load_fireflies_token(db: Session) -> str:
+    """Lee el `webhook_token` desde IntegrationSetting(provider_name='fireflies')."""
     setting = integration_setting_crud.get_by_provider(
         session=db, provider_name="fireflies"
     )
@@ -30,67 +36,46 @@ def _load_fireflies_secret(db: Session) -> str:
     except (json.JSONDecodeError, TypeError):
         logger.warning("config_json inválido en IntegrationSetting(fireflies)")
         return ""
-    return str(cfg.get("webhook_secret") or "").strip()
+    return str(cfg.get("webhook_token") or "").strip()
 
 
-async def verify_fireflies_signature(
-    request: Request, body: bytes, db: Session
-) -> None:
+async def verify_fireflies_webhook(request: Request, db: Session) -> None:
     """
-    Verifica la firma HMAC-SHA256 que Fireflies envía en el header
-    `X-Hub-Signature-256` (también acepta `X-Fireflies-Signature` o
-    `X-Hub-Signature` por compatibilidad).
+    Verifica que el POST entrante traiga `?token=...` igual al persistido en BD.
 
-    El secreto se almacena en la tabla `IntegrationSetting`, en el registro
-    con `provider_name = 'fireflies'`, dentro de `config_json.webhook_secret`.
-
-    En producción se exige firma. En local, si no hay secreto configurado,
-    se permite el paso pero se loguea una advertencia.
+    En producción se exige token. En desarrollo, si la integración aún no
+    se ha guardado en `/admin/settings`, se permite el paso pero se loguea
+    una advertencia.
     """
-    secret = _load_fireflies_secret(db)
+    expected = _load_fireflies_token(db)
 
-    if not secret:
+    if not expected:
         if _is_production():
             logger.error(
-                "webhook_secret no configurado para Fireflies en IntegrationSetting. "
+                "webhook_token no configurado para Fireflies en IntegrationSetting. "
                 "Rechazando webhook."
             )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Webhook signing not configured.",
+                detail="Webhook not configured.",
             )
         logger.warning(
-            "webhook_secret no configurado para Fireflies. Permitiendo webhook "
+            "webhook_token no configurado para Fireflies. Permitiendo webhook "
             "sin verificación (solo desarrollo)."
         )
         return
 
-    received_signature = (
-        request.headers.get("x-hub-signature-256")
-        or request.headers.get("x-fireflies-signature")
-        or request.headers.get("x-hub-signature")
-        or ""
-    ).strip()
-
-    if not received_signature:
-        logger.warning("Webhook recibido sin header de firma.")
+    received = (request.query_params.get("token") or "").strip()
+    if not received:
+        logger.warning("Webhook de Fireflies recibido sin query param `token`.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing webhook signature.",
+            detail="Missing webhook token.",
         )
 
-    if received_signature.startswith("sha256="):
-        received_signature = received_signature[len("sha256="):]
-
-    expected = hmac.new(
-        key=secret.encode("utf-8"),
-        msg=body,
-        digestmod=hashlib.sha256,
-    ).hexdigest()
-
-    if not hmac.compare_digest(expected, received_signature):
-        logger.warning("Firma de webhook inválida.")
+    if not hmac.compare_digest(expected, received):
+        logger.warning("Token de webhook de Fireflies inválido.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid webhook signature.",
+            detail="Invalid webhook token.",
         )

@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../services/settings.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-settings',
@@ -12,7 +13,8 @@ import { SettingsService } from '../../services/settings.service';
 })
 export class SettingsComponent implements OnInit {
   smtpSettings = { provider: 'Resend', apiKey: '', senderEmail: '' };
-  firefliesSettings = { apiKey: '', webhookUrl: '' };
+  firefliesSettings: { apiKey: string; webhookUrl: string; webhook_token: string } =
+    { apiKey: '', webhookUrl: '', webhook_token: '' };
   trelloSettings = { apiKey: '', apiToken: '', boardId: '', isActive: false };
   jiraSettings = { email: '', apiToken: '', domain: '', isActive: false };
   azureSettings = { organization: '', project: '', pat: '', isActive: false };
@@ -23,7 +25,20 @@ export class SettingsComponent implements OnInit {
   successMessage = '';
   errorMessage = '';
 
-  constructor(private settingsService: SettingsService, private cdr: ChangeDetectorRef) { }
+  constructor(
+    private settingsService: SettingsService,
+    private cdr: ChangeDetectorRef,
+    private toast: ToastService,
+  ) { }
+
+  copyWebhookUrl(): void {
+    const url = this.firefliesSettings.webhookUrl;
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(
+      () => this.toast.success('Webhook URL copiada al portapapeles.'),
+      () => this.toast.error('No se pudo copiar la URL.'),
+    );
+  }
 
   ngOnInit(): void {
     this.settingsService.getSettings().subscribe({

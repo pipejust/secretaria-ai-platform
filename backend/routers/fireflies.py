@@ -14,7 +14,7 @@ from services.integrations import (
     IntegrationConfigError,
     get_service_for_destination,
 )
-from services.webhook_security import verify_fireflies_signature
+from services.webhook_security import verify_fireflies_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -280,9 +280,9 @@ async def receive_fireflies_webhook(
     db: Session = Depends(get_session),
 ):
     """Endpoint para recibir el evento 'Transcription complete' desde Fireflies."""
-    raw_body = await request.body()
-    await verify_fireflies_signature(request, raw_body, db)
+    await verify_fireflies_webhook(request, db)
 
+    raw_body = await request.body()
     try:
         payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
     except json.JSONDecodeError as exc:

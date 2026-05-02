@@ -53,8 +53,20 @@
                     </div>
                     <div class="form-group mb-0">
                         <label>Webhook URL (Para recibir el Post de Fireflies)</label>
-                        <input type="text" [(ngModel)]="firefliesSettings.webhookUrl" name="ff_web"
-                            placeholder="http://midominio.com/api/v1/fireflies/webhook">
+                        <div style="display: flex; gap: .5rem; align-items: stretch;">
+                            <input type="text" [value]="firefliesSettings.webhookUrl || 'Guarda primero la API Key para generar la URL.'"
+                                name="ff_web" readonly
+                                style="flex: 1; font-family: monospace; font-size: .85rem;">
+                            <button type="button" class="btn"
+                                (click)="copyWebhookUrl()"
+                                [disabled]="!firefliesSettings.webhookUrl">
+                                Copiar
+                            </button>
+                        </div>
+                        <small style="display: block; margin-top: .35rem; color: #6b7280;">
+                            Esta URL ya incluye el token de seguridad. Pégala tal cual en
+                            Fireflies → Settings → Integrations → Webhook (evento Meeting Completed).
+                        </small>
                     </div>
                 </form>
             </div>
