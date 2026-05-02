@@ -1,19 +1,66 @@
+# Render Blueprint para Notiva
+# https://render.com/docs/blueprint-spec
+#
+# Define dos recursos:
+#   1. notiva-postgres   — Postgres managed (Basic-256mb, $6/mes)
+#   2. notiva-backend    — FastAPI Docker (Starter, $7/mes, no se duerme)
+#
+# Total: ~$13/mes. El frontend Angular se sigue desplegando en Vercel.
+
+databases:
+  - name: notiva-postgres
+    plan: basic-256mb        # 256 MB RAM, 1 GB storage, backups diarios
+    databaseName: notiva
+    user: notiva
+    # Ajusta a "15" si tu Supabase aún corre 15 (proyectos nuevos van en 16).
+    postgresMajorVersion: "16"
+
 services:
   - type: web
-    name: secretaria-ai-backend
-    env: python
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    name: notiva-backend
+    runtime: docker
+    plan: starter            # 0.5 CPU, 512 MB RAM, sin spin-down
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      # --- Conexión a la BD: Render inyecta el DATABASE_URL del Postgres ---
       - key: DATABASE_URL
-        value: sqlite:///data/secretaria.db
+        fromDatabase:
+          name: notiva-postgres
+          property: connectionString
+
+      # --- Auth ---
+      - key: JWT_SECRET_KEY
+        generateValue: true        # Render genera 256 bits aleatorios al primer deploy
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: BCRYPT_ROUNDS
+        value: "12"
+
+      # --- Runtime ---
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PUBLIC_BASE_URL
+        # Después del primer deploy, copia aquí la URL pública
+        # (ej: https://notiva-backend.onrender.com).
+        sync: false
+
+      # --- LLM (pégalas en el dashboard una sola vez) ---
+      - key: OPENAI_API_KEY
+        sync: false
       - key: GROQ_API_KEY
         sync: false
+
+      # --- Fireflies (la API Key general; el webhook_token se gestiona desde /admin/settings) ---
       - key: FIREFLIES_API_KEY
         sync: false
-    disk:
-      name: sqlite-data
-      mountPath: /data
-      sizeGB: 1
+
+      # --- Frontend ---
+      - key: FRONTEND_URL
+        sync: false                # ej: https://notiva.vercel.app

@@ -1,0 +1,49 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Entornos virtuales locales
+venv/
+.venv/
+env/
+
+# Bases de datos locales
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs y temporales
+*.log
+*.tmp
+.DS_Store
+
+# Secretos
+.env
+.env.*
+!.env.example
+
+# Archivos de prueba que no deben llegar a la imagen
+test_*.py
+debug_*.py
+fix_*.py
+add_column.py
+check_admin_hash.py
+init_db.py
+rehash_passwords.py
+update_schema.py
+dummy.docx
+test.pdf
+test_export.pdf
+test_export.docx
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
