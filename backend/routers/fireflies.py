@@ -281,7 +281,7 @@ async def receive_fireflies_webhook(
 ):
     """Endpoint para recibir el evento 'Transcription complete' desde Fireflies."""
     raw_body = await request.body()
-    await verify_fireflies_signature(request, raw_body)
+    await verify_fireflies_signature(request, raw_body, db)
 
     try:
         payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}

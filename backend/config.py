@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     openai_api_key: str = ""
     fireflies_api_key: str = ""
-    fireflies_webhook_secret: str = ""
     supabase_url: str = ""
     supabase_key: str = ""
     frontend_url: str = "http://localhost:4200"
