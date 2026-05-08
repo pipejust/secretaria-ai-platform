@@ -89,7 +89,18 @@ class MeetingSession(SQLModel, table=True):
     processed_themes: str = Field(default="")
     
     status: str = Field(default="pending", description="'pending', 'approved', 'processed'")
-    
+
+    # Flags de uso único de los botones de IA en la curación.
+    # Se setean a True después de que el usuario los presiona la primera vez.
+    ai_fields_regenerated: bool = Field(
+        default=False,
+        description="True si ya se ejecutó 'Sugerir Campos con IA' (OpenAI) una vez.",
+    )
+    ai_tasks_regenerated: bool = Field(
+        default=False,
+        description="True si ya se ejecutó 'Regenerar Tareas' (OpenAI) una vez.",
+    )
+
     project: Optional[Project] = Relationship(back_populates="sessions")
     action_items: List["ActionItem"] = Relationship(back_populates="session")
 

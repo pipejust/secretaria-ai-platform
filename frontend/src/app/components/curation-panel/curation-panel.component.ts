@@ -1,10 +1,13 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
 
 interface ActionItem {
   id?: number;
@@ -33,6 +36,8 @@ interface MeetingData {
   processed_themes?: string;
   action_items: ActionItem[];
   status: string;
+  ai_fields_regenerated: boolean;
+  ai_tasks_regenerated: boolean;
 }
 
 @Component({
@@ -42,7 +47,7 @@ interface MeetingData {
   templateUrl: './curation-panel.component.html',
   styleUrl: './curation-panel.component.css'
 })
-export class CurationPanelComponent implements OnInit {
+export class CurationPanelComponent implements OnInit, OnDestroy {
   meetingData: MeetingData = {
     title: "Cargando...",
     date: "",
@@ -52,7 +57,9 @@ export class CurationPanelComponent implements OnInit {
     processed_risks: "",
     processed_agreements: "",
     action_items: [],
-    status: "processing"
+    status: "processing",
+    ai_fields_regenerated: false,
+    ai_tasks_regenerated: false,
   };
 
   sessionId: number | null = null;
@@ -62,10 +69,11 @@ export class CurationPanelComponent implements OnInit {
   isEditingTitle = false;
   isDispatchingEmails = false;
   isDispatchingPlatforms = false;
-  isFetchingSummary = false;
   isRegeneratingFields = false;
   saveStatusMessage = '';
   projects: any[] = [];
+
+  private readonly destroy$ = new Subject<void>();
   
   showManualTaskForm = false;
   isAddingTask = false;
@@ -82,8 +90,14 @@ export class CurationPanelComponent implements OnInit {
     private http: HttpClient,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private toast: ToastService,
   ) {}
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   getTranslatedStatus(status: string): string {
     const rawStatus = (status || '').trim().toLowerCase();
@@ -97,73 +111,75 @@ export class CurationPanelComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.route.paramMap.subscribe(params => {
-      const idParam = params.get('id');
-      if (idParam) {
-        this.sessionId = parseInt(idParam, 10);
-        this.loadProjects();
-        this.loadSessionDetails();
-      }
-    });
+    this.route.paramMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const idParam = params.get('id');
+        if (idParam) {
+          this.sessionId = parseInt(idParam, 10);
+          this.loadProjects();
+          this.loadSessionDetails();
+        }
+      });
   }
 
   loadProjects() {
     const headers = this.authService.getAuthHeaders();
-    this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers }).subscribe({
-      next: (data) => this.projects = data,
-      error: (err) => console.error('Error loading projects', err)
-    });
+    this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => this.projects = data,
+        error: () => this.toast.error('No se pudieron cargar los proyectos.'),
+      });
   }
 
   loadSessionDetails() {
     this.isLoading = true;
-    
-    // Pass the explicit getAuthHeaders just in case the Interceptor doesn't catch standalone requests.
-    const headers = this.authService.getAuthHeaders();
-    
-    this.http.get<any>(`${environment.apiUrl}/api/sessions/${this.sessionId}`, { headers }).subscribe({
-      next: (data) => {
-        try {
-            console.log("Curation data received:", data);
-            
-            // Safe date parsing to avoid InvalidPipeArgument
-            let parsedDate = data.session.date;
-            if (typeof parsedDate === 'string' && !isNaN(Number(parsedDate))) {
-                parsedDate = Number(parsedDate);
-            }
 
-            this.meetingData = {
-              id: data.session.id,
-              title: data.session.title || 'Sesión sin título',
-              date: parsedDate,
-              project_id: data.session.project_id || null,
-              status: data.session.status || 'pending',
-              raw_summary: data.session.raw_summary || '',
-              raw_transcript: data.session.raw_transcript || '',
-              language: data.session.language || '',
-              processed_decisions: data.session.processed_decisions || '',
-              processed_risks: data.session.processed_risks || '',
-              processed_agreements: data.session.processed_agreements || '',
-              // Ensure action_items is always an array
-              action_items: (data.action_items || []).map((item: any) => ({
-                 ...item,
-                 selected: false // Initialize checkbox state
-              }))
-            };
-            this.isLoading = false;
-            this.cdr.detectChanges();
-        } catch (e) {
-            console.error('Data parsing error', e);
-            this.isLoading = false;
-            this.cdr.detectChanges();
-        }
-      },
-      error: (err) => {
-        console.error('Error loading session details', err);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
+    const headers = this.authService.getAuthHeaders();
+    this.http.get<any>(`${environment.apiUrl}/api/sessions/${this.sessionId}`, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          try {
+              let parsedDate = data.session.date;
+              if (typeof parsedDate === 'string' && !isNaN(Number(parsedDate))) {
+                  parsedDate = Number(parsedDate);
+              }
+
+              this.meetingData = {
+                id: data.session.id,
+                title: data.session.title || 'Sesión sin título',
+                date: parsedDate,
+                project_id: data.session.project_id || null,
+                status: data.session.status || 'pending',
+                raw_summary: data.session.raw_summary || '',
+                raw_transcript: data.session.raw_transcript || '',
+                language: data.session.language || '',
+                processed_decisions: data.session.processed_decisions || '',
+                processed_risks: data.session.processed_risks || '',
+                processed_agreements: data.session.processed_agreements || '',
+                ai_fields_regenerated: !!data.session.ai_fields_regenerated,
+                ai_tasks_regenerated: !!data.session.ai_tasks_regenerated,
+                action_items: (data.action_items || []).map((item: any) => ({
+                   ...item,
+                   selected: false,
+                })),
+              };
+              this.isLoading = false;
+              this.cdr.detectChanges();
+          } catch (e) {
+              this.toast.error('Error procesando los datos de la sesión.');
+              this.isLoading = false;
+              this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.toast.error('No se pudieron cargar los detalles de la sesión.');
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   updateTaskField(task: ActionItem) {
@@ -207,7 +223,6 @@ export class CurationPanelComponent implements OnInit {
       },
       error: (err) => {
         this.isAddingTask = false;
-        console.error('Error adding manual task', err);
         this.showSaveMessage('Error al agregar la tarea manual', true);
         this.cdr.detectChanges();
       }
@@ -215,8 +230,11 @@ export class CurationPanelComponent implements OnInit {
   }
 
   showSaveMessage(msg: string, isError = false) {
-    this.saveStatusMessage = msg;
-    setTimeout(() => this.saveStatusMessage = '', 3000);
+    if (isError) {
+      this.toast.error(msg);
+    } else {
+      this.toast.info(msg);
+    }
   }
 
   toggleAllTasks(event: any) {
@@ -281,103 +299,94 @@ export class CurationPanelComponent implements OnInit {
 
 
   regenerateTasks() {
+    if (this.meetingData.ai_tasks_regenerated) {
+      this.toast.warning('Las tareas ya fueron regeneradas con IA para esta sesión.');
+      return;
+    }
     if (!this.meetingData.raw_transcript) {
-      this.showSaveMessage('No hay transcripción para regenerar tareas.', true);
-      this.cdr.detectChanges();
+      this.toast.error('No hay transcripción para regenerar tareas.');
       return;
     }
     this.isRegenerating = true;
-    this.showSaveMessage('Regenerando tareas con LLaMA... Esto puede tardar unos segundos.');
+    this.toast.info('Regenerando tareas con OpenAI... Esto tarda unos segundos.');
     this.cdr.detectChanges();
-    
+
     const headers = this.authService.getAuthHeaders();
     const payload = { raw_transcript: this.meetingData.raw_transcript };
-    
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_tasks`, payload, { headers }).subscribe({
-      next: (res: any) => {
-        this.isRegenerating = false;
-        this.showSaveMessage('Tareas regeneradas correctamente.');
-        if (res.action_items) {
-          // Aseguramos que tengan el selected map
-          this.meetingData.action_items = res.action_items.map((item: any) => ({
-                 ...item,
-                 selected: false
-              }));
-        }
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isRegenerating = false;
-        console.error('Error regenerating tasks', err);
-        this.showSaveMessage('Error al regenerar las tareas.', true);
-        this.cdr.detectChanges();
-      }
-    });
+
+    this.http.post<any>(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_tasks`, payload, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isRegenerating = false;
+          this.meetingData.ai_tasks_regenerated = true;
+          if (res?.action_items) {
+            this.meetingData.action_items = res.action_items.map((item: any) => ({
+              ...item,
+              selected: false,
+            }));
+          }
+          this.toast.success('Tareas regeneradas con OpenAI.');
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isRegenerating = false;
+          if (err?.status === 409) {
+            // Backend dice que ya se regeneró: sincronizamos el flag local.
+            this.meetingData.ai_tasks_regenerated = true;
+            this.toast.warning('Las tareas ya habían sido regeneradas previamente.');
+          } else {
+            const detail = err?.error?.detail || 'Error al regenerar las tareas.';
+            this.toast.error(detail);
+          }
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   regenerateFields() {
+    if (this.meetingData.ai_fields_regenerated) {
+      this.toast.warning('Los campos ya fueron sugeridos con IA para esta sesión.');
+      return;
+    }
     if (!this.meetingData.raw_transcript) {
-      this.showSaveMessage('No hay transcripción para sugerir campos.', true);
-      this.cdr.detectChanges();
+      this.toast.error('No hay transcripción para sugerir campos.');
       return;
     }
     this.isRegeneratingFields = true;
-    this.showSaveMessage('Regenerando campos con Inteligencia Artificial... Esto tarda un momento.');
+    this.toast.info('Sugiriendo campos con OpenAI... Esto tarda un momento.');
     this.cdr.detectChanges();
-    
+
     const headers = this.authService.getAuthHeaders();
     const payload = { raw_transcript: this.meetingData.raw_transcript };
-    
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_fields`, payload, { headers }).subscribe({
-      next: (res: any) => {
-        this.isRegeneratingFields = false;
-        this.showSaveMessage('Campos regenerados correctamente.');
-        if (res.fields) {
-          this.meetingData.processed_decisions = res.fields.processed_decisions;
-          this.meetingData.processed_risks = res.fields.processed_risks;
-          this.meetingData.processed_agreements = res.fields.processed_agreements;
-        }
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isRegeneratingFields = false;
-        console.error('Error regenerating fields', err);
-        this.showSaveMessage('Error al sugerir los campos con IA.', true);
-        this.cdr.detectChanges();
-      }
-    });
-  }
 
-  fetchSummaryFromAPI() {
-    this.isFetchingSummary = true;
-    this.showSaveMessage('Obteniendo resumen ejecutivo original...');
-    this.cdr.detectChanges();
-    
-    const headers = this.authService.getAuthHeaders();
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/fetch_summary`, {}, { headers }).subscribe({
-      next: (res: any) => {
-        this.isFetchingSummary = false;
-        if (res.summary || res.transcript) {
-          if (res.summary) {
-            this.meetingData.raw_summary = res.summary;
+    this.http.post<any>(`${environment.apiUrl}/api/sessions/${this.sessionId}/regenerate_fields`, payload, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isRegeneratingFields = false;
+          this.meetingData.ai_fields_regenerated = true;
+          if (res?.fields) {
+            this.meetingData.processed_decisions = res.fields.processed_decisions ?? this.meetingData.processed_decisions;
+            this.meetingData.processed_risks = res.fields.processed_risks ?? this.meetingData.processed_risks;
+            this.meetingData.processed_agreements = res.fields.processed_agreements ?? this.meetingData.processed_agreements;
+            // raw_summary NO se sobrescribe: viene de Fireflies y es editable manualmente.
           }
-          if (res.transcript) {
-            this.meetingData.raw_transcript = res.transcript;
+          this.toast.success('Campos sugeridos con OpenAI.');
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isRegeneratingFields = false;
+          if (err?.status === 409) {
+            this.meetingData.ai_fields_regenerated = true;
+            this.toast.warning('Los campos ya habían sido sugeridos previamente.');
+          } else {
+            const detail = err?.error?.detail || 'Error al sugerir los campos con IA.';
+            this.toast.error(detail);
           }
-          this.showSaveMessage('Resumen ejecutivo recuperado exitosamente.');
-        } else {
-          this.showSaveMessage('No se detectó resumen ejecutivo disponible.', true);
-        }
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isFetchingSummary = false;
-        console.error('Error fetching executive summary', err);
-        const detailMessage = err.error && err.error.detail ? err.error.detail : 'Error al obtener resumen ejecutivo desde el API.';
-        this.showSaveMessage(detailMessage, true);
-        this.cdr.detectChanges();
-      }
-    });
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   saveManualEdits() {
@@ -401,7 +410,6 @@ export class CurationPanelComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Error saving manual edits', err);
         this.showSaveMessage('Error al guardar los cambios de la sesión', true);
         this.cdr.detectChanges();
       }
@@ -440,7 +448,6 @@ export class CurationPanelComponent implements OnInit {
       },
       error: (err) => {
         this.isGeneratingDoc = false;
-        console.error(`Error downloading ${format}`, err);
         this.showSaveMessage(`Error descargando el Documento ${format.toUpperCase()}`, true);
         this.cdr.detectChanges();
       }

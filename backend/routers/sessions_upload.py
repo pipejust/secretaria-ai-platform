@@ -227,16 +227,23 @@ class RegeneratePayload(BaseModel):
 @router.post("/{session_id}/regenerate_tasks")
 async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[RegeneratePayload] = None, db: Session = Depends(get_session)):
     from models import ActionItem, ProjectContact
-    from services.groq_service import GroqService
+    from services.groq_service import OpenAIService
     from sqlmodel import delete
 
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
-        
+
+    # Solo se permite UN uso del botón "Regenerar Tareas".
+    if session_obj.ai_tasks_regenerated:
+        raise HTTPException(
+            status_code=409,
+            detail="Las tareas ya fueron regeneradas con IA una vez para esta sesión.",
+        )
+
     if payload and payload.raw_transcript:
         session_obj.raw_transcript = payload.raw_transcript
-    
+
     if not session_obj.raw_transcript:
         raise HTTPException(status_code=400, detail="No transcript available to regenerate tasks from.")
 
@@ -247,12 +254,12 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
         db_contacts = db.exec(select(ProjectContact).where(ProjectContact.project_id == session_obj.project_id)).all()
         project_contacts = [{"name": c.name, "email": c.email, "role": c.role, "entity": c.entity} for c in db_contacts]
 
-    # 2. Llamamos a Groq
-    groq_svc = GroqService()
+    # 2. Llamamos a OpenAI (gpt-4o), que es el LLM dedicado para tareas.
+    openai_svc = OpenAIService()
     try:
-        structured_data = await groq_svc.process_transcript_for_tasks_only(session_obj.raw_transcript, project_contacts)
+        structured_data = await openai_svc.process_transcript_for_tasks_only(session_obj.raw_transcript, project_contacts)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error conectando con la IA (Groq): {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error conectando con la IA (OpenAI): {str(e)}")
 
 
     # 3. Insertamos Nuevas
@@ -319,24 +326,45 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
             "selected": False
         })
 
-    return {"status": "success", "action_items": new_items_output}
+    # Marca el flag de uso único (el botón ya no se podrá presionar otra vez).
+    session_obj.ai_tasks_regenerated = True
+    db.add(session_obj)
+    db.commit()
+
+    return {
+        "status": "success",
+        "action_items": new_items_output,
+        "ai_tasks_regenerated": True,
+    }
 
 @router.post("/{session_id}/regenerate_fields")
 async def regenerate_fields_from_transcript(session_id: int, payload: Optional[RegeneratePayload] = None, db: Session = Depends(get_session)):
-    from services.groq_service import GroqService
+    """Sugiere campos con IA (OpenAI gpt-4o). Solo se puede usar UNA vez por sesión.
+
+    NO toca el resumen ejecutivo (ese viene nativo de Fireflies y se edita
+    manualmente). Solo regenera: language, decisions, risks, agreements,
+    attendees, themes.
+    """
+    from services.groq_service import OpenAIService
 
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj:
         raise HTTPException(status_code=404, detail="Session not found")
-        
+
+    # Validación de uso único
+    if session_obj.ai_fields_regenerated:
+        raise HTTPException(
+            status_code=409,
+            detail="Los campos ya fueron sugeridos con IA una vez para esta sesión.",
+        )
+
     if payload and payload.raw_transcript:
         session_obj.raw_transcript = payload.raw_transcript
-    
+
     if not session_obj.raw_transcript:
         raise HTTPException(status_code=400, detail="No transcript available to regenerate fields from.")
 
-    groq_svc = GroqService()
-    # Enviamos solo con los contactos requeridos si existen (para tareas) aunque aquí saquemos los demás campos
+    openai_svc = OpenAIService()
     project_contacts = []
     if session_obj.project_id:
         from sqlmodel import select
@@ -346,9 +374,9 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
 
     structured_data = {}
     try:
-        structured_data = await groq_svc.process_transcript(session_obj.raw_transcript, project_contacts)
+        structured_data = await openai_svc.process_transcript(session_obj.raw_transcript, project_contacts)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error conectando con la IA (Groq): {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error conectando con la IA (OpenAI): {str(e)}")
 
     def _unwrap_ai_field(val):
         if isinstance(val, dict):
@@ -356,34 +384,35 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
             if "items" in val: return val["items"]
         return val
 
-    summary = _unwrap_ai_field(structured_data.get("summary"))
-    if summary is not None:
-        session_obj.raw_summary = str(summary)
-        
+    # NO sobrescribimos raw_summary: ese viene de Fireflies y es editable manualmente.
+
     language = _unwrap_ai_field(structured_data.get("language"))
     if language is not None:
         session_obj.language = str(language)
-        
+
     decisions = _unwrap_ai_field(structured_data.get("decisions"))
     if decisions is not None:
         session_obj.processed_decisions = str(decisions)
-        
+
     risks = _unwrap_ai_field(structured_data.get("risks"))
     if risks is not None:
         session_obj.processed_risks = str(risks)
-        
+
     agreements = _unwrap_ai_field(structured_data.get("agreements"))
     if agreements is not None:
         session_obj.processed_agreements = str(agreements)
-    
+
     import json
     attendees = _unwrap_ai_field(structured_data.get("attendees"))
     if attendees is not None:
         session_obj.processed_attendees = json.dumps(attendees, ensure_ascii=False)
-        
+
     themes = _unwrap_ai_field(structured_data.get("themes"))
     if themes is not None:
         session_obj.processed_themes = json.dumps(themes, ensure_ascii=False)
+
+    # Marca el flag de uso único.
+    session_obj.ai_fields_regenerated = True
 
     db.add(session_obj)
     db.commit()
@@ -391,6 +420,7 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
 
     return {
         "status": "success",
+        "ai_fields_regenerated": True,
         "fields": {
             "language": session_obj.language,
             "raw_summary": session_obj.raw_summary,
@@ -398,8 +428,8 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
             "processed_risks": session_obj.processed_risks,
             "processed_agreements": session_obj.processed_agreements,
             "processed_attendees": session_obj.processed_attendees,
-            "processed_themes": session_obj.processed_themes
-        }
+            "processed_themes": session_obj.processed_themes,
+        },
     }
 
 @router.put("/{session_id}")

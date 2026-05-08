@@ -1,3 +1,16 @@
+"""Webhook entrante de Fireflies.
+
+Flujo automático al llegar el POST de Fireflies:
+1. Crear MeetingSession en estado 'processing'.
+2. Background task:
+   a. Trae transcript + summary nativo de Fireflies (no se genera con IA).
+   b. Limpia el summary nativo con Groq (solo formato; sin reemplazar contenido).
+   c. Groq Llama 3.3 70B → fundamentals + insights (idioma, asistentes, temas,
+      decisiones, riesgos, acuerdos).
+   d. OpenAI gpt-4o → action_items (tareas).
+   e. Disparar routing a Trello/Jira/ClickUp/Azure según IntegrationSetting.
+"""
+
 import json
 import logging
 import time
@@ -9,11 +22,12 @@ from sqlmodel import Session, select
 from database import get_session
 from models import ActionItem, MeetingSession, Project, ProjectContact, Routing
 from services.fireflies_service import FirefliesService
-from services.groq_service import GroqService
+from services.groq_service import OpenAIService
 from services.integrations import (
     IntegrationConfigError,
     get_service_for_destination,
 )
+from services.llm_groq import GroqLLMService
 from services.webhook_security import verify_fireflies_webhook
 
 logger = logging.getLogger(__name__)
@@ -22,6 +36,37 @@ router = APIRouter(
     prefix="/api/webhook/fireflies",
     tags=["Webhooks Fireflies"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_native_summary(summary_obj) -> str:
+    """Compone el resumen ejecutivo a partir de los campos nativos de Fireflies."""
+    if not isinstance(summary_obj, dict):
+        return str(summary_obj or "").strip()
+
+    parts: list[str] = []
+
+    overview = (summary_obj.get("overview") or "").strip()
+    if overview:
+        parts.append(f"### Resumen General\n{overview}")
+
+    bullet_gist = (summary_obj.get("bullet_gist") or "").strip()
+    if bullet_gist:
+        parts.append(f"### Puntos Clave\n{bullet_gist}")
+
+    notes = (summary_obj.get("notes") or "").strip()
+    if notes:
+        parts.append(f"### Notas\n{notes}")
+
+    short_summary = (summary_obj.get("short_summary") or "").strip()
+    if short_summary and not parts:
+        parts.append(f"### Resumen\n{short_summary}")
+
+    return "\n\n".join(parts).strip()
 
 
 async def _dispatch_routing(
@@ -94,6 +139,11 @@ async def _dispatch_routing(
             )
 
 
+# ---------------------------------------------------------------------------
+# Background processing
+# ---------------------------------------------------------------------------
+
+
 async def process_transcript_background(
     session_id: int, transcript_id: str, payload_data: dict
 ) -> None:
@@ -124,38 +174,49 @@ async def process_transcript_background(
             )
             date_str = str(date_val) if date_val else str(int(time.time() * 1000))
 
-            raw_transcript = str(payload_data.get("transcript", ""))
-            raw_summary = str(payload_data.get("summary", ""))
+            raw_transcript = str(payload_data.get("transcript", "")).strip()
+            raw_summary = ""
 
+            # ---------- 1. Pull native data from Fireflies ----------
+            fireflies = FirefliesService()
+            try:
+                ff_data = await fireflies.get_transcript_data(transcript_id)
+            except Exception:
+                logger.exception(
+                    "Fireflies API falló al traer transcript %s", transcript_id
+                )
+                ff_data = {}
+
+            # Title / date desde Fireflies si no vinieron en el payload.
+            title = ff_data.get("title") or title
+            if ff_data.get("dateString"):
+                date_str = str(ff_data["dateString"])
+
+            # Transcripción nativa (sentencias).
             if not raw_transcript or len(raw_transcript) < 10:
-                service = FirefliesService()
-                data = await service.get_transcript_data(transcript_id)
-                title = data.get("title", title)
-                date_str = str(data.get("date")) if data.get("date") else date_str
-                sentences = [
-                    f"{s.get('speaker_name', 'Anon')}: {s.get('text', '')}"
-                    for s in data.get("sentences", [])
-                ]
-                raw_transcript = "\n".join(sentences)
-                summary_obj = data.get("summary")
-                if isinstance(summary_obj, dict):
-                    raw_summary = summary_obj.get("overview", "")
-                else:
-                    raw_summary = str(summary_obj or "")
+                sentences = ff_data.get("sentences") or []
+                raw_transcript = "\n".join(
+                    f"[{s.get('speaker_name', 'Speaker')}] {s.get('text', '')}"
+                    for s in sentences
+                ).strip()
 
+            # Resumen ejecutivo NATIVO de Fireflies (no se genera con IA).
+            raw_summary = _extract_native_summary(ff_data.get("summary"))
+
+            # Limpiamos formato del summary con Groq (sólo cosmética: traduce
+            # encabezados, quita asteriscos, elimina basura tipo [Fuente: ...]).
+            groq = GroqLLMService()
+            if raw_summary:
+                raw_summary = await groq.clean_native_summary(raw_summary)
+
+            # ---------- 2. Project matching nivel 1 (texto literal) ----------
             projects = db.exec(select(Project)).all()
-            matched_project_id = None
-
+            matched_project_id: int | None = None
+            haystack = f"{title}\n{raw_transcript}".lower()
             for p in projects:
-                if p.name.lower() in title.lower():
+                if p.name and p.name.lower() in haystack:
                     matched_project_id = p.id
                     break
-
-            if not matched_project_id and raw_transcript:
-                for p in projects:
-                    if p.name.lower() in raw_transcript.lower():
-                        matched_project_id = p.id
-                        break
 
             new_session.title = title
             new_session.date = date_str
@@ -163,15 +224,18 @@ async def process_transcript_background(
             new_session.raw_transcript = raw_transcript
             new_session.raw_summary = raw_summary
             new_session.status = "pending"
-
             db.add(new_session)
             db.commit()
             db.refresh(new_session)
 
             if not raw_transcript:
+                logger.warning(
+                    "Sesión %s sin transcript (Fireflies vacío). Saltando IA.",
+                    session_id,
+                )
                 return
 
-            groq_svc = GroqService()
+            # ---------- 3. Groq → fundamentals + insights ----------
             project_contacts: list[dict] = []
             if matched_project_id:
                 db_contacts = db.exec(
@@ -184,44 +248,49 @@ async def process_transcript_background(
                     for c in db_contacts
                 ]
 
-            structured_data = await groq_svc.process_transcript(
+            insights = await groq.process_fundamentals_and_insights(
                 raw_transcript, project_contacts
             )
 
-            groq_summary = structured_data.get("summary", "")
-            if (
-                not new_session.raw_summary
-                and groq_summary
-                and len(groq_summary) > 20
-            ):
-                new_session.raw_summary = groq_summary
-
-            if not matched_project_id and new_session.raw_summary:
+            # ---------- 4. Project matching nivel 2 (Groq deduce por contexto) ----------
+            if not matched_project_id:
                 proj_dict_list = [
                     {"id": p.id, "name": p.name, "description": p.description}
                     for p in projects
                 ]
-                deduced_id = await groq_svc.deduce_project(
-                    new_session.raw_summary, proj_dict_list
+                deduced_id = await groq.deduce_project(
+                    raw_summary or raw_transcript[:6000], proj_dict_list
                 )
                 if deduced_id:
                     matched_project_id = deduced_id
                     new_session.project_id = matched_project_id
 
-            new_session.language = structured_data.get("language", "Español")
-            new_session.processed_decisions = structured_data.get("decisions", "")
-            new_session.processed_risks = structured_data.get("risks", "")
-            new_session.processed_agreements = structured_data.get("agreements", "")
+            new_session.language = insights.get("language") or "Español"
+            new_session.processed_decisions = insights.get("decisions", "")
+            new_session.processed_risks = insights.get("risks", "")
+            new_session.processed_agreements = insights.get("agreements", "")
             new_session.processed_attendees = json.dumps(
-                structured_data.get("attendees", []), ensure_ascii=False
+                insights.get("attendees", []), ensure_ascii=False
             )
             new_session.processed_themes = json.dumps(
-                structured_data.get("themes", []), ensure_ascii=False
+                insights.get("themes", []), ensure_ascii=False
             )
             db.add(new_session)
             db.commit()
 
-            for item_data in structured_data.get("action_items", []):
+            # ---------- 5. OpenAI → action_items ----------
+            openai = OpenAIService()
+            try:
+                tasks_payload = await openai.process_transcript_for_tasks_only(
+                    raw_transcript, project_contacts
+                )
+            except Exception:
+                logger.exception(
+                    "OpenAI falló extrayendo tareas para sesión %s", session_id
+                )
+                tasks_payload = {"action_items": []}
+
+            for item_data in tasks_payload.get("action_items", []) or []:
                 if isinstance(item_data, str):
                     title_v = "Tarea Detectada"
                     description = item_data.strip()
@@ -240,18 +309,20 @@ async def process_transcript_background(
                 if not title_v and not description:
                     continue
 
-                action_item = ActionItem(
-                    session_id=new_session.id,
-                    owner_name=owner_name,
-                    owner_email=owner_email,
-                    title=title_v or "Tarea sin título",
-                    description=description,
-                    due_date=due_date,
-                    is_approved=False,
+                db.add(
+                    ActionItem(
+                        session_id=new_session.id,
+                        owner_name=owner_name,
+                        owner_email=owner_email,
+                        title=title_v or "Tarea sin título",
+                        description=description,
+                        due_date=due_date,
+                        is_approved=False,
+                    )
                 )
-                db.add(action_item)
             db.commit()
 
+            # ---------- 6. Routing externo (Trello/Jira/ClickUp/Azure) ----------
             if matched_project_id:
                 routings = db.exec(
                     select(Routing).where(Routing.project_id == matched_project_id)
@@ -271,6 +342,11 @@ async def process_transcript_background(
                 "Error procesando transcript %s en background", transcript_id
             )
             logger.debug(traceback.format_exc())
+
+
+# ---------------------------------------------------------------------------
+# Endpoint
+# ---------------------------------------------------------------------------
 
 
 @router.post("")
@@ -295,11 +371,6 @@ async def receive_fireflies_webhook(
     )
 
     transcript_id = payload.get("transcriptId") or payload.get("meetingId")
-    event_type = payload.get("eventType") or payload.get("event")
-    logger.info(
-        "Event type: %s, Transcript ID inicial: %s", event_type, transcript_id
-    )
-
     if not transcript_id:
         transcript_id = payload.get("id") or payload.get("meeting_id")
         if not transcript_id and isinstance(payload.get("data"), dict):
@@ -309,11 +380,9 @@ async def receive_fireflies_webhook(
                 or data_obj.get("id")
                 or data_obj.get("meetingId")
             )
-            logger.info("Extraído de data anidada: %s", transcript_id)
 
     if not transcript_id:
         logger.info("Webhook sin transcript ID. Ignorando.")
-        # Devolvemos 200 para que Fireflies no desactive el hook por pings de validación.
         return {
             "status": "ignored",
             "message": "Falta transcriptId o meetingId en el payload, ignorando.",

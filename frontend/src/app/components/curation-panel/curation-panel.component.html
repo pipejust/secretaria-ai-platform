@@ -48,35 +48,36 @@
       </div>
     </header>
 
-    <div *ngIf="saveStatusMessage" class="toast-message">
-      {{ saveStatusMessage }}
-    </div>
 
     <div class="grid-layout">
       <section class="col-left">
         <div class="glass-panel section-card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <h3 style="margin: 0;">📝 Resumen Ejecutivo</h3>
-            <button class="btn btn-sm" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;" 
-                    (click)="fetchSummaryFromAPI()" [disabled]="isFetchingSummary">
-              <span *ngIf="!isFetchingSummary">🤖 Obtener resumen ejecutivo</span>
-              <span *ngIf="isFetchingSummary">Cargando...</span>
-            </button>
-          </div>
+          <h3 style="margin: 0 0 0.5rem 0;">📝 Resumen Ejecutivo</h3>
+          <small style="color:#6b7280; display:block; margin-bottom:.4rem;">
+            Resumen nativo de Fireflies. Editable.
+          </small>
           <textarea [(ngModel)]="meetingData.raw_summary" rows="4"></textarea>
         </div>
-        
+
         <div class="glass-panel section-card" style="position: relative;">
           <h3>🗣️ Transcripción Original</h3>
           <textarea [(ngModel)]="meetingData.raw_transcript" rows="8" class="form-control transcript-box"></textarea>
           <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 10px;">
-            <button class="btn btn-secondary action-btn" [disabled]="isRegeneratingFields" (click)="regenerateFields()">
-              <span *ngIf="isRegeneratingFields">⏳ Regenerando Campos...</span>
-              <span *ngIf="!isRegeneratingFields">✨ Sugerir Campos con IA</span>
+            <button class="btn btn-secondary action-btn"
+                    [disabled]="isRegeneratingFields || meetingData.ai_fields_regenerated"
+                    [title]="meetingData.ai_fields_regenerated ? 'Ya se sugirieron campos con IA para esta sesión.' : 'Sugerir decisiones, riesgos, acuerdos, asistentes y temas con OpenAI (un solo uso).'"
+                    (click)="regenerateFields()">
+              <span *ngIf="isRegeneratingFields">⏳ Sugiriendo Campos...</span>
+              <span *ngIf="!isRegeneratingFields && !meetingData.ai_fields_regenerated">✨ Sugerir Campos con IA</span>
+              <span *ngIf="!isRegeneratingFields && meetingData.ai_fields_regenerated">✓ Campos sugeridos</span>
             </button>
-            <button class="btn btn-secondary action-btn" [disabled]="isRegenerating" (click)="regenerateTasks()">
+            <button class="btn btn-secondary action-btn"
+                    [disabled]="isRegenerating || meetingData.ai_tasks_regenerated"
+                    [title]="meetingData.ai_tasks_regenerated ? 'Ya se regeneraron tareas con IA para esta sesión.' : 'Regenerar el listado de tareas con OpenAI (un solo uso).'"
+                    (click)="regenerateTasks()">
               <span *ngIf="isRegenerating">⏳ Regenerando Tareas...</span>
-              <span *ngIf="!isRegenerating">🤖 Regenerar Tareas</span>
+              <span *ngIf="!isRegenerating && !meetingData.ai_tasks_regenerated">🤖 Regenerar Tareas</span>
+              <span *ngIf="!isRegenerating && meetingData.ai_tasks_regenerated">✓ Tareas regeneradas</span>
             </button>
           </div>
         </div>
