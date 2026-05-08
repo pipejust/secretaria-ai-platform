@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------------
-# Migrar la base de datos de Supabase → Render Postgres.
+# Backup completo de Supabase + (opcional) restore a otro Postgres.
+#
+# La decisión vigente es mantener la BD en Supabase. Este script se conserva
+# para dos casos:
+#   A) Backup periódico (recomendado mensual o ad-hoc antes de cambios grandes).
+#      Cuando el script pida confirmación para restaurar, responde "n" y el
+#      backup quedará comprimido en backups/.
+#   B) Si en el futuro se decide migrar a Render Postgres u otro proveedor,
+#      este mismo script hace el dump + restore en una sola corrida.
 #
 # Uso:
-#   1. Crea el Postgres en Render (manualmente o vía Blueprint con render.yaml).
-#   2. En el dashboard de Render → tu Postgres → "Connections", copia
-#      la "External Database URL" (la que termina en .render.com).
-#   3. En Supabase → Project Settings → Database, copia la "Connection string"
-#      en modo "URI" (formato postgres://...).
-#   4. Exporta como variables de entorno y corre este script:
-#
-#      export SUPABASE_URL='postgres://postgres:PASS@db.xxxxx.supabase.co:5432/postgres'
-#      export RENDER_URL='postgres://notiva:PASS@dpg-xxxx.oregon-postgres.render.com/notiva'
-#      ./scripts/migrate-from-supabase.sh
+#   export SUPABASE_URL='postgres://postgres:PASS@db.xxxxx.supabase.co:5432/postgres'
+#   export RENDER_URL='postgres://...'   # opcional; solo si vas a restaurar
+#   ./scripts/migrate-from-supabase.sh
 #
 # Requisitos:
 #   - postgresql-client 14+ instalado localmente (`brew install postgresql@16`)
@@ -31,10 +32,10 @@ if [[ -z "${SUPABASE_URL:-}" ]]; then
     exit 1
 fi
 
+SKIP_RESTORE=0
 if [[ -z "${RENDER_URL:-}" ]]; then
-    echo "ERROR: define RENDER_URL antes de ejecutar." >&2
-    echo "  export RENDER_URL='postgres://notiva:PASS@dpg-xxxx.oregon-postgres.render.com/notiva'" >&2
-    exit 1
+    echo "INFO: RENDER_URL no definida → modo backup-only (no se restaurará)."
+    SKIP_RESTORE=1
 fi
 
 BACKUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/backups"
@@ -77,7 +78,12 @@ fi
 echo "==> 3/4 Comprimiendo a ${DUMP_GZ} ..."
 gzip -f "${DUMP_FILE}"
 
-echo "==> 4/4 Restaurando en Render Postgres..."
+if [[ "${SKIP_RESTORE}" -eq 1 ]]; then
+    echo "==> Backup-only completado. Archivo: ${DUMP_GZ}"
+    exit 0
+fi
+
+echo "==> 4/4 Restaurando en \$RENDER_URL..."
 echo "    Si el destino tiene datos previos, las tablas serán dropeadas (--clean)."
 read -r -p "    ¿Continuar? [y/N]: " confirm
 if [[ ! "${confirm}" =~ ^[yY]$ ]]; then

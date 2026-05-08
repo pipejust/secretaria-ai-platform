@@ -1,19 +1,12 @@
 # Render Blueprint para Notiva
 # https://render.com/docs/blueprint-spec
 #
-# Define dos recursos:
-#   1. notiva-postgres   — Postgres managed (Basic-256mb, $6/mes)
-#   2. notiva-backend    — FastAPI Docker (Starter, $7/mes, no se duerme)
+# Decisión arquitectónica vigente:
+#   - La base de datos vive en Supabase (no migramos a Render Postgres).
+#   - El backend FastAPI corre como contenedor Docker en Render.
+#   - Plan Starter ($7/mes) → no se duerme, sin cold-starts.
 #
-# Total: ~$13/mes. El frontend Angular se sigue desplegando en Vercel.
-
-databases:
-  - name: notiva-postgres
-    plan: basic-256mb        # 256 MB RAM, 1 GB storage, backups diarios
-    databaseName: notiva
-    user: notiva
-    # Ajusta a "15" si tu Supabase aún corre 15 (proyectos nuevos van en 16).
-    postgresMajorVersion: "16"
+# Total: $7/mes de Render + lo que ya pagas a Supabase.
 
 services:
   - type: web
@@ -25,15 +18,19 @@ services:
     healthCheckPath: /
     autoDeploy: true
     envVars:
-      # --- Conexión a la BD: Render inyecta el DATABASE_URL del Postgres ---
+      # --- Conexión a la BD: Supabase (Direct connection con add-on IPv4) ---
       - key: DATABASE_URL
-        fromDatabase:
-          name: notiva-postgres
-          property: connectionString
+        sync: false           # postgresql://postgres:PASS@db.<ref>.supabase.co:5432/postgres
+
+      # Opcional, solo si algún día se usa supabase-py para storage o auth.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
 
       # --- Auth ---
       - key: JWT_SECRET_KEY
-        generateValue: true        # Render genera 256 bits aleatorios al primer deploy
+        generateValue: true   # Render genera 256 bits aleatorios al primer deploy
       - key: JWT_ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -47,11 +44,11 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: PUBLIC_BASE_URL
-        # Después del primer deploy, copia aquí la URL pública
+        # Después del primer deploy, copia aquí la URL pública del web service
         # (ej: https://notiva-backend.onrender.com).
         sync: false
 
-      # --- LLM (pégalas en el dashboard una sola vez) ---
+      # --- LLM (ya están configuradas en Render hoy) ---
       - key: OPENAI_API_KEY
         sync: false
       - key: GROQ_API_KEY
@@ -63,4 +60,4 @@ services:
 
       # --- Frontend ---
       - key: FRONTEND_URL
-        sync: false                # ej: https://notiva.vercel.app
+        sync: false           # ej: https://notiva.vercel.app

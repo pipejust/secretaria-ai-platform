@@ -1,154 +1,151 @@
-# Migración: Supabase → Render (todo en Render)
+# Despliegue: Backend Dockerizado en Render Starter (BD se queda en Supabase)
 
-Procedimiento para mover Notiva de **Supabase + Render Free** a **Render
-Postgres + Render Web (Docker)**.
+Procedimiento para mover Notiva de **Render Free (Python)** → **Render Starter (Docker)**
+manteniendo Supabase como base de datos.
 
-- **Costo final:** $13/mes (Postgres Basic-256mb $6 + Web Starter $7).
-- **Tiempo total:** ~40 min (15 min de los cuales son `pg_dump`).
-- **Downtime:** ~5 min, durante la repunteada del `DATABASE_URL`.
+- **Costo:** $7/mes Render Starter + lo que ya pagas a Supabase.
+- **Tiempo total:** ~15 min.
+- **Downtime:** prácticamente cero (Render hace el switch al nuevo deploy cuando está sano).
+- **Beneficio principal:** mata el spin-down de Render Free.
 
 ---
 
 ## 0. Pre-flight
 
-Asegúrate de tener:
-
-- `psql` y `pg_dump` instalados localmente, **versión >= 16** (la de tu Postgres destino):
-  ```bash
-  brew install postgresql@16
-  echo 'export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"' >> ~/.zshrc
-  ```
-- Una cuenta en Render con tarjeta cargada (los planes pagos requieren método de pago).
-- El repo en GitHub conectado a tu cuenta de Render.
+- Cuenta Render con tarjeta cargada (Starter es plan pago).
+- Repo en GitHub conectado a Render.
+- API keys que ya tienes en el dashboard actual de Render: `OPENAI_API_KEY`,
+  `GROQ_API_KEY`, `FIREFLIES_API_KEY`, `DATABASE_URL` (Supabase).
 
 ---
 
-## 1. Crear los recursos en Render (5 min)
+## 1. Migración de schema en Supabase  ✅ HECHO
 
-### Opción A: usando el `render.yaml` que ya está en el repo (recomendado)
+Las dos columnas nuevas (`ai_fields_regenerated`, `ai_tasks_regenerated`)
+ya están aplicadas en producción mediante:
 
-1. En Render dashboard → **New + → Blueprint**.
-2. Conecta tu repo de GitHub y selecciona la rama `main` (o la que vas a desplegar).
-3. Render lee `render.yaml` y crea `notiva-postgres` + `notiva-backend` automáticamente.
+```sql
+ALTER TABLE public.meetingsession
+  ADD COLUMN IF NOT EXISTS ai_fields_regenerated BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.meetingsession
+  ADD COLUMN IF NOT EXISTS ai_tasks_regenerated  BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+Las 46 sesiones existentes quedaron con ambos flags en `false`, lo que
+significa que los botones "Sugerir Campos con IA" y "Regenerar Tareas"
+seguirán habilitados en cada una.
+
+> Si en futuras versiones agregas más columnas, `database.create_db_and_tables()`
+> en `backend/database.py` ya tiene el patrón `ALTER TABLE ADD COLUMN IF NOT EXISTS`
+> idempotente que se ejecuta en cada `on_startup`. Solo añade la sentencia ahí.
+
+---
+
+## 2. Webhook token de Fireflies  ✅ HECHO
+
+Se pre-generó un `webhook_token` aleatorio (32 bytes URL-safe) y se persistió
+en `IntegrationSetting` (provider `fireflies`, campo `config_json.webhook_token`).
+
+**URL nueva del webhook (cópiala y pégala en Fireflies tras el deploy):**
+
+```
+https://secretaria-ai-platform.onrender.com/api/webhook/fireflies?token=<webhook_token>
+```
+
+(El token exacto está en Supabase; lo verás en `/admin/settings` → Fireflies → "Webhook URL".
+También puedes consultarlo con:
+`SELECT config_json::jsonb->'webhook_token' FROM integrationsetting WHERE provider_name='fireflies';`)
+
+> **Importante:** Apenas hagas el deploy del nuevo código, los webhooks que sigan
+> llegando a la URL vieja (sin `?token=…`) serán rechazados con `401 Missing
+> webhook token`. Actualiza Fireflies inmediatamente después del deploy.
+
+---
+
+## 3. Migrar el web service a Docker Starter (10 min)
+
+### Opción A: aplicar el Blueprint del repo (recomendado)
+
+1. En Render dashboard → **Settings** del web service actual → **Suspend** (no lo borres aún).
+2. Render dashboard → **New + → Blueprint** → conecta el repo y la rama.
+3. Render lee `render.yaml` y crea `notiva-backend` como Docker Starter.
 4. Render te pedirá rellenar los secrets marcados como `sync: false`:
-   - `OPENAI_API_KEY`
-   - `GROQ_API_KEY`
-   - `FIREFLIES_API_KEY`
-   - `FRONTEND_URL` → `https://notiva.vercel.app` (o lo que tengas en Vercel)
-   - `PUBLIC_BASE_URL` → déjalo vacío en este momento; lo llenas después del primer deploy.
+   - `DATABASE_URL` → la misma cadena de Supabase que ya usabas (Direct connection con IPv4 add-on)
+   - `OPENAI_API_KEY`, `GROQ_API_KEY`, `FIREFLIES_API_KEY` → las que ya tenías
+   - `FRONTEND_URL` → `https://notiva.vercel.app` (o lo que sea)
+   - `PUBLIC_BASE_URL` → déjalo vacío en este momento; lo llenas tras el primer deploy
+5. Espera el primer build de Docker (~3-5 min la primera vez, después <1 min).
+6. Cuando esté arriba, abre la URL pública. Debes ver:
+   ```json
+   {"status":"ok","message":"Notiva Backend está corriendo"}
+   ```
+7. Copia esa URL al env var `PUBLIC_BASE_URL` y guarda → Render redeploya.
+8. **Ahora sí**, suspende/borra el web service viejo (Free, Python).
 
-### Opción B: manual (si prefieres)
+### Opción B: cambiar el actual sin Blueprint
 
-1. **New + → PostgreSQL**: nombre `notiva-postgres`, plan **Basic-256mb ($6)**, versión 16.
-2. **New + → Web Service**: conecta el repo, runtime **Docker**, dockerContext `./backend`, plan **Starter ($7)**.
-3. En "Environment" del web service, agrega manualmente las variables del `render.yaml` y conecta el `DATABASE_URL` al Postgres.
+1. En el web service actual de Render → **Settings**:
+   - **Runtime**: Python → **Docker**
+   - **Dockerfile path**: `./backend/Dockerfile`
+   - **Docker context**: `./backend`
+   - **Plan**: Free → **Starter ($7/mo)**
+   - **Health Check Path**: `/`
+2. **Environment**: añade lo que falte (`JWT_SECRET_KEY` con "Generate Value", `ENVIRONMENT=production`, `BCRYPT_ROUNDS=12`, `PUBLIC_BASE_URL`).
+3. Manual Deploy → Latest commit.
 
 ---
 
-## 2. Backup de Supabase (10 min)
+## 4. Frontend (Vercel) — sin cambios
+
+El frontend sigue apuntando a la misma URL del backend. Si la URL pública
+cambia (con el Blueprint usualmente cambia), actualiza la env var
+`NG_APP_API_URL` en Vercel y redeploya.
+
+---
+
+## 5. Settings post-deploy (2 min)
+
+Login como admin → `/admin/settings`:
+
+1. La sección **Fireflies** ya tiene tu API Key. **El "Webhook URL" ahora se
+   muestra con el `?token=…` embebido y un botón "Copiar".**
+2. Copia esa URL nueva → ve a Fireflies → Settings → Integrations → Webhook
+   → reemplaza la URL vieja por esta. Marca el evento "Meeting Completed".
+3. Verifica que **Resend, Trello, Jira, ClickUp, Azure** sigan con sus
+   credenciales (las dejaste como estaban; nada se borró).
+
+---
+
+## 6. Smoke test (5 min)
 
 ```bash
-# Copia las dos URLs de conexión:
-#   - Supabase: Project Settings → Database → Connection string (URI)
-#   - Render:   tu Postgres → Connections → External Database URL
-export SUPABASE_URL='postgres://postgres:PASS@db.xxxxx.supabase.co:5432/postgres'
-export RENDER_URL='postgres://notiva:PASS@dpg-xxxx.oregon-postgres.render.com/notiva'
+# 1. Healthcheck del backend
+curl -s https://<tu-url>.onrender.com/
 
-# El script genera backups/supabase-backup-TIMESTAMP.sql.gz y luego restaura.
-./scripts/migrate-from-supabase.sh
-```
+# 2. El JWT viejo está invalidado al rotar JWT_SECRET_KEY → re-loguea desde el frontend.
 
-El script:
-1. Verifica que tienes `pg_dump`/`psql`/`gzip`.
-2. Hace `pg_dump --schema=public --no-owner --no-privileges --clean --if-exists` de Supabase.
-3. Comprime el dump.
-4. Te pide confirmación antes de restaurar en Render.
-5. Carga el dump con `psql --single-transaction --set ON_ERROR_STOP=on`.
+# 3. Crea/edita una sesión y verifica que los nuevos botones se comportan:
+#    - Quitamos "Obtener Resumen Ejecutivo" (el textarea muestra el de Fireflies).
+#    - "✨ Sugerir Campos con IA" → llama OpenAI, después se vuelve "✓ Campos sugeridos".
+#    - "🤖 Regenerar Tareas" → llama OpenAI, después se vuelve "✓ Tareas regeneradas".
 
-> El backup queda en `backups/supabase-backup-*.sql.gz` (gitignored). Guárdalo
-> aparte hasta que confirmes que todo funciona.
-
-### Verificación post-restore
-
-```bash
-psql "${RENDER_URL}" -c '\dt'                                # debes ver todas las tablas
-psql "${RENDER_URL}" -c 'SELECT COUNT(*) FROM "user";'       # cuenta de usuarios > 0
-psql "${RENDER_URL}" -c 'SELECT COUNT(*) FROM meetingsession;'
+# 4. Dispara una reunión real con Fireflies (o un POST manual con el token correcto)
+#    para validar que el webhook entra, el summary nativo aparece, las tareas las saca
+#    OpenAI y las decisiones/riesgos/acuerdos los saca Groq.
 ```
 
 ---
 
-## 3. Switch del backend (5 min)
+## Rollback
 
-Si usaste el Blueprint, el `DATABASE_URL` del web service ya apunta al
-Postgres de Render. Solo necesitas:
+Si algo se rompe en el nuevo Docker Starter, en Render → web service viejo → **Resume**
+y en Vercel apunta `NG_APP_API_URL` de vuelta a la URL vieja. La BD nunca cambió.
 
-1. **Manual deploy** del web service en Render (botón "Deploy latest commit").
-2. Espera el build de Docker (~3-5 min la primera vez, después <1 min con cache).
-3. Cuando esté arriba, abre la URL pública (ej. `https://notiva-backend.onrender.com/`).
-   Debes ver `{"status":"ok","message":"Notiva Backend está corriendo"}`.
-4. Copia esa URL al env var `PUBLIC_BASE_URL` y guarda → Render redeploya.
+Para revertir la migración SQL (si fuera necesario):
 
----
-
-## 4. Frontend (Vercel) (2 min)
-
-En Vercel → tu proyecto Notiva → Settings → Environment Variables:
-
-```
-NG_APP_API_URL=https://notiva-backend.onrender.com
+```sql
+ALTER TABLE public.meetingsession DROP COLUMN IF EXISTS ai_fields_regenerated;
+ALTER TABLE public.meetingsession DROP COLUMN IF EXISTS ai_tasks_regenerated;
 ```
 
-(o como esté nombrada en `environment.prod.ts`). Redeploy.
-
----
-
-## 5. Settings post-deploy (5 min)
-
-Con la app arriba:
-
-1. Login como admin.
-2. Ve a `/admin/settings`.
-3. Pega de nuevo:
-   - **Fireflies**: API Key + guarda. La UI te genera el `Webhook URL` con el token embebido.
-   - **Resend**: API Key + sender.
-   - **Trello / Jira / ClickUp / Azure** según uses.
-4. Copia el `Webhook URL` recién generado y pégalo en Fireflies → Settings → Integrations → Webhook (evento "Meeting Completed").
-
----
-
-## 6. Limpieza (3 min)
-
-Cuando confirmes que las dos primeras reuniones procesadas en Render funcionan
-end-to-end (Fireflies → backend → DB → email):
-
-1. **Cancela el add-on de IPv4 en Supabase** (-$4/mes).
-2. **Downgrade de Supabase Pro → Free** (-$10/mes) o cancela el proyecto.
-3. Guarda el último `backups/supabase-backup-*.sql.gz` en cold storage (S3 / Drive).
-
----
-
-## Rollback de emergencia
-
-Si algo se rompe en Render y necesitas volver a Supabase mientras debuggeas:
-
-1. En Vercel cambia `NG_APP_API_URL` de vuelta a la URL vieja (la del Render Free
-   con Supabase) y redeploya. El backend viejo sigue funcionando porque sigue
-   apuntando a Supabase.
-2. No toques los datos en Render hasta que decidas re-migrar.
-
-Si necesitas restaurar un dump en Supabase:
-
-```bash
-gunzip -c backups/supabase-backup-*.sql.gz | psql "${SUPABASE_URL}"
-```
-
----
-
-## Costos comparados
-
-| Setup | $/mes | Spin-down? |
-|---|---|---|
-| Hoy: Supabase Pro + IPv4 + Render Free | **$14** | Sí, 15 min |
-| Render-only (este blueprint) | **$13** | No |
-| Quedarse en Supabase + Render Starter | $21 | No |
+(No revertirá el `webhook_token`; ese queda en `config_json` y no estorba al código viejo.)
