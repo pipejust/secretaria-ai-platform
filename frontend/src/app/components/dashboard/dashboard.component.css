@@ -46,6 +46,38 @@
     background: var(--accent-hover);
 }
 
+/* === Tabla de sesiones: scroll horizontal y acciones que envuelven === */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md, 12px);
+}
+
+.actions-cell {
+    /* En desktop: ancho mínimo para que los 4 botones quepan en línea */
+    min-width: 280px;
+    white-space: nowrap;
+}
+
+.actions-wrap {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 1024px) {
+    /* En tablet/móvil dejamos que los botones envuelvan a 2 filas si hace falta */
+    .actions-wrap {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    .actions-cell {
+        min-width: 200px;
+    }
+}
+
 @media (max-width: 768px) {
     .header-actions {
         flex-direction: column;
@@ -63,7 +95,29 @@
         width: 100% !important;
     }
     .data-table th, .data-table td {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
+        padding: 0.5rem 0.6rem;
+        font-size: 0.78rem;
+    }
+
+    /* Compactar botones de acción para que quepan más por línea */
+    .actions-wrap .btn-sm {
+        padding: 0.35rem 0.55rem;
+        font-size: 0.72rem;
+    }
+    /* Botón principal "Ver Curación" / "Detalle" se va a línea propia */
+    .actions-wrap .btn-secondary {
+        flex: 1 1 100%;
+    }
+    .actions-cell {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    /* En pantalla muy chica, cada botón ocupa 50% y se distribuyen 2x2 */
+    .actions-wrap .btn-sm {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: 0;
+        justify-content: center;
     }
 }
