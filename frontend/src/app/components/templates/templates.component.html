@@ -39,7 +39,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-full" [disabled]="!templateName?.trim() || !selectedProjectId || (!selectedFile && !editingTemplateId) || isUploading">
+                <button type="submit" class="btn btn-primary w-full" [disabled]="!templateName.trim() || !selectedProjectId || (!selectedFile && !editingTemplateId) || isUploading">
                     <span *ngIf="!isUploading">{{ editingTemplateId ? 'Actualizar Plantilla' : 'Subir Plantilla' }}</span>
                     <span *ngIf="isUploading">Guardando...</span>
                 </button>

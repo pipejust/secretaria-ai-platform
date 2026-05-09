@@ -88,7 +88,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
         this.authService.logout();
     }
 
-    getInitials(name: string): string {
+    getInitials(name: string | null | undefined): string {
         if (!name) return 'U';
         const words = name.trim().split(' ');
         if (words.length >= 2) {
