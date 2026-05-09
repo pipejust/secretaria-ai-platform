@@ -46,12 +46,35 @@
     background: var(--accent-hover);
 }
 
-/* === Tabla de sesiones: scroll horizontal y acciones que envuelven === */
+/* === Tabla de sesiones: scroll horizontal y acciones que envuelven ===
+   Nota crítica: el .card global tiene `overflow: hidden` (en styles.css)
+   para mantener los rounded corners. Eso recorta cualquier overflow del
+   .table-container interno → la columna de Acciones quedaba cortada en
+   mobile sin posibilidad de scrollear. Sobrescribimos SOLO en este
+   componente (Angular scopea el selector vía Emulated encapsulation
+   porque el <div class="card glass-panel"> vive en el template del
+   dashboard). */
+/* Solo el card que envuelve la tabla de sesiones (único con .flex-2).
+   No tocamos los modales (.card.glass-panel sin .flex-2 que necesitan
+   overflow-y:auto para scrollear verticalmente). */
+.card.glass-panel.flex-2 {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch;
+}
+
 .table-container {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: var(--radius-md, 12px);
+}
+
+/* Forzar que la tabla no se comprima por debajo de un ancho legible.
+   Con esto, en mobile (<880px) el contenedor activa scroll horizontal
+   automáticamente y la columna de Acciones queda accesible. */
+.data-table {
+    min-width: 880px;
 }
 
 .actions-cell {
