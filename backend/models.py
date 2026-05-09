@@ -41,6 +41,14 @@ class Project(SQLModel, table=True):
         description="Horas de espera antes del Auto-Dispatch. None = usar global.",
     )
 
+    # Responsable principal del proyecto. Hace seguimiento de pendientes y
+    # recibe (en futuras versiones) los reportes ejecutivos.
+    owner_user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="user.id",
+        description="Usuario responsable del proyecto.",
+    )
+
     templates: List["Template"] = Relationship(back_populates="project")
     routings: List["Routing"] = Relationship(back_populates="project")
     sessions: List["MeetingSession"] = Relationship(back_populates="project")
@@ -121,14 +129,28 @@ class MeetingSession(SQLModel, table=True):
 class ActionItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     session_id: int = Field(foreign_key="meetingsession.id")
-    
+
     owner_name: str
     owner_email: str
     title: str
     description: str = Field(default="")
     due_date: Optional[str] = Field(default=None)
-    
-    external_id: Optional[str] = Field(default=None, description="ID en el sistema remoto ej. Jira para evitar duplicados")
+
+    external_id: Optional[str] = Field(
+        default=None,
+        description="ID en el sistema remoto ej. Jira para evitar duplicados",
+    )
     is_approved: bool = Field(default=False)
-    
+
+    # Trazabilidad de cumplimiento. Pipeline manda 'pending'; el usuario
+    # marca 'done', 'blocked' o 'cancelled' desde /admin/pendientes.
+    status: str = Field(
+        default="pending",
+        description="'pending' | 'done' | 'blocked' | 'cancelled'",
+    )
+    completed_at: Optional[str] = Field(
+        default=None,
+        description="ISO timestamp cuando status pasa a 'done'.",
+    )
+
     session: Optional[MeetingSession] = Relationship(back_populates="action_items")

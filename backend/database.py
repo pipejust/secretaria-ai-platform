@@ -52,13 +52,14 @@ def create_db_and_tables() -> None:
 def _apply_lightweight_migrations() -> None:
     """ALTER TABLE idempotentes para columnas añadidas después del schema inicial."""
     if _is_sqlite:
-        # SQLite acepta ADD COLUMN pero no IF NOT EXISTS. Lo intentamos y si falla por
-        # 'duplicate column name' lo ignoramos.
         statements = [
             'ALTER TABLE meetingsession ADD COLUMN ai_fields_regenerated BOOLEAN DEFAULT 0 NOT NULL',
             'ALTER TABLE meetingsession ADD COLUMN ai_tasks_regenerated  BOOLEAN DEFAULT 0 NOT NULL',
             'ALTER TABLE project ADD COLUMN auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN auto_dispatch_timeout_hours REAL',
+            'ALTER TABLE project ADD COLUMN owner_user_id INTEGER REFERENCES "user"(id)',
+            'ALTER TABLE actionitem ADD COLUMN status TEXT DEFAULT "pending" NOT NULL',
+            'ALTER TABLE actionitem ADD COLUMN completed_at TEXT',
         ]
     else:
         statements = [
@@ -66,6 +67,9 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ai_tasks_regenerated  BOOLEAN DEFAULT FALSE NOT NULL',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_timeout_hours DOUBLE PRECISION',
+            'ALTER TABLE project ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES "user"(id)',
+            'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT \'pending\'',
+            'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS completed_at VARCHAR(64)',
         ]
 
     from sqlalchemy import text

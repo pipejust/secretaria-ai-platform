@@ -83,11 +83,29 @@ export const routes: Routes = [
                 title: 'Mi Perfil | Notiva',
                 data: { robots: 'noindex, nofollow' }
             },
-            { 
-                path: 'curation/:id', 
+            {
+                path: 'curation/:id',
                 loadComponent: () => import('./components/curation-panel/curation-panel.component').then(m => m.CurationPanelComponent),
                 title: 'Panel de Curaduría | Notiva',
                 data: { description: 'Modera, edita y despacha manualmente las tareas, compromisos y correos extraídos de la sesión virtual antes de ser enviados.', robots: 'noindex, nofollow' }
+            },
+            {
+                path: 'pendientes',
+                loadComponent: () => import('./components/pendientes/pendientes.component').then(m => m.PendientesComponent),
+                title: 'Pendientes | Notiva',
+                data: { description: 'Trazabilidad transversal de tareas: vencidos, próximos, bloqueos y cumplimiento.', robots: 'noindex, nofollow' }
+            },
+            {
+                path: 'reportes',
+                loadComponent: () => import('./components/reportes/reportes.component').then(m => m.ReportesComponent),
+                title: 'Reportes | Notiva',
+                data: { description: 'Reportes ejecutivos semanales y mensuales de actividad por proyecto.', robots: 'noindex, nofollow' }
+            },
+            {
+                path: 'projects/:id',
+                loadComponent: () => import('./components/project-detail/project-detail.component').then(m => m.ProjectDetailComponent),
+                title: 'Detalle de Proyecto | Notiva',
+                data: { description: 'Resumen del proyecto: últimas decisiones, riesgos, tareas activas y reuniones recientes.', robots: 'noindex, nofollow' }
             },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]

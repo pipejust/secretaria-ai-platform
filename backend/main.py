@@ -82,6 +82,10 @@ from routers import rondas
 app.include_router(rondas.router)
 from routers import sessions_upload
 app.include_router(sessions_upload.router)
+from routers import pendientes
+app.include_router(pendientes.router)
+from routers import reports
+app.include_router(reports.router)
 
 
 @app.get("/")

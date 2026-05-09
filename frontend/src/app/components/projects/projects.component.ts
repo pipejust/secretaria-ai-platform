@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { SettingsService } from '../../services/settings.service';
 import { environment } from '../../../environments/environment';
@@ -10,7 +10,7 @@ import { environment } from '../../../environments/environment';
 @Component({
     selector: 'app-projects',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, RouterModule],
     templateUrl: './projects.component.html',
     styleUrls: ['./projects.component.css']
 })
@@ -23,10 +23,20 @@ export class ProjectsComponent implements OnInit {
         description: string;
         auto_dispatch_enabled: boolean | null;
         auto_dispatch_timeout_hours: number | null;
-    } = { name: '', description: '', auto_dispatch_enabled: null, auto_dispatch_timeout_hours: null };
+        owner_user_id: number | null;
+    } = {
+        name: '',
+        description: '',
+        auto_dispatch_enabled: null,
+        auto_dispatch_timeout_hours: null,
+        owner_user_id: null,
+    };
 
     /** UI helper: cuando es false → enviamos null en ambos campos para usar el global */
     autoDispatchOverride = false;
+
+    /** Usuarios disponibles para asignar como responsable de proyecto. */
+    users: Array<{ id: number; full_name: string; email: string; role: string; is_active: boolean }> = [];
 
     editingProject: any = null;
     isCreating = false;
@@ -70,8 +80,19 @@ export class ProjectsComponent implements OnInit {
         private route: ActivatedRoute
     ) { }
 
+    loadUsers(): void {
+        this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe({
+            next: (data) => {
+                this.users = (data || []).filter(u => u.is_active);
+                this.cdr.detectChanges();
+            },
+            error: () => { /* no rompe el flujo, solo deja el dropdown vacío */ }
+        });
+    }
+
     ngOnInit() {
         this.loadProjects();
+        this.loadUsers();
         this.loadActiveIntegrations();
         this.route.queryParams.subscribe(params => {
             if (params['openContacts']) {
@@ -139,6 +160,7 @@ export class ProjectsComponent implements OnInit {
             is_active: true,
             auto_dispatch_enabled: this.autoDispatchOverride ? !!this.newProject.auto_dispatch_enabled : null,
             auto_dispatch_timeout_hours: this.autoDispatchOverride ? this.newProject.auto_dispatch_timeout_hours : null,
+            owner_user_id: this.newProject.owner_user_id ?? null,
         };
 
         this.http.post<any>(`${environment.apiUrl}/api/projects/`, payload).subscribe({
@@ -170,6 +192,7 @@ export class ProjectsComponent implements OnInit {
             description: project.description || '',
             auto_dispatch_enabled: project.auto_dispatch_enabled ?? null,
             auto_dispatch_timeout_hours: project.auto_dispatch_timeout_hours ?? null,
+            owner_user_id: project.owner_user_id ?? null,
         };
         this.autoDispatchOverride =
             project.auto_dispatch_enabled !== null ||
@@ -183,8 +206,16 @@ export class ProjectsComponent implements OnInit {
             description: '',
             auto_dispatch_enabled: null,
             auto_dispatch_timeout_hours: null,
+            owner_user_id: null,
         };
         this.autoDispatchOverride = false;
+    }
+
+    /** Helper: nombre del responsable de un proyecto, o '—' si no asignado. */
+    ownerNameFor(project: any): string {
+        if (!project?.owner_user_id) return '—';
+        const u = this.users.find(x => x.id === project.owner_user_id);
+        return u ? (u.full_name || u.email) : `Usuario #${project.owner_user_id}`;
     }
 
     /** Si el usuario apaga el override, limpiamos los valores por proyecto. */
@@ -214,6 +245,7 @@ export class ProjectsComponent implements OnInit {
             is_active: this.editingProject.is_active,
             auto_dispatch_enabled: this.autoDispatchOverride ? !!this.newProject.auto_dispatch_enabled : null,
             auto_dispatch_timeout_hours: this.autoDispatchOverride ? this.newProject.auto_dispatch_timeout_hours : null,
+            owner_user_id: this.newProject.owner_user_id ?? null,
         };
 
         this.http.put<any>(`${environment.apiUrl}/api/projects/${this.editingProject.id}`, payload).subscribe({

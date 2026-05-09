@@ -1,0 +1,126 @@
+<div class="project-detail-container">
+  <div *ngIf="isLoading" class="loading">Cargando detalle del proyecto…</div>
+
+  <ng-container *ngIf="!isLoading && data as d">
+    <header class="header">
+      <div>
+        <a routerLink="/admin/projects" class="back-link">← Volver a proyectos</a>
+        <h1 class="title">{{ d.project.name }}</h1>
+        <p class="subtitle" *ngIf="d.project.description">{{ d.project.description }}</p>
+      </div>
+      <div class="header-meta">
+        <div class="meta-row" *ngIf="d.project.owner_user">
+          <span class="meta-key">Responsable</span>
+          <span class="meta-val">{{ d.project.owner_user.full_name || d.project.owner_user.email }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Auto-Dispatch</span>
+          <span class="meta-val">
+            <ng-container *ngIf="d.project.auto_dispatch_enabled === null">Heredado del global</ng-container>
+            <ng-container *ngIf="d.project.auto_dispatch_enabled === true">
+              ✓ Activo · {{ d.project.auto_dispatch_timeout_hours || '?' }}h
+            </ng-container>
+            <ng-container *ngIf="d.project.auto_dispatch_enabled === false">✗ Desactivado</ng-container>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <section class="metrics">
+      <article class="metric-card metric-card--neutral">
+        <span class="metric-num">{{ d.metrics.total_sessions }}</span>
+        <span class="metric-label">Reuniones</span>
+      </article>
+      <article class="metric-card metric-card--blue">
+        <span class="metric-num">{{ d.metrics.active_action_items }}</span>
+        <span class="metric-label">Tareas activas</span>
+      </article>
+      <article class="metric-card metric-card--red">
+        <span class="metric-num">{{ d.metrics.overdue }}</span>
+        <span class="metric-label">Vencidas</span>
+      </article>
+      <article class="metric-card metric-card--amber">
+        <span class="metric-num">{{ d.metrics.upcoming_7d }}</span>
+        <span class="metric-label">Próximas (≤7d)</span>
+      </article>
+      <article class="metric-card metric-card--green">
+        <span class="metric-num">{{ d.metrics.completed_action_items }}</span>
+        <span class="metric-label">Completadas</span>
+      </article>
+      <article class="metric-card metric-card--neutral">
+        <span class="metric-num">{{ d.metrics.contacts_count }}</span>
+        <span class="metric-label">Participantes</span>
+      </article>
+      <article class="metric-card metric-card--neutral">
+        <span class="metric-num">{{ d.metrics.routings_active }}</span>
+        <span class="metric-label">Integraciones activas</span>
+      </article>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Decisiones recientes</h2>
+        <p class="hint" *ngIf="!d.recent_decisions.length">Aún no hay decisiones registradas.</p>
+        <article *ngFor="let dec of d.recent_decisions; trackBy: trackById" class="decision">
+          <div class="decision-head">
+            <a [routerLink]="['/admin/curation', dec.session_id]" class="decision-link">{{ dec.session_title }}</a>
+            <span class="decision-date">{{ formatDate(dec.session_date) }}</span>
+          </div>
+          <pre class="decision-body">{{ dec.text }}</pre>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Reuniones recientes</h2>
+        <p class="hint" *ngIf="!d.last_sessions.length">Sin reuniones registradas.</p>
+        <ul class="session-list">
+          <li *ngFor="let s of d.last_sessions; trackBy: trackById">
+            <a [routerLink]="['/admin/curation', s.id]" class="session-link">{{ s.title }}</a>
+            <div class="session-meta">
+              <span>{{ formatDate(s.date) }}</span>
+              <span class="badge" [attr.data-status]="s.status">{{ statusLabel(s.status) }}</span>
+              <span class="lang-tag">{{ s.language }}</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Tareas activas (vencidas y próximas primero)</h2>
+      <p class="hint" *ngIf="!d.active_action_items.length">No hay tareas activas en este proyecto.</p>
+      <table *ngIf="d.active_action_items.length" class="action-table">
+        <thead>
+          <tr>
+            <th>Tarea</th>
+            <th>Responsable</th>
+            <th>Vence</th>
+            <th>Estado</th>
+            <th>Sesión</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let it of d.active_action_items; trackBy: trackById"
+              [class.row-overdue]="it.is_overdue"
+              [class.row-upcoming]="it.is_upcoming">
+            <td>{{ it.title }}</td>
+            <td>{{ it.owner_name || 'Sin asignar' }}</td>
+            <td>{{ formatDate(it.due_date) }}</td>
+            <td>{{ statusLabel(it.status) }}</td>
+            <td><a [routerLink]="['/admin/curation', it.session_id]">#{{ it.session_id }}</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel" *ngIf="d.contacts.length">
+      <h2>Participantes</h2>
+      <ul class="contact-list">
+        <li *ngFor="let c of d.contacts; trackBy: trackById">
+          <strong>{{ c.name }}</strong>
+          <span class="contact-meta">{{ c.role }} · {{ c.email }}<span *ngIf="c.entity"> · {{ c.entity }}</span></span>
+        </li>
+      </ul>
+    </section>
+  </ng-container>
+</div>

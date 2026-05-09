@@ -1,0 +1,123 @@
+.project-detail-container {
+    padding: 1.5rem 1.75rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.loading { padding: 2rem; text-align: center; color: #6b7280; }
+
+.header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 2rem; flex-wrap: wrap;
+    border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1.25rem;
+}
+.back-link {
+    display: inline-block; color: #4f46e5; text-decoration: none;
+    font-size: 0.85rem; margin-bottom: 0.4rem;
+}
+.back-link:hover { text-decoration: underline; }
+.title { margin: 0; font-size: 1.85rem; color: #0f172a; }
+.subtitle { margin: 0.4rem 0 0 0; color: #475569; max-width: 60ch; }
+
+.header-meta {
+    display: flex; flex-direction: column; gap: 0.4rem;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 0.85rem 1rem; min-width: 240px;
+}
+.meta-row { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.88rem; }
+.meta-key { color: #6b7280; }
+.meta-val { color: #0f172a; font-weight: 600; }
+
+/* === Métricas === */
+.metrics {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.85rem; margin-bottom: 1.5rem;
+}
+.metric-card {
+    padding: 1rem; border-radius: 12px;
+    background: #fff; border: 1px solid #e5e7eb;
+    display: flex; flex-direction: column; gap: 0.2rem;
+}
+.metric-num { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+.metric-label { color: #475569; font-size: 0.8rem; }
+.metric-card--blue    { border-left: 4px solid #3b82f6; }
+.metric-card--red     { border-left: 4px solid #ef4444; }
+.metric-card--amber   { border-left: 4px solid #f59e0b; }
+.metric-card--green   { border-left: 4px solid #10b981; }
+.metric-card--neutral { border-left: 4px solid #cbd5e1; }
+
+/* === Paneles === */
+.grid {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;
+}
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+.panel {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem;
+}
+.panel h2 { margin: 0 0 0.85rem 0; font-size: 1.05rem; color: #0f172a; }
+.hint { color: #6b7280; font-size: 0.88rem; margin: 0; }
+
+/* === Decisiones === */
+.decision { padding: 0.6rem 0; border-bottom: 1px dashed #e5e7eb; }
+.decision:last-child { border-bottom: 0; }
+.decision-head {
+    display: flex; justify-content: space-between; gap: 1rem;
+    margin-bottom: 0.4rem; align-items: baseline;
+}
+.decision-link { color: #4f46e5; text-decoration: none; font-weight: 600; }
+.decision-link:hover { text-decoration: underline; }
+.decision-date { color: #94a3b8; font-size: 0.82rem; }
+.decision-body {
+    margin: 0; padding: 0.6rem 0.85rem;
+    background: #f8fafc; border-left: 3px solid #cbd5e1;
+    border-radius: 6px; white-space: pre-wrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem; color: #1e293b;
+    overflow-x: auto;
+}
+
+/* === Lista sesiones === */
+.session-list { list-style: none; padding: 0; margin: 0; }
+.session-list li {
+    padding: 0.55rem 0; border-bottom: 1px solid #f1f5f9;
+    display: flex; flex-direction: column; gap: 0.2rem;
+}
+.session-list li:last-child { border-bottom: 0; }
+.session-link { color: #1e293b; text-decoration: none; font-weight: 500; }
+.session-link:hover { color: #4f46e5; }
+.session-meta {
+    display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap;
+    font-size: 0.78rem; color: #64748b;
+}
+.session-meta .badge {
+    padding: 0.1rem 0.55rem; border-radius: 10px;
+    background: #e2e8f0; color: #1e293b;
+}
+.lang-tag {
+    background: #ede9fe; color: #5b21b6; border-radius: 10px; padding: 0.1rem 0.55rem;
+}
+
+/* === Tabla tareas === */
+.action-table {
+    width: 100%; border-collapse: collapse;
+}
+.action-table th, .action-table td {
+    text-align: left; padding: 0.5rem 0.65rem; font-size: 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+.action-table th { color: #6b7280; font-weight: 600; background: #f9fafb; }
+.row-overdue { background: rgba(239, 68, 68, 0.05); }
+.row-upcoming { background: rgba(245, 158, 11, 0.05); }
+
+/* === Contactos === */
+.contact-list {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.5rem;
+}
+.contact-list li {
+    background: #f8fafc; padding: 0.55rem 0.75rem;
+    border-radius: 8px; border: 1px solid #e2e8f0;
+}
+.contact-meta { display: block; color: #64748b; font-size: 0.8rem; margin-top: 0.15rem; }

@@ -1,0 +1,106 @@
+<div class="pendientes-container">
+  <header class="header">
+    <div>
+      <h1>Pendientes</h1>
+      <p class="subtitle">Trazabilidad transversal de tareas: vencidos, próximos, bloqueos y cumplimiento.</p>
+    </div>
+  </header>
+
+  <section class="stats-grid" *ngIf="stats">
+    <article class="stat-card stat-card--vencido"  (click)="setBucket('vencido')">
+      <span class="stat-num">{{ stats.counts['vencido'] || 0 }}</span>
+      <span class="stat-label">Vencidos</span>
+    </article>
+    <article class="stat-card stat-card--proximo"  (click)="setBucket('proximo')">
+      <span class="stat-num">{{ stats.counts['proximo'] || 0 }}</span>
+      <span class="stat-label">Próximos (≤7d)</span>
+    </article>
+    <article class="stat-card stat-card--pendiente" (click)="setBucket('pendiente')">
+      <span class="stat-num">{{ stats.counts['pendiente'] || 0 }}</span>
+      <span class="stat-label">Pendientes</span>
+    </article>
+    <article class="stat-card stat-card--bloqueado" (click)="setBucket('bloqueado')">
+      <span class="stat-num">{{ stats.counts['bloqueado'] || 0 }}</span>
+      <span class="stat-label">Bloqueados</span>
+    </article>
+    <article class="stat-card stat-card--sinfecha"  (click)="setBucket('sin_fecha')">
+      <span class="stat-num">{{ stats.counts['sin_fecha'] || 0 }}</span>
+      <span class="stat-label">Sin fecha</span>
+    </article>
+    <article class="stat-card stat-card--completado" (click)="setBucket('completado')">
+      <span class="stat-num">{{ stats.counts['completado'] || 0 }}</span>
+      <span class="stat-label">Completados</span>
+    </article>
+  </section>
+
+  <section class="filters">
+    <div class="bucket-tabs">
+      <button *ngFor="let b of ['activos','vencido','proximo','pendiente','bloqueado','sin_fecha','completado','cancelado']"
+              class="tab"
+              [class.tab--active]="bucket === b"
+              (click)="setBucket($any(b))">
+        {{ bucketLabel(b) }}
+      </button>
+    </div>
+
+    <input type="text"
+           class="owner-search"
+           placeholder="🔍 Filtrar por responsable…"
+           [(ngModel)]="ownerFilter"
+           (input)="load()" />
+  </section>
+
+  <section class="ranking" *ngIf="stats?.top_owners_active?.length">
+    <h3>Top responsables con tareas activas</h3>
+    <ol class="ranking-list">
+      <li *ngFor="let o of stats?.top_owners_active">
+        <span class="rank-name">{{ o.owner }}</span>
+        <span class="rank-badge">{{ o.count }}</span>
+      </li>
+    </ol>
+  </section>
+
+  <section class="list-wrapper">
+    <div *ngIf="isLoading" class="loading">Cargando…</div>
+
+    <div *ngIf="!isLoading && items.length === 0" class="empty-state">
+      No hay tareas en este filtro.
+    </div>
+
+    <article *ngFor="let item of items; trackBy: trackById" class="task-row">
+      <div class="task-row__main">
+        <span class="bucket-badge" [style.background]="bucketColor(item.bucket)">
+          {{ bucketLabel(item.bucket) }}
+        </span>
+        <a class="task-link" [routerLink]="['/admin/curation', item.session_id]" title="Ir a la sesión">
+          <strong>{{ item.title }}</strong>
+        </a>
+        <span class="project-chip">{{ item.project_name }}</span>
+      </div>
+
+      <div class="task-row__meta">
+        <span><strong>👤</strong> {{ item.owner_name || 'Sin asignar' }}</span>
+        <span *ngIf="item.owner_email"><strong>✉️</strong> {{ item.owner_email }}</span>
+        <span><strong>📅</strong> {{ formatDate(item.due_date) }}</span>
+        <span *ngIf="item.completed_at"><strong>✅</strong> {{ formatDate(item.completed_at) }}</span>
+      </div>
+
+      <p class="task-desc" *ngIf="item.description">{{ item.description }}</p>
+
+      <div class="task-row__actions">
+        <button *ngIf="item.status !== 'done'"
+                class="btn btn-success btn-mini"
+                (click)="setStatus(item, 'done')">✓ Completar</button>
+        <button *ngIf="item.status !== 'blocked' && item.status !== 'done'"
+                class="btn btn-warning btn-mini"
+                (click)="setStatus(item, 'blocked')">⛔ Bloquear</button>
+        <button *ngIf="item.status !== 'pending' && item.status !== 'done'"
+                class="btn btn-secondary btn-mini"
+                (click)="setStatus(item, 'pending')">↺ Reabrir</button>
+        <button *ngIf="item.status !== 'cancelled' && item.status !== 'done'"
+                class="btn btn-secondary btn-mini"
+                (click)="setStatus(item, 'cancelled')">✕ Cancelar</button>
+      </div>
+    </article>
+  </section>
+</div>

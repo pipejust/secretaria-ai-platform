@@ -1,0 +1,179 @@
+.pendientes-container {
+    padding: 1.5rem 1.75rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: #0f172a;
+}
+.header .subtitle {
+    margin: 0.25rem 0 1.25rem 0;
+    color: #6b7280;
+    font-size: 0.95rem;
+}
+
+/* === Tarjetas de estadística === */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem 1.1rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.08);
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -8px rgba(15, 23, 42, 0.12);
+}
+.stat-num {
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.stat-label {
+    color: #475569;
+    font-size: 0.85rem;
+}
+.stat-card--vencido    { border-left: 4px solid #ef4444; }
+.stat-card--proximo    { border-left: 4px solid #f59e0b; }
+.stat-card--pendiente  { border-left: 4px solid #3b82f6; }
+.stat-card--bloqueado  { border-left: 4px solid #a855f7; }
+.stat-card--sinfecha   { border-left: 4px solid #6b7280; }
+.stat-card--completado { border-left: 4px solid #10b981; }
+
+/* === Tabs y filtro === */
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.bucket-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.tab {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    border-radius: 999px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+.tab:hover { background: #f3f4f6; }
+.tab--active {
+    background: #4f46e5;
+    border-color: #4338ca;
+    color: #fff;
+    font-weight: 600;
+}
+.owner-search {
+    flex: 1;
+    min-width: 220px;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    font-size: 0.9rem;
+}
+
+/* === Ranking === */
+.ranking {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid #e2e8f0;
+}
+.ranking h3 { margin: 0 0 0.6rem 0; font-size: 1rem; color: #1e293b; }
+.ranking-list {
+    margin: 0; padding-left: 1.25rem;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.4rem;
+}
+.ranking-list li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.25rem 0;
+}
+.rank-name { color: #334155; }
+.rank-badge {
+    background: #4f46e5; color: #fff;
+    border-radius: 999px; padding: 0.1rem 0.55rem;
+    font-size: 0.8rem; font-weight: 600;
+}
+
+/* === Lista de tareas === */
+.list-wrapper {
+    display: flex; flex-direction: column; gap: 0.6rem;
+}
+.loading, .empty-state {
+    padding: 1.5rem; text-align: center; color: #6b7280;
+}
+
+.task-row {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    display: flex; flex-direction: column; gap: 0.55rem;
+    transition: border-color 120ms ease;
+}
+.task-row:hover { border-color: #c7d2fe; }
+.task-row__main {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+}
+.task-link {
+    color: #1e293b;
+    text-decoration: none;
+}
+.task-link:hover { text-decoration: underline; }
+.project-chip {
+    background: #f1f5f9; color: #475569;
+    border-radius: 6px; padding: 0.15rem 0.55rem;
+    font-size: 0.78rem;
+}
+.bucket-badge {
+    color: #fff; font-weight: 600; font-size: 0.72rem;
+    border-radius: 999px; padding: 0.18rem 0.7rem; letter-spacing: .02em;
+}
+.task-row__meta {
+    display: flex; flex-wrap: wrap; gap: 1.1rem;
+    font-size: 0.85rem; color: #475569;
+}
+.task-row__meta strong { color: #1e293b; margin-right: .2rem; }
+.task-desc {
+    margin: 0; color: #334155; white-space: pre-wrap;
+    background: #f8fafc; padding: 0.6rem 0.8rem; border-radius: 8px;
+    font-size: 0.85rem;
+}
+.task-row__actions {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+}
+.btn-mini {
+    font-size: 0.78rem; padding: 0.3rem 0.7rem; border-radius: 8px;
+    border: 1px solid transparent; cursor: pointer;
+    transition: filter 120ms ease;
+}
+.btn-mini:hover { filter: brightness(0.94); }
+.btn-success   { background: #10b981; color: #fff; }
+.btn-warning   { background: #f59e0b; color: #fff; }
+.btn-secondary { background: #e2e8f0; color: #1e293b; }

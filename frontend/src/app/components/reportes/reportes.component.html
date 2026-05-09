@@ -1,0 +1,99 @@
+<div class="reportes-container">
+  <header class="header">
+    <div>
+      <h1>Reportes ejecutivos</h1>
+      <p class="subtitle">Resumen consolidado por período. Descargable en PDF para compartir con stakeholders.</p>
+    </div>
+    <button class="btn btn-primary" [disabled]="isDownloading || isLoading" (click)="downloadPdf()">
+      <span *ngIf="!isDownloading">📄 Descargar PDF</span>
+      <span *ngIf="isDownloading">Generando…</span>
+    </button>
+  </header>
+
+  <section class="filters">
+    <div class="field">
+      <label>Período</label>
+      <select [(ngModel)]="period" (change)="load()">
+        <option value="week">Semanal</option>
+        <option value="month">Mensual</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Fecha de referencia</label>
+      <input type="date" [(ngModel)]="refDate" (change)="load()" />
+      <small>Vacío = usar hoy.</small>
+    </div>
+    <div class="field">
+      <label>Proyecto</label>
+      <select [(ngModel)]="projectId" (change)="load()">
+        <option [ngValue]="null">— Todos los proyectos —</option>
+        <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
+      </select>
+    </div>
+  </section>
+
+  <div *ngIf="isLoading" class="loading">Cargando reporte…</div>
+
+  <ng-container *ngIf="!isLoading && data as d">
+    <section class="period-banner">
+      <strong>{{ d.label }}</strong> · {{ d.project_name }}
+    </section>
+
+    <section class="metrics">
+      <article class="metric">
+        <span class="num">{{ d.metrics.sessions_count }}</span>
+        <span class="lbl">Reuniones</span>
+      </article>
+      <article class="metric">
+        <span class="num">{{ d.metrics.action_items_total }}</span>
+        <span class="lbl">Tareas totales</span>
+      </article>
+      <article class="metric metric--green">
+        <span class="num">{{ d.metrics.action_items_by_status['done'] || 0 }}</span>
+        <span class="lbl">Completadas</span>
+      </article>
+      <article class="metric metric--blue">
+        <span class="num">{{ d.metrics.action_items_by_status['pending'] || 0 }}</span>
+        <span class="lbl">Pendientes</span>
+      </article>
+      <article class="metric metric--purple">
+        <span class="num">{{ d.metrics.action_items_by_status['blocked'] || 0 }}</span>
+        <span class="lbl">Bloqueadas</span>
+      </article>
+      <article class="metric">
+        <span class="num">{{ d.metrics.completed_in_window }}</span>
+        <span class="lbl">Cerradas en ventana</span>
+      </article>
+      <article class="metric">
+        <span class="num">{{ d.metrics.auto_dispatched }}</span>
+        <span class="lbl">Auto-despachadas</span>
+      </article>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Reuniones del período</h2>
+        <p class="hint" *ngIf="!d.sessions.length">Sin reuniones en este rango.</p>
+        <ul *ngIf="d.sessions.length" class="session-list">
+          <li *ngFor="let s of d.sessions">
+            <a [routerLink]="['/admin/curation', s.id]" class="link">{{ s.title }}</a>
+            <span class="meta">
+              {{ formatDate(s.date) }} · {{ s.project_name }} · {{ statusLabel(s.status) }}
+            </span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>Top responsables</h2>
+        <p class="hint" *ngIf="!d.top_owners.length">Sin tareas asignadas en el período.</p>
+        <ol class="ranking">
+          <li *ngFor="let o of d.top_owners">
+            <span>{{ o.owner }}</span>
+            <span class="badge">{{ o.count }}</span>
+          </li>
+        </ol>
+      </section>
+    </div>
+  </ng-container>
+</div>
