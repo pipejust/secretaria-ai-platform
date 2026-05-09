@@ -147,4 +147,9 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
     trackById(_i: number, item: { id: number }): number {
         return item.id;
     }
+
+    /** RecentDecision no tiene `id`, así que usamos session_id como llave. */
+    trackByDecision(_i: number, dec: RecentDecision): number {
+        return dec.session_id;
+    }
 }

@@ -61,7 +61,7 @@
       <section class="panel">
         <h2>Decisiones recientes</h2>
         <p class="hint" *ngIf="!d.recent_decisions.length">Aún no hay decisiones registradas.</p>
-        <article *ngFor="let dec of d.recent_decisions; trackBy: trackById" class="decision">
+        <article *ngFor="let dec of d.recent_decisions; trackBy: trackByDecision" class="decision">
           <div class="decision-head">
             <a [routerLink]="['/admin/curation', dec.session_id]" class="decision-link">{{ dec.session_title }}</a>
             <span class="decision-date">{{ formatDate(dec.session_date) }}</span>
