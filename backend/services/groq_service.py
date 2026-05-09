@@ -111,15 +111,43 @@ class OpenAIService:
         }
 
     def _get_insights_schema(self) -> Dict[str, Any]:
-        """Schema para Agent 2: Textos narrativos profundos"""
+        """Schema para Agent 2: Decisiones / Riesgos / Acuerdos en formato viñetado.
+
+        Cambio importante: el lector tiene 30 segundos para entender el acta.
+        Forzamos viñetas Markdown con responsable explícito por línea, no
+        paredes de texto.
+        """
         return {
             "type": "object",
             "properties": {
-                "decisions": {"type": "string", "description": "TEXTO EXHAUSTIVO Y GIGANTE (mínimo 3 a 5 párrafos grandes, NO listas ni viñetas). Analiza todas las decisiones, sus motivaciones y el contexto con lujo de detalles."},
-                "risks": {"type": "string", "description": "TEXTO EXHAUSTIVO Y GIGANTE (mínimo 3 a 5 párrafos grandes, NO listas ni viñetas). Explica profundamente cada riesgo, bloqueo o preocupación detectada, su gravedad y contexto."},
-                "agreements": {"type": "string", "description": "TEXTO EXHAUSTIVO Y GIGANTE (mínimo 3 a 5 párrafos grandes, NO listas ni viñetas). Detalla largamente y en prosa todos los acuerdos generales y consensos logrados."}
+                "decisions": {
+                    "type": "string",
+                    "description": (
+                        "Lista Markdown. UNA viñeta `-` por decisión. "
+                        "Formato exacto por línea:\n"
+                        "- **[Tema]** Decisión concreta — Responsable: <Nombre o 'por definir'>\n"
+                        "Si necesitas contexto, segunda línea sangrada con `  · contexto: <una frase>`. "
+                        "NO uses párrafos largos."
+                    ),
+                },
+                "risks": {
+                    "type": "string",
+                    "description": (
+                        "Lista Markdown. UNA viñeta `-` por riesgo. Formato:\n"
+                        "- **[Severidad: alta/media/baja]** Riesgo concreto — Responsable de seguimiento: <Nombre>\n"
+                        "Si la reunión no menciona riesgos, devuelve `- Sin riesgos identificados.`"
+                    ),
+                },
+                "agreements": {
+                    "type": "string",
+                    "description": (
+                        "Lista Markdown. UNA viñeta `-` por acuerdo. Formato:\n"
+                        "- **[Tema]** Acuerdo concreto — Partes: <Nombres>\n"
+                        "NO uses párrafos largos."
+                    ),
+                },
             },
-            "required": ["decisions", "risks", "agreements"]
+            "required": ["decisions", "risks", "agreements"],
         }
 
     def _get_tasks_only_json_schema(self) -> Dict[str, Any]:
@@ -423,14 +451,33 @@ class OpenAIService:
         """
         schema_fund = self._get_fundamentals_schema()
         
-        # AGENT 2: Insights (Decisions, Risks, Agreements)
+        # AGENT 2: Insights (Decisions, Risks, Agreements) — formato viñetado
+        # con responsable explícito por línea. El lector tiene 30 seg.
         prompt_insights = f"""
-        Como redactor experto en actas:
-        - 'decisions': REDACTA UN TEXTO MONUMENTAL, GIGANTE Y FLUIDO (mínimo 3 a 5 párrafos grandes, SIN VIÑETAS) contando con muchísimo detalle TODAS las decisiones clave tomadas, motivos y resultados. 
-        - 'risks': REDACTA UN TEXTO EN PROSA GIGANTE (mínimo 3 a 5 párrafos grandes, SIN VIÑETAS) explicando de forma altamente granular los bloqueos o preocupaciones mencionadas.
-        - 'agreements': REDACTA UN TEXTO PROFUNDO Y EXTENSO (mínimo 3 a 5 párrafos grandes, SIN VIÑETAS) con las metodologías, consensos generales o fechas límite holísticas, con máximo contexto.
-        ES OBLIGATORIO que los tres textos sean MUY LARGOS, descriptivos, y llenos de contexto. El usuario odia las viñetas y odia los resúmenes cortos, desarrolla ideas largas y completas.
-        
+        Como redactor experto en actas corporativas, devuelve los siguientes
+        campos COMO LISTAS MARKDOWN (`-` por línea), NUNCA párrafos largos:
+
+        - 'decisions':
+            Una viñeta por decisión, formato exacto:
+              `- **[Tema]** Decisión concreta — Responsable: <Nombre o 'por definir'>`
+            Si necesitas contexto, segunda línea sangrada con `  · contexto: <una frase>`.
+
+        - 'risks':
+            Una viñeta por riesgo:
+              `- **[Severidad: alta/media/baja]** Riesgo concreto — Responsable de seguimiento: <Nombre>`
+            Si la reunión no menciona riesgos, devuelve `- Sin riesgos identificados.`
+
+        - 'agreements':
+            Una viñeta por acuerdo:
+              `- **[Tema]** Acuerdo concreto — Partes: <Nombres>`
+
+        Reglas duras:
+        1. NUNCA generes párrafos largos. SIEMPRE viñetas.
+        2. Cada viñeta debe nombrar al responsable. Si no se identifica, usa
+           "por definir".
+        3. Sé conciso: el lector debe entender el acta en 30 segundos.
+        4. No inventes responsables ni cifras que no estén en la transcripción.
+
         Transcripción:
         {safe_transcript}
         """

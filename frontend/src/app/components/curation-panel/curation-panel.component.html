@@ -139,7 +139,7 @@
             <label for="selectAll" style="font-weight: 500; font-size: 0.95rem; cursor:pointer;">Seleccionar todas las tareas</label>
           </div>
           
-          <div class="task-list modern-scroll">
+          <div class="task-list">
             <div class="task-card fade-in" *ngFor="let task of meetingData.action_items; let i = index" [class.selected]="task.selected">
               <div class="task-header-row">
                 <input type="checkbox" class="task-checkbox" [(ngModel)]="task.selected" />

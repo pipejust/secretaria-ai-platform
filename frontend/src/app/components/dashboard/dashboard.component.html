@@ -18,7 +18,7 @@
     </div>
 
     <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
-        <input type="text" class="modern-search" placeholder="🔍 Buscar por título o ID de sesión..." [(ngModel)]="searchText" (keyup.enter)="currentPage = 1; loadSessions()" style="flex:1;">
+        <input type="text" class="modern-search" placeholder="🔍 Buscar por título, proyecto o fecha (dd/mm/aaaa)…" [(ngModel)]="searchText" (input)="onSearchInput()" (keyup.enter)="currentPage = 1; loadSessions()" style="flex:1;">
         
         <select class="glass-select" [(ngModel)]="filterProjectId" (change)="currentPage = 1; loadSessions()" style="width:250px;">
             <option value="">Todos los Proyectos</option>

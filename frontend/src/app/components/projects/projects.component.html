@@ -22,6 +22,42 @@
                     <textarea name="description" [(ngModel)]="newProject.description" rows="3" placeholder="Contexto del proyecto..."></textarea>
                 </div>
 
+                <fieldset style="border:1px solid #e5e7eb; border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+                    <legend style="padding:0 8px; font-size:.85rem; color:#475569; font-weight:600;">
+                        Auto-Dispatch para este proyecto
+                    </legend>
+
+                    <div class="form-group mb-3" style="display:flex; align-items:center; gap:.6rem;">
+                        <input type="checkbox" id="ad_override" name="ad_override"
+                               [(ngModel)]="autoDispatchOverride"
+                               (change)="onAutoDispatchOverrideChange()" />
+                        <label for="ad_override" style="margin:0; cursor:pointer;">
+                            Sobrescribir el ajuste global para este proyecto
+                        </label>
+                    </div>
+
+                    <div *ngIf="autoDispatchOverride" style="padding-left:1.5rem; border-left:2px solid #c7d2fe;">
+                        <div class="form-group mb-3" style="display:flex; align-items:center; gap:.6rem;">
+                            <input type="checkbox" id="ad_enabled" name="ad_enabled"
+                                   [(ngModel)]="newProject.auto_dispatch_enabled" />
+                            <label for="ad_enabled" style="margin:0; cursor:pointer;">
+                                Activar Auto-Dispatch (envío automático tras curación humana opcional)
+                            </label>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label>Horas de espera antes de despachar automáticamente</label>
+                            <input type="number" min="0" step="0.5" name="ad_timeout"
+                                   [(ngModel)]="newProject.auto_dispatch_timeout_hours"
+                                   placeholder="Ej: 24" />
+                            <small style="color:#6b7280;">Si lo dejas vacío, usa el global (Configuración → Auto-Curación).</small>
+                        </div>
+                    </div>
+
+                    <small *ngIf="!autoDispatchOverride" style="color:#6b7280;">
+                        Este proyecto sigue el ajuste global de <a routerLink="/admin/settings">Configuración → Auto-Curación</a>.
+                    </small>
+                </fieldset>
+
                 <div class="flex gap-2 mt-4">
                     <button type="submit" class="btn btn-primary flex-1" [disabled]="!projectForm.form.valid || isCreating || isUpdating">
                         <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Actualizar Proyecto' : 'Crear Proyecto' }}</span>
@@ -34,11 +70,11 @@
     </div>
 </div>
 
-<!-- Modal Gestor de Contactos -->
+<!-- Modal Gestor de Participantes -->
 <div class="modal-overlay" *ngIf="managingContactsForProject">
     <div class="modal-content" style="max-width: 650px;">
         <div class="modal-header">
-            <h3>Contactos: {{ managingContactsForProject.name }}</h3>
+            <h3>Participantes: {{ managingContactsForProject.name }}</h3>
             <button class="btn-close" (click)="closeContacts()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -48,7 +84,7 @@
             <div class="contacts-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;">
                 <div *ngIf="isLoadingContacts" class="text-center">Cargando...</div>
                 <div *ngIf="!isLoadingContacts && projectContacts.length === 0" class="text-center" style="color: gray;">
-                    Sin contactos guardados para este proyecto.
+                    Sin participantes guardados para este proyecto.
                 </div>
                 <ul *ngIf="!isLoadingContacts && projectContacts.length > 0" style="padding: 0; margin: 0; list-style: none;">
                     <li *ngFor="let contact of projectContacts" [style]="'background: white; border: ' + (editingContactId === contact.id ? '2px solid #2563eb' : '1px solid #e2e8f0') + '; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'">
@@ -224,7 +260,7 @@
     <div class="header-actions">
         <div>
             <h2 class="section-title">Gestión de Proyectos</h2>
-            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra tus proyectos y mapea los contactos de Fireflies.</p>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra tus proyectos y los participantes que se incorporan en cada reunión.</p>
         </div>
         <button class="btn btn-primary" (click)="showProjectModal = true">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0.5rem;">
@@ -265,7 +301,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Nombre de Captura</th>
+                            <th>Nombre del proyecto</th>
                             <th>Descripción</th>
                             <th>Acciones Disponibles</th>
                         </tr>
@@ -277,7 +313,7 @@
                             <td>{{ p.description || 'N/A' }}</td>
                             <td>
                                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                                    <button class="btn btn-sm" style="background:#e0e7ff; color:#4f46e5; border:1px solid #c7d2fe;" (click)="manageContacts(p)">Contactos</button>
+                                    <button class="btn btn-sm" style="background:#4f46e5; color:#fff; border:1px solid #4338ca; font-weight:600;" (click)="manageContacts(p)">👥 Participantes</button>
                                     <button class="btn btn-sm" style="background:#dbeafe; color:#2563eb; border:1px solid #bfdbfe;" (click)="manageRoutings(p)">Rutas</button>
                                     <button class="btn btn-sm" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;" (click)="editProject(p)">Editar</button>
                                     <button class="btn btn-sm" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;" (click)="deleteProject(p.id)" [disabled]="isDeleting">Eliminar</button>

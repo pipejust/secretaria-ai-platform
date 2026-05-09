@@ -75,6 +75,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return p ? p.name : 'General';
     }
 
+    /** Convierte la fecha de la sesión a 'dd/mm/aaaa' para que el buscador
+     *  pueda matchear cuando el usuario tipea fragmentos como '15/03'. */
+    private _sessionDateLabel(s: any): string {
+        let value = s?.date;
+        if (value == null) return '';
+        if (typeof value === 'string' && !isNaN(Number(value))) {
+            value = Number(value);
+        }
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return String(s.date || '');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    }
+
     openUploadModal() {
         // Set default date to now in yyyy-MM-ddThh:mm format for datetime-local input
         const now = new Date();
@@ -237,19 +253,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
     }
 
+    /**
+     * Live filter del buscador. Reemplaza la búsqueda por ID por:
+     * título, proyecto (nombre) y fecha. Soporta formato dd/mm/aaaa
+     * o dd/mm. Cuando el usuario borra el texto, el listado vuelve a
+     * mostrarse completo automáticamente (sin necesidad de Enter).
+     */
+    onSearchInput(): void {
+        // Solo refresca el filtro local; no recarga del backend en cada tecla
+        // para no saturar la API. Si quisiera buscar a nivel servidor,
+        // hago debounce y disparo loadSessions(). Por ahora client-side.
+        this.cdr.detectChanges();
+    }
+
     get filteredSessions() {
         let filtered = this.sessions || [];
-        
+
         if (this.statusFilter) {
             filtered = filtered.filter(s => s.status === this.statusFilter);
         }
-        
-        if (this.searchText.trim()) {
-            const search = this.searchText.toLowerCase();
-            filtered = filtered.filter(s => 
-                (s.title && s.title.toLowerCase().includes(search)) ||
-                (s.id && s.id.toString().includes(search))
-            );
+
+        const rawSearch = (this.searchText || '').trim().toLowerCase();
+        if (rawSearch) {
+            filtered = filtered.filter(s => {
+                const title = (s.title || '').toLowerCase();
+                const projectName = this.getProjectName(s.project_id).toLowerCase();
+                const dateLabel = this._sessionDateLabel(s);
+                return (
+                    title.includes(rawSearch) ||
+                    projectName.includes(rawSearch) ||
+                    dateLabel.includes(rawSearch)
+                );
+            });
         }
         
         // Sorting logic based on selected column: Clone array to trigger Angular Change Detection

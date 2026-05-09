@@ -57,11 +57,15 @@ def _apply_lightweight_migrations() -> None:
         statements = [
             'ALTER TABLE meetingsession ADD COLUMN ai_fields_regenerated BOOLEAN DEFAULT 0 NOT NULL',
             'ALTER TABLE meetingsession ADD COLUMN ai_tasks_regenerated  BOOLEAN DEFAULT 0 NOT NULL',
+            'ALTER TABLE project ADD COLUMN auto_dispatch_enabled BOOLEAN',
+            'ALTER TABLE project ADD COLUMN auto_dispatch_timeout_hours REAL',
         ]
     else:
         statements = [
             'ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ai_fields_regenerated BOOLEAN DEFAULT FALSE NOT NULL',
             'ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ai_tasks_regenerated  BOOLEAN DEFAULT FALSE NOT NULL',
+            'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_enabled BOOLEAN',
+            'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_timeout_hours DOUBLE PRECISION',
         ]
 
     from sqlalchemy import text

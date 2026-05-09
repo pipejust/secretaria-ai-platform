@@ -18,7 +18,16 @@ export class ProjectsComponent implements OnInit {
     projects: any[] = [];
     isLoading = false;
 
-    newProject = { name: '', description: '' };
+    newProject: {
+        name: string;
+        description: string;
+        auto_dispatch_enabled: boolean | null;
+        auto_dispatch_timeout_hours: number | null;
+    } = { name: '', description: '', auto_dispatch_enabled: null, auto_dispatch_timeout_hours: null };
+
+    /** UI helper: cuando es false → enviamos null en ambos campos para usar el global */
+    autoDispatchOverride = false;
+
     editingProject: any = null;
     isCreating = false;
     isUpdating = false;
@@ -124,16 +133,18 @@ export class ProjectsComponent implements OnInit {
         this.errorMsg = '';
         this.successMsg = '';
 
-        const payload = {
+        const payload: any = {
             name: this.newProject.name,
             description: this.newProject.description,
-            is_active: true
+            is_active: true,
+            auto_dispatch_enabled: this.autoDispatchOverride ? !!this.newProject.auto_dispatch_enabled : null,
+            auto_dispatch_timeout_hours: this.autoDispatchOverride ? this.newProject.auto_dispatch_timeout_hours : null,
         };
 
         this.http.post<any>(`${environment.apiUrl}/api/projects/`, payload).subscribe({
             next: (data) => {
                 this.projects.push(data);
-                this.newProject = { name: '', description: '' };
+                this.resetNewProject();
                 this.isCreating = false;
                 this.successMsg = 'Proyecto creado exitosamente';
                 setTimeout(() => {
@@ -154,13 +165,39 @@ export class ProjectsComponent implements OnInit {
 
     editProject(project: any) {
         this.editingProject = { ...project };
-        this.newProject = { name: project.name, description: project.description || '' };
+        this.newProject = {
+            name: project.name,
+            description: project.description || '',
+            auto_dispatch_enabled: project.auto_dispatch_enabled ?? null,
+            auto_dispatch_timeout_hours: project.auto_dispatch_timeout_hours ?? null,
+        };
+        this.autoDispatchOverride =
+            project.auto_dispatch_enabled !== null ||
+            project.auto_dispatch_timeout_hours !== null;
         this.showProjectModal = true;
+    }
+
+    private resetNewProject(): void {
+        this.newProject = {
+            name: '',
+            description: '',
+            auto_dispatch_enabled: null,
+            auto_dispatch_timeout_hours: null,
+        };
+        this.autoDispatchOverride = false;
+    }
+
+    /** Si el usuario apaga el override, limpiamos los valores por proyecto. */
+    onAutoDispatchOverrideChange(): void {
+        if (!this.autoDispatchOverride) {
+            this.newProject.auto_dispatch_enabled = null;
+            this.newProject.auto_dispatch_timeout_hours = null;
+        }
     }
 
     cancelEdit() {
         this.editingProject = null;
-        this.newProject = { name: '', description: '' };
+        this.resetNewProject();
         this.errorMsg = '';
         this.showProjectModal = false;
     }
@@ -171,10 +208,12 @@ export class ProjectsComponent implements OnInit {
         this.errorMsg = '';
         this.successMsg = '';
 
-        const payload = {
+        const payload: any = {
             name: this.newProject.name,
             description: this.newProject.description,
-            is_active: this.editingProject.is_active
+            is_active: this.editingProject.is_active,
+            auto_dispatch_enabled: this.autoDispatchOverride ? !!this.newProject.auto_dispatch_enabled : null,
+            auto_dispatch_timeout_hours: this.autoDispatchOverride ? this.newProject.auto_dispatch_timeout_hours : null,
         };
 
         this.http.put<any>(`${environment.apiUrl}/api/projects/${this.editingProject.id}`, payload).subscribe({
@@ -252,7 +291,7 @@ export class ProjectsComponent implements OnInit {
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = 'Error al cargar los contactos';
+                this.errorMsg = 'Error al cargar los participantes';
                 this.isLoadingContacts = false;
                 this.cdr.detectChanges();
             }

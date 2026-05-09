@@ -117,22 +117,24 @@ class GroqLLMService:
         contacts_block = ""
         if project_contacts:
             contacts_block = (
-                "\nLista de personas conocidas del proyecto (úsala solo para enriquecer "
-                "datos, no para limitar la extracción):\n"
+                "\nLista de personas conocidas del proyecto (úsala para enriquecer "
+                "responsables y entidades, NO para limitar la extracción):\n"
                 f"{json.dumps(project_contacts, ensure_ascii=False)}\n"
             )
 
         current_date = datetime.now().strftime("%Y-%m-%d")
         system_prompt = (
-            "Eres un asistente experto que analiza transcripciones de reuniones "
-            f"corporativas. La fecha actual es {current_date}. "
+            "Eres un acta-redactor corporativo experto. La fecha actual es "
+            f"{current_date}. "
             "REGLA DE ORO: tu respuesta debe estar EXCLUSIVAMENTE EN ESPAÑOL, "
             "sin importar el idioma original de la reunión. Devuelves SIEMPRE "
-            "un único objeto JSON válido siguiendo el esquema solicitado."
+            "un único objeto JSON válido siguiendo el esquema solicitado. "
+            "PRIORIZA CLARIDAD Y CONCISIÓN sobre extensión: el lector tiene "
+            "30 segundos para entender el acta."
         )
 
         user_prompt = f"""
-Analiza la siguiente transcripción y devuelve un JSON con EXACTAMENTE estas claves:
+Analiza la transcripción y devuelve un JSON con EXACTAMENTE estas claves:
 
 {{
   "language": "idioma original detectado (Español, Inglés, Portugués, etc.)",
@@ -140,18 +142,27 @@ Analiza la siguiente transcripción y devuelve un JSON con EXACTAMENTE estas cla
     {{ "name": "Nombre Completo", "role": "Cargo o rol", "entity": "Empresa o entidad" }}
   ],
   "themes": [
-    {{ "theme_name": "Título del tema", "discussion_points": ["punto 1", "punto 2"] }}
+    {{ "theme_name": "Título corto del tema", "discussion_points": ["punto conciso 1", "punto conciso 2"] }}
   ],
-  "decisions": "TEXTO MUY EXTENSO (3 a 5 párrafos grandes en prosa, SIN viñetas) explicando cada decisión clave, su motivación y contexto.",
-  "risks": "TEXTO MUY EXTENSO (3 a 5 párrafos en prosa, SIN viñetas) describiendo bloqueos, preocupaciones y riesgos detectados, con su gravedad.",
-  "agreements": "TEXTO MUY EXTENSO (3 a 5 párrafos en prosa, SIN viñetas) detallando acuerdos generales, consensos y metodologías acordadas."
+  "decisions": "Lista de decisiones en formato Markdown. UNA viñeta por decisión, formato:\\n- **[Tema]** Decisión concreta — Responsable: <Nombre>",
+  "risks": "Lista de riesgos en Markdown. UNA viñeta por riesgo, formato:\\n- **[Severidad alta/media/baja]** Riesgo concreto — Responsable de seguimiento: <Nombre>",
+  "agreements": "Lista de acuerdos en Markdown. UNA viñeta por acuerdo, formato:\\n- **[Tema]** Acuerdo concreto — Partes: <Nombres>"
 }}
 
-Reglas estrictas:
-- attendees: extrae a TODOS los participantes mencionados, incluso si no están en la lista de contactos.
-- themes: usa títulos cortos y descriptivos, con sub-puntos detallados.
-- decisions / risks / agreements: prosa larga y rica en contexto. Si la reunión no toca alguno, usa una frase breve indicándolo.
-- Nunca inventes contenido que no esté en la transcripción.
+Reglas duras:
+1. NUNCA generes párrafos largos en `decisions`, `risks`, `agreements`. SIEMPRE viñetas Markdown
+   `- ...`. Si una decisión necesita explicación, una segunda línea sangrada
+   con `  · contexto: <una sola frase>`.
+2. Cada viñeta DEBE incluir el responsable identificado por nombre. Si no se
+   pudo identificar, escribe `Responsable: por definir`.
+3. attendees: extrae a TODOS los participantes mencionados (estén o no en la
+   lista de contactos del proyecto). Si están en la lista, usa su `role` y
+   `entity` exactos. Si no, infiérelos por contexto.
+4. themes: títulos de máximo 6 palabras. discussion_points: oraciones cortas,
+   no transcripciones literales largas.
+5. Si la reunión no toca alguno de los tres campos (decisions/risks/agreements),
+   devuelve una sola viñeta `- Sin elementos relevantes en esta reunión.`
+6. Nunca inventes responsables, hechos ni cifras que no estén en la transcripción.
 {contacts_block}
 Transcripción:
 {transcript}

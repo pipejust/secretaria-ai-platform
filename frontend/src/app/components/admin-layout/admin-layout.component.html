@@ -5,10 +5,10 @@
     <!-- Sidebar -->
     <aside class="sidebar" [class.collapsed]="isCollapsed" [class.mobile-open]="isMobileOpen">
         <div class="sidebar-header">
-            <div class="logo-area">
+            <a routerLink="/admin/dashboard" class="logo-area" style="text-decoration:none; color:inherit; cursor:pointer;" title="Ir al inicio">
                 <h2 *ngIf="!isCollapsed">Notiva</h2>
                 <h2 *ngIf="isCollapsed" class="logo-collapsed">N</h2>
-            </div>
+            </a>
         </div>
 
         <nav class="sidebar-nav">

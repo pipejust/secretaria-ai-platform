@@ -26,7 +26,21 @@ class Project(SQLModel, table=True):
     name: str = Field(index=True, unique=True, description="Nombre del proyecto, usado para mapear desde Fireflies")
     description: str = Field(default="")
     is_active: bool = Field(default=True)
-    
+
+    # Auto-Dispatch parametrizable por proyecto. Si `auto_dispatch_enabled` es True,
+    # tras `auto_dispatch_timeout_hours` horas en estado 'pending' la sesión se
+    # despacha automáticamente (correos + plataformas) sin curación humana.
+    # Si `auto_dispatch_enabled` es None, se cae al setting global
+    # IntegrationSetting('autoCuration').
+    auto_dispatch_enabled: Optional[bool] = Field(
+        default=None,
+        description="Override por proyecto del Auto-Dispatch global. None = usar global.",
+    )
+    auto_dispatch_timeout_hours: Optional[float] = Field(
+        default=None,
+        description="Horas de espera antes del Auto-Dispatch. None = usar global.",
+    )
+
     templates: List["Template"] = Relationship(back_populates="project")
     routings: List["Routing"] = Relationship(back_populates="project")
     sessions: List["MeetingSession"] = Relationship(back_populates="project")

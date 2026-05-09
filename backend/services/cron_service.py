@@ -25,7 +25,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from sqlmodel import Session, select
 
 from database import engine
-from models import ActionItem, IntegrationSetting, MeetingSession
+from models import ActionItem, IntegrationSetting, MeetingSession, Project
 
 logger = logging.getLogger(__name__)
 
@@ -169,28 +169,67 @@ def _run_async(coro):
         pass
 
 
+def _resolve_dispatch_policy(
+    session: Session,
+    ms: MeetingSession,
+    global_enabled: bool,
+    global_timeout_hours: float,
+) -> tuple[bool, float]:
+    """Devuelve (enabled, timeout_hours) aplicables a esta sesión.
+
+    Si el proyecto asociado tiene `auto_dispatch_enabled` set (no NULL),
+    usa los valores del proyecto. Si no, cae al global.
+    """
+    if ms.project_id is None:
+        return global_enabled, global_timeout_hours
+
+    project = session.get(Project, ms.project_id)
+    if project is None:
+        return global_enabled, global_timeout_hours
+
+    enabled = (
+        project.auto_dispatch_enabled
+        if project.auto_dispatch_enabled is not None
+        else global_enabled
+    )
+    timeout = (
+        project.auto_dispatch_timeout_hours
+        if project.auto_dispatch_timeout_hours is not None
+        else global_timeout_hours
+    )
+    return bool(enabled), max(float(timeout), 0.0)
+
+
 def check_and_dispatch_pending_sessions() -> None:
     """Loop de auto-curación. Se ejecuta cada N minutos."""
     with Session(engine) as session:
         config = _load_auto_curation_config(session)
+        # Si no hay setting global, usamos defaults conservadores: solo activan
+        # quien lo haya marcado a nivel proyecto.
         if config is None:
-            return
-        is_enabled, timeout_hours = config
-        if not is_enabled:
-            return
+            global_enabled, global_timeout_hours = False, 24.0
+        else:
+            global_enabled, global_timeout_hours = config
 
         pending_sessions = session.exec(
             select(MeetingSession).where(MeetingSession.status == "pending")
         ).all()
 
         for ms in pending_sessions:
+            enabled, timeout_hours = _resolve_dispatch_policy(
+                session, ms, global_enabled, global_timeout_hours
+            )
+            if not enabled:
+                continue
+
             delta = _hours_since(ms.created_at)
             if delta is None or delta < timeout_hours:
                 continue
 
             logger.info(
-                "Auto-curación: sesión %s lleva %.2fh >= %sh. Despachando...",
+                "Auto-curación: sesión %s (proyecto=%s) lleva %.2fh >= %sh. Despachando...",
                 ms.id,
+                ms.project_id,
                 delta,
                 timeout_hours,
             )
