@@ -29,17 +29,65 @@ logger = logging.getLogger(__name__)
 
 class GroqLLMService:
     BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
-    MODEL = "llama-3.3-70b-versatile"   # 128k context, 32k output, JSON mode
+    AUDIO_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
+    MODEL = "llama-3.3-70b-versatile"           # 128k context, 32k output, JSON mode
+    WHISPER_MODEL = "whisper-large-v3-turbo"    # Multilingual, ~10x más rápido que whisper-1 de OpenAI
 
     def __init__(self) -> None:
         if not settings.groq_api_key:
             logger.warning(
                 "GROQ_API_KEY no configurada. GroqLLMService devolverá vacíos."
             )
+        self.api_key = settings.groq_api_key
         self.headers = {
-            "Authorization": f"Bearer {settings.groq_api_key}",
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+
+    # ------------------------------------------------------------------
+    # Audio transcription (Whisper en Groq Cloud)
+    # ------------------------------------------------------------------
+
+    async def transcribe_audio(
+        self, file_bytes: bytes, filename: str, language: str | None = None
+    ) -> str:
+        """Transcribe audio con Whisper en Groq Cloud (whisper-large-v3-turbo).
+
+        Compatible con la misma API de OpenAI Whisper pero ~10x más rápido y barato.
+        Devuelve solo el texto transcrito.
+        """
+        if not self.api_key:
+            raise RuntimeError("GROQ_API_KEY no configurada; no se puede transcribir.")
+
+        files = {"file": (filename, file_bytes)}
+        data: dict[str, Any] = {
+            "model": self.WHISPER_MODEL,
+            "response_format": "json",
+            "temperature": "0",
+        }
+        if language:
+            data["language"] = language  # ISO-639-1 ("es", "en", "pt"...)
+
+        # NO incluir Content-Type: httpx lo arma como multipart/form-data automáticamente.
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            for attempt in range(3):
+                response = await client.post(
+                    self.AUDIO_URL, files=files, data=data, headers=headers
+                )
+                if response.status_code == 429 and attempt < 2:
+                    wait_seconds = self._parse_retry_after(response.text, attempt)
+                    logger.info(
+                        "Groq Whisper 429: durmiendo %ss antes de reintentar",
+                        wait_seconds,
+                    )
+                    await asyncio.sleep(wait_seconds)
+                    continue
+                response.raise_for_status()
+                payload = response.json()
+                return str(payload.get("text") or "").strip()
+        return ""
 
     # ------------------------------------------------------------------
     # Public API

@@ -525,6 +525,24 @@ def create_manual_action_item(
     return {"status": "success", "message": "Tarea agregada correctamente", "item": new_item}
 
 
+async def _process_uploaded_session_background(session_id: int) -> None:
+    """Background task que invoca el pipeline IA sobre una sesión recién subida.
+
+    Vive en una Session DB nueva porque la del request HTTP ya cerró.
+    """
+    from database import engine
+    from services.transcript_pipeline import process_session_with_ai
+
+    with Session(engine) as db:
+        try:
+            await process_session_with_ai(db, session_id)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Pipeline IA falló para sesión subida manualmente %s", session_id
+            )
+
+
 @router.post("/upload")
 async def upload_manual_session(
     title: str = Form(...),
@@ -534,35 +552,44 @@ async def upload_manual_session(
     text_content: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     background_tasks: BackgroundTasks = BackgroundTasks(),
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
 ):
+    """Crea una sesión a partir de audio o texto.
+
+    Pipeline post-creación (idéntico al del webhook de Fireflies):
+      - Audio  → Groq Whisper (whisper-large-v3-turbo)
+      - Texto  → se usa tal cual
+      - Luego  → Groq fundamentals+insights + OpenAI tareas, en background.
+    """
     try:
-        import uuid
-        import datetime
-        from services.groq_service import GroqService
-        
         import time
+        import uuid
+
         session_date = date if date else str(int(time.time() * 1000))
         session_language = language if language else "Desconocido"
-        
+
         raw_transcript = ""
-        
-        # 1. Analizar si subieron algo válido
+
         if file and file.filename:
             content = await file.read()
-            # Si es audio, lo pasamos por Whisper API (Groq)
-            if file.filename.lower().endswith(('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm')):
-                groq_svc = GroqService()
-                raw_transcript = await groq_svc.transcribe_audio(content, file.filename)
+            if file.filename.lower().endswith(
+                ('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm', '.flac', '.ogg')
+            ):
+                # Transcripción con Whisper en Groq Cloud (más rápido y barato).
+                from services.llm_groq import GroqLLMService
+                groq = GroqLLMService()
+                raw_transcript = await groq.transcribe_audio(content, file.filename)
             else:
-                # Si es txt plain text
                 raw_transcript = content.decode('utf-8', errors='ignore')
         elif text_content:
             raw_transcript = text_content
-            
-        if not raw_transcript or len(raw_transcript) < 5:
-            raise HTTPException(status_code=400, detail="No se pudo extraer texto del archivo o el texto está vacío.")
-            
+
+        if not raw_transcript or len(raw_transcript.strip()) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail="No se pudo extraer texto del archivo o el texto está vacío.",
+            )
+
         new_session = MeetingSession(
             fireflies_id=f"manual_{uuid.uuid4()}",
             title=title,
@@ -570,24 +597,38 @@ async def upload_manual_session(
             language=session_language,
             project_id=project_id,
             raw_transcript=raw_transcript,
-            status="pending", # Empezamos en pending. Lo pasaremos a process manual o lo lanzamos al background
+            status="processing",   # mientras corre el pipeline IA en background
             raw_summary="",
             processed_decisions="",
             processed_risks="",
             processed_agreements="",
             processed_attendees="[]",
-            processed_themes="[]"
+            processed_themes="[]",
         )
-        
+
         db.add(new_session)
         db.commit()
         db.refresh(new_session)
-        
-        return {"status": "success", "session_id": new_session.id, "message": "Sesión creada exitosamente. Diríjase a curación para generar la inteligencia del acta."}
-    except Exception as e:
-        import traceback
-        print(f"Error uploading session: {e}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e))
+
+        # Mismo pipeline IA que se usa para webhooks de Fireflies.
+        background_tasks.add_task(
+            _process_uploaded_session_background, new_session.id
+        )
+
+        return {
+            "status": "success",
+            "session_id": new_session.id,
+            "message": (
+                "Sesión creada. La IA está procesando idioma, asistentes, temas, "
+                "decisiones, riesgos, acuerdos y tareas en segundo plano."
+            ),
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Error en upload manual de sesión")
+        raise HTTPException(status_code=500, detail="Error procesando la subida.")
 
 class DispatchEmailsRequest(BaseModel):
     action_item_ids: list[int]
