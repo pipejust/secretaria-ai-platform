@@ -58,6 +58,16 @@ def on_startup():
                 len(stuck_sessions),
             )
 
+    # Seed automático en development (admin@notiva.local / notiva)
+    if os.getenv("ENVIRONMENT", "").lower() in ("dev", "development"):
+        try:
+            import sys, pathlib
+            sys.path.insert(0, str(pathlib.Path(__file__).parent / "scripts"))
+            from seed_dev import main as seed_main
+            seed_main()
+        except Exception:
+            logger.exception("seed_dev falló (no bloquea startup).")
+
     start_cron()
 
 @app.on_event("shutdown")
