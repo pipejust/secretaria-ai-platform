@@ -1,0 +1,82 @@
+# Quality Gates — fuente única de verdad para el `verifier`.
+# Cualquier sprint/PR que no cumpla TODOS estos mínimos se rechaza.
+# Editar requiere PR con ADR (architecture decision record).
+
+coverage:
+  backend:
+    line_coverage_min: 0.70   # Sprint 0 plantea suite base; primer cierre puede partir de 0.50 → 0.70 al sprint 3
+  frontend:
+    line_coverage_min: 0.60
+
+e2e:
+  framework: playwright
+  browsers: [chromium, firefox, webkit, mobile-chrome]
+  required_pass_rate: 1.00    # 100% verde en críticos
+
+lighthouse:
+  profile: mobile
+  thresholds:
+    performance: 85
+    accessibility: 95
+    best_practices: 90
+    seo: 90
+
+a11y:
+  framework: axe-core
+  serious_violations_max: 0
+  moderate_violations_max: 2
+
+visual_regression:
+  diff_pct_max: 2.0
+  baseline_dir: tests/visual/__baseline__
+  failure_dir: runs/{RUN_ID}/visual
+
+runtime_perf:
+  tti_mobile_mid_4g_seconds_max: 3.5
+  lcp_seconds_max: 2.5
+  cls_max: 0.1
+  inp_ms_max: 200
+
+security_static:
+  semgrep:
+    high_max: 0
+    critical_max: 0
+  bandit:
+    high_max: 0
+  eslint_security:
+    high_max: 0
+
+dependencies:
+  npm_audit_high_max: 0
+  pip_audit_high_max: 0
+
+api_contract:
+  schemathesis_mismatches_max: 0
+  pact_mismatches_max: 0
+
+responsive:
+  required_breakpoints_px: [360, 414, 768, 1024, 1440, 1920]
+
+i18n:
+  inline_strings_in_components: forbidden     # no_hardcode_scan lint regla
+
+self_heal:
+  max_retries: 6
+  patch_max_lines: 800
+  protected_paths:
+    - backend/auth_utils.py
+    - backend/services/webhook_security.py
+    - backend/database.py
+    - backend/routers/auth.py
+    - backend/services/integrations/   # credenciales reales
+    - "**/migrations/**"
+    - "**/secrets/**"
+
+verifier:
+  approve_label: APPROVE
+  reject_label: REJECT
+  evidence_required: true
+  evidence_paths:
+    - runs/{RUN_ID}/crosscut.report.json
+    - runs/{RUN_ID}/dashboard/index.html
+    - runs/{RUN_ID}/ui/**/*.png

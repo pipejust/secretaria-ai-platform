@@ -1,0 +1,102 @@
+# Roles del swarm. Cada rol tiene su prompt en orchestration/prompts/role_*.md
+# y se invoca con la skill `superpowers:dispatching-parallel-agents` o
+# `superpowers:subagent-driven-development` según corresponda.
+
+agents:
+
+  architect:
+    description: Diseña arquitectura por sprint, define contratos de API, ADRs.
+    prompt_file: orchestration/prompts/role_architect.md
+    invokes_skills:
+      - engineering:architecture
+      - engineering:system-design
+      - claude-mem:make-plan
+    outputs:
+      - orchestration/sprints/sprint_<NN>_<slug>.md  (la sección "Plan técnico")
+      - docs/adr/<NN>_<title>.md  cuando aplique
+
+  builder:
+    description: Implementa código respetando el plan del architect, sin desviarse.
+    prompt_file: orchestration/prompts/role_builder.md
+    invokes_skills:
+      - superpowers:test-driven-development     # red→green→refactor
+      - superpowers:dispatching-parallel-agents # cuando hay tareas independientes
+      - superpowers:subagent-driven-development
+    constraints:
+      - cero hardcoding (no_hardcode_scan debe pasar)
+      - escribe test ANTES de la implementación
+      - patches > 800 líneas requieren split
+    outputs:
+      - código en feature branches dentro de worktrees auto/sprint-<id>
+      - actualización de openapi.json si toca endpoints
+
+  tester:
+    description: Suite específica del sprint + transversal aplicable.
+    prompt_file: orchestration/prompts/role_tester.md
+    invokes_skills:
+      - engineering:testing-strategy
+      - e2e-testing-patterns
+      - python-testing-patterns
+      - javascript-testing-patterns
+    outputs:
+      - tests/<package>/test_<feature>.py o spec.ts
+      - cobertura como JSON
+      - reporte runs/<RUN_ID>/agents/<sprint>/tester.json
+
+  uxui:
+    description: Pantallas con Design System, responsive, a11y, microcopy en i18n.
+    prompt_file: orchestration/prompts/role_uxui.md
+    invokes_skills:
+      - ui-ux-pro-max
+      - frontend-design
+      - emil-design-eng
+      - design                       # tokens, handoff, critique
+      - accessibility-compliance-accessibility-audit
+      - wcag-audit-patterns
+    constraints:
+      - 0 strings inline (todos a i18n)
+      - tokens del DS en CSS vars
+      - capturas reales en runs/<RUN_ID>/ui/<screen>/<bp>.png para 360/414/768/1024/1440/1920
+      - axe 0 serias
+    outputs:
+      - frontend/src/components/<atom|molecule|organism>/...
+      - storybook stories
+      - capturas en runs/<RUN_ID>/ui/
+
+  security:
+    description: Static + dependency scans + revisión OWASP.
+    prompt_file: orchestration/prompts/role_security.md
+    invokes_skills:
+      - security-review
+      - security-auditor
+      - security-scanning-security-sast
+      - security-scanning-security-dependencies
+      - frontend-security-coder
+      - backend-security-coder
+    outputs:
+      - runs/<RUN_ID>/agents/<sprint>/security.json
+
+  self_heal:
+    description: Diagnóstica fallos con systematic-debugging y emite UN único patch.
+    prompt_file: orchestration/prompts/role_self_heal.md
+    invokes_skills:
+      - superpowers:systematic-debugging
+      - debugging-strategies
+      - error-debugging-error-analysis
+    constraints:
+      - max 6 retries por sprint
+      - no toca rutas en quality_gates.yaml::self_heal.protected_paths
+      - no modifica tests para que pasen sin justificación
+    outputs:
+      - patch entre marcadores PATCH/END
+      - escalamiento entre marcadores ESCALATE/END si no puede
+
+  verifier:
+    description: Compara reporte JSON contra quality_gates.yaml. APPROVE o REJECT.
+    prompt_file: orchestration/prompts/role_verifier.md
+    invokes_skills:
+      - verification-quality
+      - verification-loop
+      - verification-before-completion
+    outputs:
+      - runs/<RUN_ID>/agents/<sprint>/verifier.json (decision: APPROVE|REJECT, reasons[])

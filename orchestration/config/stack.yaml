@@ -1,0 +1,111 @@
+# Stack consolidado del proyecto. Es la versión "human-curated" del
+# runs/<RUN_ID>/stack.detected.json (que es la versión auto-generada).
+#
+# REGLA: si stack.detected.json detecta algo nuevo que NO está aquí,
+# 00_bootstrap.sh lo agrega; nunca pisa lo que ya esté declarado a mano.
+
+monorepo: true
+default_branch: main
+git_remote: github.com/pipejust/secretaria-ai-platform
+
+backend:
+  language: python
+  language_version: "3.11"          # del Dockerfile (python:3.11-slim)
+  framework: fastapi
+  framework_version: "0.135.1"
+  orm: sqlmodel
+  db_driver: psycopg2-binary
+  scheduler: apscheduler
+  containerized: true
+  dockerfile: backend/Dockerfile
+  llm_clients:
+    - openai           # gpt-4o (tareas, sugerir-campos)
+    - groq             # llama-3.3-70b-versatile (insights), whisper-large-v3-turbo (audio)
+  routers_count: 11    # auth, fireflies, users, templates, settings, debug, projects, documental, landing, rondas, sessions_upload, pendientes, reports
+  test_framework: pytest
+  test_dir: backend/tests   # CREAR en sprint 0
+  package_manager: pip
+  package_manifest: backend/requirements.txt
+
+frontend:
+  framework: angular
+  framework_version: "^21.2.0"
+  package_manager: npm
+  package_manifest: frontend/package.json
+  test_framework: TBD          # Karma vs Vitest vs Jest — decidir en sprint 0
+  e2e_framework: playwright    # a instalar en sprint 0
+  i18n_framework: TBD          # angular built-in i18n vs ngx-translate vs transloco
+  design_tokens_file: frontend/src/styles/tokens.css   # CREAR en sprint 4 (UI/UX)
+  components_dir: frontend/src/app/components
+  routes_file: frontend/src/app/app.routes.ts
+  encapsulation: emulated
+  deploy_target: vercel
+
+database:
+  engine: postgresql
+  version: "17.6"
+  host: supabase (managed)
+  schema: public
+  migration_strategy: idempotent_alter_table_at_startup
+  migration_file: backend/database.py::_apply_lightweight_migrations
+  extensions_required:
+    - pgvector              # sprint 0 (Foundation)
+  tables_present:
+    - role
+    - user
+    - project
+    - projectcontact
+    - template
+    - routing
+    - integrationsetting
+    - meetingsession
+    - actionitem
+
+infra:
+  backend_host: render.com
+  backend_plan: starter            # $7/mes
+  backend_runtime: docker
+  backend_blueprint: render.yaml
+  frontend_host: vercel.com
+  ci: github_actions               # CREAR en sprint 0 — hoy NO existe
+  artifact_storage: render-attached-disk-no
+  observability:
+    logging: stdlib_basic_config
+    metrics: TBD                   # Prometheus + Grafana o Datadog (decidir sprint 8 o cuando $$)
+    tracing: TBD
+    error_reporting: TBD           # Sentry recomendado
+
+integrations_outbound:
+  - trello
+  - jira
+  - clickup
+  - azure_devops
+  - resend                          # email transaccional
+
+integrations_inbound:
+  - fireflies                       # webhook firmado por token (validado vs IntegrationSetting.fireflies.webhook_token)
+
+auth:
+  scheme: jwt-hs256
+  token_secret_source: env JWT_SECRET_KEY
+  bcrypt_rounds: 12
+  session_minutes: 1440
+  rbac_roles: [admin, viewer]
+  sso: false                        # planeado en sprint 8
+
+env_vars_required:
+  backend:
+    - DATABASE_URL
+    - JWT_SECRET_KEY
+    - JWT_ALGORITHM
+    - ACCESS_TOKEN_EXPIRE_MINUTES
+    - BCRYPT_ROUNDS
+    - ENVIRONMENT
+    - LOG_LEVEL
+    - PUBLIC_BASE_URL
+    - OPENAI_API_KEY
+    - GROQ_API_KEY
+    - FIREFLIES_API_KEY
+    - FRONTEND_URL
+  frontend:
+    - NG_APP_API_URL                # apunta al backend de Render

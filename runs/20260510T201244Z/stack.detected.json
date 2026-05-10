@@ -1,0 +1,107 @@
+{
+  "detected_at_utc": "2026-05-10T20:12:44Z",
+  "monorepo": true,
+  "backend": {
+    "language": "python",
+    "version_pinned": "3.11 (Dockerfile)",
+    "framework": "fastapi",
+    "framework_version": "0.135.1",
+    "orm": "sqlmodel",
+    "db_driver": "psycopg2-binary",
+    "test_framework": "pytest",
+    "scheduler": "apscheduler",
+    "llm_clients": [
+      "groq"
+    ],
+    "key_deps": {
+      "fastapi": "0.135.1",
+      "uvicorn": "0.41.0",
+      "sqlmodel": "0.0.37",
+      "sqlalchemy": "2.0.48",
+      "pydantic": "2.12.5",
+      "pydantic-settings": "2.13.1",
+      "python-jose": "3.5.0",
+      "bcrypt": "5.0.0",
+      "httpx": "0.28.1",
+      "docxtpl": "0.20.1",
+      "python-docx": "1.2.0",
+      "fpdf2": ">=2.8.1",
+      "resend": "2.24.0",
+      "supabase": ">=2.3.0",
+      "apscheduler": "3.10.4",
+      "jinja2": ">=3.1.0"
+    },
+    "all_deps_count": 51,
+    "containerized": true
+  },
+  "frontend": {
+    "framework": "angular",
+    "framework_version": "^21.2.0",
+    "package_manager": "npm",
+    "test_framework": "MISSING (no Karma/Jasmine/Jest configurado en package.json visible)",
+    "i18n_present": false,
+    "design_system_tokens": false,
+    "key_deps": {
+      "@angular/core": "^21.2.0",
+      "@angular/router": "^21.2.0",
+      "@angular/common": "^21.2.0",
+      "@angular/forms": "^21.2.0",
+      "@angular/platform-browser": "^21.2.0",
+      "rxjs": "~7.8.0",
+      "tslib": "^2.3.0"
+    },
+    "deploy_target": "vercel"
+  },
+  "database": {
+    "engine": "postgresql",
+    "host": "supabase (managed)",
+    "version_runtime": "17.6",
+    "migrations": "ALTER TABLE IF NOT EXISTS in database._apply_lightweight_migrations (NO Alembic)",
+    "extensions_used": [
+      "(planeada) pgvector — sprint 0 del roadmap"
+    ]
+  },
+  "infra": {
+    "backend_host": "render.com",
+    "backend_runtime": "docker (python:3.11-slim, multi-stage)",
+    "frontend_host": "vercel.com",
+    "ci": "MISSING (sin .github/workflows ni equivalente)",
+    "container_registry": "render builds in-place",
+    "blueprint_file": "render.yaml present"
+  },
+  "integrations_outbound": [
+    "trello",
+    "jira",
+    "clickup",
+    "azure_devops",
+    "resend",
+    "fireflies(webhook in)"
+  ],
+  "auth": {
+    "scheme": "JWT propio (HS256)",
+    "secret_source": "env JWT_SECRET_KEY",
+    "roles": [
+      "admin",
+      "viewer (modelo Role flexible)"
+    ],
+    "sso": false
+  },
+  "observability": {
+    "logging": "stdlib logging vía main.py basicConfig",
+    "metrics": "MISSING",
+    "tracing": "MISSING",
+    "error_reporting": "MISSING (sin Sentry/Rollbar)"
+  },
+  "git": {
+    "default_branch": "main",
+    "current_worktree": "/Users/felipecortes/.gemini/antigravity/scratch/projects/secretaria/.claude/worktrees/zen-bardeen-1f8a85",
+    "remote": "github.com/pipejust/secretaria-ai-platform"
+  },
+  "docs_present": [
+    "README.md",
+    "MIGRATION.md",
+    "docs/competidores.md",
+    "docs/roadmap.md",
+    "roadmap.md (recién copiado)"
+  ]
+}

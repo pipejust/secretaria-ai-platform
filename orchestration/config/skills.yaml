@@ -1,0 +1,170 @@
+# Mapeo de skills nombradas en el protocolo a las que existen REALMENTE en
+# este entorno. Ver runs/<RUN_ID>/missing_skills.md cuando una no exista.
+
+planning_and_memory:
+  available:
+    - claude-mem-knowledge-agent
+    - claude-mem-make-plan          # alias: claude-mem:make-plan
+    - claude-mem-mem-search
+    - claude-mem-smart-explore
+    - claude-mem-timeline-report
+    - claude-mem-version-bump
+    - planning                       # genérica
+    - writing-plans                  # superpowers
+    - executing-plans                # superpowers
+    - brainstorming                  # superpowers
+  unavailable:
+    - productivity:memory-management   # equivalente: memory-systems + content-hash-cache-pattern
+  fallback:
+    - memory-systems
+    - reasoningbank-intelligence
+
+construction_and_parallelism:
+  available:
+    - test-driven-development
+    - subagent-driven-development
+    - dispatching-parallel-agents
+    - using-git-worktrees
+    - finishing-a-development-branch
+    - writing-skills
+
+quality_review_debug:
+  available:
+    - architect-review
+    - architecture-patterns
+    - architecture-decision-records
+    - code-review-excellence
+    - code-reviewer
+    - code-review-ai-ai-review
+    - debugger
+    - debugging-strategies
+    - debugging-toolkit-smart-debug
+    - systematic-debugging
+    - error-debugging-error-analysis
+    - error-debugging-error-trace
+    - performance-engineer
+    - performance-analysis
+    - security-review
+    - security-auditor
+    - security-scanning-security-sast
+    - security-scanning-security-dependencies
+    - security-scanning-security-hardening
+    - silent-failure-hunter
+    - requesting-code-review
+    - receiving-code-review
+  unavailable:
+    - engineering:incident-response
+  fallback:
+    - incident-response-incident-response
+    - incident-runbook-templates
+
+ux_ui_design_a11y:
+  available:
+    - ui-ux-pro-max
+    - frontend-design
+    - emil-design-eng
+    - design                          # set principal de diseño
+    - design-system
+    - accessibility-compliance-accessibility-audit
+    - wcag-audit-patterns
+    - screen-reader-testing
+    - liquid-glass-design
+    - tailwind-design-system
+  unavailable:
+    - design:design-system-management
+    - design:design-handoff
+    - design:design-critique
+    - design:ux-writing
+    - design:accessibility-review
+  fallback:
+    # los anteriores se cubren con la skill `design` que es paquete único.
+    - design
+
+verification:
+  available:
+    - verification-quality
+    - verification-loop
+    - verification-before-completion
+    - eval-harness
+    - llm-evaluation
+    - advanced-evaluation
+
+testing_and_e2e:
+  available:
+    - e2e-testing
+    - e2e-testing-patterns
+    - python-testing
+    - python-testing-patterns
+    - javascript-testing-patterns
+    - tdd-workflow
+    - tdd-workflows-tdd-cycle
+    - tdd-workflows-tdd-red
+    - tdd-workflows-tdd-green
+    - tdd-workflows-tdd-refactor
+    - webapp-testing
+    - browser-qa
+
+frameworks_specific:
+  backend:
+    - fastapi-pro
+    - fastapi-templates
+    - python-pro
+    - python-patterns
+    - async-python-patterns
+    - python-performance-optimization
+    - python-packaging
+    - postgresql
+    - postgres-patterns
+    - sql-optimization-patterns
+    - database-architect
+    - database-optimizer
+    - database-migrations
+    - database-migration
+  frontend:
+    - frontend-developer
+    - frontend-patterns
+    - react-best-practices         # adapta sintaxis a Angular
+    - typescript-pro
+    - typescript-advanced-types
+    - modern-javascript-patterns
+    - react-state-management       # patrones aplicables
+    - composition-patterns
+    - ui-styling
+    - ui-visual-validator
+
+ai_specific:
+  available:
+    - ai-engineer
+    - ai-first-engineering
+    - ai-regression-testing
+    - claude-api
+    - llm-application-dev-ai-assistant
+    - llm-application-dev-prompt-optimize
+    - llm-application-dev-langchain-agent
+    - prompt-engineer
+    - prompt-engineering-patterns
+    - rag-implementation
+    - hybrid-search-implementation
+    - similarity-search-patterns
+    - vector-index-tuning
+    - vector-database-engineer
+    - embedding-strategies
+    - context-management-context-restore
+    - context-management-context-save
+    - cost-aware-llm-pipeline
+
+deployment_devops:
+  available:
+    - deployment-engineer
+    - deployment-pipeline-design
+    - deployment-validation-config-validate
+    - docker-patterns
+    - github-actions-templates
+    - github-workflow-automation
+    - cicd-automation-workflow-automate
+    - hooks-automation
+    - terraform-specialist
+    - terraform-module-library
+
+# Si el protocolo invoca una skill listada como `unavailable`, este archivo
+# es la fuente de verdad para escoger el fallback en runs/<RUN_ID>/missing_skills.md.
