@@ -1,0 +1,38 @@
+<div class="ro-container">
+  <header class="header">
+    <a [routerLink]="['/admin/curation', sessionId]" class="back">← Volver al acta</a>
+    <h1>Generar artefactos role-específicos</h1>
+    <p class="subtitle">Genera un PRD, Deal Brief, Status Update u otro documento
+       a partir del transcript de esta sesión.</p>
+  </header>
+
+  <section class="composer">
+    <label>Plantilla</label>
+    <select [(ngModel)]="selectedTemplateId">
+      <option *ngFor="let t of templates" [ngValue]="t.id">{{ t.name }} <small>({{ t.role_type }})</small></option>
+    </select>
+    <label>LLM</label>
+    <select [(ngModel)]="provider">
+      <option value="openai">OpenAI gpt-4o (precisión)</option>
+      <option value="groq">Groq Llama 3.3 70B (rápido)</option>
+    </select>
+    <button class="btn" [disabled]="isGenerating || !selectedTemplateId" (click)="generate()">
+      <span *ngIf="!isGenerating">✨ Generar</span>
+      <span *ngIf="isGenerating">⌛ Generando…</span>
+    </button>
+  </section>
+
+  <section class="outputs">
+    <h2>Outputs generados</h2>
+    <p *ngIf="!outputs.length" class="hint">Aún no has generado ningún artefacto. Selecciona una plantilla arriba.</p>
+    <article *ngFor="let out of outputs; trackBy: trackById" class="output">
+      <header>
+        <strong>{{ out.title }}</strong>
+        <span class="meta">{{ out.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
+        <button class="btn-link" (click)="download(out)">⬇ Descargar .md</button>
+        <button class="btn-link danger" (click)="deleteOutput(out)">Borrar</button>
+      </header>
+      <pre>{{ out.body }}</pre>
+    </article>
+  </section>
+</div>
