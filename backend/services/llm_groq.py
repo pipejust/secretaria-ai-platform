@@ -296,7 +296,18 @@ Transcripción:
                         await asyncio.sleep(wait_seconds)
                         continue
                     response.raise_for_status()
-                    raw = response.json()["choices"][0]["message"]["content"]
+                    body = response.json()
+                    raw = body["choices"][0]["message"]["content"]
+                    # Métrica de costo: tokens consumidos por llamada
+                    usage = body.get("usage") or {}
+                    if usage:
+                        logger.info(
+                            "GROQ_TOKENS_USED model=%s prompt=%s completion=%s total=%s",
+                            self.MODEL,
+                            usage.get("prompt_tokens"),
+                            usage.get("completion_tokens"),
+                            usage.get("total_tokens"),
+                        )
                     parsed = json.loads(raw)
                     if not isinstance(parsed, dict):
                         return fallback

@@ -107,6 +107,12 @@ export const routes: Routes = [
                 title: 'Detalle de Proyecto | Notiva',
                 data: { description: 'Resumen del proyecto: últimas decisiones, riesgos, tareas activas y reuniones recientes.', robots: 'noindex, nofollow' }
             },
+            {
+                path: 'ask',
+                loadComponent: () => import('./components/ask/ask.component').then(m => m.AskComponent),
+                title: 'Ask Notiva | Notiva',
+                data: { description: 'Chat con RAG sobre tus actas anteriores. Haz preguntas y Notiva responde citando las sesiones específicas.', robots: 'noindex, nofollow' }
+            },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
     },

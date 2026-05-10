@@ -1,0 +1,68 @@
+{
+  "summary": "Match comercial. Reunión con cliente → adjunta acta a deal correspondiente.",
+  "tasks": [
+    {
+      "id": "S06-T01",
+      "title": "services/integrations/hubspot.py con find_deal_by_email + attach_note",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/integrations/hubspot.py"
+      ],
+      "dependencies": [],
+      "dod": "reunión con attendee@cliente.com encuentra deal y crea engagement",
+      "est_minutes": 180,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S06-T02",
+      "title": "services/integrations/salesforce.py",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/integrations/salesforce.py"
+      ],
+      "dependencies": [],
+      "dod": "misma idea Salesforce REST API + Task object",
+      "est_minutes": 180,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S06-T03",
+      "title": "services/integrations/pipedrive.py",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/integrations/pipedrive.py"
+      ],
+      "dependencies": [],
+      "dod": "misma idea Pipedrive Notes API",
+      "est_minutes": 150,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S06-T04",
+      "title": "Auto-attach en pipeline si CRM routing activo",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/transcript_pipeline.py"
+      ],
+      "dependencies": [
+        "S06-T01",
+        "S06-T02",
+        "S06-T03"
+      ],
+      "dod": "deal sincronizado en BD por session",
+      "est_minutes": 90,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [],
+  "sprint_id": "06_crm-hubspot-salesforce-pipedrive",
+  "open_questions_for_human": [
+    "S06-T01",
+    "S06-T02",
+    "S06-T03"
+  ]
+}

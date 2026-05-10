@@ -371,9 +371,18 @@ class OpenAIService:
                 response.raise_for_status()
                 break
             result_json = response.json()
+            usage = result_json.get("usage") or {}
+            if usage:
+                logger.info(
+                    "OPENAI_TOKENS_USED model=%s prompt=%s completion=%s total=%s",
+                    payload.get("model"),
+                    usage.get("prompt_tokens"),
+                    usage.get("completion_tokens"),
+                    usage.get("total_tokens"),
+                )
             content_str = result_json["choices"][0]["message"]["content"]
             parsed_data = json.loads(content_str)
-            
+
             # Root wrap defensive programming ("properties", "response", etc)
             if "properties" in parsed_data and isinstance(parsed_data["properties"], dict):
                 for key in ["summary", "action_items", "language", "decisions", "themes"]:

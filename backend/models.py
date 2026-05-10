@@ -49,6 +49,14 @@ class Project(SQLModel, table=True):
         description="Usuario responsable del proyecto.",
     )
 
+    # Sprint 01 — multi-idioma. Aplica como hint para Whisper y para
+    # mantener el output del summary en el idioma original cuando el
+    # usuario lo prefiere así.
+    language_code: Optional[str] = Field(
+        default="es",
+        description="ISO-639-1 (es, en, pt, fr, de, it, ja, ko, zh, ar, hi, ...)",
+    )
+
     templates: List["Template"] = Relationship(back_populates="project")
     routings: List["Routing"] = Relationship(back_populates="project")
     sessions: List["MeetingSession"] = Relationship(back_populates="project")
@@ -123,8 +131,138 @@ class MeetingSession(SQLModel, table=True):
         description="True si ya se ejecutó 'Regenerar Tareas' (OpenAI) una vez.",
     )
 
+    # Sprint 01 — Quick wins: override del LLM provider por sesión.
+    # Valores: 'auto' (default: groq insights + openai tareas), 'openai', 'groq'.
+    llm_provider: str = Field(
+        default="auto",
+        description="'auto' | 'openai' | 'groq'",
+    )
+
     project: Optional[Project] = Relationship(back_populates="sessions")
     action_items: List["ActionItem"] = Relationship(back_populates="session")
+
+
+class OutputTemplate(SQLModel, table=True):
+    """Sprint 04 — plantillas para outputs role-específicos."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True, unique=True, description="ej. 'Deal Brief'")
+    role_type: str = Field(
+        index=True,
+        description="commercial | product | hr | status | kickoff | eval | custom",
+    )
+    prompt_template: str = Field(
+        description="Plantilla con placeholder {{transcript}} y opcionales {{contacts}}, {{date}}.",
+    )
+    output_format: str = Field(default="markdown")
+    is_active: bool = Field(default=True)
+
+
+class SessionOutput(SQLModel, table=True):
+    """Sprint 04 — output generado para una sesión."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="meetingsession.id", index=True)
+    template_id: int = Field(foreign_key="outputtemplate.id", index=True)
+    title: str
+    body: str
+    output_format: str = Field(default="markdown")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    created_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+
+
+class MeetingSessionVersion(SQLModel, table=True):
+    """Sprint 07 — snapshot del acta antes de cada PUT del usuario."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="meetingsession.id", index=True)
+    version_number: int = Field(default=1)
+    snapshot_json: str = Field(description="JSON del MeetingSession completo en este punto.")
+    edited_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class Comment(SQLModel, table=True):
+    """Sprint 07 — comentarios sticky por sección de la sesión."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="meetingsession.id", index=True)
+    section: str = Field(
+        description="summary | decisions | risks | agreements | task | general",
+    )
+    ref_id: Optional[int] = Field(
+        default=None,
+        description="Para section='task': id del ActionItem.",
+    )
+    author_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    body: str
+    parent_comment_id: Optional[int] = Field(default=None, foreign_key="comment.id")
+    resolved_at: Optional[str] = Field(default=None)
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class SessionPermission(SQLModel, table=True):
+    """Sprint 07 — permisos granulares por sesión + usuario."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="meetingsession.id", index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    role: str = Field(default="viewer", description="viewer | editor | admin")
+    granted_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class AuditLog(SQLModel, table=True):
+    """Sprint 08 — audit log para SOC 2 / GDPR compliance."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    action: str = Field(index=True, description="login, logout, edit_settings, delete, dispatch, ...")
+    resource_type: Optional[str] = Field(default=None)
+    resource_id: Optional[str] = Field(default=None)
+    ip: Optional[str] = Field(default=None)
+    user_agent: Optional[str] = Field(default=None)
+    payload_diff: Optional[str] = Field(default=None, description="JSON con before/after.")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class ApiKey(SQLModel, table=True):
+    """Sprint 11 — API keys para clientes que consumen Notiva API pública."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    name: str = Field(description="Etiqueta humana de la key (ej. 'Zapier prod')")
+    hashed_key: str = Field(unique=True, index=True)
+    scopes: str = Field(default="[]", description="JSON array de scopes permitidos.")
+    rate_limit_per_min: int = Field(default=60)
+    last_used_at: Optional[str] = Field(default=None)
+    revoked_at: Optional[str] = Field(default=None)
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class EmbeddingChunk(SQLModel, table=True):
+    """Chunk vectorizado del contenido de una sesión, indexado en pgvector.
+
+    Producido por `services/embedding_service.embed_session()` al final del
+    pipeline IA. La columna `embedding` se persiste vía SQL crudo (DDL en
+    `_apply_lightweight_migrations`) porque SQLModel/SQLAlchemy no tiene
+    tipo nativo para pgvector. Aquí la declaramos como str solo para que
+    el modelo Python compile; el DDL real es VECTOR(1536).
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: int = Field(foreign_key="meetingsession.id", index=True)
+    kind: str = Field(
+        description="'summary' | 'decisions' | 'risks' | 'agreements' | 'transcript'",
+        index=True,
+    )
+    chunk_index: int = Field(default=0, description="0..N para kind='transcript'")
+    content: str = Field(description="Texto original del chunk")
+    embedding: Optional[str] = Field(
+        default=None,
+        description="VECTOR(1536) en Postgres; serializa como str en Python.",
+    )
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
 
 class ActionItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

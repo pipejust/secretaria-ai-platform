@@ -1,0 +1,76 @@
+{
+  "summary": "Workspace colaborativo. Versionado tipo Google Docs + comentarios por sección + permisos por sesión.",
+  "tasks": [
+    {
+      "id": "S07-T01",
+      "title": "Modelo MeetingSessionVersion (snapshot completo)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py"
+      ],
+      "dependencies": [],
+      "dod": "cada PUT a sesión crea snapshot; máximo 20 retenidos",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S07-T02",
+      "title": "Modelo Comment (session_id, section, ref_id, body, resolved_at)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py",
+        "backend/routers/comments.py"
+      ],
+      "dependencies": [],
+      "dod": "CRUD comments funciona end-to-end",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S07-T03",
+      "title": "Modelo SessionPermission (viewer/editor/admin por user)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py",
+        "backend/routers/sessions_upload.py"
+      ],
+      "dependencies": [],
+      "dod": "403 si no tiene rol; admin puede compartir",
+      "est_minutes": 120,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S07-T04",
+      "title": "UI: timeline versiones + comentarios sticky por sección",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/curation-panel/*"
+      ],
+      "dependencies": [
+        "S07-T01",
+        "S07-T02"
+      ],
+      "dod": "usuario abre timeline y restaura versión; agrega comentario en línea",
+      "est_minutes": 240,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [
+    {
+      "id": "ADR-003",
+      "title": "Estrategia de retención de snapshots",
+      "decision": "20 versiones LRU"
+    }
+  ],
+  "sprint_id": "07_versioning-comments-permissions",
+  "open_questions_for_human": [
+    "S07-T03"
+  ]
+}

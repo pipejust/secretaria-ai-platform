@@ -1,0 +1,83 @@
+{
+  "summary": "Plataforma vs producto. API key management + rate limiting + OpenAPI público + buffer.",
+  "tasks": [
+    {
+      "id": "S11-T01",
+      "title": "Modelo ApiKey (hashed, scopes JSON)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py",
+        "backend/routers/api_keys.py"
+      ],
+      "dependencies": [],
+      "dod": "POST /api/me/api-keys genera key (mostrada UNA sola vez)",
+      "est_minutes": 120,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S11-T02",
+      "title": "Middleware de auth por X-API-Key",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/main.py",
+        "backend/middleware/api_key.py"
+      ],
+      "dependencies": [
+        "S11-T01"
+      ],
+      "dod": "requests con header válido reemplazan JWT",
+      "est_minutes": 90,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S11-T03",
+      "title": "Rate limiting con slowapi (60 req/min)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/main.py",
+        "backend/requirements.txt"
+      ],
+      "dependencies": [
+        "S11-T02"
+      ],
+      "dod": "cliente que excede recibe 429",
+      "est_minutes": 60,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S11-T04",
+      "title": "OpenAPI públicos en /api/docs",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/main.py"
+      ],
+      "dependencies": [],
+      "dod": "swagger UI accesible sin auth",
+      "est_minutes": 30,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S11-T05",
+      "title": "Buffer: bug fixes reportados sprints 1-10",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "**/*"
+      ],
+      "dependencies": [],
+      "dod": "backlog vaciado",
+      "est_minutes": 600,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [],
+  "sprint_id": "11_public-api-rate-limit",
+  "open_questions_for_human": [
+    "S11-T01"
+  ]
+}

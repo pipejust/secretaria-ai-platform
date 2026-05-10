@@ -167,6 +167,14 @@ async def process_session_with_ai(
         )
     db.commit()
 
+    # ---------- 6. Embeddings (Sprint 00 — RAG foundation) ----------
+    try:
+        from services.embedding_service import embed_session
+        chunks = await embed_session(db, session_id)
+        logger.info("Sesión %s: %s chunks de embeddings indexados.", session_id, chunks)
+    except Exception:
+        logger.exception("embed_session falló para sesión %s (no bloquea curación).", session_id)
+
     # Marca la sesión como pendiente de curación humana (sale de "processing").
     # Si auto-curación está activa, el cron la moverá a "processed" tras N horas.
     db.refresh(session_obj)

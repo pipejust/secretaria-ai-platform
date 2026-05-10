@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         zlib1g \
         postgresql-client \
         curl \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Usuario no-root (mejor postura de seguridad)

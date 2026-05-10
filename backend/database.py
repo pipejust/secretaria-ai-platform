@@ -60,6 +60,8 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE project ADD COLUMN owner_user_id INTEGER REFERENCES "user"(id)',
             'ALTER TABLE actionitem ADD COLUMN status TEXT DEFAULT "pending" NOT NULL',
             'ALTER TABLE actionitem ADD COLUMN completed_at TEXT',
+            # Sprint 00 — embeddings (sqlite no soporta pgvector, fallback a TEXT)
+            'ALTER TABLE embeddingchunk ADD COLUMN embedding_vector TEXT',
         ]
     else:
         statements = [
@@ -70,6 +72,26 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES "user"(id)',
             'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT \'pending\'',
             'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS completed_at VARCHAR(64)',
+            # Sprint 00 — pgvector (extensión + columna VECTOR(1536) reemplaza la "embedding TEXT" genérica)
+            'CREATE EXTENSION IF NOT EXISTS vector',
+            'ALTER TABLE embeddingchunk ADD COLUMN IF NOT EXISTS embedding_vector vector(1536)',
+            'CREATE INDEX IF NOT EXISTS idx_embeddingchunk_session ON embeddingchunk(session_id)',
+            'CREATE INDEX IF NOT EXISTS idx_embeddingchunk_kind    ON embeddingchunk(kind)',
+            # Índice IVFFlat para búsqueda aproximada (creado vacío; primer reindex llena listas)
+            "CREATE INDEX IF NOT EXISTS idx_embeddingchunk_vector ON embeddingchunk USING ivfflat (embedding_vector vector_cosine_ops) WITH (lists=100)",
+            # Sprint 01 — quick wins
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(16) NOT NULL DEFAULT 'auto'",
+            "ALTER TABLE project        ADD COLUMN IF NOT EXISTS language_code VARCHAR(8) DEFAULT 'es'",
+            # Sprints 04/07/08/11 — tablas nuevas creadas por SQLModel.metadata.create_all
+            # arriba; aquí solo añadimos índices que SQLModel no genera por sí solo.
+            "CREATE INDEX IF NOT EXISTS idx_outputtemplate_role     ON outputtemplate(role_type)",
+            "CREATE INDEX IF NOT EXISTS idx_sessionoutput_session   ON sessionoutput(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_msv_session              ON meetingsessionversion(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_comment_session          ON comment(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_sessionperm_user_session ON sessionpermission(user_id, session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_auditlog_user_action     ON auditlog(user_id, action)",
+            "CREATE INDEX IF NOT EXISTS idx_auditlog_created_at      ON auditlog(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_apikey_hash              ON apikey(hashed_key)",
         ]
 
     from sqlalchemy import text

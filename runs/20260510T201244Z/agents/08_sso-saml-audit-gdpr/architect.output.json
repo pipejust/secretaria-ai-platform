@@ -1,0 +1,103 @@
+{
+  "summary": "Enterprise-ready: SSO/SAML, audit log, exports/borrado GDPR. ALTAMENTE SENSIBLE → muchos requires_human_review.",
+  "tasks": [
+    {
+      "id": "S08-T01",
+      "title": "Migración a Supabase Auth (o Auth0) — decisión arquitectónica",
+      "owner_role": "architect",
+      "files_touched_glob": [],
+      "dependencies": [],
+      "dod": "ADR-004 escrita y aprobada por founder",
+      "est_minutes": 120,
+      "risk": "high",
+      "requires_human_review": true
+    },
+    {
+      "id": "S08-T02",
+      "title": "SAML provider config (Okta, Azure AD, Google Workspace)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/auth_utils.py",
+        "backend/routers/auth.py"
+      ],
+      "dependencies": [
+        "S08-T01"
+      ],
+      "dod": "login SSO con cuenta corporativa",
+      "est_minutes": 300,
+      "risk": "high",
+      "requires_human_review": true
+    },
+    {
+      "id": "S08-T03",
+      "title": "Tabla audit_log + hooks en endpoints sensibles",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py",
+        "backend/middleware/audit.py"
+      ],
+      "dependencies": [],
+      "dod": "login/edit_settings/delete loguean entry",
+      "est_minutes": 150,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S08-T04",
+      "title": "GET /api/me/export (GDPR data portability)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/routers/me.py"
+      ],
+      "dependencies": [],
+      "dod": "ZIP con todos los datos del usuario en JSON",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S08-T05",
+      "title": "DELETE /api/me/account (soft delete + purge job 30d)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/routers/me.py",
+        "backend/services/cron_service.py"
+      ],
+      "dependencies": [],
+      "dod": "account_deletion_request marca y job purge tras 30d",
+      "est_minutes": 120,
+      "risk": "high",
+      "requires_human_review": true
+    },
+    {
+      "id": "S08-T06",
+      "title": "Política de privacidad pública",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "docs/privacy.md",
+        "frontend/src/app/components/privacy/*"
+      ],
+      "dependencies": [],
+      "dod": "/privacy renderea desde Markdown del repo",
+      "est_minutes": 60,
+      "risk": "low",
+      "requires_human_review": true
+    }
+  ],
+  "adrs_to_create": [
+    {
+      "id": "ADR-004",
+      "title": "Auth federado: Supabase Auth vs Auth0",
+      "decision": "PENDING — founder"
+    }
+  ],
+  "sprint_id": "08_sso-saml-audit-gdpr",
+  "open_questions_for_human": [
+    "S08-T01",
+    "S08-T02",
+    "S08-T03",
+    "S08-T05",
+    "S08-T06"
+  ]
+}

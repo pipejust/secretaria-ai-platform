@@ -1,0 +1,71 @@
+{
+  "summary": "Diferenciador #1: chat con citas sobre el histórico de actas usando pgvector.",
+  "tasks": [
+    {
+      "id": "S02-T01",
+      "title": "Endpoint POST /api/ask con búsqueda semántica top_k",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/routers/ask.py",
+        "backend/main.py"
+      ],
+      "dependencies": [
+        "S00-T04"
+      ],
+      "dod": "POST /api/ask {question:'¿qué decidimos sobre X?'} devuelve answer + citations[]",
+      "est_minutes": 120,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S02-T02",
+      "title": "Vista /admin/ask con chat UI y links a sesiones citadas",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/ask/*",
+        "frontend/src/app/app.routes.ts"
+      ],
+      "dependencies": [
+        "S02-T01"
+      ],
+      "dod": "usuario hace pregunta y ve respuesta + chips clickeables a /admin/curation/:id",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S02-T03",
+      "title": "Sidebar entry 'Ask Notiva'",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/admin-layout/*"
+      ],
+      "dependencies": [
+        "S02-T02"
+      ],
+      "dod": "link en sidebar visible para usuarios admin",
+      "est_minutes": 15,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S02-T04",
+      "title": "Eval set de 20 preguntas + métrica citation accuracy",
+      "owner_role": "tester",
+      "files_touched_glob": [
+        "backend/tests/test_ask_quality.py",
+        "backend/tests/fixtures/ask_eval.json"
+      ],
+      "dependencies": [
+        "S02-T01"
+      ],
+      "dod": "≥90% de respuestas citan al menos una sesión que el ground truth marca como relevante",
+      "est_minutes": 120,
+      "risk": "medium",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [],
+  "sprint_id": "02_ask-notiva-rag",
+  "open_questions_for_human": []
+}

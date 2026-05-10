@@ -1,0 +1,56 @@
+<div class="ask-container">
+  <header class="header">
+    <h1>Ask Notiva</h1>
+    <p class="subtitle">Pregunta cualquier cosa sobre tus actas anteriores. Notiva responde citando las sesiones específicas.</p>
+  </header>
+
+  <section class="composer">
+    <div class="filter-row">
+      <label>Filtrar por proyecto</label>
+      <select [(ngModel)]="projectId">
+        <option [ngValue]="null">— Todos —</option>
+        <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
+      </select>
+    </div>
+    <div class="input-row">
+      <textarea
+        [(ngModel)]="question"
+        rows="3"
+        placeholder="Ej: ¿Qué decidimos sobre el rebranding la semana pasada?"
+        (keydown.enter)="$event.shiftKey ? null : (submit() && $event.preventDefault())"
+        ></textarea>
+      <button class="btn-primary" [disabled]="isAsking || !question.trim()" (click)="submit()">
+        <span *ngIf="!isAsking">🔎 Preguntar</span>
+        <span *ngIf="isAsking">⌛ Buscando…</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="history">
+    <p class="empty" *ngIf="!history.length">
+      Aún no has preguntado nada. Probá con: <em>"¿Quiénes están responsables de la migración a Render?"</em>
+    </p>
+
+    <article *ngFor="let turn of history; trackBy: trackByTurn" class="turn">
+      <div class="q">
+        <strong>Tú:</strong> {{ turn.question }}
+        <span class="model-tag">{{ turn.model }} · {{ turn.chunks_used }} chunks</span>
+      </div>
+      <div class="a">
+        <pre>{{ turn.answer }}</pre>
+      </div>
+      <div class="citations" *ngIf="turn.citations.length">
+        <h4>Citas</h4>
+        <ul>
+          <li *ngFor="let c of turn.citations; trackBy: trackByCitation">
+            <a [routerLink]="['/admin/curation', c.session_id]" class="cite-link">
+              Sesión #{{ c.session_id }} · {{ c.kind }}
+            </a>
+            <span class="dist">distancia {{ c.distance | number:'1.3-3' }}</span>
+            <p class="snippet">{{ c.snippet }}</p>
+          </li>
+        </ul>
+      </div>
+    </article>
+  </section>
+</div>

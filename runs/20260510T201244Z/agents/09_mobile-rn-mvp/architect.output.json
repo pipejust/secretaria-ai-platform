@@ -1,0 +1,153 @@
+{
+  "summary": "React Native + Expo MVP. Login + sesiones + tareas + push. Sin transcripción on-device.",
+  "tasks": [
+    {
+      "id": "S09-T01",
+      "title": "Init Expo workspace mobile/",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "mobile/package.json",
+        "mobile/app.json",
+        "mobile/src/**"
+      ],
+      "dependencies": [],
+      "dod": "expo start arranca y carga splash screen",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T02",
+      "title": "Paquete @notiva/sdk con types + http client compartido con web",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "packages/sdk/**"
+      ],
+      "dependencies": [],
+      "dod": "mobile y web importan los mismos types/clients",
+      "est_minutes": 180,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T03",
+      "title": "Login (SSO si disponible)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "mobile/src/screens/Login.tsx"
+      ],
+      "dependencies": [
+        "S09-T01",
+        "S09-T02"
+      ],
+      "dod": "login con email+password funciona; token persistido en SecureStore",
+      "est_minutes": 150,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T04",
+      "title": "Tab Sesiones — lista + filtros básicos",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "mobile/src/screens/Sessions.tsx"
+      ],
+      "dependencies": [
+        "S09-T03"
+      ],
+      "dod": "lista refresca con pull-to-refresh",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T05",
+      "title": "Tab Pendientes — tareas asignadas a mí",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "mobile/src/screens/Pending.tsx"
+      ],
+      "dependencies": [
+        "S09-T03"
+      ],
+      "dod": "swipe-to-complete cambia status a done",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T06",
+      "title": "Detalle sesión + comentarios",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "mobile/src/screens/SessionDetail.tsx"
+      ],
+      "dependencies": [
+        "S09-T04",
+        "S07-T02"
+      ],
+      "dod": "ver acta + agregar comentario",
+      "est_minutes": 180,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T07",
+      "title": "Push notifications con Firebase",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "mobile/src/services/push.ts",
+        "backend/services/push_notifications.py"
+      ],
+      "dependencies": [
+        "S09-T01"
+      ],
+      "dod": "tarea vencida dispara notificación en device",
+      "est_minutes": 180,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T08",
+      "title": "Compartir PDF con expo-sharing",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "mobile/src/screens/SessionDetail.tsx"
+      ],
+      "dependencies": [
+        "S09-T06"
+      ],
+      "dod": "botón share abre native share sheet",
+      "est_minutes": 60,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S09-T09",
+      "title": "App Store + Play Store submission",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "mobile/eas.json",
+        "mobile/app.json"
+      ],
+      "dependencies": [
+        "S09-T08"
+      ],
+      "dod": "build subido a TestFlight + Internal Testing",
+      "est_minutes": 240,
+      "risk": "high",
+      "requires_human_review": true
+    }
+  ],
+  "adrs_to_create": [
+    {
+      "id": "ADR-005",
+      "title": "Mobile stack: RN+Expo vs Flutter vs nativo",
+      "decision": "RN+Expo"
+    }
+  ],
+  "sprint_id": "09_mobile-rn-mvp",
+  "open_questions_for_human": [
+    "S09-T09"
+  ]
+}

@@ -550,16 +550,23 @@ async def upload_manual_session(
     language: Optional[str] = Form(None),
     project_id: Optional[int] = Form(None),
     text_content: Optional[str] = Form(None),
+    youtube_url: Optional[str] = Form(None),
+    llm_provider: Optional[str] = Form("auto"),
     file: Optional[UploadFile] = File(None),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_session),
 ):
-    """Crea una sesión a partir de audio o texto.
+    """Crea una sesión a partir de audio, texto o URL de YouTube.
 
     Pipeline post-creación (idéntico al del webhook de Fireflies):
       - Audio  → Groq Whisper (whisper-large-v3-turbo)
+      - YouTube → yt-dlp → audio → Whisper
       - Texto  → se usa tal cual
       - Luego  → Groq fundamentals+insights + OpenAI tareas, en background.
+
+    Args nuevos (Sprint 01):
+      - youtube_url: URL de YouTube (alternativa a file/text_content)
+      - llm_provider: 'auto' | 'openai' | 'groq' (override por sesión)
     """
     try:
         import time
@@ -570,12 +577,21 @@ async def upload_manual_session(
 
         raw_transcript = ""
 
-        if file and file.filename:
+        if youtube_url:
+            from services.youtube_ingest import fetch_audio_bytes, is_youtube_url
+            if not is_youtube_url(youtube_url):
+                raise HTTPException(status_code=400, detail="youtube_url no parece una URL válida de YouTube.")
+            try:
+                audio_bytes, fname = await fetch_audio_bytes(youtube_url)
+            except RuntimeError as exc:
+                raise HTTPException(status_code=422, detail=str(exc))
+            from services.llm_groq import GroqLLMService
+            raw_transcript = await GroqLLMService().transcribe_audio(audio_bytes, fname)
+        elif file and file.filename:
             content = await file.read()
             if file.filename.lower().endswith(
                 ('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm', '.flac', '.ogg')
             ):
-                # Transcripción con Whisper en Groq Cloud (más rápido y barato).
                 from services.llm_groq import GroqLLMService
                 groq = GroqLLMService()
                 raw_transcript = await groq.transcribe_audio(content, file.filename)
@@ -587,7 +603,7 @@ async def upload_manual_session(
         if not raw_transcript or len(raw_transcript.strip()) < 5:
             raise HTTPException(
                 status_code=400,
-                detail="No se pudo extraer texto del archivo o el texto está vacío.",
+                detail="No se pudo extraer texto. Sube audio, pega texto o pasa una URL de YouTube válida.",
             )
 
         new_session = MeetingSession(
@@ -604,6 +620,7 @@ async def upload_manual_session(
             processed_agreements="",
             processed_attendees="[]",
             processed_themes="[]",
+            llm_provider=(llm_provider or "auto"),  # Sprint 01
         )
 
         db.add(new_session)

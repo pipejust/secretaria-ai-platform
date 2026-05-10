@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend (pytest + coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest-cov
+      - name: Run tests with coverage
+        run: |
+          cd backend
+          pytest --cov=. --cov-report=xml --cov-report=term --cov-fail-under=40
+        env:
+          DATABASE_URL: sqlite:///:memory:
+          ENVIRONMENT: test
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY_TEST || 'x-test-secret-must-be-at-least-32-chars-long-x' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+
+  backend-lint:
+    name: Backend (compileall + grep checks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Syntax check
+        run: python -m compileall -q backend/
+      - name: Forbid bare excepts
+        run: |
+          if grep -rn "except\s*:" backend/ --include="*.py" | grep -v __pycache__ | grep -v "/tests/"; then
+            echo "::error::bare except encontrado"; exit 1
+          fi
+      - name: Forbid hardcoded JWT secret
+        run: |
+          if grep -rn "super-secret-key" backend/ --include="*.py" | grep -v __pycache__; then
+            echo "::error::JWT secret hardcodeado encontrado"; exit 1
+          fi
+
+  frontend-build:
+    name: Frontend (Angular build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm run build
+
+  docker-build:
+    name: Docker (backend image)
+    runs-on: ubuntu-latest
+    needs: [backend-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: notiva-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  no-hardcode-scan:
+    name: no_hardcode_scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run linter
+        run: |
+          source orchestration/scripts/lib/log.sh || true
+          source orchestration/scripts/lib/no_hardcode.sh
+          mkdir -p runs/ci
+          no_hardcode::scan ci ci_run || true
+          cat runs/ci/agents/ci_run/no_hardcode.json
+        shell: bash

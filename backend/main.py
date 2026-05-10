@@ -86,6 +86,8 @@ from routers import pendientes
 app.include_router(pendientes.router)
 from routers import reports
 app.include_router(reports.router)
+from routers import ask
+app.include_router(ask.router)
 
 
 @app.get("/")

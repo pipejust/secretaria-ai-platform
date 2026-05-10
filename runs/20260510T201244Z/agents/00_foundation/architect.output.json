@@ -1,0 +1,130 @@
+{
+  "summary": "Foundation técnica: pgvector, embeddings, suite pytest base, CI GitHub Actions.",
+  "tasks": [
+    {
+      "id": "S00-T01",
+      "title": "CREATE EXTENSION pgvector en Supabase",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/database.py"
+      ],
+      "dependencies": [],
+      "dod": "SELECT extname FROM pg_extension WHERE extname='vector' devuelve fila",
+      "est_minutes": 15,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S00-T02",
+      "title": "Modelo EmbeddingChunk + ALTER idempotente",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py"
+      ],
+      "dependencies": [
+        "S00-T01"
+      ],
+      "dod": "create_db_and_tables crea tabla embedding_chunk con columna VECTOR(1536)",
+      "est_minutes": 45,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S00-T03",
+      "title": "services/embedding_service.py con embed_text() vía OpenAI text-embedding-3-small",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/embedding_service.py"
+      ],
+      "dependencies": [],
+      "dod": "embed_text('hola') devuelve list[float] len=1536",
+      "est_minutes": 40,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S00-T04",
+      "title": "Pipeline: tras process_session_with_ai, generar embeddings (summary/decisions/risks/agreements/transcript chunked)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/transcript_pipeline.py"
+      ],
+      "dependencies": [
+        "S00-T02",
+        "S00-T03"
+      ],
+      "dod": "sesión nueva produce ≥1 fila en embedding_chunk por kind",
+      "est_minutes": 60,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S00-T05",
+      "title": "Backfill script para 46 sesiones existentes",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/scripts/backfill_embeddings.py"
+      ],
+      "dependencies": [
+        "S00-T04"
+      ],
+      "dod": "COUNT(*) FROM embedding_chunk > 100 tras corrida",
+      "est_minutes": 30,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S00-T06",
+      "title": "Suite pytest base",
+      "owner_role": "tester",
+      "files_touched_glob": [
+        "backend/tests/conftest.py",
+        "backend/tests/test_*.py"
+      ],
+      "dependencies": [],
+      "dod": "pytest -q corre y reporta ≥10 tests verdes; coverage ≥40% (línea base, sube en sprints siguientes)",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S00-T07",
+      "title": "GitHub Actions CI (lint + tests + docker build)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        ".github/workflows/ci.yml"
+      ],
+      "dependencies": [
+        "S00-T06"
+      ],
+      "dod": "PR a main dispara workflow y queda verde",
+      "est_minutes": 40,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S00-T08",
+      "title": "Métricas tokens (logger.info de OPENAI_TOKENS_USED y GROQ_TOKENS_USED por sesión)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/llm_groq.py",
+        "backend/services/groq_service.py"
+      ],
+      "dependencies": [],
+      "dod": "logs muestran tokens consumidos por session_id",
+      "est_minutes": 25,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [
+    {
+      "id": "ADR-001",
+      "title": "Vector store: pgvector en Supabase vs Pinecone managed",
+      "decision": "pgvector"
+    }
+  ],
+  "sprint_id": "00_foundation",
+  "open_questions_for_human": []
+}

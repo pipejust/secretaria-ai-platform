@@ -1,0 +1,69 @@
+{
+  "summary": "4 features chicas independientes y vendibles: selector LLM, YouTube import, multi-idioma, .ics auto-schedule.",
+  "tasks": [
+    {
+      "id": "S01-T01",
+      "title": "Campo llm_provider en MeetingSession (groq|openai|auto) + UI selector en curación",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py",
+        "frontend/src/app/components/curation-panel/*"
+      ],
+      "dependencies": [],
+      "dod": "sesión con llm_provider='openai' usa OpenAI también para insights",
+      "est_minutes": 90,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S01-T02",
+      "title": "YouTube import endpoint",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/youtube_ingest.py",
+        "backend/routers/sessions_upload.py",
+        "backend/requirements.txt"
+      ],
+      "dependencies": [],
+      "dod": "POST /api/sessions/upload con field youtube_url=https://... crea sesión con transcript",
+      "est_minutes": 150,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S01-T03",
+      "title": "Multi-idioma: campo language_code en Project + dropdown ISO-639 + Whisper auto-detect",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py",
+        "backend/services/llm_groq.py",
+        "frontend/src/app/components/projects/*"
+      ],
+      "dependencies": [],
+      "dod": "sesión asociada a project con language_code=pt-BR procesa con prompt español pero respeta idioma original detectado",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S01-T04",
+      "title": ".ics auto-schedule de próxima reunión detectada por LLM + adjunto en email",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/transcript_pipeline.py",
+        "backend/services/email_service.py",
+        "backend/services/ics_generator.py"
+      ],
+      "dependencies": [],
+      "dod": "email entregado con archivo invite.ics adjunto cuando LLM detecta próxima fecha",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [],
+  "sprint_id": "01_quick-wins",
+  "open_questions_for_human": []
+}

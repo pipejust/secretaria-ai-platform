@@ -1,0 +1,80 @@
+{
+  "summary": "Sticky/retention features.",
+  "tasks": [
+    {
+      "id": "S10-T01",
+      "title": "Meeting quality scoring (5 métricas sobre transcript)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/quality_scoring.py",
+        "backend/models.py"
+      ],
+      "dependencies": [],
+      "dod": "sesión recibe meeting_quality_score JSON con 5 campos",
+      "est_minutes": 180,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S10-T02",
+      "title": "Vista /admin/analytics con gráficos de tendencia",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/analytics/*"
+      ],
+      "dependencies": [
+        "S10-T01"
+      ],
+      "dod": "línea + barras mensuales por proyecto",
+      "est_minutes": 180,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S10-T03",
+      "title": "Dashboard ROI ejecutivo",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/roi-dashboard/*"
+      ],
+      "dependencies": [],
+      "dod": "horas totales en reuniones por persona, % auto-curado",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S10-T04",
+      "title": "Alertas push tareas vencidas (cron + Firebase + email)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/cron_service.py",
+        "backend/services/push_notifications.py"
+      ],
+      "dependencies": [
+        "S09-T07"
+      ],
+      "dod": "task vencida hoy dispara push y email",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S10-T05",
+      "title": "Reuniones recurrentes (fuzzy match por título)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/services/recurring_detection.py"
+      ],
+      "dependencies": [],
+      "dod": "sesión nueva se vincula a serie si título matchea ≥80%",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [],
+  "sprint_id": "10_analytics-roi-alerts-recurrent",
+  "open_questions_for_human": []
+}

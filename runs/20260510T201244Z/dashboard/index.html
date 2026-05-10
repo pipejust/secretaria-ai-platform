@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Notiva — RUN dashboard</title>
+<style>body{font-family:system-ui;margin:2rem;max-width:900px;background:#0f172a;color:#e2e8f0}
+pre{background:#1e293b;padding:1rem;border-radius:8px;overflow:auto}h1{color:#7dd3fc}</style></head>
+<body><h1>Notiva — Crosscut report</h1>
+<p>Reporte real en <code>../crosscut.report.json</code>.</p>
+<pre id="r">cargando…</pre>
+<script>fetch('../crosscut.report.json').then(r=>r.json()).then(j=>{
+  document.getElementById('r').textContent=JSON.stringify(j,null,2);
+});</script></body></html>

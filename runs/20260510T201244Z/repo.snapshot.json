@@ -1,0 +1,154 @@
+{
+  "run_id": "20260510T201244Z",
+  "backend_modules": {
+    "routers": [
+      "backend/routers/auth.py",
+      "backend/routers/debug.py",
+      "backend/routers/documental.py",
+      "backend/routers/fireflies.py",
+      "backend/routers/landing.py",
+      "backend/routers/pendientes.py",
+      "backend/routers/projects.py",
+      "backend/routers/reports.py",
+      "backend/routers/rondas.py",
+      "backend/routers/sessions_upload.py",
+      "backend/routers/settings.py",
+      "backend/routers/templates.py",
+      "backend/routers/users.py"
+    ],
+    "services": [
+      "backend/services/cron_service.py",
+      "backend/services/docx_generator.py",
+      "backend/services/docx_table_utils.py",
+      "backend/services/email_service.py",
+      "backend/services/fireflies_service.py",
+      "backend/services/groq_service.py",
+      "backend/services/integrations/__init__.py",
+      "backend/services/integrations/azure_devops.py",
+      "backend/services/integrations/clickup.py",
+      "backend/services/integrations/jira.py",
+      "backend/services/integrations/smtp.py",
+      "backend/services/integrations/trello.py",
+      "backend/services/llm_groq.py",
+      "backend/services/pdf_generator.py",
+      "backend/services/supabase_service.py",
+      "backend/services/transcript_pipeline.py",
+      "backend/services/webhook_security.py",
+      "backend/services/word_generator.py"
+    ],
+    "crud": [
+      "backend/crud/__init__.py",
+      "backend/crud/base.py",
+      "backend/crud/crud_action_item.py",
+      "backend/crud/crud_integration_setting.py",
+      "backend/crud/crud_meeting_session.py",
+      "backend/crud/crud_project.py",
+      "backend/crud/crud_role.py",
+      "backend/crud/crud_routing.py",
+      "backend/crud/crud_template.py",
+      "backend/crud/crud_user.py"
+    ],
+    "models_loc": 156
+  },
+  "frontend_components": [
+    "frontend/src/app/components/admin-layout/admin-layout.component.ts",
+    "frontend/src/app/components/admin-layout/admin-layout.component.ts",
+    "frontend/src/app/components/curation-panel/curation-panel.component.ts",
+    "frontend/src/app/components/curation-panel/curation-panel.component.ts",
+    "frontend/src/app/components/dashboard/dashboard.component.ts",
+    "frontend/src/app/components/dashboard/dashboard.component.ts",
+    "frontend/src/app/components/forgot-password/forgot-password.ts",
+    "frontend/src/app/components/login/login.component.ts",
+    "frontend/src/app/components/login/login.component.ts",
+    "frontend/src/app/components/pendientes/pendientes.component.ts",
+    "frontend/src/app/components/pendientes/pendientes.component.ts",
+    "frontend/src/app/components/profile/profile.component.ts",
+    "frontend/src/app/components/profile/profile.component.ts",
+    "frontend/src/app/components/project-detail/project-detail.component.ts",
+    "frontend/src/app/components/project-detail/project-detail.component.ts",
+    "frontend/src/app/components/projects/projects.component.ts",
+    "frontend/src/app/components/projects/projects.component.ts",
+    "frontend/src/app/components/reportes/reportes.component.ts",
+    "frontend/src/app/components/reportes/reportes.component.ts",
+    "frontend/src/app/components/reset-password/reset-password.ts",
+    "frontend/src/app/components/roles/roles.component.ts",
+    "frontend/src/app/components/roles/roles.component.ts",
+    "frontend/src/app/components/settings/settings.component.ts",
+    "frontend/src/app/components/settings/settings.component.ts",
+    "frontend/src/app/components/templates/templates.component.ts",
+    "frontend/src/app/components/templates/templates.component.ts",
+    "frontend/src/app/components/toast/toast.component.ts",
+    "frontend/src/app/components/toast/toast.component.ts",
+    "frontend/src/app/components/users/users.component.ts",
+    "frontend/src/app/components/users/users.component.ts"
+  ],
+  "frontend_routes": 115,
+  "tests_present": {
+    "backend": [],
+    "frontend": [
+      "frontend/src/app/app.spec.ts"
+    ]
+  },
+  "ci_workflows": [],
+  "design_tokens_file_present": false,
+  "i18n_dirs_present": [],
+  "potential_tech_debt": [
+    {
+      "rule": "backend bare exceptions",
+      "occurrences": 0,
+      "sample": []
+    },
+    {
+      "rule": "backend print() en código no-test",
+      "occurrences": 37,
+      "sample": [
+        {
+          "file": "backend/routers/debug.py",
+          "line": 8
+        },
+        {
+          "file": "backend/routers/sessions_upload.py",
+          "line": 155
+        },
+        {
+          "file": "backend/routers/sessions_upload.py",
+          "line": 167
+        },
+        {
+          "file": "backend/routers/sessions_upload.py",
+          "line": 186
+        },
+        {
+          "file": "backend/routers/sessions_upload.py",
+          "line": 820
+        }
+      ]
+    },
+    {
+      "rule": "frontend any tipo",
+      "occurrences": 53,
+      "sample": [
+        {
+          "file": "frontend/src/app/components/curation-panel/curation-panel.component.ts",
+          "line": 74
+        },
+        {
+          "file": "frontend/src/app/components/curation-panel/curation-panel.component.ts",
+          "line": 164
+        },
+        {
+          "file": "frontend/src/app/components/curation-panel/curation-panel.component.ts",
+          "line": 212
+        },
+        {
+          "file": "frontend/src/app/components/curation-panel/curation-panel.component.ts",
+          "line": 240
+        },
+        {
+          "file": "frontend/src/app/components/curation-panel/curation-panel.component.ts",
+          "line": 259
+        }
+      ]
+    }
+  ]
+}

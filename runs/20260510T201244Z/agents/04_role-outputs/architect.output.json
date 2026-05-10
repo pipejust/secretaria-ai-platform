@@ -1,0 +1,69 @@
+{
+  "summary": "Match con Acta.ai: PRD, Deal Brief, Status Update, 1:1 Notes, Kickoff, Eval Report auto-generables.",
+  "tasks": [
+    {
+      "id": "S04-T01",
+      "title": "Modelo OutputTemplate + 6 templates seed",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/models.py",
+        "backend/database.py",
+        "backend/scripts/seed_output_templates.py"
+      ],
+      "dependencies": [],
+      "dod": "6 plantillas en BD (PRD, deal_brief, status, 1on1, kickoff, eval)",
+      "est_minutes": 90,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S04-T02",
+      "title": "Endpoint POST /api/sessions/{id}/generate_output?template_id=X",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/routers/sessions_upload.py",
+        "backend/services/llm_groq.py"
+      ],
+      "dependencies": [
+        "S04-T01"
+      ],
+      "dod": "llamada produce session_output con render Markdown + Word descargable",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S04-T03",
+      "title": "Auto-detección de role_type en pipeline",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/transcript_pipeline.py"
+      ],
+      "dependencies": [
+        "S04-T01"
+      ],
+      "dod": "sesión nueva tiene suggested_role_type populated",
+      "est_minutes": 60,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S04-T04",
+      "title": "UI dropdown 'Generar artefacto adicional' + render outputs guardados",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/curation-panel/*"
+      ],
+      "dependencies": [
+        "S04-T02"
+      ],
+      "dod": "usuario genera y ve el output con botón descarga PDF/Word",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [],
+  "sprint_id": "04_role-outputs",
+  "open_questions_for_human": []
+}

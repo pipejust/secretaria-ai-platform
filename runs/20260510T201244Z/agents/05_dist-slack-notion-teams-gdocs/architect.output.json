@@ -1,0 +1,83 @@
+{
+  "summary": "Extensión del factory de integraciones para 4 destinos nuevos.",
+  "tasks": [
+    {
+      "id": "S05-T01",
+      "title": "services/integrations/slack.py (Incoming Webhook + Bot OAuth)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/integrations/slack.py",
+        "backend/services/integrations/__init__.py"
+      ],
+      "dependencies": [],
+      "dod": "post a canal #general entrega resumen + tareas",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S05-T02",
+      "title": "services/integrations/notion.py",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/integrations/notion.py"
+      ],
+      "dependencies": [],
+      "dod": "crea página en database con propiedades title/date/project",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S05-T03",
+      "title": "services/integrations/microsoft_teams.py",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/integrations/microsoft_teams.py"
+      ],
+      "dependencies": [
+        "S03-T02"
+      ],
+      "dod": "post a canal Teams entrega tarjeta adaptive",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S05-T04",
+      "title": "services/integrations/google_docs.py",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/integrations/google_docs.py"
+      ],
+      "dependencies": [
+        "S03-T01"
+      ],
+      "dod": "crea Google Doc con el acta usando template",
+      "est_minutes": 150,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S05-T05",
+      "title": "UI: nuevos targets en Routings de proyecto",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/projects/*"
+      ],
+      "dependencies": [
+        "S05-T01",
+        "S05-T02",
+        "S05-T03",
+        "S05-T04"
+      ],
+      "dod": "selector en routings incluye slack/notion/teams/gdocs",
+      "est_minutes": 90,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [],
+  "sprint_id": "05_dist-slack-notion-teams-gdocs",
+  "open_questions_for_human": []
+}

@@ -1,0 +1,7 @@
+{
+  "task": "Genera el Plan técnico del sprint con tareas atómicas (≤1 día) y campos id, title, owner_role, files_touched_glob, dependencies, dod, est_minutes, risk. Marca requires_human_review en pasos sensibles (auth, pagos, datos personales, DDL destructivo).",
+  "sprint_md": "orchestration/sprints/sprint_01_quick-wins.md",
+  "stack": "orchestration/config/stack.yaml",
+  "gates": "orchestration/config/quality_gates.yaml",
+  "skills_to_invoke": ["superpowers:writing-plans","claude-mem:make-plan","engineering:architecture","engineering:system-design"]
+}

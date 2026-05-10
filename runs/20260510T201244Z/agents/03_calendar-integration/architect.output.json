@@ -1,0 +1,93 @@
+{
+  "summary": "OAuth Google + Microsoft Graph; sync de eventos próximos; auto-link MeetingSession.",
+  "tasks": [
+    {
+      "id": "S03-T01",
+      "title": "OAuth Google Calendar (scope readonly)",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/routers/oauth_google.py",
+        "backend/services/google_calendar.py",
+        "backend/models.py"
+      ],
+      "dependencies": [],
+      "dod": "flujo OAuth completa y guarda calendar_account con refresh_token cifrado",
+      "est_minutes": 180,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S03-T02",
+      "title": "OAuth Microsoft Graph",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/routers/oauth_ms.py",
+        "backend/services/ms_graph.py"
+      ],
+      "dependencies": [],
+      "dod": "misma idea para Microsoft 365",
+      "est_minutes": 180,
+      "risk": "medium",
+      "requires_human_review": true
+    },
+    {
+      "id": "S03-T03",
+      "title": "Cron sync cada 30 min de próximos 7 días",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/services/cron_service.py",
+        "backend/models.py"
+      ],
+      "dependencies": [
+        "S03-T01",
+        "S03-T02"
+      ],
+      "dod": "calendar_event tabla se popula automáticamente",
+      "est_minutes": 90,
+      "risk": "low",
+      "requires_human_review": false
+    },
+    {
+      "id": "S03-T04",
+      "title": "Auto-link Fireflies → calendar_event por título+hora",
+      "owner_role": "builder",
+      "files_touched_glob": [
+        "backend/routers/fireflies.py"
+      ],
+      "dependencies": [
+        "S03-T03"
+      ],
+      "dod": "sesión nueva recibe project_id + attendees del calendar_event matched",
+      "est_minutes": 75,
+      "risk": "medium",
+      "requires_human_review": false
+    },
+    {
+      "id": "S03-T05",
+      "title": "Panel 'Próximas reuniones' en /admin/dashboard",
+      "owner_role": "uxui",
+      "files_touched_glob": [
+        "frontend/src/app/components/dashboard/*"
+      ],
+      "dependencies": [
+        "S03-T03"
+      ],
+      "dod": "vista lista próximos 7 días con badge 'Sin acta aún'",
+      "est_minutes": 120,
+      "risk": "low",
+      "requires_human_review": false
+    }
+  ],
+  "adrs_to_create": [
+    {
+      "id": "ADR-002",
+      "title": "Encryption at rest de OAuth tokens",
+      "decision": "AES-GCM con KEK desde env"
+    }
+  ],
+  "sprint_id": "03_calendar-integration",
+  "open_questions_for_human": [
+    "S03-T01",
+    "S03-T02"
+  ]
+}

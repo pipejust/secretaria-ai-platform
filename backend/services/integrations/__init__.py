@@ -25,6 +25,11 @@ from services.integrations.azure_devops import AzureDevOpsIntegrationService
 from services.integrations.clickup import ClickUpIntegrationService
 from services.integrations.jira import JiraIntegrationService
 from services.integrations.trello import TrelloIntegrationService
+# Sprint 05 — distribuciones
+from services.integrations.slack import SlackIntegrationService
+from services.integrations.notion import NotionIntegrationService
+from services.integrations.microsoft_teams import MicrosoftTeamsIntegrationService
+from services.integrations.google_docs import GoogleDocsIntegrationService
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +92,34 @@ def get_azure_devops_service(db: Session) -> AzureDevOpsIntegrationService:
     return AzureDevOpsIntegrationService(cfg["organization"], cfg["project"], cfg["pat"])
 
 
+def get_slack_service(db: Session) -> SlackIntegrationService:
+    cfg = _load_provider_config(db, "slack")
+    if not cfg.get("webhook_url") and not cfg.get("bot_token"):
+        raise IntegrationConfigError("Slack: webhook_url o bot_token requerido.")
+    return SlackIntegrationService(
+        webhook_url=cfg.get("webhook_url"),
+        bot_token=cfg.get("bot_token"),
+    )
+
+
+def get_notion_service(db: Session) -> NotionIntegrationService:
+    cfg = _load_provider_config(db, "notion")
+    _require(cfg, ["integration_token", "database_id"], "notion")
+    return NotionIntegrationService(cfg["integration_token"], cfg["database_id"])
+
+
+def get_msteams_service(db: Session) -> MicrosoftTeamsIntegrationService:
+    cfg = _load_provider_config(db, "microsoft_teams")
+    _require(cfg, ["webhook_url"], "microsoft_teams")
+    return MicrosoftTeamsIntegrationService(cfg["webhook_url"])
+
+
+def get_gdocs_service(db: Session) -> GoogleDocsIntegrationService:
+    cfg = _load_provider_config(db, "google_docs")
+    _require(cfg, ["access_token"], "google_docs")
+    return GoogleDocsIntegrationService(cfg["access_token"], cfg.get("refresh_token"))
+
+
 def get_service_for_destination(
     db: Session, destination_type: str
 ) -> Optional[object]:
@@ -96,13 +129,13 @@ def get_service_for_destination(
     el tipo se reconoce pero no hay credenciales válidas.
     """
     dt = (destination_type or "").lower()
-    if "trello" in dt:
-        return get_trello_service(db)
-    if "jira" in dt:
-        return get_jira_service(db)
-    if "clickup" in dt:
-        return get_clickup_service(db)
-    if "azure" in dt or "devops" in dt:
-        return get_azure_devops_service(db)
+    if "trello" in dt: return get_trello_service(db)
+    if "jira" in dt: return get_jira_service(db)
+    if "clickup" in dt: return get_clickup_service(db)
+    if "azure" in dt or "devops" in dt: return get_azure_devops_service(db)
+    if "slack" in dt: return get_slack_service(db)
+    if "notion" in dt: return get_notion_service(db)
+    if "teams" in dt or "msteams" in dt: return get_msteams_service(db)
+    if "gdocs" in dt or "google_docs" in dt or "googledocs" in dt: return get_gdocs_service(db)
     logger.warning("Destination_type no reconocido: %s", destination_type)
     return None

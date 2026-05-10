@@ -1,0 +1,52 @@
+.ask-container { padding: 1.5rem 1.75rem; max-width: 1100px; margin: 0 auto; }
+.header h1 { margin: 0; font-size: 1.7rem; color: #0f172a; }
+.subtitle { color: #6b7280; margin: 0.25rem 0 1.25rem 0; }
+
+.composer {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 14px; padding: 1rem 1.1rem; margin-bottom: 1.25rem;
+}
+.filter-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.filter-row label { font-size: 0.85rem; color: #475569; }
+.filter-row select { padding: 0.4rem 0.7rem; border-radius: 8px; border: 1px solid #cbd5e1; }
+
+.input-row { display: flex; gap: 0.75rem; align-items: flex-end; }
+.input-row textarea {
+    flex: 1; padding: 0.7rem 0.9rem; border-radius: 10px;
+    border: 1px solid #cbd5e1; font-size: 0.95rem; font-family: inherit;
+    resize: vertical;
+}
+.btn-primary {
+    background: #4f46e5; color: #fff; border: 0; border-radius: 10px;
+    padding: 0.7rem 1.2rem; font-weight: 600; cursor: pointer; min-width: 130px;
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.history .empty { color: #94a3b8; padding: 1rem; }
+
+.turn {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 0.85rem;
+}
+.q { color: #1e293b; margin-bottom: 0.6rem; }
+.q strong { color: #4f46e5; }
+.model-tag {
+    margin-left: 0.6rem; font-size: 0.72rem; color: #94a3b8;
+    background: #f1f5f9; padding: 0.1rem 0.45rem; border-radius: 6px;
+}
+.a pre {
+    background: #f8fafc; border-left: 3px solid #4f46e5;
+    padding: 0.75rem 1rem; margin: 0; border-radius: 6px;
+    white-space: pre-wrap; font-family: inherit; line-height: 1.45;
+    color: #0f172a;
+}
+.citations { margin-top: 0.85rem; }
+.citations h4 { margin: 0 0 0.4rem 0; font-size: 0.85rem; color: #475569; }
+.citations ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.cite-link { color: #4f46e5; text-decoration: none; font-weight: 600; }
+.cite-link:hover { text-decoration: underline; }
+.dist { color: #94a3b8; font-size: 0.75rem; margin-left: 0.5rem; }
+.snippet {
+    margin: 0.3rem 0 0 0; color: #475569; font-size: 0.85rem;
+    background: #f8fafc; padding: 0.4rem 0.6rem; border-radius: 6px;
+}
