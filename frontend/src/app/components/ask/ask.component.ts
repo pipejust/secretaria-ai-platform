@@ -26,6 +26,7 @@ interface ChatTurn {
     answer: string;
     citations: Citation[];
     model: string;
+    chunks_used: number;
     timestamp: number;
 }
 
@@ -70,6 +71,13 @@ export class AskComponent implements OnInit, OnDestroy {
                 },
                 error: () => { /* permite preguntar sin filtro */ }
             });
+    }
+
+    onEnter(ev: Event): void {
+        const e = ev as KeyboardEvent;
+        if (e.shiftKey) return;
+        e.preventDefault();
+        this.submit();
     }
 
     submit(): void {

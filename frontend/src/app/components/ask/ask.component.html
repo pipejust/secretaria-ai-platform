@@ -17,7 +17,7 @@
         [(ngModel)]="question"
         rows="3"
         placeholder="Ej: ¿Qué decidimos sobre el rebranding la semana pasada?"
-        (keydown.enter)="$event.shiftKey ? null : (submit() && $event.preventDefault())"
+        (keydown.enter)="onEnter($event)"
         ></textarea>
       <button class="btn-primary" [disabled]="isAsking || !question.trim()" (click)="submit()">
         <span *ngIf="!isAsking">🔎 Preguntar</span>
