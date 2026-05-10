@@ -5,9 +5,10 @@ from jinja2 import Environment, FileSystemLoader
 from sqlmodel import Session, select
 from models import IntegrationSetting
 
-# En un entorno real, manejar la config via `config.py/settings`
-DEFAULT_RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-DEFAULT_FROM_EMAIL = os.environ.get("FROM_EMAIL", "no-reply@notiva.com")
+# Resend se configura SIEMPRE desde /admin/settings (UI) →
+# IntegrationSetting('smtp').config_json.{apiKey, senderEmail}.
+# Sin DB, no se envían correos: se imprime el HTML en consola (modo dev).
+DEFAULT_FROM_EMAIL = "no-reply@notiva.local"
 DEFAULT_TO_EMAIL = os.environ.get("TO_EMAIL", "felipesof@gmail.com")
 class EmailService:
     def __init__(self, db: Session = None):
@@ -47,7 +48,7 @@ class EmailService:
             
         self.jinja_env.filters['linkify'] = filter_linkify
         
-        self.api_key = DEFAULT_RESEND_API_KEY
+        self.api_key = None
         self.from_email = DEFAULT_FROM_EMAIL
 
         if db:
