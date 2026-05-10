@@ -189,12 +189,24 @@ def get_project_sessions(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Obtiene las sesiones de un proyecto"""
+    """Obtiene las sesiones de un proyecto (excluye archivadas).
+
+    El relationship `db_project.sessions` no permite filtrar limpio, así que
+    consultamos directamente y aplicamos `status != 'archived'` igual que
+    /api/sessions/.
+    """
+    from sqlmodel import select
     db_project = crud.project.get(session, project_id)
     if not db_project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    return db_project.sessions
+    rows = session.exec(
+        select(MeetingSession)
+        .where(MeetingSession.project_id == project_id)
+        .where(MeetingSession.status != "archived")
+        .order_by(MeetingSession.id.desc())
+    ).all()
+    return rows
 
 
 @router.get("/{project_id}/dashboard")
@@ -216,6 +228,7 @@ def get_project_dashboard(
     sessions_raw = session.exec(
         select(MeetingSession)
         .where(MeetingSession.project_id == project_id)
+        .where(MeetingSession.status != "archived")
         .order_by(MeetingSession.id.desc())
     ).all()
 

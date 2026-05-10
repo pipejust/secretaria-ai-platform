@@ -27,20 +27,32 @@ def get_sessions(
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     search: str = Query(None, description="Search by title or id"),
     status: str = Query(None, description="Filter by status"),
+    include_archived: bool = Query(False, description="Include archived sessions"),
     db: Session = Depends(get_session)
 ):
-    """Fetch paginated meeting sessions (Actas) from the database."""
+    """Fetch paginated meeting sessions (Actas) from the database.
+
+    Por defecto excluye sesiones con status='archived' (placeholders sin
+    contenido recuperable, p.ej. webhooks de Fireflies que nunca completaron).
+    Pasar `include_archived=true` para verlas (debugging/admin).
+    """
     from sqlmodel import select, func, or_
     import math
-    
+
     query = select(MeetingSession)
-    
+
+    # Por defecto ocultamos las sesiones archivadas (basura sin contenido).
+    # Si el caller pide explícitamente status='archived', NO aplicamos el filtro
+    # — quiere ver justamente esas.
+    if not include_archived and status != "archived":
+        query = query.where(MeetingSession.status != "archived")
+
     if project_id is not None:
         query = query.where(MeetingSession.project_id == project_id)
-        
+
     if status:
         query = query.where(MeetingSession.status == status)
-        
+
     if search:
         search_filter = f"%{search}%"
         conditions = [MeetingSession.title.ilike(search_filter)]
