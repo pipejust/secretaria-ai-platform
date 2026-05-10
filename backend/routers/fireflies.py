@@ -98,6 +98,56 @@ async def _dispatch_routing(
         return
 
     dest_type = (routing.destination_type or "").lower()
+
+    # Sprint 05/06 — destinos de tipo "broadcast" (Slack/Notion/Teams/GDocs/CRM)
+    # NO crean una tarea por action_item, sino que despachan UNA notificación
+    # consolidada por sesión.
+    if any(k in dest_type for k in ("slack", "notion", "teams", "msteams", "gdocs", "google_docs")):
+        try:
+            from sqlmodel import select as _sel
+            sess = db.get(MeetingSession, action_items[0].session_id) if action_items else None
+            title = sess.title if sess else "Sesión Notiva"
+            summary = (sess.raw_summary if sess else "")[:1500]
+            count = len(action_items)
+            if "slack" in dest_type:
+                await service.post_summary(channel=config.get("channel"), title=title,
+                                           summary_md=summary, action_items_count=count)
+            elif "notion" in dest_type:
+                await service.create_page(title=title, summary_md=summary,
+                                          project_name=(sess.project.name if sess and sess.project else None) if sess else None)
+            elif "teams" in dest_type or "msteams" in dest_type:
+                await service.post_card(title=title, summary_md=summary)
+            elif "gdocs" in dest_type or "google_docs" in dest_type:
+                await service.create_doc(title=title, body_md=summary)
+        except Exception:
+            logger.exception("Broadcast routing %s falló", routing.destination_type)
+        return
+
+    if any(k in dest_type for k in ("hubspot", "salesforce", "pipedrive")):
+        # CRM: requiere identificar deal por email. Best-effort por primer attendee
+        # con email del action_item.
+        primary_email = next((a.owner_email for a in action_items if a.owner_email), None)
+        if not primary_email:
+            logger.info("Routing CRM %s: sin email de attendee, no se attachea.", dest_type)
+            return
+        body_html = f"<p>{(action_items[0].description or '').replace(chr(10), '<br>')}</p>"
+        try:
+            if "hubspot" in dest_type:
+                deal = await service.find_deal_by_email(primary_email)
+                if deal: await service.attach_note(deal["id"], body_html)
+            elif "salesforce" in dest_type:
+                opp = await service.find_opportunity_by_email(primary_email)
+                if opp: await service.attach_task(opp["Id"],
+                                                  subject=(action_items[0].title or "Notiva")[:255],
+                                                  description=body_html)
+            elif "pipedrive" in dest_type:
+                deal = await service.find_deal_by_email(primary_email)
+                if deal: await service.add_note(deal["id"], body_html)
+        except Exception:
+            logger.exception("CRM routing %s falló", dest_type)
+        return
+
+    # Resto: tareas por action_item (Trello/Jira/ClickUp/Azure)
     for act in action_items:
         try:
             if "trello" in dest_type:

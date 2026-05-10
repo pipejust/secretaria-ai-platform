@@ -30,6 +30,10 @@ from services.integrations.slack import SlackIntegrationService
 from services.integrations.notion import NotionIntegrationService
 from services.integrations.microsoft_teams import MicrosoftTeamsIntegrationService
 from services.integrations.google_docs import GoogleDocsIntegrationService
+# Sprint 06 — CRM
+from services.integrations.hubspot import HubspotIntegrationService
+from services.integrations.salesforce import SalesforceIntegrationService
+from services.integrations.pipedrive import PipedriveIntegrationService
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +124,24 @@ def get_gdocs_service(db: Session) -> GoogleDocsIntegrationService:
     return GoogleDocsIntegrationService(cfg["access_token"], cfg.get("refresh_token"))
 
 
+def get_hubspot_service(db: Session) -> HubspotIntegrationService:
+    cfg = _load_provider_config(db, "hubspot")
+    _require(cfg, ["private_app_token"], "hubspot")
+    return HubspotIntegrationService(cfg["private_app_token"])
+
+
+def get_salesforce_service(db: Session) -> SalesforceIntegrationService:
+    cfg = _load_provider_config(db, "salesforce")
+    _require(cfg, ["instance_url", "access_token"], "salesforce")
+    return SalesforceIntegrationService(cfg["instance_url"], cfg["access_token"])
+
+
+def get_pipedrive_service(db: Session) -> PipedriveIntegrationService:
+    cfg = _load_provider_config(db, "pipedrive")
+    _require(cfg, ["api_token", "company_domain"], "pipedrive")
+    return PipedriveIntegrationService(cfg["api_token"], cfg["company_domain"])
+
+
 def get_service_for_destination(
     db: Session, destination_type: str
 ) -> Optional[object]:
@@ -137,5 +159,9 @@ def get_service_for_destination(
     if "notion" in dt: return get_notion_service(db)
     if "teams" in dt or "msteams" in dt: return get_msteams_service(db)
     if "gdocs" in dt or "google_docs" in dt or "googledocs" in dt: return get_gdocs_service(db)
+    # Sprint 06 — CRM
+    if "hubspot" in dt: return get_hubspot_service(db)
+    if "salesforce" in dt: return get_salesforce_service(db)
+    if "pipedrive" in dt: return get_pipedrive_service(db)
     logger.warning("Destination_type no reconocido: %s", destination_type)
     return None
