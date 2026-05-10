@@ -102,6 +102,8 @@ from routers import calendar as calendar_router  # Sprint 03
 app.include_router(calendar_router.router)
 from routers import role_outputs  # Sprint 04
 app.include_router(role_outputs.router)
+from routers import collab  # Sprint 07
+app.include_router(collab.router)
 
 
 @app.get("/")
