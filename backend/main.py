@@ -1,7 +1,7 @@
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import create_db_and_tables
@@ -19,6 +19,27 @@ app = FastAPI(
     description="Orquestador principal para procesamiento de actas y tareas",
     version="1.0.0"
 )
+
+# === Sprint 11 — Rate limiting global con slowapi ===
+# Solo se activa si slowapi está instalado. En entornos sin la dep, sigue.
+try:
+    from slowapi import Limiter
+    from slowapi.errors import RateLimitExceeded
+    from slowapi.middleware import SlowAPIMiddleware
+    from slowapi.util import get_remote_address
+
+    limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
+    app.state.limiter = limiter
+
+    @app.exception_handler(RateLimitExceeded)
+    async def _rl_exceeded(request: Request, exc: RateLimitExceeded):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": f"Rate limit exceeded: {exc.detail}"}, status_code=429)
+
+    app.add_middleware(SlowAPIMiddleware)
+    logger.info("Rate limiter activo (120 req/min por IP).")
+except ImportError:
+    logger.warning("slowapi no instalado; rate limiting desactivado.")
 
 # Configurar CORS para permitir peticiones desde el frontend Angular ANTES de cargar los routers
 app.add_middleware(
@@ -104,6 +125,12 @@ from routers import role_outputs  # Sprint 04
 app.include_router(role_outputs.router)
 from routers import collab  # Sprint 07
 app.include_router(collab.router)
+from routers import me  # Sprint 08 — GDPR
+app.include_router(me.router)
+from routers import analytics  # Sprint 10
+app.include_router(analytics.router)
+from routers import api_keys  # Sprint 11
+app.include_router(api_keys.router)
 
 
 @app.get("/")

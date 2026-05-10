@@ -241,17 +241,51 @@ def check_and_dispatch_pending_sessions() -> None:
                 )
 
 
+def check_overdue_action_items() -> None:
+    """Sprint 10 — log de tareas vencidas no completadas. Backbone para
+    push notifications futuras (Firebase). Por ahora solo loguea para que
+    el operador vea las pendientes en los logs.
+    """
+    from datetime import datetime as _dt
+    with Session(engine) as session:
+        items = session.exec(
+            select(ActionItem).where(ActionItem.status.in_(["pending", "blocked"]))
+        ).all()
+        now = _dt.now()
+        overdue = 0
+        for it in items:
+            if not it.due_date:
+                continue
+            try:
+                due = _dt.fromisoformat(str(it.due_date).replace("Z", "+00:00"))
+            except ValueError:
+                try:
+                    due = _dt.strptime(str(it.due_date)[:10], "%Y-%m-%d")
+                except ValueError:
+                    continue
+            if due.tzinfo:
+                due = due.replace(tzinfo=None)
+            if due < now:
+                overdue += 1
+        if overdue:
+            logger.info("OVERDUE_TASKS=%s", overdue)
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     check_and_dispatch_pending_sessions, "interval", minutes=5, max_instances=1
+)
+# Sprint 10 — alertas de vencimiento (cada 1 hora)
+scheduler.add_job(
+    check_overdue_action_items, "interval", hours=1, max_instances=1
 )
 
 
 def start_cron() -> None:
     scheduler.start()
-    logger.info("Auto-curación cron iniciado (cada 5 min).")
+    logger.info("Cron iniciado: auto-curación cada 5 min + overdue check cada 1h.")
 
 
 def stop_cron() -> None:
     scheduler.shutdown()
-    logger.info("Auto-curación cron detenido.")
+    logger.info("Cron detenido.")

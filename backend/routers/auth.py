@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -59,21 +59,38 @@ def require_admin(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/login")
-def login_for_access_token(login_req: LoginRequest, db: Session = Depends(get_session)):
+def login_for_access_token(
+    login_req: LoginRequest,
+    request: Request,
+    db: Session = Depends(get_session),
+):
     user = db.exec(select(User).where(User.email == login_req.username)).first()
     if not user or not verify_password(login_req.password, user.hashed_password):
+        # Audit del intento fallido
+        try:
+            from services import audit as _audit
+            _audit.log(db, None, request, action="login_failed",
+                       resource_type="user", resource_id=login_req.username)
+        except Exception:
+            pass
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    # in JWT payload, typically "sub" is used for identify subject
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role.name if user.role else ""}, 
+        data={"sub": user.email, "role": user.role.name if user.role else ""},
         expires_delta=access_token_expires
     )
+    # Audit login OK
+    try:
+        from services import audit as _audit
+        _audit.log(db, user, request, action="login_ok",
+                   resource_type="user", resource_id=user.id)
+    except Exception:
+        pass
     return {"access_token": access_token, "token_type": "bearer"}
 
 
