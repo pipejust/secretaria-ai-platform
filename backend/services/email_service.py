@@ -21,7 +21,12 @@ class EmailService:
         def filter_linkify(text):
             if not text: return text
             safe_text = html.escape(str(text)).replace('\n', '<br>')
-            regex = r'(?P<email>[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(?P<whatsapp>(?P<wa_prefix>(?i)[wW]hats[aA]pp|[wW]pp|[wW]a\b|[wW]s\b)(?P<wa_sep>\s*[:\-#]*\s*)(?P<wa_num>\+?[\d][\d\s\-\.]{6,15}\d))|(?P<phone>(?<!\w)\+?[\d][\d\s\-\.]{6,15}\d(?!\w))'
+            # Python 3.11+ exige los flags inline `(?i)` al INICIO del patrón global.
+            # Tenerlo en medio de un grupo (como estaba) lanza
+            # `re.error: global flags not at the start of the expression at position 85`
+            # y rompía /api/sessions/{id}/dispatch_emails (los correos quedaban en
+            # status="failed" sin razón clara para el operador).
+            regex = r'(?i)(?P<email>[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})|(?P<whatsapp>(?P<wa_prefix>whatsapp|wpp|wa\b|ws\b)(?P<wa_sep>\s*[:\-#]*\s*)(?P<wa_num>\+?[\d][\d\s\-\.]{6,15}\d))|(?P<phone>(?<!\w)\+?[\d][\d\s\-\.]{6,15}\d(?!\w))'
             def replacer(m):
                 if m.group('email'):
                     addr = m.group('email')
