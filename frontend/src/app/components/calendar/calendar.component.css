@@ -1,0 +1,49 @@
+.cal-container { padding: 1.5rem 1.75rem; max-width: 1100px; margin: 0 auto; }
+.header h1 { margin: 0; font-size: 1.7rem; color: #0f172a; }
+.subtitle { color: #6b7280; margin: 0.25rem 0 1.25rem 0; }
+
+.connect-row { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.btn { padding: 0.55rem 1rem; border-radius: 10px; border: 0; cursor: pointer; font-weight: 600; }
+.btn-google { background: #4285f4; color: #fff; }
+.btn-ms     { background: #2f6fb1; color: #fff; }
+.btn-sync   { background: #4f46e5; color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.accounts h2, .events h2 { margin: 1rem 0 0.5rem 0; font-size: 1.05rem; color: #0f172a; }
+.accounts ul { list-style: none; padding: 0; margin: 0; }
+.acc-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.55rem 0.85rem; background: #fff;
+    border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 0.4rem;
+}
+.provider {
+    font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px;
+    color: #fff; text-transform: uppercase;
+}
+.provider--google    { background: #4285f4; }
+.provider--microsoft { background: #2f6fb1; }
+.email { color: #1e293b; font-weight: 500; }
+.status { color: #10b981; font-size: 0.85rem; margin-left: auto; }
+.status.inactive { color: #ef4444; }
+.btn-link {
+    background: transparent; border: 0; color: #ef4444;
+    cursor: pointer; font-size: 0.85rem; text-decoration: underline;
+}
+
+.event-list { list-style: none; padding: 0; margin: 0; }
+.event-row {
+    display: grid; grid-template-columns: 160px 1fr; gap: 1rem;
+    padding: 0.85rem 1rem; background: #fff;
+    border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 0.5rem;
+}
+.ev-time { color: #64748b; font-size: 0.85rem; }
+.ev-body strong { color: #0f172a; }
+.ev-meta {
+    display: flex; gap: 0.85rem; align-items: center;
+    margin-top: 0.3rem; color: #64748b; font-size: 0.85rem;
+}
+.ev-meta a { color: #4f46e5; text-decoration: none; }
+.ev-meta a:hover { text-decoration: underline; }
+.link-session { background: #d1fae5; padding: 0.1rem 0.55rem; border-radius: 6px; color: #065f46 !important; }
+.badge-missing { background: #fef3c7; padding: 0.1rem 0.55rem; border-radius: 6px; color: #92400e; }
+.hint { color: #94a3b8; padding: 0.5rem 0; }

@@ -1,0 +1,52 @@
+<div class="cal-container">
+  <header class="header">
+    <h1>Calendario</h1>
+    <p class="subtitle">Conecta tu Google o Microsoft Calendar para que Notiva pueda
+       enlazar las próximas reuniones con sus actas automáticamente.</p>
+  </header>
+
+  <section class="connect-row">
+    <button class="btn btn-google" (click)="connect('google')">📅 Conectar Google</button>
+    <button class="btn btn-ms" (click)="connect('microsoft')">📅 Conectar Microsoft 365</button>
+    <button class="btn btn-sync" [disabled]="isSyncing || !accounts.length" (click)="syncNow()">
+      <span *ngIf="!isSyncing">🔄 Sincronizar ahora</span>
+      <span *ngIf="isSyncing">⌛ Sincronizando…</span>
+    </button>
+  </section>
+
+  <section class="accounts" *ngIf="accounts.length">
+    <h2>Cuentas conectadas</h2>
+    <ul>
+      <li *ngFor="let a of accounts; trackBy: trackById" class="acc-row">
+        <span class="provider provider--{{a.provider}}">{{ a.provider }}</span>
+        <span class="email">{{ a.account_email }}</span>
+        <span class="status" [class.inactive]="!a.is_active">{{ a.is_active ? '✓ Activa' : '✗ Inactiva' }}</span>
+        <button class="btn-link" (click)="disconnect(a)">Desconectar</button>
+      </li>
+    </ul>
+  </section>
+
+  <section class="events">
+    <h2>Próximos 7 días</h2>
+    <p *ngIf="isLoading" class="hint">Cargando…</p>
+    <p *ngIf="!isLoading && !events.length" class="hint">
+      Sin eventos próximos. Conecta una cuenta y presiona "Sincronizar ahora".
+    </p>
+    <ul *ngIf="!isLoading && events.length" class="event-list">
+      <li *ngFor="let ev of events; trackBy: trackById" class="event-row">
+        <div class="ev-time">{{ formatDate(ev.start_at) }}</div>
+        <div class="ev-body">
+          <strong>{{ ev.title }}</strong>
+          <div class="ev-meta">
+            <span *ngIf="ev.attendees?.length">{{ ev.attendees.length }} asistentes</span>
+            <a *ngIf="ev.meeting_url" [href]="ev.meeting_url" target="_blank" rel="noopener">📞 unirse</a>
+            <a *ngIf="ev.session_id" [routerLink]="['/admin/curation', ev.session_id]" class="link-session">
+              ✓ acta #{{ ev.session_id }}
+            </a>
+            <span *ngIf="!ev.session_id" class="badge-missing">⚠ Sin acta aún</span>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </section>
+</div>

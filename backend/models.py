@@ -211,6 +211,40 @@ class SessionPermission(SQLModel, table=True):
     granted_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
+class CalendarAccount(SQLModel, table=True):
+    """Sprint 03 — credenciales OAuth de un usuario para Google/Microsoft."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    provider: str = Field(index=True, description="'google' | 'microsoft'")
+    account_email: str
+    access_token: str = Field(description="Cifrar en producción; plaintext en dev.")
+    refresh_token: Optional[str] = Field(default=None)
+    token_expires_at: Optional[str] = Field(default=None)
+    scopes: str = Field(default="")
+    is_active: bool = Field(default=True)
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class CalendarEvent(SQLModel, table=True):
+    """Sprint 03 — evento sincronizado desde Google/Microsoft."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    calendar_account_id: int = Field(foreign_key="calendaraccount.id", index=True)
+    external_id: str = Field(index=True, description="ID nativo del provider")
+    title: str
+    start_at: str
+    end_at: str
+    attendees_json: str = Field(default="[]")
+    meeting_url: Optional[str] = Field(default=None)
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id")
+    session_id: Optional[int] = Field(
+        default=None, foreign_key="meetingsession.id",
+        description="Vincula al MeetingSession cuando llega su acta.",
+    )
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
 class AuditLog(SQLModel, table=True):
     """Sprint 08 — audit log para SOC 2 / GDPR compliance."""
 

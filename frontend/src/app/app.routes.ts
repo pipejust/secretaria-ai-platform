@@ -111,7 +111,19 @@ export const routes: Routes = [
                 path: 'ask',
                 loadComponent: () => import('./components/ask/ask.component').then(m => m.AskComponent),
                 title: 'Ask Notiva | Notiva',
-                data: { description: 'Chat con RAG sobre tus actas anteriores. Haz preguntas y Notiva responde citando las sesiones específicas.', robots: 'noindex, nofollow' }
+                data: { description: 'Chat con RAG sobre tus actas anteriores.', robots: 'noindex, nofollow' }
+            },
+            {
+                path: 'calendar',
+                loadComponent: () => import('./components/calendar/calendar.component').then(m => m.CalendarComponent),
+                title: 'Calendario | Notiva',
+                data: { description: 'Conecta tu Google o Microsoft Calendar.', robots: 'noindex, nofollow' }
+            },
+            {
+                path: 'outputs/:id',
+                loadComponent: () => import('./components/role-outputs/role-outputs.component').then(m => m.RoleOutputsComponent),
+                title: 'Outputs | Notiva',
+                data: { description: 'Genera artefactos role-específicos a partir del acta.', robots: 'noindex, nofollow' }
             },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
