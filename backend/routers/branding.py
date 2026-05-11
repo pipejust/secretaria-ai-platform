@@ -49,6 +49,11 @@ class BrandingPatch(BaseModel):
     primary_color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
     secondary_color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
     accent_color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    # Permite borrar logo/icon enviando "" — útil para "quitar" desde la UI
+    # sin tener que invocar DELETE /logo o /icon. Aceptamos data URLs para
+    # casos donde el cliente prefiere PATCH+body en vez de POST multipart.
+    logo_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
+    icon_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
 
 
 @router.get("/")

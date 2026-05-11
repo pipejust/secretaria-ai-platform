@@ -150,6 +150,31 @@
   margin-bottom: 1.5rem;
 }
 
+/* Imagologo / icono — preview cuadrado y compacto, fondo sólido (no
+   gradiente) para reflejar cómo se ve en el sidebar colapsado. */
+.icon-preview {
+  height: 120px;
+  width: 120px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .75rem;
+  overflow: hidden;
+}
+
+.icon-preview img {
+  max-height: 80px;
+  max-width: 80px;
+  object-fit: contain;
+}
+
+.icon-placeholder {
+  font-size: 2.4rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .email-preview {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
