@@ -5,13 +5,23 @@
     <!-- Sidebar -->
     <aside class="sidebar" [class.collapsed]="isCollapsed" [class.mobile-open]="isMobileOpen">
         <div class="sidebar-header">
-            <a routerLink="/admin/dashboard" class="logo-area" style="text-decoration:none; color:inherit; cursor:pointer; display:flex; align-items:center; gap:.5rem;" title="Ir al inicio">
+            <a routerLink="/admin/dashboard" class="logo-area" title="Ir al inicio">
+                <!-- Si la empresa subió su logo, lo usamos. -->
                 <img *ngIf="branding.hasLogo() && !isCollapsed"
                      [src]="branding.logoUrl()"
                      [alt]="branding.companyName()"
-                     style="max-height:36px; max-width:140px;" />
-                <h2 *ngIf="!isCollapsed && !branding.hasLogo()">{{ branding.companyName() }}</h2>
-                <h2 *ngIf="isCollapsed" class="logo-collapsed">{{ (branding.companyName() || 'A').charAt(0) }}</h2>
+                     class="company-logo-sidebar" />
+                <!-- Default: monograma "A" Acten + nombre de empresa. -->
+                <ng-container *ngIf="!branding.hasLogo()">
+                    <img src="brand/acten-monogram.png" alt="" class="acten-monogram"
+                         [class.collapsed]="isCollapsed" />
+                    <span *ngIf="!isCollapsed" class="brand-text">
+                        <span class="brand-company">{{ branding.companyName() }}</span>
+                        <span class="brand-platform" *ngIf="branding.companyName() !== branding.platformName()">
+                            powered by Acten
+                        </span>
+                    </span>
+                </ng-container>
             </a>
         </div>
 
@@ -188,17 +198,40 @@
         <header class="topbar">
             <div class="topbar-left">
                 <button class="btn-icon mobile-menu-toggle" (click)="toggleMobileMenu()" title="Abrir Menú">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="3" y1="12" x2="21" y2="12"></line>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <line x1="3" y1="18" x2="21" y2="18"></line>
                     </svg>
                 </button>
-                <h3 class="page-title">Panel de Control</h3>
+                <div class="topbar-titles">
+                    <span class="topbar-eyebrow">{{ branding.companyName() }}</span>
+                    <h3 class="page-title">Panel de Control</h3>
+                </div>
+            </div>
+
+            <div class="topbar-center">
+                <div class="topbar-search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" placeholder="Buscar sesiones, proyectos, tareas…" />
+                    <kbd>⌘K</kbd>
+                </div>
             </div>
 
             <div class="topbar-right">
+                <button class="btn-icon-soft" title="Notificaciones">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <span class="dot-indicator"></span>
+                </button>
                 <div class="user-profile-container">
                     <div class="user-profile" (click)="toggleProfileDropdown()">
                         <div class="avatar-circle top-avatar" *ngIf="user">{{ getInitials(user.full_name) }}</div>

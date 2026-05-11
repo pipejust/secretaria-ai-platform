@@ -234,6 +234,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     sortColumn: string = 'id';
     sortDirection: 'asc' | 'desc' = 'desc';
 
+    /** Cuenta sesiones por status sobre el lote actualmente cargado.
+        Sirve para los KPI tiles del hero del dashboard. */
+    countByStatus(status: string): number {
+        return (this.sessions || []).filter((s) => s?.status === status).length;
+    }
+
     changePage(page: number) {
         if (page >= 1 && page <= this.totalPages) {
             this.currentPage = page;

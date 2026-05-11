@@ -31,14 +31,60 @@
     border-bottom: 1px solid rgba(245, 239, 227, 0.08);
 }
 
-.sidebar-header h2 {
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    min-height: 44px;
+}
+
+.acten-monogram {
+    height: 36px;
+    width: 36px;
+    object-fit: contain;
+    /* El PNG tiene fondo blanco; lo blanqueamos con backdrop circular cream
+       para que destaque sobre navy. */
+    background: var(--brand-cream-50);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+.acten-monogram.collapsed {
+    margin: 0 auto;
+}
+
+.company-logo-sidebar {
+    max-height: 40px;
+    max-width: 180px;
+    object-fit: contain;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    overflow: hidden;
+}
+
+.brand-company {
     font-family: var(--font-display);
-    font-size: var(--text-24);
+    font-size: var(--text-20);
     font-weight: var(--fw-semibold);
-    letter-spacing: var(--tracking-tight);
-    line-height: var(--lh-display);
-    margin: 0;
     color: var(--color-fg-on-dark);
+    letter-spacing: var(--tracking-tight);
+}
+
+.brand-platform {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    color: var(--brand-cream-500);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    margin-top: 2px;
+    font-weight: var(--fw-semibold);
 }
 
 .sidebar-header h2 span {
@@ -198,15 +244,16 @@
    El título de página usa Playfair Display para mantener la jerarquía
    visual del brand kit (display arriba, sans en la grilla). */
 .topbar {
-    height: 72px;
-    min-height: 72px;
-    display: flex;
-    justify-content: space-between;
+    height: 76px;
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(280px, 520px) auto;
     align-items: center;
     padding: 0 var(--space-32);
     background: var(--color-bg-topbar);
     color: var(--color-fg-default);
     border-bottom: 1px solid var(--color-border);
+    gap: var(--space-24);
     z-index: 5;
 }
 
@@ -214,11 +261,24 @@
     display: flex;
     align-items: center;
     gap: var(--space-12);
+    min-width: 0;
 }
 
-.topbar-right {
+.topbar-titles {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    line-height: 1.1;
+    min-width: 0;
+}
+
+.topbar-eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--color-fg-muted);
+    font-weight: var(--fw-semibold);
+    margin-bottom: 2px;
 }
 
 .page-title {
@@ -228,6 +288,108 @@
     letter-spacing: var(--tracking-tight);
     color: var(--color-fg-default);
     margin: 0;
+    line-height: var(--lh-display);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.topbar-center {
+    display: flex;
+    justify-content: center;
+}
+
+.topbar-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    width: 100%;
+    background: var(--brand-cream-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-8) var(--space-12);
+    transition: var(--transition);
+}
+
+.topbar-search:focus-within {
+    background: var(--color-bg-panel);
+    border-color: var(--brand-navy-300);
+    box-shadow: var(--shadow-ring-focus);
+}
+
+.topbar-search svg {
+    color: var(--color-fg-muted);
+    flex-shrink: 0;
+}
+
+.topbar-search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-14);
+    color: var(--color-fg-default);
+    min-height: auto;
+}
+
+.topbar-search input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.topbar-search input::placeholder {
+    color: var(--color-fg-muted);
+}
+
+.topbar-search kbd {
+    font-family: var(--font-mono);
+    font-size: var(--text-12);
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    padding: 2px 6px;
+    color: var(--color-fg-muted);
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+    justify-self: end;
+}
+
+.btn-icon-soft {
+    position: relative;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--color-fg-muted);
+    padding: var(--space-8);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    width: 40px;
+    transition: var(--transition);
+}
+
+.btn-icon-soft:hover {
+    background: var(--brand-cream-100);
+    color: var(--color-fg-default);
+}
+
+.dot-indicator {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--brand-gold-500);
+    border: 2px solid var(--color-bg-topbar);
 }
 
 .user-profile-container {

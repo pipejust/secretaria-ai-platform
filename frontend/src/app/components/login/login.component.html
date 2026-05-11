@@ -1,70 +1,110 @@
-<div class="login-page fade-in">
-    <div class="login-card glass-panel">
-            <div class="logo">
-                <img *ngIf="branding.hasLogo()"
-                     [src]="branding.logoUrl()"
-                     [alt]="branding.companyName()"
-                     class="company-logo" />
-                <h2>{{ branding.companyName() }}</h2>
-                <small class="platform-tag" *ngIf="branding.companyName() !== branding.platformName()">
-                    Powered by {{ branding.platformName() }}
-                </small>
-                <p>Inicia sesión para gestionar actas, tareas y configuraciones.</p>
-            </div>
+<div class="login-page">
+    <!-- Header con logo: arriba-izquierda como en el handoff -->
+    <header class="login-header">
+        <a routerLink="/" class="brand-mark">
+            <img src="brand/acten-logo-full.png" alt="Acten" class="brand-logo" />
+        </a>
+        <span class="header-tagline">{{ branding.brand().platform_tagline }}</span>
+    </header>
 
-        <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
-            <div class="form-group" *ngIf="showTenantField">
-                <label>Empresa</label>
-                <input type="text" [(ngModel)]="tenantSlug" name="tenantSlug"
-                       class="form-control"
-                       placeholder="acten"
-                       [readonly]="tenantLocked" />
-                <small class="hint">Identificador de tu empresa (ej. <code>acten</code>, <code>nexura</code>).</small>
-            </div>
+    <!-- Layout split: panel izquierdo (claim editorial) + card derecha (form) -->
+    <main class="login-main">
+        <section class="login-claim">
+            <p class="claim-eyebrow">Acten Platform</p>
+            <h1 class="claim-headline">
+                Bienvenido de vuelta a tu sala de actas inteligente.
+            </h1>
+            <p class="claim-body">
+                Acten convierte cada conversación en decisiones rastreables, tareas
+                accionables y reportes que tu equipo realmente usa.
+            </p>
+            <ul class="claim-bullets">
+                <li><span class="dot dot-teal"></span> Captura — transcripciones de Fireflies y subidas manuales</li>
+                <li><span class="dot dot-gold"></span> Interpreta — IA extrae decisiones, riesgos y acuerdos</li>
+                <li><span class="dot dot-navy"></span> Organiza — proyectos, plantillas y permisos por rol</li>
+                <li><span class="dot dot-coral"></span> Ejecuta — despacha tareas a Trello, Jira, ClickUp, Azure</li>
+            </ul>
+        </section>
 
-            <div class="form-group">
-                <label>Correo Electrónico</label>
-                <input type="email" [(ngModel)]="email" name="email" class="form-control" required
-                    placeholder="admin@empresa.com" />
-            </div>
-
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <div class="input-wrapper password-wrapper">
-                    <input [type]="showPassword ? 'text' : 'password'" id="password" name="password"
-                        [(ngModel)]="password" required placeholder="••••••••" />
-                    <button type="button" class="btn-icon toggle-password" (click)="togglePassword()">
-                        <!-- Icono de Ojito usando SVG básico para no agregar librerias -->
-                        <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
-                            </path>
-                            <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                    </button>
+        <section class="login-card-wrap">
+            <div class="login-card">
+                <div *ngIf="branding.hasLogo()" class="company-logo-row">
+                    <img [src]="branding.logoUrl()" [alt]="branding.companyName()" class="company-logo" />
                 </div>
-            </div>
 
-            <div class="forgot-link">
-                <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
-            </div>
+                <header class="card-head">
+                    <h2 class="card-headline">Iniciar sesión</h2>
+                    <p class="card-sub" *ngIf="branding.companyName() !== branding.platformName()">
+                        Accediendo al espacio de
+                        <strong>{{ branding.companyName() }}</strong>
+                    </p>
+                    <p class="card-sub" *ngIf="branding.companyName() === branding.platformName()">
+                        Usa el correo y contraseña de tu organización.
+                    </p>
+                </header>
 
-            <div class="error-msg" *ngIf="errorMessage">
-                {{ errorMessage }}
-            </div>
+                <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="card-form">
+                    <div class="field" *ngIf="showTenantField">
+                        <label for="tenantSlug">Empresa</label>
+                        <input id="tenantSlug" type="text" [(ngModel)]="tenantSlug" name="tenantSlug"
+                               placeholder="acten" autocomplete="off"
+                               [readonly]="tenantLocked" />
+                        <small class="field-hint">Identificador URL ej. <code>acten</code> · <code>nexura</code>.</small>
+                    </div>
 
-            <button type="submit" class="btn btn-primary w-full" [disabled]="!loginForm.form.valid || isLoading">
-                <span *ngIf="!isLoading">Iniciar Sesión</span>
-                <span *ngIf="isLoading">Verificando...</span>
-            </button>
-        </form>
-    </div>
+                    <div class="field">
+                        <label for="email">Correo electrónico</label>
+                        <input id="email" type="email" [(ngModel)]="email" name="email" required
+                               placeholder="tu@empresa.com" autocomplete="email" />
+                    </div>
+
+                    <div class="field">
+                        <label for="password">Contraseña</label>
+                        <div class="password-wrap">
+                            <input [type]="showPassword ? 'text' : 'password'" id="password" name="password"
+                                   [(ngModel)]="password" required placeholder="••••••••" autocomplete="current-password" />
+                            <button type="button" class="toggle-password" (click)="togglePassword()" aria-label="Mostrar/ocultar contraseña">
+                                <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row-between">
+                        <label class="check">
+                            <input type="checkbox" />
+                            <span>Mantener sesión iniciada</span>
+                        </label>
+                        <a routerLink="/forgot-password" class="text-link">¿Olvidaste tu contraseña?</a>
+                    </div>
+
+                    <div class="error-banner" *ngIf="errorMessage" role="alert">
+                        {{ errorMessage }}
+                    </div>
+
+                    <button type="submit" class="btn-cta" [disabled]="!loginForm.form.valid || isLoading">
+                        <span *ngIf="!isLoading">Entrar a {{ branding.companyName() }}</span>
+                        <span *ngIf="isLoading">Verificando…</span>
+                    </button>
+
+                    <p class="card-foot">
+                        ¿No tienes cuenta? Tu administrador la crea en
+                        <code>/admin/users</code>.
+                    </p>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer class="login-footer">
+        <span>© {{ year }} {{ branding.platformName() }}</span>
+        <span class="dot-sep">·</span>
+        <span>From conversation to clarity.</span>
+    </footer>
 </div>

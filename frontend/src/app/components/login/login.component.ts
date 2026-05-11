@@ -30,6 +30,7 @@ export class LoginComponent implements OnInit {
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
     private readonly tenants = inject(TenantService);
+    readonly year = new Date().getFullYear();
 
     constructor(private authService: AuthService, private router: Router) { }
 

@@ -1,38 +1,82 @@
-<div class="fade-in">
-    <div class="header-actions">
-        <div>
-            <h2 class="section-title">Registro de Sesiones</h2>
-            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Visualiza sesiones procesadas por
-                inteligencia artificial o carga las tuyas manualmente.</p>
+<div class="acten-dashboard">
+    <!-- Hero del dashboard estilo editorial -->
+    <header class="dash-hero">
+        <div class="dash-hero-left">
+            <p class="acten-eyebrow">Operaciones · Sesiones</p>
+            <h1 class="dash-hero-title">Registro de Sesiones</h1>
+            <p class="dash-hero-sub">
+                Cada conversación, transcrita y curada por IA. Despachá tareas a tu equipo
+                y a tus integraciones sin salir de aquí.
+            </p>
         </div>
-        <button class="btn btn-primary" (click)="openUploadModal()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                style="margin-right:0.5rem;">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            Nueva Subida Manual
-        </button>
-    </div>
+        <div class="dash-hero-right">
+            <button class="btn-cta-light" (click)="openUploadModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Nueva subida manual
+            </button>
+        </div>
+    </header>
 
-    <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
-        <input type="text" class="modern-search" placeholder="🔍 Buscar por título, proyecto o fecha (dd/mm/aaaa)…" [(ngModel)]="searchText" (input)="onSearchInput()" (keyup.enter)="currentPage = 1; loadSessions()" style="flex:1;">
-        
-        <select class="glass-select" [(ngModel)]="filterProjectId" (change)="currentPage = 1; loadSessions()" style="width:250px;">
-            <option value="">Todos los Proyectos</option>
+    <!-- KPI tiles del handoff: 4 métricas con sparkline-style mini -->
+    <section class="kpi-row" aria-label="Métricas del período">
+        <article class="kpi-tile">
+            <span class="kpi-label">Sesiones totales</span>
+            <span class="kpi-value">{{ totalItems || sessions.length }}</span>
+            <span class="kpi-trend kpi-trend-up">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                </svg>
+                <span>Aislado por empresa</span>
+            </span>
+        </article>
+        <article class="kpi-tile">
+            <span class="kpi-label">Pendientes</span>
+            <span class="kpi-value">{{ countByStatus('pending') }}</span>
+            <span class="kpi-trend">Esperan curación humana</span>
+        </article>
+        <article class="kpi-tile">
+            <span class="kpi-label">Completadas</span>
+            <span class="kpi-value">{{ countByStatus('completed') }}</span>
+            <span class="kpi-trend kpi-trend-good">Despachadas a integraciones</span>
+        </article>
+        <article class="kpi-tile">
+            <span class="kpi-label">Proyectos activos</span>
+            <span class="kpi-value">{{ projects.length }}</span>
+            <span class="kpi-trend">Visibles para esta empresa</span>
+        </article>
+    </section>
+
+    <!-- Filtros editoriales -->
+    <div class="filter-bar">
+        <div class="filter-search">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" placeholder="Buscar por título, proyecto o fecha (dd/mm/aaaa)…"
+                   [(ngModel)]="searchText" (input)="onSearchInput()"
+                   (keyup.enter)="currentPage = 1; loadSessions()" />
+        </div>
+
+        <select class="filter-select" [(ngModel)]="filterProjectId" (change)="currentPage = 1; loadSessions()">
+            <option value="">Todos los proyectos</option>
             <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
         </select>
-        
-        <select class="glass-select" [(ngModel)]="statusFilter" (change)="currentPage = 1; loadSessions()" style="width:250px;">
-            <option value="">Todos los Estados</option>
-            <option value="pending">Pendiente de Curación</option>
+
+        <select class="filter-select" [(ngModel)]="statusFilter" (change)="currentPage = 1; loadSessions()">
+            <option value="">Todos los estados</option>
+            <option value="pending">Pendiente de curación</option>
             <option value="processing">Procesando IA</option>
             <option value="completed">Completado</option>
         </select>
-        
-        <button class="btn btn-secondary" (click)="currentPage = 1; loadSessions()">Buscar</button>
+
+        <button class="btn-filter-action" (click)="currentPage = 1; loadSessions()">Buscar</button>
     </div>
 
     <div class="card glass-panel flex-2">
@@ -126,29 +170,38 @@
                         </td>
                         <td>{{ s.date | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td>
-                            <span class="status-indicator" [class.active]="s.status === 'completed'" [ngStyle]="{'background': s.status === 'processing' ? '#fef08a' : '', 'color': s.status === 'processing' ? '#854d0e' : ''}">
-                                <span *ngIf="s.status === 'processing'" style="display:inline-block; margin-right:4px;">⏳</span>
-                                {{ s.status === 'completed' ? 'Completado' : (s.status === 'processing' ? 'Procesando IA...' : 'Pendiente Curación') }}
+                            <span class="status-pill"
+                                  [class.pill-completed]="s.status === 'completed'"
+                                  [class.pill-pending]="s.status === 'pending'"
+                                  [class.pill-processing]="s.status === 'processing'">
+                                <span class="pill-dot"></span>
+                                {{ s.status === 'completed' ? 'Completado' : (s.status === 'processing' ? 'Procesando IA' : 'Pendiente curación') }}
                             </span>
                         </td>
                         <td class="actions-cell">
                             <div class="actions-wrap">
-                                <button class="btn btn-sm btn-secondary"
-                                    (click)="viewCuration(s.id)">
-                                    {{ s.status === 'completed' ? 'Detalle de la Sesión' : 'Ver Curación' }}
+                                <button class="btn-row btn-row-primary"
+                                        (click)="viewCuration(s.id)">
+                                    {{ s.status === 'completed' ? 'Detalle' : 'Curar' }}
                                 </button>
-                                <button class="btn btn-sm" style="background:#2563eb; color:white; border:none; padding: 0.4rem 0.6rem; border-radius: 4px; display:flex; align-items:center; cursor: pointer;" (click)="generateActa(s, 'word')" title="Descargar Word" [disabled]="generatingIds[s.id + '_word']">
-                                    <svg *ngIf="!generatingIds[s.id + '_word']" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                    <i *ngIf="generatingIds[s.id + '_word']" class="fas fa-spinner fa-spin" style="margin-right:4px; font-size:14px;"></i>
-                                    {{ generatingIds[s.id + '_word'] ? 'Cargando' : 'Word' }}
+                                <button class="btn-row btn-row-ghost"
+                                        (click)="generateActa(s, 'word')"
+                                        title="Descargar Word"
+                                        [disabled]="generatingIds[s.id + '_word']">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                    {{ generatingIds[s.id + '_word'] ? '…' : 'Word' }}
                                 </button>
-                                <button class="btn btn-sm" style="background:#ef4444; color:white; border:none; padding: 0.4rem 0.6rem; border-radius: 4px; display:flex; align-items:center; cursor: pointer;" (click)="generateActa(s, 'pdf')" title="Descargar PDF" [disabled]="generatingIds[s.id + '_pdf']">
-                                    <svg *ngIf="!generatingIds[s.id + '_pdf']" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
-                                    <i *ngIf="generatingIds[s.id + '_pdf']" class="fas fa-spinner fa-spin" style="margin-right:4px; font-size:14px;"></i>
-                                    {{ generatingIds[s.id + '_pdf'] ? 'Cargando' : 'PDF' }}
+                                <button class="btn-row btn-row-ghost"
+                                        (click)="generateActa(s, 'pdf')"
+                                        title="Descargar PDF"
+                                        [disabled]="generatingIds[s.id + '_pdf']">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
+                                    {{ generatingIds[s.id + '_pdf'] ? '…' : 'PDF' }}
                                 </button>
-                                <button class="btn btn-sm btn-danger" style="background:#ef4444; border:none; color:white; padding: 0.4rem 0.6rem; border-radius: 4px; display:flex; align-items:center; cursor: pointer;" (click)="deleteSession(s)" title="Eliminar Sesión">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <button class="btn-row btn-row-icon-danger"
+                                        (click)="deleteSession(s)"
+                                        title="Eliminar Sesión">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M3 6h18"></path>
                                         <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                                         <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
