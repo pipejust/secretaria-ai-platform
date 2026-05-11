@@ -1,261 +1,316 @@
-<div class="acten-dashboard">
-    <!-- Hero del dashboard estilo editorial -->
-    <header class="dash-hero">
-        <div class="dash-hero-left">
-            <p class="acten-eyebrow">Operaciones · Sesiones</p>
-            <h1 class="dash-hero-title">Registro de Sesiones</h1>
-            <p class="dash-hero-sub">
-                Cada conversación, transcrita y curada por IA. Despachá tareas a tu equipo
-                y a tus integraciones sin salir de aquí.
-            </p>
+<div class="overview-page">
+
+    <!-- ============= HERO ============= -->
+    <header class="ov-hero">
+        <div class="ov-hero-left">
+            <h1 class="ov-greeting">{{ greeting }}, {{ userFirstName }}</h1>
+            <p class="ov-greeting-sub">Esto es lo que está pasando hoy.</p>
         </div>
-        <div class="dash-hero-right">
-            <button class="btn-cta-light" (click)="openUploadModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
+        <div class="ov-hero-actions">
+            <div class="ov-period">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                Nueva subida manual
+                <select class="ov-period-select" [(ngModel)]="overviewPeriod" (change)="setOverviewPeriod(overviewPeriod)">
+                    <option value="7d">Últimos 7 días</option>
+                    <option value="14d">Últimos 14 días</option>
+                    <option value="30d">Últimos 30 días</option>
+                </select>
+            </div>
+            <button class="ov-cta-primary" (click)="openUploadModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nueva reunión
             </button>
         </div>
     </header>
 
-    <!-- KPI tiles del handoff: 4 métricas con sparkline-style mini -->
-    <section class="kpi-row" aria-label="Métricas del período">
-        <article class="kpi-tile">
-            <span class="kpi-label">Sesiones totales</span>
-            <span class="kpi-value">{{ totalItems || sessions.length }}</span>
-            <span class="kpi-trend kpi-trend-up">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+    <!-- ============= KPI TILES ============= -->
+    <section class="ov-kpis" aria-label="Métricas principales">
+        <article class="ov-kpi" *ngFor="let k of kpiTiles" [attr.data-tone]="k.tone">
+            <div class="ov-kpi-icon" [attr.data-tone]="k.tone" [ngSwitch]="k.icon">
+                <svg *ngSwitchCase="'meetings'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                 </svg>
-                <span>Aislado por empresa</span>
-            </span>
-        </article>
-        <article class="kpi-tile">
-            <span class="kpi-label">Pendientes</span>
-            <span class="kpi-value">{{ countByStatus('pending') }}</span>
-            <span class="kpi-trend">Esperan curación humana</span>
-        </article>
-        <article class="kpi-tile">
-            <span class="kpi-label">Completadas</span>
-            <span class="kpi-value">{{ countByStatus('completed') }}</span>
-            <span class="kpi-trend kpi-trend-good">Despachadas a integraciones</span>
-        </article>
-        <article class="kpi-tile">
-            <span class="kpi-label">Proyectos activos</span>
-            <span class="kpi-value">{{ projects.length }}</span>
-            <span class="kpi-trend">Visibles para esta empresa</span>
+                <svg *ngSwitchCase="'tasks'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 11 12 14 22 4"></polyline>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+                <svg *ngSwitchCase="'decisions'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <svg *ngSwitchCase="'risks'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <div class="ov-kpi-body">
+                <span class="ov-kpi-value">{{ k.value }}</span>
+                <span class="ov-kpi-label">{{ k.label }}</span>
+                <span class="ov-kpi-trend"
+                      [class.trend-up]="k.trend > 0"
+                      [class.trend-down]="k.trend < 0"
+                      [class.trend-flat]="k.trend === 0">
+                    <svg *ngIf="k.trend > 0" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                    <svg *ngIf="k.trend < 0" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                    <span *ngIf="k.trend === 0">— sin cambio</span>
+                    <span *ngIf="k.trend !== 0">{{ k.trend > 0 ? '+' : '' }}{{ k.trend }}% vs período anterior</span>
+                </span>
+            </div>
         </article>
     </section>
 
-    <!-- Filtros editoriales -->
-    <div class="filter-bar">
-        <div class="filter-search">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" placeholder="Buscar por título, proyecto o fecha (dd/mm/aaaa)…"
-                   [(ngModel)]="searchText" (input)="onSearchInput()"
-                   (keyup.enter)="currentPage = 1; loadSessions()" />
-        </div>
-
-        <select class="filter-select" [(ngModel)]="filterProjectId" (change)="currentPage = 1; loadSessions()">
-            <option value="">Todos los proyectos</option>
-            <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
-        </select>
-
-        <select class="filter-select" [(ngModel)]="statusFilter" (change)="currentPage = 1; loadSessions()">
-            <option value="">Todos los estados</option>
-            <option value="pending">Pendiente de curación</option>
-            <option value="processing">Procesando IA</option>
-            <option value="completed">Completado</option>
-        </select>
-
-        <button class="btn-filter-action" (click)="currentPage = 1; loadSessions()">Buscar</button>
-    </div>
-
-    <div class="card glass-panel flex-2">
-        <div class="card-body p-0">
-            <!-- Loading State (Skeletons) -->
-            <div class="table-container" *ngIf="isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 40px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 150px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 100px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 120px;"></div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let i of [1,2,3]">
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 30px;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-title" style="margin-bottom: 0;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 90px;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 100px;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                            </td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <div class="skeleton skeleton-text" style="width: 80px; height: 32px;"></div>
-                                    <div class="skeleton skeleton-text" style="width: 100px; height: 32px;"></div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="table-container" *ngIf="!isLoading">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th style="cursor:pointer;" (click)="sortBy('id')">
-                            ID Sesión 
-                            <span *ngIf="sortColumn === 'id'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('title')">
-                            Reunión / Título
-                            <span *ngIf="sortColumn === 'title'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('project_id')">
-                            Proyecto
-                            <span *ngIf="sortColumn === 'project_id'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('date')">
-                            Fecha
-                            <span *ngIf="sortColumn === 'date'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('status')">
-                            Estado
-                            <span *ngIf="sortColumn === 'status'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th>Acciones Disponibles</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let s of filteredSessions">
-                        <td><span class="badge" style="background:#e0e7ff; color:var(--text-main);">#{{
-                                s.id }}</span></td>
-                        <td>
-                            <strong style="color:var(--text-main);">{{ s.title }}</strong>
-                        </td>
-                        <td style="color: var(--text-light); font-size: 0.9em;">
-                            <i class="fas fa-folder-open" style="opacity: 0.5; margin-right: 4px;"></i> {{ getProjectName(s.project_id) }}
-                        </td>
-                        <td>{{ s.date | date:'dd/MM/yyyy HH:mm' }}</td>
-                        <td>
-                            <span class="status-pill"
-                                  [class.pill-completed]="s.status === 'completed'"
-                                  [class.pill-pending]="s.status === 'pending'"
-                                  [class.pill-processing]="s.status === 'processing'">
-                                <span class="pill-dot"></span>
-                                {{ s.status === 'completed' ? 'Completado' : (s.status === 'processing' ? 'Procesando IA' : 'Pendiente curación') }}
-                            </span>
-                        </td>
-                        <td class="actions-cell">
-                            <div class="actions-wrap">
-                                <button class="btn-row btn-row-primary"
-                                        (click)="viewCuration(s.id)">
-                                    {{ s.status === 'completed' ? 'Detalle' : 'Curar' }}
-                                </button>
-                                <button class="btn-row btn-row-ghost"
-                                        (click)="generateActa(s, 'word')"
-                                        title="Descargar Word"
-                                        [disabled]="generatingIds[s.id + '_word']">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                    {{ generatingIds[s.id + '_word'] ? '…' : 'Word' }}
-                                </button>
-                                <button class="btn-row btn-row-ghost"
-                                        (click)="generateActa(s, 'pdf')"
-                                        title="Descargar PDF"
-                                        [disabled]="generatingIds[s.id + '_pdf']">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
-                                    {{ generatingIds[s.id + '_pdf'] ? '…' : 'PDF' }}
-                                </button>
-                                <button class="btn-row btn-row-icon-danger"
-                                        (click)="deleteSession(s)"
-                                        title="Eliminar Sesión">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M3 6h18"></path>
-                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr *ngIf="sessions.length === 0">
-                        <td colspan="6" class="p-0">
-                            <div class="empty-state">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"
-                                    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
-                                </svg>
-                                <h4>No hay sesiones registradas</h4>
-                                <p style="color:var(--text-muted); margin-top:0.5rem; font-size:0.95rem;">Empieza subiendo una transcripción o graba una nueva sesión.</p>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            </div>
-
-            <!-- Pagination Controls -->
-            <div *ngIf="totalItems > 0 && !isLoading" style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border);">
-                <span style="color:var(--text-muted); font-size: 0.9rem;">
-                    Mostrando página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} sesiones)
-                </span>
-                <div style="display:flex; gap: 0.5rem;">
-                    <button class="btn btn-sm btn-secondary" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">
-                        Anterior
-                    </button>
-                    <button class="btn btn-sm btn-secondary" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">
-                        Siguiente
-                    </button>
+    <!-- ============= MAIN GRID ============= -->
+    <section class="ov-main-grid">
+        <!-- Activity Chart -->
+        <article class="ov-card ov-card-chart">
+            <header class="ov-card-head">
+                <div>
+                    <h2 class="ov-card-title">Actividad de Reuniones</h2>
+                    <p class="ov-card-sub">Últimos {{ overviewPeriod === '7d' ? 7 : overviewPeriod === '30d' ? 30 : 14 }} días</p>
                 </div>
+                <div class="ov-card-legend">
+                    <span class="legend-dot legend-meetings"></span> <span>Reuniones</span>
+                    <span class="legend-dot legend-analyzed"></span> <span>Analizadas</span>
+                </div>
+            </header>
+
+            <div class="ov-chart-wrap">
+                <svg class="ov-chart" viewBox="0 0 600 220" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="meetingsGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#2F6DBE" stop-opacity="0.18"/>
+                            <stop offset="100%" stop-color="#2F6DBE" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- gridlines horizontales -->
+                    <g class="ov-chart-grid">
+                        <line x1="20" y1="20"  x2="580" y2="20"  />
+                        <line x1="20" y1="70"  x2="580" y2="70"  />
+                        <line x1="20" y1="120" x2="580" y2="120" />
+                        <line x1="20" y1="170" x2="580" y2="170" />
+                    </g>
+
+                    <!-- Y axis labels -->
+                    <g class="ov-chart-y-labels">
+                        <text x="12" y="24"  text-anchor="end">{{ chartYMax }}</text>
+                        <text x="12" y="74"  text-anchor="end">{{ chartYMax * 0.75 | number:'1.0-0' }}</text>
+                        <text x="12" y="124" text-anchor="end">{{ chartYMax * 0.5 | number:'1.0-0' }}</text>
+                        <text x="12" y="174" text-anchor="end">{{ chartYMax * 0.25 | number:'1.0-0' }}</text>
+                        <text x="12" y="194" text-anchor="end">0</text>
+                    </g>
+
+                    <!-- Meetings area + line -->
+                    <path class="ov-chart-area" [attr.d]="chartAreaPath(activitySeries.meetings, chartYMax)" fill="url(#meetingsGrad)"/>
+                    <path class="ov-chart-line ov-chart-line-primary" [attr.d]="chartPath(activitySeries.meetings, chartYMax)"/>
+                    <!-- Analyzed (dashed) -->
+                    <path class="ov-chart-line ov-chart-line-secondary" [attr.d]="chartPath(activitySeries.analyzed, chartYMax)" stroke-dasharray="4 4"/>
+
+                    <!-- Puntos -->
+                    <g class="ov-chart-points">
+                        <circle *ngFor="let p of chartPoints(activitySeries.meetings, chartYMax)" [attr.cx]="p.cx" [attr.cy]="p.cy" r="3.5"/>
+                    </g>
+
+                    <!-- X labels -->
+                    <g class="ov-chart-x-labels">
+                        <text *ngFor="let l of chartXLabels; let i = index" [attr.x]="30 + i * 140" y="215" text-anchor="middle">{{ l }}</text>
+                    </g>
+                </svg>
+            </div>
+
+            <a class="ov-card-link" routerLink="/admin/reportes">Ver toda la actividad →</a>
+        </article>
+
+        <!-- Right column: Follow-up + Sync Health -->
+        <div class="ov-side-stack">
+            <article class="ov-card">
+                <header class="ov-card-head">
+                    <h2 class="ov-card-title">Estado de seguimiento</h2>
+                    <span class="ov-card-sub-right">Total: {{ followupTotal }} tareas</span>
+                </header>
+                <ul class="ov-followup">
+                    <li *ngFor="let f of followupBreakdown">
+                        <span class="fu-dot" [style.background]="f.color"></span>
+                        <span class="fu-label">{{ f.label }}</span>
+                        <span class="fu-count">{{ f.count }}</span>
+                        <span class="fu-pct">({{ f.pct }}%)</span>
+                    </li>
+                </ul>
+            </article>
+
+            <article class="ov-card">
+                <header class="ov-card-head">
+                    <h2 class="ov-card-title">Sync Health</h2>
+                    <span class="ov-card-sub-right">Estado de integraciones</span>
+                </header>
+                <ul class="ov-sync">
+                    <li *ngFor="let p of syncProviders">
+                        <span class="sync-logo" [style.background]="p.iconColor">{{ p.iconLetter }}</span>
+                        <span class="sync-name">{{ p.name }}</span>
+                        <span class="sync-status" [class.connected]="p.connected" [class.disconnected]="!p.connected">
+                            <span class="sync-pulse" *ngIf="p.connected"></span>
+                            {{ p.connected ? 'Conectado' : 'Sin conectar' }}
+                        </span>
+                    </li>
+                </ul>
+                <a class="ov-card-link" routerLink="/admin/settings">Gestionar integraciones →</a>
+            </article>
+        </div>
+    </section>
+
+    <!-- ============= RECENT MEETINGS ============= -->
+    <section class="ov-card ov-recent">
+        <header class="ov-card-head">
+            <div>
+                <h2 class="ov-card-title">Reuniones recientes</h2>
+                <p class="ov-card-sub">Últimas analizadas por la IA</p>
+            </div>
+            <a class="ov-card-link" routerLink="/admin/dashboard">Ver todas →</a>
+        </header>
+        <div class="ov-recent-table">
+            <div class="ov-recent-row ov-recent-head">
+                <span>Reunión</span>
+                <span>Fecha</span>
+                <span>Proyecto</span>
+                <span>Resumen</span>
+                <span class="t-right">Estado</span>
+            </div>
+            <div class="ov-recent-row" *ngFor="let m of recentMeetings" (click)="viewCuration(m.id)" role="button">
+                <div class="ov-recent-title">
+                    <span class="ov-recent-id">#{{ m.id }}</span>
+                    <span class="ov-recent-name">{{ m.title }}</span>
+                </div>
+                <span class="ov-recent-date">{{ formatShortDate(m.date) }}</span>
+                <span class="ov-recent-project">{{ getProjectName(m.project_id) }}</span>
+                <span class="ov-recent-summary">{{ (m.raw_summary || 'Sin resumen aún.') | slice:0:80 }}{{ m.raw_summary && m.raw_summary.length > 80 ? '…' : '' }}</span>
+                <span class="t-right">
+                    <span class="status-pill"
+                          [class.pill-completed]="m.status === 'completed'"
+                          [class.pill-pending]="m.status === 'pending'"
+                          [class.pill-processing]="m.status === 'processing'">
+                        <span class="pill-dot"></span>
+                        {{ statusLabel(m.status) }}
+                    </span>
+                </span>
+            </div>
+            <div *ngIf="!recentMeetings.length && !isLoadingOverview" class="ov-empty">
+                Aún no hay reuniones registradas. Subí la primera con
+                <button class="link-btn" (click)="openUploadModal()">Nueva reunión →</button>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- ============= BOTTOM ROW: TOP RISKS + TOP ACTIONS + QUICK ACTIONS ============= -->
+    <section class="ov-bottom-grid">
+        <article class="ov-card">
+            <header class="ov-card-head">
+                <h2 class="ov-card-title">Riesgos principales</h2>
+                <a class="ov-card-link-sm" routerLink="/admin/pendientes">Ver todos →</a>
+            </header>
+            <ul class="ov-risks">
+                <li *ngFor="let r of topRisks">
+                    <div class="risk-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="risk-body">
+                        <p class="risk-text">{{ r.text }}</p>
+                        <p class="risk-meta">{{ r.sessionTitle }}</p>
+                    </div>
+                    <span class="badge"
+                          [class.badge-danger]="r.impact === 'High'"
+                          [class.badge-warning]="r.impact === 'Medium'"
+                          [class.badge-neutral]="r.impact === 'Low'">
+                        {{ r.impact === 'High' ? 'Alto' : r.impact === 'Medium' ? 'Medio' : 'Bajo' }}
+                    </span>
+                </li>
+                <li *ngIf="!topRisks.length" class="ov-empty-li">No hay riesgos identificados todavía.</li>
+            </ul>
+        </article>
+
+        <article class="ov-card">
+            <header class="ov-card-head">
+                <h2 class="ov-card-title">Tareas prioritarias</h2>
+                <a class="ov-card-link-sm" routerLink="/admin/pendientes">Ver todas →</a>
+            </header>
+            <ul class="ov-tasks">
+                <li *ngFor="let t of topActionItems">
+                    <input type="checkbox" class="task-check" />
+                    <div class="task-body">
+                        <p class="task-title">{{ t.title }}</p>
+                        <p class="task-meta">{{ t.owner_name || 'Sin asignar' }} · {{ t.due_date || 'Sin fecha' }}</p>
+                    </div>
+                    <span class="badge"
+                          [class.badge-info]="t.status === 'in_progress'"
+                          [class.badge-warning]="t.status === 'pending' || !t.status"
+                          [class.badge-danger]="t.status === 'blocked'">
+                        {{ t.status === 'in_progress' ? 'En curso' : t.status === 'blocked' ? 'Bloqueada' : 'Pendiente' }}
+                    </span>
+                </li>
+                <li *ngIf="!topActionItems.length" class="ov-empty-li">Sin tareas pendientes asignadas.</li>
+            </ul>
+        </article>
+
+        <article class="ov-card ov-quick">
+            <header class="ov-card-head">
+                <h2 class="ov-card-title">Acciones rápidas</h2>
+            </header>
+            <ul class="ov-quick-list">
+                <li *ngFor="let qa of quickActions" (click)="triggerQuickAction(qa)" role="button" tabindex="0">
+                    <div class="qa-icon" [ngSwitch]="qa.icon">
+                        <svg *ngSwitchCase="'mic'"      xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        <svg *ngSwitchCase="'upload'"   xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <svg *ngSwitchCase="'folder'"   xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        <svg *ngSwitchCase="'sparkle'"  xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path><path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path></svg>
+                        <svg *ngSwitchCase="'calendar'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <svg *ngSwitchCase="'chart'"    xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    </div>
+                    <div class="qa-body">
+                        <span class="qa-label">{{ qa.label }}</span>
+                        <span class="qa-sub">{{ qa.sub }}</span>
+                    </div>
+                    <svg class="qa-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </li>
+            </ul>
+        </article>
+    </section>
+
+    <footer class="ov-footer">
+        <span>© {{ todayLabel | slice:-4 }} Acten AI · {{ todayLabel }}</span>
+        <span class="dot-sep">·</span>
+        <a routerLink="/admin/settings">Privacidad</a>
+        <span class="dot-sep">·</span>
+        <a routerLink="/admin/settings">Términos</a>
+        <span class="ov-version">v1.0</span>
+    </footer>
 </div>
 
 <!-- Modal Upload -->
 <div class="modal-backdrop fade-in" *ngIf="showUploadModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
     <div class="card glass-panel" style="width: 500px; max-width: 90vw; max-height: 90vh; overflow-y:auto; position:relative;">
         <button class="btn btn-sm" style="position:absolute; top:1rem; right:1rem; background:transparent; border:none; font-size:1.5rem; line-height:1; cursor:pointer;" (click)="closeUploadModal()">×</button>
-        
         <div class="card-body">
-            <h3 style="margin-top:0; color:var(--text-main); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem;">
+            <h3 style="margin-top:0; color:var(--color-fg-default); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
@@ -263,31 +318,26 @@
                 </svg>
                 Subir Acta Manual
             </h3>
-
-            <!-- Tabs -->
-            <div style="display:flex; border-bottom: 1px solid var(--glass-border); margin-bottom: 1.25rem;">
-                <button [ngStyle]="{'background': uploadTab === 'audio' ? 'rgba(79, 70, 229, 0.1)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'audio' ? '2px solid var(--primary-color)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'audio' ? 'var(--primary-color)' : 'var(--text-muted)', 'font-weight': uploadTab === 'audio' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'audio'">
+            <div style="display:flex; border-bottom: 1px solid var(--color-border); margin-bottom: 1.25rem;">
+                <button [ngStyle]="{'background': uploadTab === 'audio' ? 'rgba(34, 49, 72, 0.06)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'audio' ? '2px solid var(--color-accent)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'audio' ? 'var(--color-accent)' : 'var(--color-fg-muted)', 'font-weight': uploadTab === 'audio' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'audio'">
                     Procesar Audio
                 </button>
-                <button [ngStyle]="{'background': uploadTab === 'text' ? 'rgba(79, 70, 229, 0.1)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'text' ? '2px solid var(--primary-color)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'text' ? 'var(--primary-color)' : 'var(--text-muted)', 'font-weight': uploadTab === 'text' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'text'">
+                <button [ngStyle]="{'background': uploadTab === 'text' ? 'rgba(34, 49, 72, 0.06)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'text' ? '2px solid var(--color-accent)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'text' ? 'var(--color-accent)' : 'var(--color-fg-muted)', 'font-weight': uploadTab === 'text' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'text'">
                     Pegar Texto Libre
                 </button>
             </div>
-
-            <!-- Formularios Generales -->
             <div class="form-group">
                 <label>Título o Motivo de la Sesión *</label>
-                <input type="text" class="modern-input" [(ngModel)]="uploadForm.title" placeholder="Ej: Comité Estratégico Mensual">
+                <input type="text" [(ngModel)]="uploadForm.title" placeholder="Ej: Comité Estratégico Mensual">
             </div>
-
             <div style="display:flex; gap:1rem; margin-bottom:1rem;">
                 <div class="form-group" style="flex:1; margin-bottom:0;">
                     <label>Fecha y Hora</label>
-                    <input type="datetime-local" class="modern-input" [(ngModel)]="uploadForm.date">
+                    <input type="datetime-local" [(ngModel)]="uploadForm.date">
                 </div>
                 <div class="form-group" style="flex:1; margin-bottom:0;">
                     <label>Idioma Principal</label>
-                    <select class="modern-input" [(ngModel)]="uploadForm.language">
+                    <select [(ngModel)]="uploadForm.language">
                         <option value="Español">Español</option>
                         <option value="Inglés">Inglés</option>
                         <option value="Portugués">Portugués</option>
@@ -295,33 +345,27 @@
                     </select>
                 </div>
             </div>
-
             <div class="form-group">
-                <label>Proyecto (Opcional, para enrutamiento auto)</label>
-                <select class="modern-input" [(ngModel)]="uploadForm.projectId">
+                <label>Proyecto (Opcional)</label>
+                <select [(ngModel)]="uploadForm.projectId">
                     <option value="">-- Sin Proyecto (General) --</option>
                     <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                 </select>
             </div>
-
-            <!-- Audio Tab -->
-            <div *ngIf="uploadTab === 'audio'" style="background:rgba(255,255,255,0.02); border:1px dashed var(--glass-border); border-radius:8px; padding:1.5rem; text-align:center; margin-bottom:1.5rem;">
+            <div *ngIf="uploadTab === 'audio'" style="background:var(--brand-cream-100); border:1px dashed var(--color-border-strong); border-radius:12px; padding:1.5rem; text-align:center; margin-bottom:1.5rem;">
                 <input type="file" #audioUpload style="display:none;" accept="audio/*,video/mp4" (change)="onFileSelected($event)">
                 <button class="btn btn-secondary" (click)="audioUpload.click()" style="margin-bottom:0.5rem;" [disabled]="isUploading">
                     Seleccionar Archivo (MP3, WAV, M4A)
                 </button>
-                <p style="font-size:0.85rem; color:var(--text-muted); margin:0;" *ngIf="uploadForm.file">Archivo: <strong>{{ uploadForm.file.name }}</strong></p>
+                <p style="font-size:0.85rem; color:var(--color-fg-muted); margin:0;" *ngIf="uploadForm.file">Archivo: <strong>{{ uploadForm.file.name }}</strong></p>
             </div>
-
-            <!-- Text Tab -->
             <div *ngIf="uploadTab === 'text'" class="form-group">
                 <label>Transcripción o Acta Cruda *</label>
-                <textarea class="modern-input" rows="6" [(ngModel)]="uploadForm.textContent" placeholder="Pega aquí todo el texto discutido en la sesión..." [disabled]="isUploading"></textarea>
+                <textarea rows="6" [(ngModel)]="uploadForm.textContent" placeholder="Pega aquí todo el texto discutido en la sesión..." [disabled]="isUploading"></textarea>
             </div>
-
             <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;" (click)="submitUpload()" [disabled]="isUploading">
                 <span *ngIf="!isUploading">Procesar e Inteligenciar Sesión</span>
-                <span *ngIf="isUploading">Subiendo y transcribiendo... ⏳</span>
+                <span *ngIf="isUploading">Subiendo y transcribiendo… ⏳</span>
             </button>
         </div>
     </div>
@@ -331,26 +375,24 @@
 <div class="modal-backdrop fade-in" *ngIf="showDeleteModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
     <div class="card glass-panel" style="width: 400px; max-width: 90vw; position:relative;">
         <div class="card-body" style="text-align: center; padding: 2rem;">
-            <div style="background: rgba(239, 68, 68, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: #ef4444;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div style="background: rgba(224, 61, 61, 0.10); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: var(--color-danger);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                     <line x1="12" y1="9" x2="12" y2="13"></line>
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
             </div>
-            
-            <h3 style="margin-top:0; color:var(--text-main); font-size: 1.25rem; font-weight: 600;">¿Eliminar Sesión?</h3>
-            <p style="color:var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2rem;">
-                Estás a punto de eliminar permanentemente el registro <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>.<br><br>Todas las tareas extraídas directamente relacionadas a esta sesión se borrarán de la base de datos de Notiva. Esta acción es <strong>irreversible</strong>.
+            <h3 style="margin-top:0; color:var(--color-fg-default); font-size: 1.25rem; font-weight: 600;">¿Eliminar Sesión?</h3>
+            <p style="color:var(--color-fg-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2rem;">
+                Estás a punto de eliminar permanentemente <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>. Esta acción es <strong>irreversible</strong>.
             </p>
-            
             <div style="display: flex; gap: 1rem; width: 100%;">
                 <button class="btn btn-secondary" style="flex:1; justify-content: center;" (click)="cancelDeleteSession()" [disabled]="isDeleting">
                     Cancelar
                 </button>
-                <button class="btn btn-danger" style="flex:1; justify-content: center; background: #ef4444; color: white;" (click)="confirmDeleteSession()" [disabled]="isDeleting">
+                <button class="btn btn-danger" style="flex:1; justify-content: center;" (click)="confirmDeleteSession()" [disabled]="isDeleting">
                     <span *ngIf="!isDeleting">Sí, Eliminar</span>
-                    <span *ngIf="isDeleting">Borrando...</span>
+                    <span *ngIf="isDeleting">Borrando…</span>
                 </button>
             </div>
         </div>

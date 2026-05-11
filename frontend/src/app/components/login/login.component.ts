@@ -19,6 +19,8 @@ export class LoginComponent implements OnInit {
     showPassword = false;
     isLoading = false;
     errorMessage = '';
+    /** Visual-only: el SSO real no está cableado todavía. */
+    rememberMe = true;
 
     /** Multi-tenant: empresa contra la que se loguea. */
     tenantSlug = 'acten';
@@ -50,6 +52,15 @@ export class LoginComponent implements OnInit {
 
     togglePassword() {
         this.showPassword = !this.showPassword;
+    }
+
+    /** SSO + alta de cuenta: visualmente presentes para coincidir con el
+     *  mockup, pero el flujo todavía no está cableado. Mostramos un mensaje
+     *  efímero en pantalla en lugar de un toast (para no añadir dependencias). */
+    ssoUnavailable(ev?: Event) {
+        ev?.preventDefault();
+        this.errorMessage = 'SSO y registro auto-servicio aún no disponibles. Pide acceso a tu administrador.';
+        setTimeout(() => { if (this.errorMessage.startsWith('SSO')) this.errorMessage = ''; }, 4000);
     }
 
     onSubmit() {
