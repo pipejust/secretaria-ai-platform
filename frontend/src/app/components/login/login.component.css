@@ -37,27 +37,17 @@
 .aside-brand {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-16);
     text-decoration: none;
     color: inherit;
     margin-bottom: var(--space-64);
 }
 
-.aside-mono {
-    width: 88px;
-    height: 88px;
+/* Logo oficial Acten — la imagen ya combina monograma + wordmark. */
+.aside-logo {
+    height: 80px;
+    width: auto;
     display: block;
-    flex-shrink: 0;
-    overflow: visible;
-}
-
-.aside-wordmark {
-    font-family: var(--font-display);
-    font-size: 80px;
-    font-weight: var(--fw-bold);
-    letter-spacing: var(--tracking-tight);
-    line-height: 0.95;
-    color: #FFFFFF;
+    /* La imagen ya viene transparente. No filters ni blend modes. */
 }
 
 .aside-hero {
