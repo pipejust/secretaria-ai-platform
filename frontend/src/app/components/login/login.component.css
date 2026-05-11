@@ -37,6 +37,7 @@
 .aside-brand {
     display: inline-flex;
     align-items: center;
+    gap: var(--space-16);
     text-decoration: none;
     color: inherit;
     margin-bottom: var(--space-64);
@@ -47,7 +48,60 @@
     height: 80px;
     width: auto;
     display: block;
-    /* La imagen ya viene transparente. No filters ni blend modes. */
+}
+
+/* Logo custom del tenant — solo cuando hasLogo()==true.
+   Limita altura a 80px pero permite ratios variables. */
+.aside-logo-client {
+    max-height: 80px;
+    max-width: 280px;
+    object-fit: contain;
+}
+
+/* Monograma + wordmark del tenant cuando no tiene logo personalizado. */
+.aside-mono {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    background: var(--brand-cream-50);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+}
+
+.aside-wordmark {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 3vw, 3rem);
+    font-weight: var(--fw-semibold);
+    color: #FFFFFF;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1;
+}
+
+/* "Powered by Acten" — solo visible cuando el tenant no es default. */
+.aside-powered {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-8);
+    margin-top: var(--space-24);
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: var(--tracking-wide);
+}
+
+.aside-powered img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    background: rgba(255, 255, 255, 0.10);
+    padding: 2px;
+    border-radius: var(--radius-xs);
+}
+
+.aside-powered .powered-name {
+    color: rgba(255, 255, 255, 0.80);
+    font-weight: var(--fw-semibold);
 }
 
 .aside-hero {
@@ -442,25 +496,6 @@
 }
 
 .contact-admin a:hover { text-decoration: underline; }
-
-/* Demo banner — visible solo cuando el password vino por query param.
-   Avisa al usuario que está en modo testing y NO debe usarlo en prod. */
-.demo-banner {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-8);
-    padding: var(--space-8) var(--space-12);
-    border-radius: var(--radius-md);
-    background: rgba(217, 164, 65, 0.12);
-    border: 1px solid rgba(217, 164, 65, 0.30);
-    color: var(--brand-amber-scale-700);
-    font-family: var(--font-sans);
-    font-size: var(--text-12);
-    font-weight: var(--fw-medium);
-    margin-bottom: var(--space-16);
-}
-
-.demo-banner svg { flex-shrink: 0; }
 
 /* Link "Cambiar de empresa" — para revelar el campo workspace cuando
    el usuario tiene credenciales de un tenant distinto al default. */

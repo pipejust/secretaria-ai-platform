@@ -3,24 +3,48 @@
     <!-- ===================== ASIDE NAVY ===================== -->
     <aside class="login-aside">
         <div class="aside-content">
-            <a routerLink="/" class="aside-brand" aria-label="Acten — inicio">
-                <!-- Logo oficial /rediseño/logotipo.png (copiado sin procesar
-                     a frontend/public/brand/acten-logo-full.png). -->
-                <img src="brand/acten-logo-full.png"
-                     alt="Acten"
-                     class="aside-logo" />
+            <a routerLink="/" class="aside-brand" [attr.aria-label]="branding.companyName() + ' — inicio'">
+                <!-- Si el tenant tiene logo propio, lo usamos. Si no, mostramos
+                     el monograma + nombre de la empresa (o Acten por default). -->
+                <img *ngIf="branding.hasLogo()"
+                     [src]="branding.logoUrl()"
+                     [alt]="branding.companyName()"
+                     class="aside-logo aside-logo-client" />
+                <ng-container *ngIf="!branding.hasLogo()">
+                    <img src="brand/acten-monogram.png" alt="" class="aside-mono" aria-hidden="true" />
+                    <span class="aside-wordmark">{{ branding.companyName() }}</span>
+                </ng-container>
             </a>
 
             <h1 class="aside-hero">
-                De la conversación a la claridad.
-                <br />
-                De la claridad al impacto.
+                <ng-container *ngIf="branding.companyName() === branding.platformName(); else clientHero">
+                    De la conversación a la claridad.
+                    <br />
+                    De la claridad al impacto.
+                </ng-container>
+                <ng-template #clientHero>
+                    Bienvenido a tu espacio de
+                    <br />
+                    <strong>{{ branding.companyName() }}</strong>.
+                </ng-template>
             </h1>
 
             <p class="aside-sub">
-                Acten es el asistente de IA para reuniones que transforma
-                las conversaciones en decisiones, responsabilidades y
-                entregables profesionales.
+                <ng-container *ngIf="branding.companyName() === branding.platformName(); else clientSub">
+                    Acten es el asistente de IA para reuniones que transforma
+                    las conversaciones en decisiones, responsabilidades y
+                    entregables profesionales.
+                </ng-container>
+                <ng-template #clientSub>
+                    Inteligencia artificial para tus reuniones — operado con
+                    <strong>{{ branding.platformName() }}</strong>.
+                </ng-template>
+            </p>
+
+            <p class="aside-powered" *ngIf="branding.companyName() !== branding.platformName()">
+                <span>Powered by</span>
+                <img src="brand/acten-monogram.png" alt="" aria-hidden="true" />
+                <span class="powered-name">{{ branding.platformName() }}</span>
             </p>
         </div>
 
@@ -138,16 +162,6 @@
                         <strong>{{ branding.companyName() || 'Acten' }}</strong>.
                     </p>
                 </header>
-
-                <div class="demo-banner" *ngIf="demoMode" role="alert">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    Modo demo · credenciales precargadas desde la URL. No usar en producción.
-                </div>
 
                 <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form" novalidate>
                     <div class="field" *ngIf="showTenantField">

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { BrandingService } from '../../services/branding.service';
 import { TenantService } from '../../services/tenant.service';
@@ -32,12 +32,7 @@ export class LoginComponent implements OnInit {
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
     private readonly tenants = inject(TenantService);
-    private readonly route = inject(ActivatedRoute);
     readonly year = new Date().getFullYear();
-
-    /** True si el password vino por query param. Mostramos banner ámbar de
-     *  advertencia ("Modo demo — credenciales visibles en la URL"). */
-    demoMode = false;
 
     constructor(
         private authService: AuthService,
@@ -53,54 +48,8 @@ export class LoginComponent implements OnInit {
         // campo. El usuario puede revelarlo con el link "Otra empresa".
         this.showTenantField = !this.tenants.isDefault() || this.tenantLocked;
 
-        // Query params: pre-fill para demos y testing. Acepta:
-        //   ?email=...
-        //   ?password=...
-        //   ?tenant=acten | slug=acten  (sinónimos)
-        //   ?autologin=1          → envía el form solo si email+password vienen
-        this._consumeQueryParams();
-
         if (this.authService.token) {
             this.router.navigate(['/admin/dashboard']);
-        }
-    }
-
-    /** Lee query params para pre-rellenar el form. Limpia la URL después
-     *  para no dejar credenciales en el historial del navegador. */
-    private _consumeQueryParams(): void {
-        const qp = this.route.snapshot.queryParamMap;
-        const email = qp.get('email');
-        const password = qp.get('password');
-        const tenant = qp.get('tenant') || qp.get('slug') || qp.get('workspace');
-        const autologin = qp.get('autologin') === '1' || qp.get('auto') === '1';
-
-        if (email) this.email = email.trim();
-        if (password) {
-            this.password = password;
-            this.demoMode = true;
-        }
-        if (tenant) {
-            const norm = tenant.trim().toLowerCase();
-            this.tenantSlug = norm;
-            this.tenants.setSlug(norm, true);
-            this.showTenantField = true;
-            // Si querés bloquearlo cuando viene por URL, descomentar:
-            // this.tenantLocked = true;
-        }
-
-        // Limpiamos la URL si vinieron credenciales (no dejar password en
-        // window.location.search ni en la barra de direcciones).
-        const hadSensitiveParams = !!(email || password || tenant || autologin);
-        if (hadSensitiveParams && typeof history !== 'undefined') {
-            try {
-                history.replaceState(null, '', window.location.pathname);
-            } catch {}
-        }
-
-        // Auto-submit diferido al próximo tick para dar tiempo a Angular
-        // a renderizar el form y registrar el validator de [ngModel] required.
-        if (autologin && this.email && this.password) {
-            setTimeout(() => this.onSubmit(), 80);
         }
     }
 
