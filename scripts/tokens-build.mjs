@@ -86,8 +86,6 @@ css += `  /* --- Aliases para retrocompatibilidad con el código viejo --- */
   --success-color:  var(--color-success);
   --danger-color:   var(--color-danger);
   --border-color:   var(--color-border);
-  --radius-md:      var(--radius-md);
-  --radius-lg:      var(--radius-lg);
   --transition:     all var(--dur-base) var(--ease-out);
 
   /* --- Brand white-label (BrandingService los sobreescribe en runtime) --- */
