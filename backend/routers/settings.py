@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
 
 from database import get_session
-from models import IntegrationSetting, User
-from routers.auth import require_admin
+from models import IntegrationSetting, Tenant, User
+from routers.auth import get_current_tenant, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -72,9 +72,12 @@ def get_all_settings(
     request: Request,
     session: Session = Depends(get_session),
     _admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Devuelve la configuración de todas las integraciones. Solo admins."""
-    settings_rows = session.exec(select(IntegrationSetting)).all()
+    """Devuelve la configuración de todas las integraciones del tenant actual."""
+    settings_rows = session.exec(
+        select(IntegrationSetting).where(IntegrationSetting.tenant_id == tenant.id)
+    ).all()
     result: Dict[str, Any] = {}
     fireflies_setting: Optional[IntegrationSetting] = None
 
@@ -106,13 +109,14 @@ def save_settings(
     request: Request,
     session: Session = Depends(get_session),
     _admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Crea o actualiza configuración de integraciones. Solo admins."""
+    """Crea o actualiza configuración de integraciones del tenant actual."""
     for provider_name, config_obj in payload.items():
         existing = session.exec(
-            select(IntegrationSetting).where(
-                IntegrationSetting.provider_name == provider_name
-            )
+            select(IntegrationSetting)
+            .where(IntegrationSetting.provider_name == provider_name)
+            .where(IntegrationSetting.tenant_id == tenant.id)
         ).first()
 
         is_active = (
@@ -148,6 +152,7 @@ def save_settings(
         else:
             session.add(
                 IntegrationSetting(
+                    tenant_id=tenant.id,
                     provider_name=provider_name,
                     config_json=config_json_str,
                     is_active=is_active,

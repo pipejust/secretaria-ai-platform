@@ -3,11 +3,20 @@ from sqlmodel import Session, select
 from typing import List, Optional
 
 from database import get_session
-from models import Project, Routing, MeetingSession, User, ProjectContact
-from routers.auth import get_current_user
+from models import Project, Routing, MeetingSession, Tenant, User, ProjectContact
+from routers.auth import get_current_user, get_current_tenant
 import crud
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+
+def _get_project_or_404(session: Session, project_id: int, tenant: Tenant) -> Project:
+    """Helper de aislamiento: 404 si el proyecto no es de este tenant."""
+    p = session.get(Project, project_id)
+    if not p or p.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return p
+
 
 # -----------------
 # Projects
@@ -16,51 +25,75 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 @router.get("/", response_model=List[Project])
 def get_projects(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Obtiene la lista de todos los proyectos activos"""
-    projects = crud.project.get_active_projects(session)
-    return projects
+    """Lista proyectos activos del tenant actual."""
+    rows = session.exec(
+        select(Project)
+        .where(Project.tenant_id == tenant.id)
+        .where(Project.is_active == True)  # noqa: E712
+        .order_by(Project.id.asc())
+    ).all()
+    return rows
+
 
 @router.post("/", response_model=Project, status_code=status.HTTP_201_CREATED)
 def create_project(
     project: Project,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Crea un nuevo proyecto"""
-    db_project = crud.project.get_by_name(session, name=project.name)
-    if db_project:
-        raise HTTPException(status_code=400, detail="Ya existe un proyecto con ese nombre")
-    
-    return crud.project.create(session, obj_in=project)
+    """Crea un nuevo proyecto en el tenant del usuario."""
+    existing = session.exec(
+        select(Project)
+        .where(Project.tenant_id == tenant.id)
+        .where(Project.name == project.name)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe un proyecto con ese nombre en esta empresa")
+    project.tenant_id = tenant.id
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+    return project
+
 
 @router.put("/{project_id}", response_model=Project)
 def update_project(
     project_id: int,
     project_update: Project,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Actualiza la información de un proyecto"""
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-        
-    return crud.project.update(session, db_obj=db_project, obj_in=project_update)
+    """Actualiza la información de un proyecto del tenant."""
+    db_project = _get_project_or_404(session, project_id, tenant)
+    # No permitimos cambiar el tenant_id desde un PUT.
+    update_data = project_update.model_dump(exclude_unset=True)
+    update_data.pop("tenant_id", None)
+    update_data.pop("id", None)
+    for k, v in update_data.items():
+        setattr(db_project, k, v)
+    session.add(db_project)
+    session.commit()
+    session.refresh(db_project)
+    return db_project
+
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
     project_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Desactiva lógicamente un proyecto"""
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    
-    crud.project.deactivate(session, db_obj=db_project)
+    """Desactiva lógicamente un proyecto del tenant."""
+    db_project = _get_project_or_404(session, project_id, tenant)
+    db_project.is_active = False
+    session.add(db_project)
+    session.commit()
 
 # -----------------
 # Routings (Destinations per project)
@@ -70,11 +103,10 @@ def delete_project(
 def get_project_routings(
     project_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    db_project = _get_project_or_404(session, project_id, tenant)
         
     return db_project.routings
 
@@ -83,11 +115,10 @@ def add_project_routing(
     project_id: int,
     routing: Routing,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    db_project = _get_project_or_404(session, project_id, tenant)
         
     routing.project_id = project_id
     return crud.routing.create(session, obj_in=routing)
@@ -96,7 +127,8 @@ def add_project_routing(
 def delete_routing(
     routing_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
     routing_obj = crud.routing.get(session, routing_id)
     if not routing_obj:
@@ -108,7 +140,8 @@ def delete_routing(
 def toggle_routing_status(
     routing_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
     routing_obj = crud.routing.get(session, routing_id)
     if not routing_obj:
@@ -132,12 +165,11 @@ def toggle_routing_status(
 def get_project_contacts(
     project_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
     """Obtiene los contactos asociados a un proyecto"""
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    db_project = _get_project_or_404(session, project_id, tenant)
         
     return db_project.contacts
 
@@ -146,12 +178,11 @@ def add_project_contact(
     project_id: int,
     contact: ProjectContact,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
     """Agrega un nuevo contacto a un proyecto"""
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    db_project = _get_project_or_404(session, project_id, tenant)
         
     contact.project_id = project_id
     return crud.project_contact.create(session, obj_in=contact)
@@ -161,7 +192,8 @@ def update_project_contact(
     contact_id: int,
     contact_update: ProjectContact,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
     """Actualiza un contacto del proyecto"""
     contact_obj = crud.project_contact.get(session, contact_id)
@@ -174,7 +206,8 @@ def update_project_contact(
 def delete_project_contact(
     contact_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant)
 ):
     """Elimina un contacto"""
     contact_obj = crud.project_contact.get(session, contact_id)
@@ -187,21 +220,16 @@ def delete_project_contact(
 def get_project_sessions(
     project_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Obtiene las sesiones de un proyecto (excluye archivadas).
-
-    El relationship `db_project.sessions` no permite filtrar limpio, así que
-    consultamos directamente y aplicamos `status != 'archived'` igual que
-    /api/sessions/.
-    """
+    """Sesiones del proyecto (tenant-scoped, excluye archivadas)."""
     from sqlmodel import select
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    db_project = _get_project_or_404(session, project_id, tenant)
 
     rows = session.exec(
         select(MeetingSession)
+        .where(MeetingSession.tenant_id == tenant.id)
         .where(MeetingSession.project_id == project_id)
         .where(MeetingSession.status != "archived")
         .order_by(MeetingSession.id.desc())
@@ -221,9 +249,7 @@ def get_project_dashboard(
     from datetime import datetime
     from models import ActionItem, MeetingSession, ProjectContact, Routing, User as UserModel
 
-    db_project = crud.project.get(session, project_id)
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    db_project = _get_project_or_404(session, project_id, tenant)
 
     sessions_raw = session.exec(
         select(MeetingSession)

@@ -156,6 +156,7 @@ async def process_session_with_ai(
 
         db.add(
             ActionItem(
+                tenant_id=session_obj.tenant_id,
                 session_id=session_id,
                 owner_name=owner_name,
                 owner_email=owner_email,

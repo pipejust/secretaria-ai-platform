@@ -1,21 +1,22 @@
-"""Helpers para validar webhooks entrantes (Fireflies).
+"""Helpers para validar webhooks entrantes (Fireflies) — multi-tenant.
 
-Fireflies no firma sus webhooks con HMAC; lo que sí permite es que la URL
-del webhook sea libre. Aprovechamos eso: incluimos un token aleatorio como
-query param (`?token=...`) en la URL que el usuario pega en Fireflies, y
-validamos ese token contra el valor persistido en `IntegrationSetting`
-(provider_name='fireflies', config_json.webhook_token).
+Cada tenant tiene su propio `webhook_token` en
+`IntegrationSetting(provider_name='fireflies', tenant_id=X).config_json.webhook_token`.
+La URL pública del webhook lleva `?token=...`. El backend itera todos los
+tokens activos y devuelve el `tenant_id` cuya integración corresponde — eso
+permite que cada empresa cliente tenga su propia URL pública sin colisiones.
 """
 
 import hmac
 import json
 import logging
 import os
+from typing import Optional
 
 from fastapi import HTTPException, Request, status
-from sqlmodel import Session
+from sqlmodel import Session, select
 
-from crud.crud_integration_setting import integration_setting as integration_setting_crud
+from models import IntegrationSetting
 
 logger = logging.getLogger(__name__)
 
@@ -24,58 +25,67 @@ def _is_production() -> bool:
     return os.getenv("ENVIRONMENT", "").lower() in ("prod", "production")
 
 
-def _load_fireflies_token(db: Session) -> str:
-    """Lee el `webhook_token` desde IntegrationSetting(provider_name='fireflies')."""
-    setting = integration_setting_crud.get_by_provider(
-        session=db, provider_name="fireflies"
-    )
-    if not setting or not setting.is_active:
-        return ""
-    try:
-        cfg = json.loads(setting.config_json or "{}")
-    except (json.JSONDecodeError, TypeError):
-        logger.warning("config_json inválido en IntegrationSetting(fireflies)")
-        return ""
-    return str(cfg.get("webhook_token") or "").strip()
-
-
-async def verify_fireflies_webhook(request: Request, db: Session) -> None:
+def _resolve_tenant_by_token(db: Session, token: str) -> Optional[int]:
+    """Devuelve el `tenant_id` cuya integración Fireflies tiene ese webhook_token,
+    o None si ninguna lo tiene.
     """
-    Verifica que el POST entrante traiga `?token=...` igual al persistido en BD.
+    if not token:
+        return None
+    rows = db.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.provider_name == "fireflies")
+        .where(IntegrationSetting.is_active == True)  # noqa: E712
+    ).all()
+    for s in rows:
+        try:
+            cfg = json.loads(s.config_json or "{}")
+        except (json.JSONDecodeError, TypeError):
+            continue
+        expected = str(cfg.get("webhook_token") or "").strip()
+        if expected and hmac.compare_digest(expected, token):
+            return s.tenant_id
+    return None
 
-    En producción se exige token. En desarrollo, si la integración aún no
-    se ha guardado en `/admin/settings`, se permite el paso pero se loguea
-    una advertencia.
+
+async def verify_fireflies_webhook(request: Request, db: Session) -> int:
+    """Verifica el `?token=...` y devuelve el `tenant_id` al que pertenece.
+
+    En producción se exige token válido. En desarrollo, si NO hay ninguna
+    integración Fireflies guardada todavía, devolvemos el tenant default
+    para que se pueda probar el flujo end-to-end localmente.
     """
-    expected = _load_fireflies_token(db)
+    received = (request.query_params.get("token") or "").strip()
 
-    if not expected:
+    # Caso desarrollo sin token configurado en ningún tenant.
+    has_any_token = bool(db.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.provider_name == "fireflies")
+        .where(IntegrationSetting.is_active == True)  # noqa: E712
+    ).first())
+
+    if not has_any_token:
         if _is_production():
-            logger.error(
-                "webhook_token no configurado para Fireflies en IntegrationSetting. "
-                "Rechazando webhook."
-            )
+            logger.error("Sin integración Fireflies en ningún tenant. Rechazando webhook.")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Webhook not configured.",
             )
         logger.warning(
-            "webhook_token no configurado para Fireflies. Permitiendo webhook "
-            "sin verificación (solo desarrollo)."
+            "Sin webhook_token configurado en ningún tenant. Cayendo al tenant default ('acten')."
         )
-        return
+        from database import DEFAULT_TENANT_SLUG
+        from models import Tenant
+        t = db.exec(select(Tenant).where(Tenant.slug == DEFAULT_TENANT_SLUG)).first()
+        if not t:
+            raise HTTPException(status_code=503, detail="Default tenant missing.")
+        return t.id
 
-    received = (request.query_params.get("token") or "").strip()
     if not received:
-        logger.warning("Webhook de Fireflies recibido sin query param `token`.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing webhook token.",
-        )
+        logger.warning("Webhook de Fireflies sin query param `token`.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing webhook token.")
 
-    if not hmac.compare_digest(expected, received):
-        logger.warning("Token de webhook de Fireflies inválido.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid webhook token.",
-        )
+    tenant_id = _resolve_tenant_by_token(db, received)
+    if tenant_id is None:
+        logger.warning("Webhook de Fireflies con token desconocido.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook token.")
+    return tenant_id

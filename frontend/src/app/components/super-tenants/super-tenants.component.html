@@ -1,0 +1,99 @@
+<div class="super-page">
+  <header class="page-head">
+    <div>
+      <h2>Empresas (Tenants)</h2>
+      <p class="muted">
+        Cada empresa es un <strong>espacio aislado</strong>: sus usuarios sólo ven los proyectos,
+        sesiones, integraciones y marca de su propia empresa. Crea una empresa nueva, asigna su
+        primer admin y comparte las credenciales para que entren a personalizar su marca.
+      </p>
+    </div>
+    <button class="btn btn-primary" (click)="showCreate = !showCreate">
+      {{ showCreate ? 'Cancelar' : '+ Nueva empresa' }}
+    </button>
+  </header>
+
+  <div *ngIf="successMsg" class="alert alert-ok">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert alert-err">{{ errorMsg }}</div>
+
+  <!-- ============== CREATE ============== -->
+  <section class="panel" *ngIf="showCreate">
+    <h3>Crear empresa</h3>
+    <p class="muted small">
+      El <em>slug</em> identifica la empresa en la URL (ej. <code>/t/acme</code>). El admin
+      inicial podrá entrar con email + password en esa empresa y de inmediato editar logo,
+      colores, contacto y crear más usuarios.
+    </p>
+    <div class="grid">
+      <div class="form-row">
+        <label>Slug *</label>
+        <input type="text" [(ngModel)]="form.slug" placeholder="acme" maxlength="32" pattern="[a-z0-9-]+" />
+      </div>
+      <div class="form-row">
+        <label>Nombre legible *</label>
+        <input type="text" [(ngModel)]="form.name" placeholder="ACME S.A." maxlength="120" />
+      </div>
+      <div class="form-row span-2">
+        <label>Dominio custom (opcional)</label>
+        <input type="text" [(ngModel)]="form.domain" placeholder="actas.acme.com" />
+        <small class="hint">Apunta el CNAME de ese dominio a esta plataforma; el host detecta el tenant solo.</small>
+      </div>
+      <div class="form-row">
+        <label>Email del primer admin *</label>
+        <input type="email" [(ngModel)]="form.admin_email" placeholder="admin@acme.com" />
+      </div>
+      <div class="form-row">
+        <label>Password inicial *</label>
+        <input type="text" [(ngModel)]="form.admin_password" placeholder="al menos 8 chars" />
+        <small class="hint">El cliente debería cambiarla después en su perfil.</small>
+      </div>
+      <div class="form-row span-2">
+        <label>Nombre del admin *</label>
+        <input type="text" [(ngModel)]="form.admin_full_name" placeholder="Juan Pérez" />
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="createTenant()" [disabled]="isCreating">
+      {{ isCreating ? 'Creando…' : 'Crear empresa + admin' }}
+    </button>
+  </section>
+
+  <!-- ============== LIST ============== -->
+  <section class="panel">
+    <h3>Empresas existentes ({{ tenants.length }})</h3>
+    <div *ngIf="loading" class="muted">Cargando…</div>
+    <table *ngIf="!loading && tenants.length" class="t-table">
+      <thead>
+        <tr>
+          <th>Slug</th>
+          <th>Nombre</th>
+          <th>Dominio</th>
+          <th>Usuarios</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of tenants" [class.inactive]="!t.is_active">
+          <td><code>{{ t.slug }}</code></td>
+          <td>{{ t.name }}</td>
+          <td>
+            <span *ngIf="t.domain">{{ t.domain }}</span>
+            <span *ngIf="!t.domain" class="muted">—</span>
+          </td>
+          <td>{{ t.user_count }}</td>
+          <td>
+            <span class="badge" [class.ok]="t.is_active" [class.off]="!t.is_active">
+              {{ t.is_active ? 'Activo' : 'Inactivo' }}
+            </span>
+          </td>
+          <td class="actions">
+            <button class="link-btn" (click)="setDomain(t)">Editar dominio</button>
+            <button class="link-btn danger" (click)="toggleActive(t)" *ngIf="t.slug !== 'acten'">
+              {{ t.is_active ? 'Desactivar' : 'Reactivar' }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>

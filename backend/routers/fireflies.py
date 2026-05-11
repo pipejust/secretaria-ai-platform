@@ -306,8 +306,12 @@ async def receive_fireflies_webhook(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_session),
 ):
-    """Endpoint para recibir el evento 'Transcription complete' desde Fireflies."""
-    await verify_fireflies_webhook(request, db)
+    """Endpoint para recibir el evento 'Transcription complete' desde Fireflies.
+
+    Multi-tenant: el token del query param identifica QUÉ EMPRESA. La sesión
+    creada se stampea con su `tenant_id` para garantizar el aislamiento.
+    """
+    tenant_id = await verify_fireflies_webhook(request, db)
 
     raw_body = await request.body()
     try:
@@ -356,6 +360,7 @@ async def receive_fireflies_webhook(
     date_str = str(date_val) if date_val else str(int(time.time() * 1000))
 
     new_session = MeetingSession(
+        tenant_id=tenant_id,
         fireflies_id=transcript_id,
         title=title,
         date=date_str,

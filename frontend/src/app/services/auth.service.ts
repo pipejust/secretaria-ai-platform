@@ -1,16 +1,17 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { TenantService } from './tenant.service';
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
-    // Apuntamos al endpoint configurado en enviroment
     private apiUrl = `${environment.apiUrl}/auth`;
     private currentUserSubject = new BehaviorSubject<any>(null);
     public currentUser$ = this.currentUserSubject.asObservable();
+    private tenants = inject(TenantService);
 
     constructor(private http: HttpClient) {
         this.loadUserFromStorage();
@@ -24,22 +25,29 @@ export class AuthService {
         return this.currentUserSubject.value;
     }
 
-    login(email: string, password: string): Observable<any> {
+    login(email: string, password: string, tenantSlug?: string): Observable<any> {
+        // Multi-tenant: el slug se manda en el body (canónico) y también queda
+        // como header gracias al tenantInterceptor. El backend usa el del body
+        // si viene, sino cae al header, sino al default ('acten').
+        const slug = tenantSlug || this.tenants.slug();
         const body = {
             username: email,
-            password: password
+            password: password,
+            tenant_slug: slug,
         };
 
-        const headers = new HttpHeaders({
-            'Content-Type': 'application/json'
-        });
+        const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
         return this.http.post<any>(`${this.apiUrl}/login`, body, { headers })
             .pipe(
                 tap(response => {
                     if (response && response.access_token) {
                         localStorage.setItem('access_token', response.access_token);
-                        // Inyectar el payload JWT básico o el user base hasta que cargue el resto, o forzar la carga
+                        // Confirmamos el tenant que el backend devolvió (puede
+                        // diferir si el frontend mandó un slug equivocado).
+                        if (response.tenant?.slug) {
+                            this.tenants.setSlug(response.tenant.slug);
+                        }
                         this.loadUserProfile();
                     }
                 })

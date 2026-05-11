@@ -133,6 +133,9 @@ from routers import api_keys  # Sprint 11
 app.include_router(api_keys.router)
 from routers import branding  # White-label
 app.include_router(branding.router)
+from routers import tenants  # Multi-tenant CRUD (super-admin)
+app.include_router(tenants.router)
+app.include_router(tenants.public_router)
 
 
 @app.get("/")

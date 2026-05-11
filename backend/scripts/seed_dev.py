@@ -1,10 +1,11 @@
 """Seed para desarrollo local. Idempotente.
 
 Crea:
-- Rol 'admin'
-- Usuario admin@notiva.local / notiva
-- Plantillas de OutputTemplate (Sprint 04)
-- Configuración mínima de IntegrationSetting (sin tokens reales)
+- Tenant 'acten' (por defecto, todos los datos legacy van aquí).
+- Rol 'admin'.
+- Usuario admin@notiva.local / notiva — super-admin de plataforma.
+- Plantillas de OutputTemplate (Sprint 04) en el tenant default.
+- Configuración mínima de IntegrationSetting (sin tokens reales) en el tenant default.
 
 Uso:
     cd backend && python scripts/seed_dev.py
@@ -23,8 +24,8 @@ sys.path.insert(0, ".")
 from sqlmodel import Session, select
 
 from auth_utils import get_password_hash
-from database import engine
-from models import IntegrationSetting, OutputTemplate, Role, User
+from database import DEFAULT_TENANT_NAME, DEFAULT_TENANT_SLUG, engine
+from models import IntegrationSetting, OutputTemplate, Role, Tenant, User
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger("seed_dev")
@@ -100,40 +101,69 @@ DEFAULT_TEMPLATES = [
 ]
 
 
-def seed_role_and_admin(db: Session) -> None:
+def seed_default_tenant(db: Session) -> Tenant:
+    t = db.exec(select(Tenant).where(Tenant.slug == DEFAULT_TENANT_SLUG)).first()
+    if t:
+        return t
+    t = Tenant(
+        slug=DEFAULT_TENANT_SLUG,
+        name=DEFAULT_TENANT_NAME,
+        branding_json=json.dumps({"company_name": DEFAULT_TENANT_NAME}, ensure_ascii=False),
+        is_active=True,
+    )
+    db.add(t); db.commit(); db.refresh(t)
+    log.info("Tenant default '%s' creado.", DEFAULT_TENANT_SLUG)
+    return t
+
+
+def seed_role_and_admin(db: Session, tenant: Tenant) -> None:
     role = db.exec(select(Role).where(Role.name == "admin")).first()
     if not role:
         role = Role(name="admin", description="Administrador")
         db.add(role); db.commit(); db.refresh(role)
         log.info("Rol 'admin' creado.")
-    user = db.exec(select(User).where(User.email == "admin@notiva.local")).first()
+    user = db.exec(
+        select(User)
+        .where(User.email == "admin@notiva.local")
+        .where(User.tenant_id == tenant.id)
+    ).first()
     if not user:
         user = User(
+            tenant_id=tenant.id,
             email="admin@notiva.local",
             hashed_password=get_password_hash("notiva"),
             full_name="Admin Local",
             is_active=True,
             role_id=role.id,
+            is_superadmin=True,  # super-admin de plataforma
         )
         db.add(user); db.commit()
-        log.info("Usuario admin@notiva.local creado (password: notiva).")
+        log.info("Usuario admin@notiva.local creado (password: notiva, super-admin).")
     else:
-        log.info("Usuario admin@notiva.local ya existe.")
+        # Garantizar que el seed siempre sea super-admin (idempotente).
+        if not user.is_superadmin:
+            user.is_superadmin = True
+            db.add(user); db.commit()
+            log.info("Promovido admin@notiva.local a super-admin.")
+        else:
+            log.info("Usuario admin@notiva.local ya existe (super-admin).")
 
 
-def seed_output_templates(db: Session) -> None:
+def seed_output_templates(db: Session, tenant: Tenant) -> None:
     for tpl in DEFAULT_TEMPLATES:
         existing = db.exec(
-            select(OutputTemplate).where(OutputTemplate.name == tpl["name"])
+            select(OutputTemplate)
+            .where(OutputTemplate.name == tpl["name"])
+            .where(OutputTemplate.tenant_id == tenant.id)
         ).first()
         if existing:
             continue
-        db.add(OutputTemplate(**tpl))
+        db.add(OutputTemplate(**tpl, tenant_id=tenant.id))
     db.commit()
-    log.info("Plantillas de outputs verificadas/creadas.")
+    log.info("Plantillas de outputs verificadas/creadas en tenant '%s'.", tenant.slug)
 
 
-def seed_default_integrations(db: Session) -> None:
+def seed_default_integrations(db: Session, tenant: Tenant) -> None:
     """Pre-crear los settings vacíos para que el frontend muestre los formularios."""
     defaults = [
         ("smtp", {"provider": "Resend", "apiKey": "", "senderEmail": "no-reply@acten.local"}),
@@ -143,42 +173,31 @@ def seed_default_integrations(db: Session) -> None:
         ("clickup", {"api_token": "", "isActive": False}),
         ("azure_devops", {"organization": "", "project": "", "pat": "", "isActive": False}),
         ("autoCuration", {"isEnabled": False, "timeoutHours": 24}),
-        # White-label: defaults pre-poblados para que /admin/branding muestre
-        # algo en una instalación fresca. NO incluye platform_name (lo añade
-        # `branding_service.get_branding` desde DEFAULT_BRANDING).
-        (
-            "branding",
-            {
-                "company_name": "Acten",
-                "company_tagline": "",
-                "company_email": "",
-                "company_address": "",
-                "company_website": "",
-                "company_phone": "",
-                "primary_color": "#4F46E5",
-                "secondary_color": "#06B6D4",
-                "accent_color": "#10B981",
-                "logo_data_url": "",
-                "favicon_data_url": "",
-            },
-        ),
     ]
     for name, cfg in defaults:
         existing = db.exec(
-            select(IntegrationSetting).where(IntegrationSetting.provider_name == name)
+            select(IntegrationSetting)
+            .where(IntegrationSetting.provider_name == name)
+            .where(IntegrationSetting.tenant_id == tenant.id)
         ).first()
         if existing:
             continue
-        db.add(IntegrationSetting(provider_name=name, config_json=json.dumps(cfg), is_active=True))
+        db.add(IntegrationSetting(
+            tenant_id=tenant.id,
+            provider_name=name,
+            config_json=json.dumps(cfg),
+            is_active=True,
+        ))
     db.commit()
-    log.info("IntegrationSetting defaults creadas.")
+    log.info("IntegrationSetting defaults creadas en tenant '%s'.", tenant.slug)
 
 
 def main() -> int:
     with Session(engine) as db:
-        seed_role_and_admin(db)
-        seed_output_templates(db)
-        seed_default_integrations(db)
+        tenant = seed_default_tenant(db)
+        seed_role_and_admin(db, tenant)
+        seed_output_templates(db, tenant)
+        seed_default_integrations(db, tenant)
     log.info("Seed completado.")
     return 0
 

@@ -9,10 +9,16 @@ from services import branding_service
 # Resend se configura SIEMPRE desde /admin/settings (UI) →
 # IntegrationSetting('smtp').config_json.{apiKey, senderEmail}.
 # Sin DB, no se envían correos: se imprime el HTML en consola (modo dev).
-DEFAULT_FROM_EMAIL = "no-reply@notiva.local"
+DEFAULT_FROM_EMAIL = "no-reply@acten.local"
 DEFAULT_TO_EMAIL = os.environ.get("TO_EMAIL", "felipesof@gmail.com")
+
+
 class EmailService:
-    def __init__(self, db: Session = None):
+    def __init__(self, db: Session = None, tenant_id: int | None = None):
+        """Multi-tenant: si `tenant_id` se pasa, las credenciales SMTP y la
+        marca se leen de ESE tenant. Si no, fallback al tenant default.
+        """
+        self.tenant_id = tenant_id
         # Configurar Jinja2 para cargar plantillas desde el directorio local `templates`
         current_dir = os.path.dirname(os.path.abspath(__file__))
         templates_dir = os.path.join(os.path.dirname(current_dir), 'templates')
@@ -56,21 +62,34 @@ class EmailService:
         self.branding = dict(branding_service.DEFAULT_BRANDING)
 
         if db:
-            setting = db.exec(select(IntegrationSetting).where(IntegrationSetting.provider_name == 'smtp')).first()
-            if setting and setting.is_active:
+            # Resuelve tenant: el explícito o, si no vino, el default ('acten').
+            from database import DEFAULT_TENANT_SLUG
+            from models import Tenant
+            tid = self.tenant_id
+            if tid is None:
+                t = db.exec(select(Tenant).where(Tenant.slug == DEFAULT_TENANT_SLUG)).first()
+                tid = t.id if t else None
+                self.tenant_id = tid
+
+            if tid is not None:
+                smtp_query = select(IntegrationSetting).where(
+                    IntegrationSetting.provider_name == 'smtp'
+                ).where(IntegrationSetting.tenant_id == tid)
+                setting = db.exec(smtp_query).first()
+                if setting and setting.is_active:
+                    try:
+                        config = json.loads(setting.config_json)
+                        if config.get("apiKey"):
+                            self.api_key = config.get("apiKey")
+                        if config.get("senderEmail"):
+                            self.from_email = config.get("senderEmail")
+                    except Exception as e:
+                        print(f"Error parsing local SMTP settings: {e}")
+                # Cargamos branding del tenant correcto.
                 try:
-                    config = json.loads(setting.config_json)
-                    if config.get("apiKey"):
-                        self.api_key = config.get("apiKey")
-                    if config.get("senderEmail"):
-                        self.from_email = config.get("senderEmail")
-                except Exception as e:
-                    print(f"Error parsing local SMTP settings: {e}")
-            # Cargamos branding también — los emails llevan la marca del cliente.
-            try:
-                self.branding = branding_service.get_branding(db)
-            except Exception as exc:
-                print(f"Error cargando branding para email: {exc}")
+                    self.branding = branding_service.get_branding(db, tid)
+                except Exception as exc:
+                    print(f"Error cargando branding para email: {exc}")
 
         if self.api_key:
             resend.api_key = self.api_key

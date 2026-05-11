@@ -84,6 +84,12 @@ export const routes: Routes = [
                 data: { description: 'Personaliza el nombre, logo, colores y datos de contacto de tu empresa.', robots: 'noindex, nofollow' },
             },
             {
+                path: 'super/tenants',
+                loadComponent: () => import('./components/super-tenants/super-tenants.component').then(m => m.SuperTenantsComponent),
+                title: 'Empresas (Tenants) | Acten',
+                data: { description: 'Gestión de empresas / tenants — sólo super-admins.', robots: 'noindex, nofollow' },
+            },
+            {
                 path: 'profile',
                 component: ProfileComponent,
                 title: 'Mi Perfil | Acten',

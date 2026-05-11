@@ -1,9 +1,11 @@
-"""Branding / White-label endpoints.
+"""Branding / White-label endpoints (per-tenant).
 
-GET  /api/branding/         público (lo necesita el login antes de tener token)
-PUT  /api/branding/         admin only — patch parcial de campos editables
-POST /api/branding/logo     admin only — sube un logo (multipart) → guarda como data URL
-DELETE /api/branding/logo   admin only — borra el logo (vuelve al texto)
+GET  /api/branding/             público — resuelve tenant desde
+                                X-Tenant-Slug, ?tenant=slug, o cae al default.
+PUT  /api/branding/             admin del tenant — patch parcial.
+POST /api/branding/logo         admin del tenant — sube logo.
+DELETE /api/branding/logo       admin del tenant — borra logo.
+POST /api/branding/favicon      admin del tenant — sube favicon.
 """
 
 from __future__ import annotations
@@ -17,13 +19,13 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from database import get_session
-from routers.auth import require_admin
+from models import Tenant, User
+from routers.auth import get_tenant_from_request, require_admin, get_current_tenant
 from services import branding_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/branding", tags=["Branding (White-label)"])
 
-# Logos < 2 MB. Mayor que eso suele ser un PNG sin optimizar y bloatea el JSON.
 MAX_LOGO_BYTES = 2 * 1024 * 1024
 ALLOWED_MIME_TYPES = {
     "image/png",
@@ -36,8 +38,6 @@ ALLOWED_MIME_TYPES = {
 
 
 class BrandingPatch(BaseModel):
-    """Patch parcial — todos los campos opcionales."""
-
     company_name: str | None = Field(None, max_length=120)
     company_tagline: str | None = Field(None, max_length=240)
     company_email: str | None = Field(None, max_length=240)
@@ -50,26 +50,35 @@ class BrandingPatch(BaseModel):
 
 
 @router.get("/")
-def get_branding(db: Session = Depends(get_session)) -> dict[str, Any]:
-    """Endpoint público — el login también lee de aquí."""
-    return branding_service.get_branding(db)
+def get_branding(
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_tenant_from_request),
+) -> dict[str, Any]:
+    """Endpoint público — el login también lee de aquí.
+
+    Resuelve el tenant desde header `X-Tenant-Slug` o querystring `?tenant=`,
+    o cae al tenant default ('acten').
+    """
+    return branding_service.get_branding(db, tenant.id)
 
 
 @router.put("/")
 def put_branding(
     patch: BrandingPatch,
     db: Session = Depends(get_session),
-    _admin=Depends(require_admin),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     payload = {k: v for k, v in patch.model_dump().items() if v is not None}
-    return branding_service.update_branding(db, payload)
+    return branding_service.update_branding(db, tenant.id, payload)
 
 
 @router.post("/logo")
 async def upload_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_session),
-    _admin=Depends(require_admin),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -84,22 +93,24 @@ async def upload_logo(
         )
     b64 = base64.b64encode(data).decode("ascii")
     data_url = f"data:{file.content_type};base64,{b64}"
-    return branding_service.update_branding(db, {"logo_data_url": data_url})
+    return branding_service.update_branding(db, tenant.id, {"logo_data_url": data_url})
 
 
 @router.delete("/logo")
 def delete_logo(
     db: Session = Depends(get_session),
-    _admin=Depends(require_admin),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
-    return branding_service.update_branding(db, {"logo_data_url": ""})
+    return branding_service.update_branding(db, tenant.id, {"logo_data_url": ""})
 
 
 @router.post("/favicon")
 async def upload_favicon(
     file: UploadFile = File(...),
     db: Session = Depends(get_session),
-    _admin=Depends(require_admin),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -114,4 +125,4 @@ async def upload_favicon(
         )
     b64 = base64.b64encode(data).decode("ascii")
     data_url = f"data:{file.content_type};base64,{b64}"
-    return branding_service.update_branding(db, {"favicon_data_url": data_url})
+    return branding_service.update_branding(db, tenant.id, {"favicon_data_url": data_url})

@@ -1,8 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.responses import Response
 from sqlmodel import Session, select
-from models import MeetingSession, ActionItem, IntegrationSetting, Routing
+from models import MeetingSession, ActionItem, IntegrationSetting, Routing, Tenant, User
 from database import get_session
+from routers.auth import get_current_tenant, get_current_user
 import uuid
 import os
 import io
@@ -20,6 +21,18 @@ router = APIRouter(
     tags=["Sessions"]
 )
 
+
+def _get_session_or_404(db: Session, session_id: int, tenant: Tenant) -> MeetingSession:
+    """Helper: trae la sesión y valida que pertenezca al tenant del caller.
+
+    Cualquier intento de acceder a una sesión de otra empresa devuelve 404
+    (no 403) para no filtrar siquiera la existencia.
+    """
+    obj = db.get(MeetingSession, session_id)
+    if not obj or obj.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return obj
+
 @router.get("/")
 def get_sessions(
     project_id: int = Query(None, description="Filter by project ID"),
@@ -28,22 +41,19 @@ def get_sessions(
     search: str = Query(None, description="Search by title or id"),
     status: str = Query(None, description="Filter by status"),
     include_archived: bool = Query(False, description="Include archived sessions"),
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Fetch paginated meeting sessions (Actas) from the database.
+    """Fetch paginated meeting sessions (Actas) del tenant actual.
 
-    Por defecto excluye sesiones con status='archived' (placeholders sin
-    contenido recuperable, p.ej. webhooks de Fireflies que nunca completaron).
-    Pasar `include_archived=true` para verlas (debugging/admin).
+    AISLAMIENTO: siempre filtra por `tenant_id` — un usuario nunca ve sesiones
+    de otra empresa. Por defecto excluye `status='archived'` también.
     """
     from sqlmodel import select, func, or_
     import math
 
-    query = select(MeetingSession)
+    query = select(MeetingSession).where(MeetingSession.tenant_id == tenant.id)
 
-    # Por defecto ocultamos las sesiones archivadas (basura sin contenido).
-    # Si el caller pide explícitamente status='archived', NO aplicamos el filtro
-    # — quiere ver justamente esas.
     if not include_archived and status != "archived":
         query = query.where(MeetingSession.status != "archived")
 
@@ -80,13 +90,18 @@ def get_sessions(
     }
 
 @router.get("/{session_id}")
-def get_session_details(session_id: int, db: Session = Depends(get_session)):
-    """Fetch a specific meeting session and its related action items."""
+def get_session_details(
+    session_id: int,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Detail de una sesión — sólo si pertenece al tenant del usuario."""
     from sqlmodel import select
     from models import ActionItem
-    
+
     session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
+    if not session_obj or session_obj.tenant_id != tenant.id:
+        # 404 (no 403) para no filtrar la existencia entre empresas.
         raise HTTPException(status_code=404, detail="Session not found")
         
     action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
@@ -97,10 +112,12 @@ def get_session_details(session_id: int, db: Session = Depends(get_session)):
     }
 
 @router.post("/{session_id}/fetch_summary")
-async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+async def fetch_summary(
+    session_id: int,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    session_obj = _get_session_or_404(db, session_id, tenant)
         
     def _fallback_to_groq():
         if not session_obj.raw_transcript:
@@ -208,11 +225,15 @@ async def fetch_summary(session_id: int, db: Session = Depends(get_session)):
         return {"summary": summary, "transcript": session_obj.raw_transcript}
 
 @router.delete("/{session_id}")
-def delete_session(session_id: int, db: Session = Depends(get_session)):
+def delete_session(
+    session_id: int,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
     from sqlmodel import select
     from models import ActionItem
     session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
+    if not session_obj or session_obj.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Session not found")
         
     action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
@@ -237,14 +258,17 @@ class RegeneratePayload(BaseModel):
     raw_transcript: Optional[str] = None
 
 @router.post("/{session_id}/regenerate_tasks")
-async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[RegeneratePayload] = None, db: Session = Depends(get_session)):
+async def regenerate_tasks_from_transcript(
+    session_id: int,
+    payload: Optional[RegeneratePayload] = None,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
     from models import ActionItem, ProjectContact
     from services.groq_service import OpenAIService
     from sqlmodel import delete
 
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session_obj = _get_session_or_404(db, session_id, tenant)
 
     # Solo se permite UN uso del botón "Regenerar Tareas".
     if session_obj.ai_tasks_regenerated:
@@ -293,6 +317,7 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
         action_items_data = []
 
     for item_data in action_items_data:
+        # tenant_id se pasa explícito porque ActionItem ahora lo requiere.
         if isinstance(item_data, str):
             # Fallback for LLM hallucinations where it returns a list of strings
             title = "Tarea Detectada"
@@ -314,6 +339,7 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
             continue
             
         action_item = ActionItem(
+            tenant_id=tenant.id,
             session_id=session_id,
             owner_name=owner_name,
             owner_email=owner_email,
@@ -350,7 +376,12 @@ async def regenerate_tasks_from_transcript(session_id: int, payload: Optional[Re
     }
 
 @router.post("/{session_id}/regenerate_fields")
-async def regenerate_fields_from_transcript(session_id: int, payload: Optional[RegeneratePayload] = None, db: Session = Depends(get_session)):
+async def regenerate_fields_from_transcript(
+    session_id: int,
+    payload: Optional[RegeneratePayload] = None,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
     """Sugiere campos con IA (OpenAI gpt-4o). Solo se puede usar UNA vez por sesión.
 
     NO toca el resumen ejecutivo (ese viene nativo de Fireflies y se edita
@@ -359,9 +390,7 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
     """
     from services.groq_service import OpenAIService
 
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session_obj = _get_session_or_404(db, session_id, tenant)
 
     # Validación de uso único
     if session_obj.ai_fields_regenerated:
@@ -445,11 +474,14 @@ async def regenerate_fields_from_transcript(session_id: int, payload: Optional[R
     }
 
 @router.put("/{session_id}")
-def update_session_content(session_id: int, payload: SessionUpdate, db: Session = Depends(get_session)):
+def update_session_content(
+    session_id: int,
+    payload: SessionUpdate,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
     """Manually update the text content of a curated session."""
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session_obj = _get_session_or_404(db, session_id, tenant)
         
     if payload.title is not None:
         session_obj.title = payload.title
@@ -481,12 +513,13 @@ def update_action_item_manual(
     owner_name: Optional[str] = Form(None),
     owner_email: Optional[str] = Form(None),
     due_date: Optional[str] = Form(None),
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Update details of an action item manually."""
+    """Update details of an action item manually (tenant-scoped)."""
     from models import ActionItem
     item = db.get(ActionItem, item_id)
-    if not item:
+    if not item or item.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Action Item not found")
     
     if title is not None:
@@ -513,15 +546,15 @@ def create_manual_action_item(
     owner_email: str = Form(""),
     due_date: str = Form(""),
     description: str = Form(""),
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Crear una nueva tarea manual."""
-    from models import ActionItem, MeetingSession
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
-        
+    """Crear una nueva tarea manual (sólo dentro del propio tenant)."""
+    from models import ActionItem
+    session_obj = _get_session_or_404(db, session_id, tenant)
+
     new_item = ActionItem(
+        tenant_id=tenant.id,
         session_id=session_id,
         title=title,
         owner_name=owner_name,
@@ -567,6 +600,7 @@ async def upload_manual_session(
     file: Optional[UploadFile] = File(None),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
     """Crea una sesión a partir de audio, texto o URL de YouTube.
 
@@ -618,7 +652,16 @@ async def upload_manual_session(
                 detail="No se pudo extraer texto. Sube audio, pega texto o pasa una URL de YouTube válida.",
             )
 
+        # Validar que el project_id (si vino) sea de ESTE tenant — evita
+        # subir un acta a un proyecto de otra empresa.
+        if project_id:
+            from models import Project
+            proj = db.get(Project, project_id)
+            if not proj or proj.tenant_id != tenant.id:
+                raise HTTPException(status_code=400, detail="Proyecto inválido para esta empresa.")
+
         new_session = MeetingSession(
+            tenant_id=tenant.id,
             fireflies_id=f"manual_{uuid.uuid4()}",
             title=title,
             date=session_date,
@@ -750,19 +793,22 @@ def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.B
     return generator.generar_buffer()
 
 @router.post("/{session_id}/dispatch_emails")
-async def dispatch_emails(session_id: int, request: DispatchEmailsRequest, db: Session = Depends(get_session)):
-    """Dispatch emails for the selected action items."""
+async def dispatch_emails(
+    session_id: int,
+    request: DispatchEmailsRequest,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Dispatch emails for the selected action items (tenant-scoped)."""
     from models import ActionItem
     from services.email_service import EmailService
     import asyncio
     from fpdf import FPDF
     from sqlmodel import select
-    
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
-        
-    email_service = EmailService(db=db)
+
+    session_obj = _get_session_or_404(db, session_id, tenant)
+
+    email_service = EmailService(db=db, tenant_id=tenant.id)
     results = []
     
     action_items_all = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
@@ -984,8 +1030,15 @@ class DispatchPlatformsRequest(BaseModel):
     action_item_ids: list[int]
 
 @router.post("/{session_id}/dispatch_platforms")
-async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest, db: Session = Depends(get_session)):
-    """Dispatch selected action items to configured platforms (ClickUp, Trello, Jira, Azure)."""
+async def dispatch_platforms(
+    session_id: int,
+    request: DispatchPlatformsRequest,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Dispatch tasks to integrations (Trello/Jira/ClickUp/Azure) — tenant-scoped:
+    sólo lee `IntegrationSetting` y `Routing` del propio tenant.
+    """
     from models import ActionItem, Routing, IntegrationSetting
     import json
     from sqlmodel import select
@@ -994,18 +1047,18 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
     from services.integrations.clickup import ClickUpIntegrationService
     from services.integrations.azure_devops import AzureDevOpsIntegrationService
 
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session_obj = _get_session_or_404(db, session_id, tenant)
 
     if not session_obj.project_id:
         raise HTTPException(status_code=400, detail="Cannot dispatch: Meeting is not related to any project routing.")
-        
+
     routings = db.exec(select(Routing).where(Routing.project_id == session_obj.project_id, Routing.is_active == True)).all()
     if not routings:
         raise HTTPException(status_code=400, detail="Project has no configured routings.")
 
-    global_settings = db.exec(select(IntegrationSetting)).all()
+    global_settings = db.exec(
+        select(IntegrationSetting).where(IntegrationSetting.tenant_id == tenant.id)
+    ).all()
     settings_dict = {}
     for s in global_settings:
         try:
@@ -1073,17 +1126,20 @@ async def dispatch_platforms(session_id: int, request: DispatchPlatformsRequest,
     return {"status": "success", "results": results}
 
 @router.get("/{session_id}/export/{format}")
-def export_document(session_id: int, format: str, db: Session = Depends(get_session)):
-    """Generate and return a document with the meeting details."""
+def export_document(
+    session_id: int,
+    format: str,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Generate and return a document with the meeting details (tenant-scoped)."""
     from models import ActionItem, Template
     from sqlmodel import select
     import io
     import json
     import os
 
-    session_obj = db.get(MeetingSession, session_id)
-    if not session_obj:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session_obj = _get_session_or_404(db, session_id, tenant)
 
     action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
 

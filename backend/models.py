@@ -1,29 +1,81 @@
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, UniqueConstraint
 from typing import Optional, List
 from pydantic import HttpUrl
 from datetime import datetime
+
+
+# ============================================================================
+# Multi-tenancy
+# ============================================================================
+# Cada `Tenant` representa una EMPRESA cliente. Los datos están AISLADOS por
+# tenant: ningún query devuelve datos de otra empresa. La plataforma sigue
+# llamándose Acten (eso vive en `branding_service.DEFAULT_BRANDING`); cada
+# tenant tiene su propia marca (logo, nombre comercial, colores) y sus
+# propios usuarios, proyectos, sesiones, integraciones, etc.
+#
+# Resolución del tenant en runtime:
+#   1) JWT carry: el token de un usuario lleva su tenant_id.
+#   2) URL slug: `/t/{slug}/...` o `?tenant={slug}` para endpoints públicos
+#      (login, branding antes de tener token).
+#   3) Custom domain: `Tenant.domain` (ej. `app.empresa.com` → tenant 'empresa').
+#
+# Backfill: en la migración ligera creamos un tenant por defecto `acten`
+# (id=1) y le asignamos todos los registros pre-existentes.
+
+class Tenant(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    slug: str = Field(
+        index=True, unique=True,
+        description="Identificador URL-safe ej. 'nexura'. Se usa en /t/{slug}/.",
+    )
+    name: str = Field(description="Nombre legible de la empresa.")
+    domain: Optional[str] = Field(
+        default=None, index=True, unique=True,
+        description="Dominio custom (ej. 'app.empresa.com'). Opcional.",
+    )
+    branding_json: str = Field(
+        default="{}",
+        description="JSON con company_name, logo_data_url, primary_color, etc.",
+    )
+    is_active: bool = Field(default=True)
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
 
 class Role(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True, unique=True, description="Nombre del rol, ej. admin, validator, viewer")
     description: str = Field(default="")
     is_active: bool = Field(default=True)
-    
+
     users: List["User"] = Relationship(back_populates="role")
 
 class User(SQLModel, table=True):
+    # Multi-tenancy: el email ya NO es globalmente único, sólo único dentro
+    # de un tenant. Mismo email puede existir en empresas distintas.
+    __table_args__ = (UniqueConstraint("email", "tenant_id", name="uq_user_email_per_tenant"),)
+
     id: Optional[int] = Field(default=None, primary_key=True)
-    email: str = Field(index=True, unique=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    email: str = Field(index=True)
     hashed_password: str
     full_name: str
     is_active: bool = Field(default=True)
     role_id: Optional[int] = Field(default=None, foreign_key="role.id")
-    
+    # Super-admin de plataforma (puede crear/listar/borrar tenants y entrar
+    # a cualquiera). Default False; sólo `admin@notiva.local` lo lleva tras
+    # el seed inicial.
+    is_superadmin: bool = Field(default=False)
+
     role: Optional[Role] = Relationship(back_populates="users")
 
 class Project(SQLModel, table=True):
+    # Project.name único por tenant (no global) — distintos clientes pueden
+    # tener proyectos con el mismo nombre.
+    __table_args__ = (UniqueConstraint("name", "tenant_id", name="uq_project_name_per_tenant"),)
+
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(index=True, unique=True, description="Nombre del proyecto, usado para mapear desde Fireflies")
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    name: str = Field(index=True, description="Nombre del proyecto, usado para mapear desde Fireflies")
     description: str = Field(default="")
     is_active: bool = Field(default=True)
 
@@ -94,15 +146,33 @@ class Routing(SQLModel, table=True):
     project: Optional[Project] = Relationship(back_populates="routings")
 
 class IntegrationSetting(SQLModel, table=True):
-    """Configuración Global de Integraciones y API Keys (SMTP, Fireflies, etc)"""
+    """Configuración por tenant de Integraciones (SMTP, Fireflies, Trello…).
+
+    Ahora es per-tenant: cada empresa tiene sus propias credenciales de
+    Resend/Trello/etc. La unicidad es `(provider_name, tenant_id)` — antes
+    era `provider_name` global, lo que filtraba credenciales entre clientes.
+    """
+
+    __table_args__ = (
+        UniqueConstraint("provider_name", "tenant_id", name="uq_integration_per_tenant"),
+    )
+
     id: Optional[int] = Field(default=None, primary_key=True)
-    provider_name: str = Field(index=True, unique=True, description="Ej: fireflies, resend, azure, trello, jira, clickup")
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    provider_name: str = Field(index=True, description="Ej: fireflies, resend, azure, trello, jira, clickup")
     config_json: str = Field(default="{}", description="Configuraciones en JSON incluyendo tokens")
     is_active: bool = Field(default=True)
 
 class MeetingSession(SQLModel, table=True):
+    # fireflies_id único por tenant (no global) — distintos clientes pueden
+    # usar la misma instancia de Fireflies sin colisión.
+    __table_args__ = (
+        UniqueConstraint("fireflies_id", "tenant_id", name="uq_meetingsession_ff_per_tenant"),
+    )
+
     id: Optional[int] = Field(default=None, primary_key=True)
-    fireflies_id: str = Field(index=True, unique=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    fireflies_id: str = Field(index=True)
     title: str
     date: str
     project_id: Optional[int] = Field(default=None, foreign_key="project.id")
@@ -143,10 +213,15 @@ class MeetingSession(SQLModel, table=True):
 
 
 class OutputTemplate(SQLModel, table=True):
-    """Sprint 04 — plantillas para outputs role-específicos."""
+    """Sprint 04 — plantillas para outputs role-específicos. Per-tenant."""
+
+    __table_args__ = (
+        UniqueConstraint("name", "tenant_id", name="uq_outputtemplate_name_per_tenant"),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(index=True, unique=True, description="ej. 'Deal Brief'")
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    name: str = Field(index=True, description="ej. 'Deal Brief'")
     role_type: str = Field(
         index=True,
         description="commercial | product | hr | status | kickoff | eval | custom",
@@ -246,9 +321,10 @@ class CalendarEvent(SQLModel, table=True):
 
 
 class AuditLog(SQLModel, table=True):
-    """Sprint 08 — audit log para SOC 2 / GDPR compliance."""
+    """Sprint 08 — audit log para SOC 2 / GDPR compliance. Per-tenant."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: Optional[int] = Field(default=None, foreign_key="tenant.id", index=True)
     user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
     action: str = Field(index=True, description="login, logout, edit_settings, delete, dispatch, ...")
     resource_type: Optional[str] = Field(default=None)
@@ -260,9 +336,10 @@ class AuditLog(SQLModel, table=True):
 
 
 class ApiKey(SQLModel, table=True):
-    """Sprint 11 — API keys para clientes que consumen Notiva API pública."""
+    """Sprint 11 — API keys para clientes que consumen la API pública."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
     user_id: int = Field(foreign_key="user.id", index=True)
     name: str = Field(description="Etiqueta humana de la key (ej. 'Zapier prod')")
     hashed_key: str = Field(unique=True, index=True)
@@ -300,6 +377,8 @@ class EmbeddingChunk(SQLModel, table=True):
 
 class ActionItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    # Denormalizado para queries directos sin join al meetingsession.
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
     session_id: int = Field(foreign_key="meetingsession.id")
 
     owner_name: str

@@ -13,10 +13,19 @@
             </div>
 
         <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+            <div class="form-group" *ngIf="showTenantField">
+                <label>Empresa</label>
+                <input type="text" [(ngModel)]="tenantSlug" name="tenantSlug"
+                       class="form-control"
+                       placeholder="acten"
+                       [readonly]="tenantLocked" />
+                <small class="hint">Identificador de tu empresa (ej. <code>acten</code>, <code>nexura</code>).</small>
+            </div>
+
             <div class="form-group">
                 <label>Correo Electrónico</label>
                 <input type="email" [(ngModel)]="email" name="email" class="form-control" required
-                    placeholder="admin@notiva.com" />
+                    placeholder="admin@empresa.com" />
             </div>
 
             <div class="form-group">

@@ -121,6 +121,20 @@
                         <span class="nav-text" *ngIf="!isCollapsed">Roles</span>
                     </a>
                 </li>
+                <li *ngIf="isSuperAdmin" class="super-only">
+                    <a routerLink="/admin/super/tenants" routerLinkActive="active" title="Gestión de empresas — sólo super-admin">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 21h18"></path>
+                            <path d="M5 21V7l8-4v18"></path>
+                            <path d="M19 21V11l-6-4"></path>
+                            <path d="M9 9h.01"></path>
+                            <path d="M9 13h.01"></path>
+                            <path d="M9 17h.01"></path>
+                        </svg>
+                        <span class="nav-text" *ngIf="!isCollapsed">Empresas (Tenants)</span>
+                    </a>
+                </li>
                 <li *ngIf="isAdmin">
                     <a routerLink="/admin/branding" routerLinkActive="active" title="Personaliza la marca: logo, colores, datos de tu empresa">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"

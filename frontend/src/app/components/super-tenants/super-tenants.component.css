@@ -1,0 +1,55 @@
+.super-page { padding: 1.25rem 1.5rem 3rem; max-width: 1200px; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; }
+.page-head h2 { margin: 0 0 .25rem; font-size: 1.6rem; }
+.muted { color: var(--text-muted); font-size: .9rem; }
+.muted.small { font-size: .8rem; margin-top: -.25rem; margin-bottom: .75rem; }
+
+.alert { padding: .75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: .9rem; }
+.alert-ok { background: rgba(16, 185, 129, .1); color: #047857; border: 1px solid rgba(16, 185, 129, .25); }
+.alert-err { background: rgba(239, 68, 68, .08); color: #b91c1c; border: 1px solid rgba(239, 68, 68, .25); }
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  margin-bottom: 1rem;
+}
+.panel h3 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 600; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.form-row { display: flex; flex-direction: column; gap: .35rem; }
+.form-row.span-2 { grid-column: span 2; }
+.form-row label {
+  font-size: .8rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .03em; font-weight: 600;
+}
+.form-row input {
+  padding: .65rem .85rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: .95rem;
+  font-family: inherit;
+}
+.hint { color: var(--text-muted); font-size: .75rem; }
+
+.t-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.t-table th, .t-table td { padding: .65rem .75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+.t-table th { font-weight: 600; color: var(--text-muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; }
+.t-table tbody tr.inactive { opacity: .55; }
+.t-table code { font-size: .85rem; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+
+.badge { padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.badge.ok  { background: rgba(16,185,129,.12); color: #047857; }
+.badge.off { background: rgba(239,68,68,.10); color: #b91c1c; }
+
+.actions { display: flex; gap: .75rem; }
+.link-btn { background: none; border: none; color: var(--brand-primary, #4f46e5); cursor: pointer; padding: 0; font-size: .85rem; }
+.link-btn:hover { text-decoration: underline; }
+.link-btn.danger { color: #b91c1c; }

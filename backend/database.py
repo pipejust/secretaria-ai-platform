@@ -49,6 +49,10 @@ def create_db_and_tables() -> None:
     _apply_lightweight_migrations()
 
 
+DEFAULT_TENANT_SLUG = "acten"
+DEFAULT_TENANT_NAME = "Acten"
+
+
 def _apply_lightweight_migrations() -> None:
     """ALTER TABLE idempotentes para columnas añadidas después del schema inicial."""
     if _is_sqlite:
@@ -92,6 +96,29 @@ def _apply_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS idx_auditlog_user_action     ON auditlog(user_id, action)",
             "CREATE INDEX IF NOT EXISTS idx_auditlog_created_at      ON auditlog(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_apikey_hash              ON apikey(hashed_key)",
+            # ================================================================
+            # Multi-tenancy — añadir tenant_id a todas las tablas raíz
+            # ================================================================
+            # NOTA: la tabla `tenant` la crea SQLModel.metadata.create_all.
+            # Aquí sólo añadimos columnas FK + backfill. Todas son IF NOT EXISTS.
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN NOT NULL DEFAULT FALSE',
+            'ALTER TABLE project            ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            'ALTER TABLE meetingsession     ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            'ALTER TABLE integrationsetting ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            'ALTER TABLE outputtemplate     ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            'ALTER TABLE actionitem         ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            'ALTER TABLE apikey             ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            'ALTER TABLE auditlog           ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
+            # Índices para queries multi-tenant
+            "CREATE INDEX IF NOT EXISTS idx_user_tenant            ON \"user\"(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_project_tenant         ON project(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_meetingsession_tenant  ON meetingsession(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_integration_tenant     ON integrationsetting(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_outputtemplate_tenant  ON outputtemplate(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_actionitem_tenant      ON actionitem(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_apikey_tenant          ON apikey(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_auditlog_tenant        ON auditlog(tenant_id)",
         ]
 
     from sqlalchemy import text
@@ -105,6 +132,136 @@ def _apply_lightweight_migrations() -> None:
                 if "duplicate column" in msg or "already exists" in msg:
                     continue
                 logger.warning("Migración ignorada (%s): %s", stmt, exc)
+
+    # Backfill multi-tenant + cambio de uniques (solo Postgres real)
+    if not _is_sqlite:
+        _ensure_default_tenant_and_backfill()
+
+
+def _ensure_default_tenant_and_backfill() -> None:
+    """Crea el tenant 'acten' por defecto y asigna a él todos los registros
+    legacy que aún no tengan `tenant_id`. También promociona la antigua
+    `IntegrationSetting('branding')` (singleton) a `Tenant.branding_json`
+    y reemplaza los uniques globales por los compuestos `(col, tenant_id)`.
+
+    Idempotente: cada paso comprueba antes de actuar.
+    """
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        # 1) Asegurar el tenant default. La tabla la creó create_all.
+        row = conn.execute(
+            text("SELECT id FROM tenant WHERE slug = :s"),
+            {"s": DEFAULT_TENANT_SLUG},
+        ).first()
+        if row:
+            tenant_id = row[0]
+        else:
+            res = conn.execute(
+                text(
+                    "INSERT INTO tenant (slug, name, branding_json, is_active, created_at) "
+                    "VALUES (:s, :n, '{}', TRUE, NOW()::text) RETURNING id"
+                ),
+                {"s": DEFAULT_TENANT_SLUG, "n": DEFAULT_TENANT_NAME},
+            )
+            tenant_id = res.scalar_one()
+            logger.info("Tenant default creado: %s (id=%s)", DEFAULT_TENANT_SLUG, tenant_id)
+
+        # 2) Backfill: cualquier fila con tenant_id IS NULL → tenant default.
+        #    Listo en orden topológico para no romper FK durante el ALTER NOT NULL.
+        backfill_tables = [
+            '"user"', "project", "meetingsession", "integrationsetting",
+            "outputtemplate", "actionitem", "apikey", "auditlog",
+        ]
+        for tbl in backfill_tables:
+            conn.execute(
+                text(f"UPDATE {tbl} SET tenant_id = :t WHERE tenant_id IS NULL"),
+                {"t": tenant_id},
+            )
+
+        # 3) Promover el primer admin (`admin@notiva.local` o el más antiguo)
+        #    a super-admin si nadie lo es aún. Permite gestionar otros tenants.
+        has_super = conn.execute(text('SELECT 1 FROM "user" WHERE is_superadmin = TRUE LIMIT 1')).first()
+        if not has_super:
+            conn.execute(text(
+                'UPDATE "user" SET is_superadmin = TRUE '
+                "WHERE id = (SELECT id FROM \"user\" ORDER BY id ASC LIMIT 1)"
+            ))
+            logger.info("Promovido el primer usuario a super-admin (gestión de tenants).")
+
+        # 4) Migrar branding del singleton legacy a Tenant.branding_json.
+        legacy_brand = conn.execute(text(
+            "SELECT config_json FROM integrationsetting "
+            "WHERE provider_name = 'branding' AND tenant_id = :t LIMIT 1"
+        ), {"t": tenant_id}).first()
+        if legacy_brand and legacy_brand[0] and legacy_brand[0] not in ("", "{}"):
+            existing = conn.execute(
+                text("SELECT branding_json FROM tenant WHERE id = :t"),
+                {"t": tenant_id},
+            ).first()
+            if not existing or existing[0] in ("", "{}"):
+                conn.execute(
+                    text("UPDATE tenant SET branding_json = :b WHERE id = :t"),
+                    {"b": legacy_brand[0], "t": tenant_id},
+                )
+                logger.info("Branding legacy migrado a Tenant.branding_json.")
+
+        # 5) Reemplazar UNIQUE globales por UNIQUE compuestos (col, tenant_id).
+        # SQLAlchemy genera el nombre como `ix_<table>_<col>` cuando el Field
+        # tiene `index=True, unique=True`, y `<table>_<col>_key` cuando es
+        # `unique=True` sin index. Probamos los dos por seguridad.
+        replace_uniques = [
+            ("user", ["user_email_key", "ix_user_email"],
+             "uq_user_email_per_tenant", "(email, tenant_id)"),
+            ("project", ["project_name_key", "ix_project_name"],
+             "uq_project_name_per_tenant", "(name, tenant_id)"),
+            ("meetingsession", ["ix_meetingsession_fireflies_id"],
+             "uq_meetingsession_ff_per_tenant", "(fireflies_id, tenant_id)"),
+            ("integrationsetting",
+             ["integrationsetting_provider_name_key", "ix_integrationsetting_provider_name"],
+             "uq_integration_per_tenant", "(provider_name, tenant_id)"),
+            ("outputtemplate",
+             ["outputtemplate_name_key", "ix_outputtemplate_name"],
+             "uq_outputtemplate_name_per_tenant", "(name, tenant_id)"),
+        ]
+        for table, old_idx_names, new_idx, cols in replace_uniques:
+            for old_idx in old_idx_names:
+                conn.execute(text(f'ALTER TABLE "{table}" DROP CONSTRAINT IF EXISTS "{old_idx}"'))
+                conn.execute(text(f'DROP INDEX IF EXISTS "{old_idx}"'))
+            # Re-crear el `ix_*` (NO unique) sólo para los que necesitan índice
+            # de búsqueda por la columna sola. user.email y project.name lo
+            # necesitan para WHERE email = X AND tenant_id = Y.
+            if table in ("user", "project", "outputtemplate", "integrationsetting"):
+                col_name = cols.strip("()").split(",")[0].strip()
+                conn.execute(text(
+                    f'CREATE INDEX IF NOT EXISTS "ix_{table}_{col_name}_nonunique" '
+                    f'ON "{table}" ({col_name})'
+                ))
+            # Crear el unique compuesto.
+            exists = conn.execute(text(
+                "SELECT 1 FROM pg_indexes WHERE indexname = :n"
+            ), {"n": new_idx}).first()
+            if not exists:
+                conn.execute(text(
+                    f'CREATE UNIQUE INDEX "{new_idx}" ON "{table}" {cols}'
+                ))
+
+        # 6) Una vez backfilleado, podemos exigir NOT NULL en tenant_id.
+        for tbl, col in [
+            ('"user"', "tenant_id"),
+            ("project", "tenant_id"),
+            ("meetingsession", "tenant_id"),
+            ("integrationsetting", "tenant_id"),
+            ("outputtemplate", "tenant_id"),
+            ("actionitem", "tenant_id"),
+            ("apikey", "tenant_id"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE {tbl} ALTER COLUMN {col} SET NOT NULL"))
+            except Exception as exc:
+                # Si quedan NULLs por una tabla derivada que no backfilleamos
+                # (caso raro), no abortamos el boot — solo lo registramos.
+                logger.warning("No pude SET NOT NULL %s.%s: %s", tbl, col, exc)
 
 
 def get_session():

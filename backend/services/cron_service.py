@@ -30,12 +30,14 @@ from models import ActionItem, IntegrationSetting, MeetingSession, Project
 logger = logging.getLogger(__name__)
 
 
-def _load_auto_curation_config(session: Session) -> Optional[tuple[bool, float]]:
-    """Devuelve (is_enabled, timeout_hours) o None si la configuración no existe/es inválida."""
+def _load_auto_curation_config(session: Session, tenant_id: int) -> Optional[tuple[bool, float]]:
+    """Devuelve (is_enabled, timeout_hours) del autoCuration setting del tenant
+    indicado, o None si la configuración no existe/es inválida.
+    """
     setting = session.exec(
-        select(IntegrationSetting).where(
-            IntegrationSetting.provider_name == "autoCuration"
-        )
+        select(IntegrationSetting)
+        .where(IntegrationSetting.provider_name == "autoCuration")
+        .where(IntegrationSetting.tenant_id == tenant_id)
     ).first()
     if not setting:
         return None
@@ -104,6 +106,17 @@ async def _auto_dispatch_session(session_id: int) -> None:
         emails_ok = False
         platforms_ok = False
 
+        # Multi-tenant: el cron NO pasa por FastAPI DI, así que tenemos que
+        # cargar el tenant manual y pasarlo explícito a las funciones-endpoint.
+        from models import Tenant
+        ms_for_tenant = db.get(MeetingSession, session_id)
+        if not ms_for_tenant:
+            return
+        tenant = db.get(Tenant, ms_for_tenant.tenant_id)
+        if not tenant:
+            logger.warning("auto-curación: sesión %s sin tenant resoluble.", session_id)
+            return
+
         try:
             await dispatch_emails(
                 session_id,
@@ -111,6 +124,7 @@ async def _auto_dispatch_session(session_id: int) -> None:
                     action_item_ids=action_item_ids, attach_document=True
                 ),
                 db,
+                tenant,
             )
             emails_ok = True
         except Exception:
@@ -123,6 +137,7 @@ async def _auto_dispatch_session(session_id: int) -> None:
                 session_id,
                 DispatchPlatformsRequest(action_item_ids=action_item_ids),
                 db,
+                tenant,
             )
             platforms_ok = True
         except Exception:
@@ -201,21 +216,30 @@ def _resolve_dispatch_policy(
 
 
 def check_and_dispatch_pending_sessions() -> None:
-    """Loop de auto-curación. Se ejecuta cada N minutos."""
-    with Session(engine) as session:
-        config = _load_auto_curation_config(session)
-        # Si no hay setting global, usamos defaults conservadores: solo activan
-        # quien lo haya marcado a nivel proyecto.
-        if config is None:
-            global_enabled, global_timeout_hours = False, 24.0
-        else:
-            global_enabled, global_timeout_hours = config
+    """Loop de auto-curación. Se ejecuta cada N minutos.
 
+    Multi-tenant: cada tenant tiene su propio setting `autoCuration` (puede
+    estar enabled en uno y disabled en otro). Resolvemos por tenant_id de
+    cada sesión pendiente. Cacheamos por tenant para no consultar lo mismo
+    N veces.
+    """
+    from models import Tenant
+    with Session(engine) as session:
         pending_sessions = session.exec(
             select(MeetingSession).where(MeetingSession.status == "pending")
         ).all()
 
+        # Cache de configuración por tenant (evita N queries cuando hay muchas
+        # sesiones del mismo tenant en cola).
+        config_cache: dict[int, tuple[bool, float]] = {}
+
         for ms in pending_sessions:
+            tid = ms.tenant_id
+            if tid not in config_cache:
+                cfg = _load_auto_curation_config(session, tid)
+                config_cache[tid] = cfg or (False, 24.0)
+            global_enabled, global_timeout_hours = config_cache[tid]
+
             enabled, timeout_hours = _resolve_dispatch_policy(
                 session, ms, global_enabled, global_timeout_hours
             )

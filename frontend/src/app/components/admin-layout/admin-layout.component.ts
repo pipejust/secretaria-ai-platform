@@ -10,6 +10,8 @@ interface CurrentUser {
     email?: string;
     full_name?: string;
     role?: string | null;
+    is_superadmin?: boolean;
+    tenant?: { id: number; slug: string; name: string };
 }
 
 @Component({
@@ -22,6 +24,7 @@ interface CurrentUser {
 export class AdminLayoutComponent implements OnInit, OnDestroy {
     user: CurrentUser | null = null;
     isAdmin = false;
+    isSuperAdmin = false;
     isCollapsed = false;
     isMobileOpen = false;
     isProfileDropdownOpen = false;
@@ -43,6 +46,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
                 }
                 this.user = u;
                 this.isAdmin = u?.role === 'admin';
+                this.isSuperAdmin = !!u?.is_superadmin;
                 this.cdr.detectChanges();
             });
 

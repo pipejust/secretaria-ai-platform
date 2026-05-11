@@ -9,6 +9,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth-interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor';
+import { tenantInterceptor } from './interceptors/tenant.interceptor';
 import { BrandingService } from './services/branding.service';
 
 import { routes } from './app.routes';
@@ -34,7 +35,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    provideHttpClient(withInterceptors([tenantInterceptor, authInterceptor, errorInterceptor])),
     provideAppInitializer(() => inject(BrandingService).loadFromServer()),
   ],
 };
