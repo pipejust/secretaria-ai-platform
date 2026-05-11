@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlmodel import Session, select
 from models import MeetingSession, ActionItem, IntegrationSetting, Routing, Tenant, User
 from database import get_session
-from routers.auth import get_current_tenant, get_current_user, require_session_writer
+from routers.auth import get_current_tenant, get_current_user, require_admin, require_session_writer
 import uuid
 import os
 import io
@@ -116,6 +116,7 @@ async def fetch_summary(
     session_id: int,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
     session_obj = _get_session_or_404(db, session_id, tenant)
         
@@ -229,7 +230,9 @@ def delete_session(
     session_id: int,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _admin: User = Depends(require_admin),
 ):
+    """Eliminar una sesión: SOLO admins."""
     from sqlmodel import select
     from models import ActionItem
     session_obj = db.get(MeetingSession, session_id)
@@ -263,6 +266,7 @@ async def regenerate_tasks_from_transcript(
     payload: Optional[RegeneratePayload] = None,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
     from models import ActionItem, ProjectContact
     from services.groq_service import OpenAIService
@@ -381,6 +385,7 @@ async def regenerate_fields_from_transcript(
     payload: Optional[RegeneratePayload] = None,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
     """Sugiere campos con IA (OpenAI gpt-4o). Solo se puede usar UNA vez por sesión.
 
@@ -479,8 +484,9 @@ def update_session_content(
     payload: SessionUpdate,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
-    """Manually update the text content of a curated session."""
+    """Manually update the text content of a curated session (admin/validator)."""
     session_obj = _get_session_or_404(db, session_id, tenant)
         
     if payload.title is not None:
@@ -515,8 +521,9 @@ def update_action_item_manual(
     due_date: Optional[str] = Form(None),
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
-    """Update details of an action item manually (tenant-scoped)."""
+    """Update details of an action item manually (admin/validator, tenant-scoped)."""
     from models import ActionItem
     item = db.get(ActionItem, item_id)
     if not item or item.tenant_id != tenant.id:
@@ -548,8 +555,9 @@ def create_manual_action_item(
     description: str = Form(""),
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
-    """Crear una nueva tarea manual (sólo dentro del propio tenant)."""
+    """Crear una nueva tarea manual (admin/validator, tenant-scoped)."""
     from models import ActionItem
     session_obj = _get_session_or_404(db, session_id, tenant)
 
@@ -799,8 +807,9 @@ async def dispatch_emails(
     request: DispatchEmailsRequest,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
-    """Dispatch emails for the selected action items (tenant-scoped)."""
+    """Dispatch emails for the selected action items (admin/validator, tenant-scoped)."""
     from models import ActionItem
     from services.email_service import EmailService
     import asyncio
@@ -1036,8 +1045,9 @@ async def dispatch_platforms(
     request: DispatchPlatformsRequest,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
-    """Dispatch tasks to integrations (Trello/Jira/ClickUp/Azure) — tenant-scoped:
+    """Dispatch tasks to integrations (admin/validator, tenant-scoped):
     sólo lee `IntegrationSetting` y `Routing` del propio tenant.
     """
     from models import ActionItem, Routing, IntegrationSetting

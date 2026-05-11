@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { RouterModule, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -30,12 +30,30 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     isProfileDropdownOpen = false;
     showNotifPanel = false;
 
+    /** Título dinámico del topbar derivado de la ruta activa
+     *  (route.data.title o route.title con sufijo " | Acten" recortado). */
+    currentPageTitle = 'Overview';
+
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
 
     private readonly destroy$ = new Subject<void>();
 
-    constructor(private authService: AuthService, private router: Router, private cdr: ChangeDetectorRef) { }
+    constructor(
+        private authService: AuthService,
+        private router: Router,
+        private activatedRoute: ActivatedRoute,
+        private cdr: ChangeDetectorRef,
+    ) { }
+
+    /** Recorre el árbol de rutas hijas para encontrar la activa y leer su title. */
+    private _resolveTitle(): string {
+        let r = this.activatedRoute.firstChild;
+        while (r?.firstChild) r = r.firstChild;
+        const raw = (r?.snapshot?.title || '').toString();
+        // Recorta " | Acten" final si está
+        return raw.replace(/\s*\|\s*Acten\s*$/i, '').trim() || 'Acten';
+    }
 
     ngOnInit(): void {
         this.authService.currentUser$
@@ -51,24 +69,20 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
             });
 
+        // Inicial — antes de la primera NavigationEnd
+        this.currentPageTitle = this._resolveTitle();
+
         this.router.events
             .pipe(
                 filter(event => event instanceof NavigationEnd),
                 takeUntil(this.destroy$)
             )
             .subscribe(() => {
-                if (this.isMobileOpen) {
-                    this.isMobileOpen = false;
-                    this.cdr.detectChanges();
-                }
-                if (this.isProfileDropdownOpen) {
-                    this.isProfileDropdownOpen = false;
-                    this.cdr.detectChanges();
-                }
-                if (this.showNotifPanel) {
-                    this.showNotifPanel = false;
-                    this.cdr.detectChanges();
-                }
+                this.currentPageTitle = this._resolveTitle();
+                if (this.isMobileOpen) this.isMobileOpen = false;
+                if (this.isProfileDropdownOpen) this.isProfileDropdownOpen = false;
+                if (this.showNotifPanel) this.showNotifPanel = false;
+                this.cdr.detectChanges();
             });
     }
 

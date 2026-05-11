@@ -59,11 +59,17 @@ export const routes: Routes = [
         component: AdminLayoutComponent,
         canActivate: [authGuard],
         children: [
-            { 
-                path: 'dashboard', 
+            {
+                path: 'dashboard',
                 component: DashboardComponent,
-                title: 'Panel de Control | Acten',
-                data: { description: 'Resumen en tiempo real de métricas, actas generadas y tareas despachadas automáticamente por Inteligencia Artificial.', robots: 'noindex, nofollow' }
+                title: 'Overview | Acten',
+                data: { description: 'Resumen ejecutivo en tiempo real: métricas, actividad, riesgos y tareas prioritarias.', robots: 'noindex, nofollow' }
+            },
+            {
+                path: 'meetings',
+                loadComponent: () => import('./components/meetings-list/meetings-list.component').then(m => m.MeetingsListComponent),
+                title: 'Sesiones Generadas | Acten',
+                data: { description: 'Listado completo de sesiones procesadas por IA con filtros, subida manual, y acciones por sesión.', robots: 'noindex, nofollow' },
             },
             { 
                 path: 'projects', 
