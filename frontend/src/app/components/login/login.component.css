@@ -69,6 +69,24 @@
     flex-shrink: 0;
 }
 
+/* Cuadrado con la primera letra del tenant — fallback cuando el cliente
+   aún no subió un logo PNG/SVG. */
+.aside-mono-letter {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+    background: var(--brand-cream-50);
+    color: var(--brand-charcoal-500);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: var(--fw-bold);
+    line-height: 1;
+    flex-shrink: 0;
+}
+
 .aside-wordmark {
     font-family: var(--font-display);
     font-size: clamp(2.25rem, 3vw, 3rem);
@@ -140,19 +158,47 @@
     position: relative;
     z-index: 2;
     margin-top: auto;
-    display: inline-flex;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--space-12);
     font-family: var(--font-sans);
     font-size: var(--text-13);
     color: rgba(247, 244, 238, 0.65);
-    width: fit-content;
 }
 
-.aside-footer svg {
+.aside-footer > svg {
     color: rgba(247, 244, 238, 0.65);
     flex-shrink: 0;
 }
+
+/* Botón "Volver al login principal" — solo visible en tenants no-default. */
+.aside-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-6);
+    margin-left: auto;
+    background: rgba(247, 244, 238, 0.08);
+    border: 1px solid rgba(247, 244, 238, 0.18);
+    color: rgba(247, 244, 238, 0.85);
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    font-weight: var(--fw-medium);
+    border-radius: var(--radius-full);
+    padding: var(--space-6) var(--space-12);
+    cursor: pointer;
+    transition: var(--transition);
+    height: auto;
+    min-height: auto;
+}
+
+.aside-back:hover {
+    background: rgba(247, 244, 238, 0.14);
+    color: #FFFFFF;
+    border-color: rgba(247, 244, 238, 0.28);
+}
+
+.aside-back svg { color: inherit; }
 
 /* ===================== MAIN CREAM ===================== */
 .login-main {

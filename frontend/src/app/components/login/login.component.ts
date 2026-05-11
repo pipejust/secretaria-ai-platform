@@ -53,6 +53,21 @@ export class LoginComponent implements OnInit {
         }
     }
 
+    /** Limpia el TenantService (slug + flag explicit) y navega al login
+     *  default (Acten). Pensado para el botón "Volver al login principal"
+     *  del aside, que aparece solo cuando estamos en un tenant cliente. */
+    backToMainLogin(ev?: Event) {
+        ev?.preventDefault();
+        this.tenants.clear();
+        // Forzar reload completo para que BrandingService + interceptor
+        // releían el slug default desde cero.
+        if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+        } else {
+            this.router.navigateByUrl('/login');
+        }
+    }
+
     /** Revela el campo "Empresa" para que el usuario pueda escribir un slug
      *  distinto al default (ej. para entrar a 'nexura' desde la URL default). */
     revealTenantField() {

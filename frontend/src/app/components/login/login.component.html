@@ -4,16 +4,21 @@
     <aside class="login-aside">
         <div class="aside-content">
             <a routerLink="/" class="aside-brand" [attr.aria-label]="branding.companyName() + ' — inicio'">
-                <!-- Si el tenant tiene logo propio, lo usamos. Si no, mostramos
-                     el monograma + nombre de la empresa (o Acten por default). -->
+                <!-- Cliente con logo propio cargado en /admin/branding -->
                 <img *ngIf="branding.hasLogo()"
                      [src]="branding.logoUrl()"
                      [alt]="branding.companyName()"
                      class="aside-logo aside-logo-client" />
-                <ng-container *ngIf="!branding.hasLogo()">
-                    <img src="brand/acten-monogram.png" alt="" class="aside-mono" aria-hidden="true" />
+                <!-- Tenant cliente SIN logo: monograma genérico cream + wordmark -->
+                <ng-container *ngIf="!branding.hasLogo() && branding.companyName() !== branding.platformName()">
+                    <span class="aside-mono-letter">{{ branding.companyName().charAt(0).toUpperCase() }}</span>
                     <span class="aside-wordmark">{{ branding.companyName() }}</span>
                 </ng-container>
+                <!-- Tenant DEFAULT (Acten): logo oficial -->
+                <img *ngIf="!branding.hasLogo() && branding.companyName() === branding.platformName()"
+                     src="brand/acten-logo-full.png"
+                     alt="Acten"
+                     class="aside-logo" />
             </a>
 
             <h1 class="aside-hero">
@@ -148,6 +153,18 @@
                 <path d="M9 12l2 2 4-4"></path>
             </svg>
             <span>Seguro. Privado. Listo para empresas.</span>
+
+            <!-- Salida del workspace: solo visible cuando estamos en un tenant
+                 distinto al default. Limpia el TenantService y va a /login. -->
+            <button type="button" class="aside-back" *ngIf="branding.companyName() !== branding.platformName()"
+                    (click)="backToMainLogin($event)" title="Volver al login principal">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al login de {{ branding.platformName() }}
+            </button>
         </div>
     </aside>
 
