@@ -17,7 +17,8 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
-from models import ActionItem, MeetingSession, Project
+from models import ActionItem, MeetingSession, Project, Tenant, User
+from routers.auth import get_current_tenant, get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ def _serialize(item: ActionItem, project_name: str, now: datetime) -> Dict[str, 
 @router.get("")
 def list_pendientes(
     db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
     bucket: Optional[str] = Query(
         None,
         description="vencido | proximo | sin_fecha | pendiente | completado | bloqueado | cancelado | activos",
@@ -93,25 +95,32 @@ def list_pendientes(
     owner: Optional[str] = Query(None, description="Texto a buscar en owner_name/email"),
     limit: int = Query(500, ge=1, le=2000),
 ):
-    """Lista action_items con su clasificación temporal y opcional de filtros."""
+    """Lista action_items del TENANT actual con su clasificación temporal.
+
+    Aislamiento estricto: solo devuelve items con `tenant_id == current_tenant.id`.
+    """
     now = datetime.now()
 
-    stmt = select(ActionItem)
+    stmt = select(ActionItem).where(ActionItem.tenant_id == tenant.id)
     if project_id is not None:
         stmt = stmt.join(MeetingSession, MeetingSession.id == ActionItem.session_id).where(
             MeetingSession.project_id == project_id
         )
-    items = db.exec(stmt.limit(limit * 4)).all()  # leemos más y filtramos en memoria
+    items = db.exec(stmt.limit(limit * 4)).all()
 
-    # Cache de proyectos
+    # Cache de proyectos del tenant
     project_names: Dict[int, str] = {
-        p.id: p.name for p in db.exec(select(Project)).all() if p.id
+        p.id: p.name
+        for p in db.exec(select(Project).where(Project.tenant_id == tenant.id)).all()
+        if p.id
     }
 
-    # Para cada item, sacar nombre de proyecto vía session
+    # session_id → project_id, solo de sesiones del tenant
     session_to_project = {
         s.id: s.project_id
-        for s in db.exec(select(MeetingSession)).all()
+        for s in db.exec(
+            select(MeetingSession).where(MeetingSession.tenant_id == tenant.id)
+        ).all()
         if s.id is not None
     }
 
@@ -156,8 +165,11 @@ def list_pendientes(
 
 
 @router.get("/stats")
-def stats(db: Session = Depends(get_session)):
-    """Resumen agregado para tarjetas del dashboard."""
+def stats(
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Resumen agregado para tarjetas del dashboard (tenant-scoped)."""
     now = datetime.now()
     counters = {b: 0 for b in (
         "vencido", "proximo", "pendiente", "sin_fecha",
@@ -165,7 +177,7 @@ def stats(db: Session = Depends(get_session)):
     )}
     by_owner: Dict[str, int] = {}
 
-    items = db.exec(select(ActionItem)).all()
+    items = db.exec(select(ActionItem).where(ActionItem.tenant_id == tenant.id)).all()
     for item in items:
         bucket_name = _classify(item, now)
         counters[bucket_name] += 1
@@ -195,6 +207,7 @@ def update_status(
     item_id: int,
     payload: StatusUpdate,
     db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
     if payload.status not in VALID_STATUSES:
         raise HTTPException(
@@ -202,7 +215,8 @@ def update_status(
             detail=f"Status inválido. Usa uno de: {sorted(VALID_STATUSES)}",
         )
     item = db.get(ActionItem, item_id)
-    if not item:
+    # Aislamiento: 404 si el item es de otra empresa.
+    if not item or item.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Action item no encontrado")
     item.status = payload.status
     item.completed_at = (

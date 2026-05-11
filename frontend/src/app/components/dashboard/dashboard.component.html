@@ -20,13 +20,16 @@
                     <option value="30d">Últimos 30 días</option>
                 </select>
             </div>
-            <button class="ov-cta-primary" (click)="openUploadModal()">
+            <button class="ov-cta-primary" (click)="openUploadModal()" *ngIf="canCreateMeeting">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
                 Nueva reunión
             </button>
+            <span class="ov-role-hint" *ngIf="!canCreateMeeting" [title]="'Rol actual: ' + (currentRole || 'desconocido')">
+                Solo lectura
+            </span>
         </div>
     </header>
 
@@ -153,7 +156,7 @@
                 </ul>
             </article>
 
-            <article class="ov-card">
+            <article class="ov-card" *ngIf="canManageIntegrations">
                 <header class="ov-card-head">
                     <h2 class="ov-card-title">Sync Health</h2>
                     <span class="ov-card-sub-right">Estado de integraciones</span>
@@ -170,6 +173,24 @@
                 </ul>
                 <a class="ov-card-link" routerLink="/admin/settings">Gestionar integraciones →</a>
             </article>
+            <article class="ov-card" *ngIf="!canManageIntegrations">
+                <header class="ov-card-head">
+                    <h2 class="ov-card-title">Mi actividad</h2>
+                    <span class="ov-card-sub-right">Resumen rápido</span>
+                </header>
+                <ul class="ov-followup">
+                    <li><span class="fu-dot" style="background: var(--color-info)"></span>
+                        <span class="fu-label">Rol asignado</span>
+                        <span class="fu-count">{{ currentRole | titlecase }}</span>
+                        <span class="fu-pct"></span>
+                    </li>
+                    <li><span class="fu-dot" style="background: var(--color-success)"></span>
+                        <span class="fu-label">Tareas a mi cargo</span>
+                        <span class="fu-count">—</span>
+                        <span class="fu-pct"></span>
+                    </li>
+                </ul>
+            </article>
         </div>
     </section>
 
@@ -180,7 +201,7 @@
                 <h2 class="ov-card-title">Reuniones recientes</h2>
                 <p class="ov-card-sub">Últimas analizadas por la IA</p>
             </div>
-            <a class="ov-card-link" routerLink="/admin/dashboard">Ver todas →</a>
+            <a class="ov-card-link" routerLink="/admin/pendientes">Ver todas →</a>
         </header>
         <div class="ov-recent-table">
             <div class="ov-recent-row ov-recent-head">
@@ -252,17 +273,23 @@
                 <a class="ov-card-link-sm" routerLink="/admin/pendientes">Ver todas →</a>
             </header>
             <ul class="ov-tasks">
-                <li *ngFor="let t of topActionItems">
-                    <input type="checkbox" class="task-check" />
+                <li *ngFor="let t of topActionItems" [class.is-toggling]="togglingTaskId === t.id">
+                    <input type="checkbox"
+                           class="task-check"
+                           [checked]="t.status === 'done'"
+                           [disabled]="!canTickTasks || togglingTaskId === t.id"
+                           (change)="toggleTaskDone(t, $event)"
+                           [title]="canTickTasks ? 'Marcar como completada' : 'Tu rol no puede cambiar el estado'" />
                     <div class="task-body">
-                        <p class="task-title">{{ t.title }}</p>
+                        <p class="task-title" [class.done]="t.status === 'done'">{{ t.title }}</p>
                         <p class="task-meta">{{ t.owner_name || 'Sin asignar' }} · {{ t.due_date || 'Sin fecha' }}</p>
                     </div>
                     <span class="badge"
+                          [class.badge-success]="t.status === 'done'"
                           [class.badge-info]="t.status === 'in_progress'"
-                          [class.badge-warning]="t.status === 'pending' || !t.status"
+                          [class.badge-warning]="(t.status === 'pending' || !t.status)"
                           [class.badge-danger]="t.status === 'blocked'">
-                        {{ t.status === 'in_progress' ? 'En curso' : t.status === 'blocked' ? 'Bloqueada' : 'Pendiente' }}
+                        {{ t.status === 'done' ? 'Completada' : t.status === 'in_progress' ? 'En curso' : t.status === 'blocked' ? 'Bloqueada' : 'Pendiente' }}
                     </span>
                 </li>
                 <li *ngIf="!topActionItems.length" class="ov-empty-li">Sin tareas pendientes asignadas.</li>

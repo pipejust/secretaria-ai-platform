@@ -89,24 +89,65 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 error: () => { this.isLoadingOverview = false; this.cdr.detectChanges(); },
             });
 
-        // Action items globales (todo el tenant). Endpoint /api/pendientes.
+        // Action items globales del tenant. /api/pendientes devuelve
+        // {items: [...], total: N} — extraemos .items.
         this.http.get<any>(`${environment.apiUrl}/api/pendientes`, { headers })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => {
-                    this.allActionItems = Array.isArray(data) ? data : (data?.items ?? []);
+                    this.allActionItems = data?.items ?? (Array.isArray(data) ? data : []);
                     this.cdr.detectChanges();
                 },
                 error: () => { this.allActionItems = []; },
             });
 
-        // Integrations / Sync Health
+        // Integrations / Sync Health — solo admin recibe /api/settings (require_admin).
+        // Para validator caemos a un sync vacío sin romper la UI.
         this.http.get<any>(`${environment.apiUrl}/api/settings`, { headers })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => { this.integrations = data || {}; this.cdr.detectChanges(); },
                 error: () => { this.integrations = {}; },
             });
+    }
+
+    // ========================================================================
+    // ROLE HELPERS — gateamos UI según rol del usuario actual.
+    // ========================================================================
+
+    get currentUser(): any {
+        return this.authService.currentUserValue || null;
+    }
+
+    get currentRole(): string {
+        return (this.currentUser?.role || '').toLowerCase();
+    }
+
+    get isAdmin(): boolean {
+        return this.currentRole === 'admin';
+    }
+
+    get isValidator(): boolean {
+        return this.currentRole === 'validator';
+    }
+
+    get isSuperadmin(): boolean {
+        return !!this.currentUser?.is_superadmin;
+    }
+
+    /** admin o validator pueden subir nuevas sesiones. */
+    get canCreateMeeting(): boolean {
+        return this.isAdmin || this.isValidator;
+    }
+
+    /** Solo admin crea proyectos / gestiona integraciones / edita branding. */
+    get canCreateProject(): boolean { return this.isAdmin; }
+    get canManageIntegrations(): boolean { return this.isAdmin; }
+    get canManageUsers(): boolean { return this.isAdmin; }
+
+    /** admin o validator pueden cambiar el status de una tarea. */
+    get canTickTasks(): boolean {
+        return this.isAdmin || this.isValidator;
     }
 
     ngOnDestroy(): void {
@@ -550,18 +591,76 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // ========================================================================
     // Quick Actions — navegan a vistas ya existentes
     // ========================================================================
-    quickActions = [
-        { id: 'new-meeting',  label: 'Iniciar reunión',       sub: 'Subir audio o texto',         icon: 'mic',      action: 'upload' },
-        { id: 'upload',       label: 'Subir transcripción',   sub: 'Analizar reunión pasada',     icon: 'upload',   action: 'upload' },
-        { id: 'projects',     label: 'Crear proyecto',        sub: 'Organiza trabajo y equipos',  icon: 'folder',   action: 'goto', target: '/admin/projects' },
-        { id: 'ask',          label: 'Preguntá a Acten',      sub: 'Insights con IA',             icon: 'sparkle',  action: 'goto', target: '/admin/ask' },
-        { id: 'calendar',     label: 'Ver mi calendario',     sub: 'Sincronizado con Google/MS',  icon: 'calendar', action: 'goto', target: '/admin/calendar' },
-        { id: 'reports',      label: 'Ver reportes',          sub: 'Explora analíticas',          icon: 'chart',    action: 'goto', target: '/admin/reportes' },
+    private readonly _allQuickActions = [
+        { id: 'new-meeting',  label: 'Iniciar reunión',       sub: 'Subir audio o texto',         icon: 'mic',      action: 'upload',                                       requires: 'writer'  },
+        { id: 'upload',       label: 'Subir transcripción',   sub: 'Analizar reunión pasada',     icon: 'upload',   action: 'upload',                                       requires: 'writer'  },
+        { id: 'projects',     label: 'Crear proyecto',        sub: 'Organiza trabajo y equipos',  icon: 'folder',   action: 'goto', target: '/admin/projects',              requires: 'admin'   },
+        { id: 'ask',          label: 'Preguntá a Acten',      sub: 'Insights con IA',             icon: 'sparkle',  action: 'goto', target: '/admin/ask',                   requires: 'any'     },
+        { id: 'calendar',     label: 'Ver mi calendario',     sub: 'Sincronizado con Google/MS',  icon: 'calendar', action: 'goto', target: '/admin/calendar',              requires: 'any'     },
+        { id: 'reports',      label: 'Ver reportes',          sub: 'Explora analíticas',          icon: 'chart',    action: 'goto', target: '/admin/reportes',              requires: 'any'     },
     ];
+
+    /** Sólo devuelve las quick actions que el rol actual puede ejecutar. */
+    get quickActions() {
+        return this._allQuickActions.filter((qa) => {
+            if (qa.requires === 'any') return true;
+            if (qa.requires === 'writer') return this.canCreateMeeting;
+            if (qa.requires === 'admin') return this.isAdmin;
+            return false;
+        });
+    }
 
     triggerQuickAction(qa: any): void {
         if (qa.action === 'upload') return this.openUploadModal();
         if (qa.action === 'goto' && qa.target) this.router.navigateByUrl(qa.target);
+    }
+
+    // ========================================================================
+    // Task interaction — checkbox "Tareas prioritarias" → PATCH status.
+    // ========================================================================
+    togglingTaskId: number | null = null;
+
+    toggleTaskDone(task: any, ev: Event): void {
+        ev.stopPropagation();
+        if (!this.canTickTasks) {
+            this.toast.error('Tu rol no permite cambiar el estado de tareas.');
+            (ev.target as HTMLInputElement).checked = false;
+            return;
+        }
+        const id = task?.id;
+        if (!id || this.togglingTaskId === id) return;
+        const wasDone = (task.status || 'pending') === 'done';
+        const nextStatus = wasDone ? 'pending' : 'done';
+        this.togglingTaskId = id;
+        // Optimistic UI
+        task.status = nextStatus;
+        const headers = this.authService.getAuthHeaders();
+        this.http.patch<any>(
+            `${environment.apiUrl}/api/pendientes/${id}/status`,
+            { status: nextStatus },
+            { headers },
+        ).pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => {
+                this.togglingTaskId = null;
+                this.toast.success(nextStatus === 'done' ? 'Tarea marcada como completada.' : 'Tarea reabierta.');
+                // Refresca contadores (Follow-up Status + KPIs)
+                this.loadOverview();
+            },
+            error: (err) => {
+                this.togglingTaskId = null;
+                task.status = wasDone ? 'done' : 'pending';  // revert
+                this.toast.error('No se pudo actualizar la tarea: ' + (err?.error?.detail || 'desconocido'));
+                this.cdr.detectChanges();
+            },
+        });
+    }
+
+    // ========================================================================
+    // Topbar bell — placeholder hasta que exista feed de notificaciones.
+    // ========================================================================
+    showNotifPanel = false;
+    toggleNotifPanel(): void {
+        this.showNotifPanel = !this.showNotifPanel;
     }
 
     setOverviewPeriod(p: '7d' | '14d' | '30d'): void {

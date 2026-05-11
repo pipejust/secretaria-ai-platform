@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from database import get_session
 from models import Project, Routing, MeetingSession, Tenant, User, ProjectContact
-from routers.auth import get_current_user, get_current_tenant
+from routers.auth import get_current_user, get_current_tenant, require_admin
 import crud
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -42,10 +42,10 @@ def get_projects(
 def create_project(
     project: Project,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    admin: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Crea un nuevo proyecto en el tenant del usuario."""
+    """Crea un nuevo proyecto en el tenant del usuario. SOLO admins."""
     existing = session.exec(
         select(Project)
         .where(Project.tenant_id == tenant.id)
@@ -65,10 +65,10 @@ def update_project(
     project_id: int,
     project_update: Project,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    admin: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Actualiza la información de un proyecto del tenant."""
+    """Actualiza la información de un proyecto del tenant. SOLO admins."""
     db_project = _get_project_or_404(session, project_id, tenant)
     # No permitimos cambiar el tenant_id desde un PUT.
     update_data = project_update.model_dump(exclude_unset=True)
@@ -86,10 +86,10 @@ def update_project(
 def delete_project(
     project_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    admin: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Desactiva lógicamente un proyecto del tenant."""
+    """Desactiva lógicamente un proyecto del tenant. SOLO admins."""
     db_project = _get_project_or_404(session, project_id, tenant)
     db_project.is_active = False
     session.add(db_project)

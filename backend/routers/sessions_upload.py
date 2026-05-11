@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlmodel import Session, select
 from models import MeetingSession, ActionItem, IntegrationSetting, Routing, Tenant, User
 from database import get_session
-from routers.auth import get_current_tenant, get_current_user
+from routers.auth import get_current_tenant, get_current_user, require_session_writer
 import uuid
 import os
 import io
@@ -601,6 +601,7 @@ async def upload_manual_session(
     background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _writer: User = Depends(require_session_writer),
 ):
     """Crea una sesión a partir de audio, texto o URL de YouTube.
 

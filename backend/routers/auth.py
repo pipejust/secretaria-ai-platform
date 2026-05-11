@@ -110,6 +110,20 @@ def get_current_tenant(
     return tenant
 
 
+def require_session_writer(current_user: User = Depends(get_current_user)) -> User:
+    """Permite escribir sesiones / action items / curation: admin o validator.
+
+    Cualquier rol distinto (futuro 'viewer' o 'guest') será rechazado con 403.
+    """
+    role_name = (current_user.role.name if current_user.role else "").lower()
+    if role_name not in ("admin", "validator"):
+        raise HTTPException(
+            status_code=403,
+            detail="Tu rol no puede crear/editar sesiones.",
+        )
+    return current_user
+
+
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """Admin del tenant — gestiona usuarios, proyectos, branding, integraciones."""
     if not current_user.role or current_user.role.name != "admin":

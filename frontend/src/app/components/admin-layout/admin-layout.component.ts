@@ -28,6 +28,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     isCollapsed = false;
     isMobileOpen = false;
     isProfileDropdownOpen = false;
+    showNotifPanel = false;
 
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
@@ -64,6 +65,10 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
                     this.isProfileDropdownOpen = false;
                     this.cdr.detectChanges();
                 }
+                if (this.showNotifPanel) {
+                    this.showNotifPanel = false;
+                    this.cdr.detectChanges();
+                }
             });
     }
 
@@ -74,10 +79,18 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
     toggleProfileDropdown() {
         this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
+        if (this.isProfileDropdownOpen) this.showNotifPanel = false;
     }
 
     closeProfileDropdown() {
         this.isProfileDropdownOpen = false;
+    }
+
+    /** Abre/cierra el panel de notificaciones del topbar. */
+    toggleNotifPanel(ev?: Event) {
+        ev?.stopPropagation();
+        this.showNotifPanel = !this.showNotifPanel;
+        if (this.showNotifPanel) this.isProfileDropdownOpen = false;
     }
 
     toggleMobileMenu() {
