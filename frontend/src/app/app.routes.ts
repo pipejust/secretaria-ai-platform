@@ -30,11 +30,29 @@ export const routes: Routes = [
             robots: 'index, follow'
         }
     },
-    { 
-        path: 'reset-password', 
+    {
+        path: 'reset-password',
         loadComponent: () => import('./components/reset-password/reset-password').then(m => m.ResetPassword),
         title: 'Restablecer Contraseña | Acten',
         data: { robots: 'noindex, nofollow' }
+    },
+    {
+        path: 'help',
+        loadComponent: () => import('./components/help-center/help-center.component').then(m => m.HelpCenterComponent),
+        title: 'Centro de Ayuda | Acten',
+        data: {
+            description: 'Guías rápidas, preguntas frecuentes y contacto con soporte de Acten.',
+            robots: 'index, follow',
+        },
+    },
+    {
+        path: 'privacy',
+        loadComponent: () => import('./components/privacy/privacy.component').then(m => m.PrivacyComponent),
+        title: 'Política de Privacidad | Acten',
+        data: {
+            description: 'Cómo Acten recopila, usa y protege tus datos personales y los de tu empresa.',
+            robots: 'index, follow',
+        },
     },
     {
         path: 'admin',

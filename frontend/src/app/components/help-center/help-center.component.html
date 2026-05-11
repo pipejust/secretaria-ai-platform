@@ -1,0 +1,107 @@
+<div class="help-page">
+    <header class="help-header">
+        <a routerLink="/login" class="help-back" aria-label="Volver al inicio de sesión">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Volver
+        </a>
+        <p class="help-eyebrow">Centro de ayuda</p>
+        <h1 class="help-title">¿En qué podemos ayudarte?</h1>
+        <p class="help-sub">
+            Guías rápidas, preguntas frecuentes y contacto con soporte humano.
+            Si no encuentras lo que buscas, escríbenos a
+            <a href="mailto:soporte@acten.ai">soporte&#64;acten.ai</a>.
+        </p>
+
+        <div class="help-search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" placeholder="Buscar artículos, guías y atajos…" />
+            <kbd>⌘K</kbd>
+        </div>
+    </header>
+
+    <section class="help-topics">
+        <h2 class="section-title">Temas principales</h2>
+        <div class="topics-grid">
+            <article class="topic-card" *ngFor="let t of topics">
+                <div class="topic-icon" [attr.data-icon]="t.icon">
+                    <svg *ngIf="t.icon === 'rocket'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path>
+                        <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path>
+                        <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path>
+                        <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path>
+                    </svg>
+                    <svg *ngIf="t.icon === 'edit'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    <svg *ngIf="t.icon === 'link'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                    <svg *ngIf="t.icon === 'building'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 21h18"></path>
+                        <path d="M5 21V7l8-4v18"></path>
+                        <path d="M19 21V11l-6-4"></path>
+                    </svg>
+                    <svg *ngIf="t.icon === 'palette'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="13.5" cy="6.5" r="1.5"></circle>
+                        <circle cx="17.5" cy="10.5" r="1.5"></circle>
+                        <circle cx="8.5" cy="7.5" r="1.5"></circle>
+                        <circle cx="6.5" cy="12.5" r="1.5"></circle>
+                        <path d="M12 22C6.5 22 2 17.5 2 12s4.5-10 10-10c6 0 10 4 10 10 0 5-3 9-9 9-2 0-3-1-3-3 0-1 1-2 2-2"></path>
+                    </svg>
+                    <svg *ngIf="t.icon === 'shield'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                </div>
+                <h3 class="topic-title">{{ t.title }}</h3>
+                <p class="topic-desc">{{ t.description }}</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="help-faqs">
+        <h2 class="section-title">Preguntas frecuentes</h2>
+        <div class="faq-list">
+            <details class="faq-item" *ngFor="let f of faqs">
+                <summary>
+                    <span>{{ f.q }}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </summary>
+                <p>{{ f.a }}</p>
+            </details>
+        </div>
+    </section>
+
+    <section class="help-contact">
+        <div class="contact-card">
+            <h3>¿Necesitas hablar con un humano?</h3>
+            <p>Nuestro equipo de soporte responde en menos de 4 horas hábiles.</p>
+            <div class="contact-actions">
+                <a href="mailto:soporte@acten.ai" class="contact-btn primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Escribir a soporte
+                </a>
+                <a routerLink="/login" class="contact-btn secondary">Volver al login</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="help-footer">
+        <span>© {{ year }} Acten, Inc. Todos los derechos reservados.</span>
+        <a routerLink="/privacy">Privacidad</a>
+    </footer>
+</div>

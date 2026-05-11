@@ -1,15 +1,8 @@
 /* ============================================================================
- * Login — Acten · réplica milimétrica del mockup adjunto.
- * Layout 50/50: aside navy (Charcoal) + main cream (Bone White).
- *
- *   Aside · monograma "A" + "Acten" (Playfair white) · hero serif blanco
- *           "From conversation to clarity. / From clarity to impact." ·
- *           subtítulo gris claro · constelación SVG decorativa abajo ·
- *           "Secure. Private. Enterprise ready." con shield.
- *   Main  · card blanca centrada con "Welcome back" + form Email/Password +
- *           Remember me / Forgot password? · CTA Sign in (Ink Blue full) +
- *           CTA SSO outlined · divider "or" · "Contact your admin" ·
- *           Footer con Help center / Privacy / © 2024 Acten, Inc.
+ * Login — réplica del mockup adjunto.
+ * Layout 50/50 · navy profundo izq + cream sutil der.
+ * Todo en español. Logo A SVG fiel al logotipo.png oficial.
+ * Inputs y botones con esquinas claramente redondeadas (radius lg = 20px).
  * ============================================================================ */
 
 .acten-login {
@@ -22,12 +15,14 @@
     color: var(--color-fg-default);
 }
 
-/* ===================== ASIDE (NAVY) ===================== */
+/* ===================== ASIDE NAVY PROFUNDO ===================== */
 .login-aside {
     position: relative;
-    background: linear-gradient(160deg, #0A1330 0%, #111318 60%, #131A36 100%);
-    color: var(--color-fg-on-dark);
-    padding: var(--space-48) var(--space-56);
+    background:
+        radial-gradient(ellipse at 50% 50%, #14214E 0%, transparent 60%),
+        linear-gradient(180deg, #0B1330 0%, #0A1530 50%, #0E1A3D 100%);
+    color: #FFFFFF;
+    padding: var(--space-56) var(--space-64) var(--space-32);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -42,60 +37,61 @@
 .aside-brand {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-12);
+    gap: var(--space-16);
     text-decoration: none;
     color: inherit;
     margin-bottom: var(--space-64);
 }
 
 .aside-mono {
-    width: 56px;
-    height: 56px;
+    width: 88px;
+    height: 88px;
     display: block;
     flex-shrink: 0;
+    overflow: visible;
 }
 
 .aside-wordmark {
     font-family: var(--font-display);
-    font-size: var(--text-48);
-    font-weight: var(--fw-semibold);
+    font-size: 80px;
+    font-weight: var(--fw-bold);
     letter-spacing: var(--tracking-tight);
-    line-height: 1;
-    color: var(--color-fg-on-dark);
+    line-height: 0.95;
+    color: #FFFFFF;
 }
 
 .aside-hero {
     font-family: var(--font-display);
-    font-size: clamp(2rem, 3vw, 2.625rem);
+    font-size: clamp(2.5rem, 3.4vw, 3rem);
     font-weight: var(--fw-semibold);
-    line-height: 1.2;
+    line-height: 1.18;
     letter-spacing: var(--tracking-tight);
-    color: var(--color-fg-on-dark);
+    color: #FFFFFF;
     margin: 0 0 var(--space-24) 0;
 }
 
 .aside-sub {
     font-family: var(--font-sans);
     font-size: var(--text-15);
-    line-height: 1.6;
-    color: rgba(247, 244, 238, 0.72);
+    line-height: 1.55;
+    color: rgba(247, 244, 238, 0.65);
     margin: 0;
-    max-width: 46ch;
+    max-width: 44ch;
 }
 
-/* Constelación decorativa */
+/* Constelación abajo, más densa */
 .aside-constellation {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: var(--space-64);
+    bottom: var(--space-56);
     width: 100%;
-    height: 320px;
+    height: 360px;
     pointer-events: none;
     z-index: 1;
 }
 
-/* Footer "Secure. Private. Enterprise ready." */
+/* "Seguro. Privado. Listo para empresas." */
 .aside-footer {
     position: relative;
     z-index: 2;
@@ -105,24 +101,26 @@
     gap: var(--space-8);
     font-family: var(--font-sans);
     font-size: var(--text-13);
-    color: rgba(247, 244, 238, 0.72);
+    color: rgba(247, 244, 238, 0.65);
+    width: fit-content;
 }
 
 .aside-footer svg {
-    color: rgba(247, 244, 238, 0.72);
+    color: rgba(247, 244, 238, 0.65);
+    flex-shrink: 0;
 }
 
-/* ===================== MAIN (CREAM) ===================== */
+/* ===================== MAIN CREAM ===================== */
 .login-main {
     background: var(--color-bg-base);
     display: flex;
     flex-direction: column;
     padding: var(--space-32) var(--space-48);
     position: relative;
-    /* Patrón sutil de puntos a la derecha como en el mockup */
+    /* Patrón de puntos sutil del mockup */
     background-image:
-        radial-gradient(circle at 1px 1px, rgba(17, 19, 24, 0.06) 1px, transparent 0);
-    background-size: 24px 24px;
+        radial-gradient(circle at 1px 1px, rgba(17, 19, 24, 0.05) 1px, transparent 0);
+    background-size: 22px 22px;
 }
 
 .login-card-wrap {
@@ -134,7 +132,7 @@
 
 .login-card {
     width: 100%;
-    max-width: 460px;
+    max-width: 480px;
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -153,9 +151,9 @@
 
 .login-headline {
     font-family: var(--font-display);
-    font-size: var(--text-30);
-    font-weight: var(--fw-semibold);
-    line-height: 1.15;
+    font-size: 2.5rem;
+    font-weight: var(--fw-bold);
+    line-height: 1.10;
     letter-spacing: var(--tracking-tight);
     color: var(--color-fg-default);
     margin: 0;
@@ -197,14 +195,15 @@
     margin-bottom: 0;
 }
 
+/* Inputs grandes y MUY redondeados */
 .field input {
-    height: 48px;
-    padding: 0 var(--space-16);
+    height: 52px;
+    padding: 0 var(--space-20);
     font-family: var(--font-sans);
     font-size: var(--text-14);
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     color: var(--color-fg-default);
     transition: var(--transition);
 }
@@ -220,10 +219,10 @@
 .field input:focus {
     outline: none;
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(34, 49, 72, 0.12);
+    box-shadow: 0 0 0 3px rgba(34, 49, 72, 0.10);
 }
 
-/* "Show" link inline a la derecha del password */
+/* "Mostrar" link inline a la derecha del password */
 .password-wrap {
     position: relative;
     display: flex;
@@ -232,12 +231,12 @@
 
 .password-wrap input {
     flex: 1;
-    padding-right: 60px;
+    padding-right: 80px;
 }
 
 .password-toggle {
     position: absolute;
-    right: var(--space-16);
+    right: var(--space-20);
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -255,7 +254,7 @@
 
 .password-toggle:hover { text-decoration: underline; }
 
-/* Remember me + Forgot password */
+/* Recuérdame + ¿Olvidaste tu contraseña? */
 .row-between {
     display: flex;
     align-items: center;
@@ -283,7 +282,7 @@
     width: 18px;
     height: 18px;
     border: 1.5px solid var(--color-border-strong);
-    border-radius: var(--radius-xs);
+    border-radius: 5px;
     background: var(--color-bg-panel);
     cursor: pointer;
     position: relative;
@@ -321,7 +320,7 @@
 
 .error-banner {
     background: rgba(224, 61, 61, 0.08);
-    border: 1px solid rgba(224, 61, 61, 0.2);
+    border: 1px solid rgba(224, 61, 61, 0.20);
     color: var(--color-danger);
     font-family: var(--font-sans);
     font-size: var(--text-13);
@@ -330,22 +329,22 @@
     border-radius: var(--radius-md);
 }
 
-/* ===== CTAs ===== */
+/* ===== CTAs muy redondeados ===== */
 .btn-signin {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-8);
     width: 100%;
-    height: 52px;
+    height: 56px;
     background: var(--color-accent);
-    color: var(--color-fg-on-dark);
+    color: #FFFFFF;
     font-family: var(--font-sans);
     font-size: var(--text-15);
     font-weight: var(--fw-semibold);
     letter-spacing: 0;
     border: 1px solid var(--color-accent);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
@@ -373,7 +372,7 @@
     justify-content: center;
     gap: var(--space-8);
     width: 100%;
-    height: 52px;
+    height: 56px;
     background: var(--color-bg-panel);
     color: var(--color-accent);
     font-family: var(--font-sans);
@@ -381,7 +380,7 @@
     font-weight: var(--fw-semibold);
     letter-spacing: 0;
     border: 1.5px solid var(--color-accent);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     transition: var(--transition);
 }
@@ -390,9 +389,9 @@
     background: rgba(34, 49, 72, 0.04);
 }
 
-.btn-sso svg { color: var(--color-accent); }
+.btn-sso svg { color: var(--color-accent); flex-shrink: 0; }
 
-/* "or" divider */
+/* "o" divider */
 .or-divider {
     position: relative;
     text-align: center;
@@ -452,7 +451,7 @@
 .footer-links {
     display: flex;
     align-items: center;
-    gap: var(--space-20);
+    gap: var(--space-24);
 }
 
 .footer-links a {
@@ -477,15 +476,17 @@
     }
     .login-aside {
         padding: var(--space-32) var(--space-24);
-        min-height: 280px;
+        min-height: 320px;
     }
-    .aside-brand { margin-bottom: var(--space-32); }
+    .aside-brand { margin-bottom: var(--space-24); }
+    .aside-wordmark { font-size: 56px; }
+    .aside-mono { width: 64px; height: 64px; }
     .aside-constellation { display: none; }
     .login-main { padding: var(--space-24); }
     .login-card { padding: var(--space-24); }
+    .login-headline { font-size: 2rem; }
 }
 
-/* Override del rule global de inputs para los inputs DENTRO de la login card.
-   Sin esto el `input { height: 44px }` global pisa al 48px de aquí. */
-.login-card .field input { height: 48px; }
+/* Override del rule global de inputs para los inputs DENTRO de la login card. */
+.login-card .field input { height: 52px; border-radius: var(--radius-lg); }
 .login-card .form-group { margin-bottom: 0; }

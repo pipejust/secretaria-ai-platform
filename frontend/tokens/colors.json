@@ -35,11 +35,13 @@
     }
   },
   "semantic": {
-    "bg-base":      "#F7F4EE",
+    "bg-base":      "#FAF7F2",
     "bg-elevated":  "#FBF9F4",
     "bg-panel":     "#FFFFFF",
-    "bg-sidebar":   "#111318",
-    "bg-sidebar-2": "#1A1F2E",
+    "bg-sidebar":   "#0B1330",
+    "bg-sidebar-2": "#152042",
+    "bg-aside":     "#0B1330",
+    "bg-aside-2":   "#0F1A3F",
     "bg-topbar":    "#FFFFFF",
     "fg-default":   "#111318",
     "fg-muted":     "#687280",

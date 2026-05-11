@@ -1,0 +1,185 @@
+<div class="privacy-page">
+    <header class="privacy-header">
+        <a routerLink="/login" class="privacy-back" aria-label="Volver al inicio de sesión">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Volver
+        </a>
+        <p class="privacy-eyebrow">Política de privacidad</p>
+        <h1 class="privacy-title">Tu información, bajo tu control.</h1>
+        <p class="privacy-meta">Última actualización: {{ lastUpdated }}</p>
+    </header>
+
+    <div class="privacy-layout">
+        <!-- TOC izquierda -->
+        <nav class="privacy-toc" aria-label="Tabla de contenidos">
+            <ul>
+                <li *ngFor="let s of sections">
+                    <a [href]="'#' + s.id">{{ s.title }}</a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Contenido -->
+        <article class="privacy-content">
+            <section id="intro">
+                <h2>1. Introducción</h2>
+                <p>
+                    En Acten transformamos conversaciones en decisiones, responsabilidades y
+                    entregables. Para hacerlo, procesamos transcripciones de tus reuniones y
+                    los metadatos asociados. Esta política explica qué datos recopilamos, cómo
+                    los usamos, con quién los compartimos (casi nadie) y qué controles tienes
+                    sobre ellos.
+                </p>
+                <p>
+                    Estamos diseñados para cumplir con el <strong>Reglamento General de
+                    Protección de Datos (GDPR)</strong> de la UE y con leyes equivalentes de
+                    América Latina (Ley 1581 de Colombia, LFPDPPP de México, LGPD de Brasil).
+                </p>
+            </section>
+
+            <section id="datos">
+                <h2>2. Datos que recopilamos</h2>
+                <ul>
+                    <li><strong>Cuenta:</strong> email, nombre, rol, hash de contraseña.</li>
+                    <li><strong>Reuniones:</strong> transcripciones de texto generadas por
+                        Fireflies o subidas manualmente. <em>No conservamos el audio
+                        original</em> después de la transcripción.</li>
+                    <li><strong>Insights derivados:</strong> decisiones, riesgos, acuerdos,
+                        tareas y asistentes extraídos por IA.</li>
+                    <li><strong>Integraciones:</strong> credenciales API de servicios que
+                        conectes (Trello, Jira, ClickUp, etc.). Las almacenamos cifradas y
+                        sólo dentro de tu tenant.</li>
+                    <li><strong>Auditoría:</strong> log de acciones (login, edición, dispatch)
+                        para cumplimiento SOC 2.</li>
+                    <li><strong>Operacionales:</strong> IP, user-agent y horario de acceso para
+                        seguridad y resolución de incidentes.</li>
+                </ul>
+            </section>
+
+            <section id="uso">
+                <h2>3. Cómo usamos tus datos</h2>
+                <p>Sólo usamos tus datos para:</p>
+                <ul>
+                    <li>Generar las actas, tareas y reportes que contrataste.</li>
+                    <li>Mantener la seguridad de tu cuenta y de la plataforma.</li>
+                    <li>Cumplir con obligaciones legales (auditoría, fiscal).</li>
+                </ul>
+                <p>
+                    <strong>NO vendemos tus datos</strong>, no los usamos para entrenar
+                    modelos públicos de IA, ni los compartimos con anunciantes.
+                </p>
+            </section>
+
+            <section id="aislamiento">
+                <h2>4. Aislamiento entre empresas</h2>
+                <p>
+                    Acten es multi-tenant: cada empresa cliente vive en un espacio aislado.
+                    A nivel de base de datos cada fila lleva un identificador de tenant y
+                    todas las consultas filtran por ese identificador. Una empresa
+                    <strong>nunca</strong> puede ver datos, integraciones, branding ni
+                    usuarios de otra. Verificamos este aislamiento con tests automatizados
+                    en cada despliegue.
+                </p>
+            </section>
+
+            <section id="compartir">
+                <h2>5. Con quién compartimos datos</h2>
+                <p>Sólo con los proveedores estrictamente necesarios para operar:</p>
+                <ul>
+                    <li><strong>Fireflies.ai:</strong> transcripciones de reuniones (si
+                        conectas tu cuenta).</li>
+                    <li><strong>OpenAI / Groq:</strong> procesamiento IA de insights. Los
+                        prompts se envían sin metadatos personales adicionales y los
+                        proveedores se comprometen a no entrenar con tus datos.</li>
+                    <li><strong>Resend:</strong> envío de correos transaccionales.</li>
+                    <li><strong>Render / Supabase:</strong> hosting y base de datos.</li>
+                    <li><strong>Integraciones que tú elijas:</strong> Trello, Jira, ClickUp,
+                        Slack, etc. — sólo cuando dispatchás manualmente.</li>
+                </ul>
+            </section>
+
+            <section id="seguridad">
+                <h2>6. Seguridad</h2>
+                <ul>
+                    <li>Cifrado en tránsito (TLS 1.3) y en reposo (AES-256).</li>
+                    <li>Contraseñas con bcrypt rounds=12.</li>
+                    <li>JWT firmado HS256 con rotación de SECRET_KEY trimestral.</li>
+                    <li>Rate limiting global (120 req/min por IP).</li>
+                    <li>Webhook tokens únicos por tenant — verificados con hmac.</li>
+                    <li>Audit log inmutable para acciones críticas (login, dispatch, delete).</li>
+                </ul>
+            </section>
+
+            <section id="derechos">
+                <h2>7. Tus derechos (GDPR)</h2>
+                <p>Tienes derecho a:</p>
+                <ul>
+                    <li><strong>Acceso:</strong> exportar todos tus datos en JSON desde
+                        <code>GET /api/me/export</code>.</li>
+                    <li><strong>Rectificación:</strong> editar tu perfil en cualquier
+                        momento.</li>
+                    <li><strong>Borrado ("derecho al olvido"):</strong> solicitar borrado
+                        desde <code>DELETE /api/me/account</code>. Marcamos tu cuenta para
+                        purga y eliminamos físicamente los datos a los 30 días.</li>
+                    <li><strong>Portabilidad:</strong> el export incluye sesiones, action
+                        items, comentarios y permisos en formato estándar.</li>
+                    <li><strong>Oposición:</strong> contactanos si querés que dejemos de
+                        procesar un dato específico.</li>
+                </ul>
+            </section>
+
+            <section id="retencion">
+                <h2>8. Retención y borrado</h2>
+                <ul>
+                    <li>Reuniones y action items: mientras tu cuenta esté activa.</li>
+                    <li>Audit log: 24 meses (cumplimiento SOC 2).</li>
+                    <li>Backups: 30 días, cifrados.</li>
+                    <li>Cuenta cancelada: 30 días de gracia, luego purga física.</li>
+                </ul>
+            </section>
+
+            <section id="cookies">
+                <h2>9. Cookies y tracking</h2>
+                <p>
+                    Usamos cookies <strong>de sesión únicamente</strong> para mantener tu
+                    login activo. <strong>No usamos cookies de tracking de terceros</strong>
+                    (sin Google Analytics, sin Meta Pixel, sin Hotjar). El localStorage
+                    guarda tu JWT y el slug del tenant para recordar tu workspace.
+                </p>
+            </section>
+
+            <section id="cambios">
+                <h2>10. Cambios a esta política</h2>
+                <p>
+                    Si actualizamos esta política te notificaremos por correo al menos 14
+                    días antes de que entren en vigor los cambios materiales.
+                </p>
+            </section>
+
+            <section id="contacto">
+                <h2>11. Contacto</h2>
+                <p>
+                    Para ejercer tus derechos o cualquier pregunta sobre privacidad:
+                </p>
+                <ul>
+                    <li>Email: <a href="mailto:privacidad@acten.ai">privacidad&#64;acten.ai</a></li>
+                    <li>Postal: Acten, Inc. · Bogotá, Colombia.</li>
+                    <li>DPO: Felipe Cortés.</li>
+                </ul>
+                <p>
+                    También puedes presentar una reclamación ante tu autoridad de protección
+                    de datos local.
+                </p>
+            </section>
+        </article>
+    </div>
+
+    <footer class="privacy-footer">
+        <span>© {{ year }} Acten, Inc. Todos los derechos reservados.</span>
+        <a routerLink="/help">Centro de ayuda</a>
+    </footer>
+</div>

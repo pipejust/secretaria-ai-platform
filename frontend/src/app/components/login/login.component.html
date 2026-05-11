@@ -1,88 +1,146 @@
 <div class="acten-login">
 
-    <!-- ===================== PANEL IZQUIERDO (NAVY) ===================== -->
+    <!-- ===================== ASIDE NAVY ===================== -->
     <aside class="login-aside">
         <div class="aside-content">
-            <a routerLink="/" class="aside-brand" aria-label="Acten">
-                <!-- Monograma A inline (SVG): garantiza fondo transparente sobre navy. -->
-                <svg class="aside-mono" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                    <!-- A letterform stroke -->
-                    <path d="M14 50 L32 14 L50 50" stroke="#FFFFFF" stroke-width="3.5"
+            <a routerLink="/" class="aside-brand" aria-label="Acten — inicio">
+                <!-- Monograma A · réplica fiel del logotipo.png oficial:
+                     · Trazo de la A en blanco (serif Playfair-style con remates)
+                     · Círculo verde con check blanco a la izquierda, en la altura del crossbar
+                     · Barra horizontal ámbar bajo la A
+                     · Punto indigo al extremo derecho de la barra ámbar -->
+                <svg class="aside-mono" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+                    <!-- A diagonal strokes (white) -->
+                    <path d="M 28 82 L 50 18 L 72 82"
+                          stroke="#FFFFFF" stroke-width="6"
                           stroke-linecap="round" stroke-linejoin="round" />
-                    <line x1="22" y1="36" x2="42" y2="36" stroke="#FFFFFF" stroke-width="3.5"
-                          stroke-linecap="round" />
-                    <!-- Horizontal accent bar (amber) below baseline -->
-                    <line x1="14" y1="56" x2="38" y2="56" stroke="#D9A441" stroke-width="2.5"
-                          stroke-linecap="round" />
-                    <!-- Connector dot (indigo) at right of bar -->
-                    <circle cx="44" cy="56" r="3" fill="#2F3C6A" />
-                    <!-- Check badge in green on the upper-left arm -->
-                    <circle cx="20" cy="32" r="6" fill="#1B7F67" />
-                    <path d="M17 32 L19.5 34.5 L23 30.5" stroke="#FFFFFF" stroke-width="1.6"
-                          stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                    <!-- Crossbar -->
+                    <line x1="38" y1="60" x2="62" y2="60"
+                          stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" />
+                    <!-- Bottom serifs (small horizontal strokes at the feet) -->
+                    <line x1="22" y1="82" x2="34" y2="82"
+                          stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+                    <line x1="66" y1="82" x2="78" y2="82"
+                          stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+
+                    <!-- Amber bar BELOW the A baseline -->
+                    <line x1="20" y1="92" x2="62" y2="92"
+                          stroke="#D9A441" stroke-width="4" stroke-linecap="round" />
+                    <!-- Indigo dot at the right end of the amber bar -->
+                    <circle cx="68" cy="92" r="5" fill="#2F3C6A" />
+
+                    <!-- Green check badge on the left, at crossbar height -->
+                    <circle cx="22" cy="60" r="9" fill="#1B7F67" />
+                    <path d="M 18 60 L 21 63 L 26 57"
+                          stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" fill="none" />
                 </svg>
                 <span class="aside-wordmark">Acten</span>
             </a>
 
             <h1 class="aside-hero">
-                From conversation to clarity.
+                De la conversación a la claridad.
                 <br />
-                From clarity to impact.
+                De la claridad al impacto.
             </h1>
 
             <p class="aside-sub">
-                Acten is the AI meeting assistant that turns conversations into decisions,
-                responsibilities, and professional deliverables.
+                Acten es el asistente de IA para reuniones que transforma
+                las conversaciones en decisiones, responsabilidades y
+                entregables profesionales.
             </p>
         </div>
 
-        <!-- Constelación decorativa abajo. Inline SVG para no añadir asset. -->
-        <svg class="aside-constellation" viewBox="0 0 600 320" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <!-- Constelación decorativa: réplica del mockup con líneas curvas,
+             nodos blancos predominantes, 2 verdes (uno con halo), 2 ámbar
+             y 2 indigo. Inline SVG para no añadir asset. -->
+        <svg class="aside-constellation" viewBox="0 0 700 360"
+             preserveAspectRatio="xMidYMax meet" aria-hidden="true">
             <defs>
-                <radialGradient id="dotGlow">
-                    <stop offset="0%" stop-color="rgba(255,255,255,0.55)" />
+                <radialGradient id="dotHalo">
+                    <stop offset="0%" stop-color="rgba(255,255,255,0.45)" />
+                    <stop offset="60%" stop-color="rgba(255,255,255,0.10)" />
                     <stop offset="100%" stop-color="rgba(255,255,255,0)" />
                 </radialGradient>
+                <radialGradient id="greenHalo">
+                    <stop offset="0%" stop-color="rgba(27,127,103,0.55)" />
+                    <stop offset="100%" stop-color="rgba(27,127,103,0)" />
+                </radialGradient>
+                <radialGradient id="amberHalo">
+                    <stop offset="0%" stop-color="rgba(217,164,65,0.55)" />
+                    <stop offset="100%" stop-color="rgba(217,164,65,0)" />
+                </radialGradient>
             </defs>
-            <!-- Lines connecting nodes -->
-            <g stroke="rgba(255,255,255,0.18)" stroke-width="0.7" fill="none">
-                <path d="M 80 180 L 180 110" />
-                <path d="M 180 110 L 280 60" />
-                <path d="M 280 60 L 360 120" />
-                <path d="M 360 120 L 460 80" />
-                <path d="M 460 80 L 540 160" />
-                <path d="M 80 180 L 130 250" />
-                <path d="M 130 250 L 240 220" />
-                <path d="M 240 220 L 320 280" />
-                <path d="M 320 280 L 420 250" />
-                <path d="M 420 250 L 540 290" />
-                <path d="M 180 110 L 240 220" />
-                <path d="M 280 60 L 240 220" />
-                <path d="M 360 120 L 320 280" />
-                <path d="M 460 80 L 420 250" />
-                <path d="M 540 160 L 540 290" />
-                <path d="M 80 180 L 240 220" />
-                <path d="M 360 120 L 240 220" />
+
+            <!-- Curved connecting lines: bezier paths para sensación orgánica -->
+            <g stroke="rgba(170,200,255,0.18)" stroke-width="0.7" fill="none">
+                <path d="M 60 220 Q 130 180 180 200" />
+                <path d="M 180 200 Q 250 130 320 100" />
+                <path d="M 320 100 Q 380 140 420 130" />
+                <path d="M 420 130 Q 480 110 540 150" />
+                <path d="M 540 150 Q 600 200 640 240" />
+                <path d="M 60 220 Q 100 280 170 300" />
+                <path d="M 170 300 Q 230 320 290 310" />
+                <path d="M 290 310 Q 360 290 420 320" />
+                <path d="M 420 320 Q 500 340 570 320" />
+                <path d="M 570 320 Q 620 300 640 240" />
+                <path d="M 180 200 Q 240 240 290 310" />
+                <path d="M 320 100 Q 280 200 290 310" />
+                <path d="M 420 130 Q 400 230 420 320" />
+                <path d="M 540 150 Q 530 250 570 320" />
+                <path d="M 60 220 Q 200 240 290 310" />
+                <path d="M 320 100 Q 400 110 420 130" />
+                <path d="M 240 60 Q 280 80 320 100" />
+                <path d="M 240 60 Q 200 130 180 200" />
+                <path d="M 460 50 Q 440 90 420 130" />
+                <path d="M 460 50 Q 510 90 540 150" />
+                <path d="M 380 240 Q 400 270 420 320" />
+                <path d="M 380 240 Q 350 200 320 100" />
+                <path d="M 100 130 Q 140 160 180 200" />
+                <path d="M 100 130 Q 80 180 60 220" />
             </g>
-            <!-- Nodes -->
+
+            <!-- Halos para nodos destacados -->
+            <circle cx="60"  cy="220" r="22" fill="url(#dotHalo)" />
+            <circle cx="320" cy="100" r="20" fill="url(#greenHalo)" />
+            <circle cx="540" cy="150" r="18" fill="url(#dotHalo)" />
+            <circle cx="170" cy="300" r="16" fill="url(#dotHalo)" />
+            <circle cx="420" cy="320" r="16" fill="url(#dotHalo)" />
+            <circle cx="290" cy="310" r="18" fill="url(#amberHalo)" />
+
+            <!-- Nodos -->
             <g>
-                <circle cx="80"  cy="180" r="14" fill="url(#dotGlow)" />
-                <circle cx="80"  cy="180" r="4"  fill="#FFFFFF" />
-
-                <circle cx="180" cy="110" r="3"  fill="#FFFFFF" opacity="0.85" />
-
-                <circle cx="280" cy="60"  r="14" fill="url(#dotGlow)" />
-                <circle cx="280" cy="60"  r="6"  fill="#1B7F67" />
-
-                <circle cx="360" cy="120" r="4"  fill="#FFFFFF" />
-                <circle cx="460" cy="80"  r="5"  fill="#D9A441" />
-                <circle cx="540" cy="160" r="4"  fill="#FFFFFF" opacity="0.7" />
-
-                <circle cx="130" cy="250" r="6"  fill="#FFFFFF" />
-                <circle cx="240" cy="220" r="5"  fill="#D9A441" />
-                <circle cx="320" cy="280" r="4"  fill="#FFFFFF" opacity="0.7" />
-                <circle cx="420" cy="250" r="5"  fill="#2F3C6A" />
-                <circle cx="540" cy="290" r="4"  fill="#FFFFFF" opacity="0.7" />
+                <!-- Anchor blanco grande -->
+                <circle cx="60"  cy="220" r="6" fill="#FFFFFF" />
+                <!-- Verde con halo (insight) -->
+                <circle cx="320" cy="100" r="7" fill="#1B7F67" />
+                <!-- Anchor blanco mediano -->
+                <circle cx="540" cy="150" r="5" fill="#FFFFFF" />
+                <!-- Ámbar destacado -->
+                <circle cx="290" cy="310" r="6" fill="#D9A441" />
+                <!-- Indigo -->
+                <circle cx="420" cy="320" r="5" fill="#2F3C6A" />
+                <!-- Otros nodos blancos pequeños esparcidos -->
+                <circle cx="180" cy="200" r="3" fill="#FFFFFF" opacity="0.85" />
+                <circle cx="170" cy="300" r="4" fill="#FFFFFF" />
+                <circle cx="240" cy="60"  r="3" fill="#FFFFFF" opacity="0.7" />
+                <circle cx="100" cy="130" r="3" fill="#FFFFFF" opacity="0.7" />
+                <circle cx="380" cy="240" r="3" fill="#FFFFFF" opacity="0.85" />
+                <circle cx="420" cy="130" r="4" fill="#FFFFFF" opacity="0.85" />
+                <circle cx="460" cy="50"  r="4" fill="#D9A441" opacity="0.85" />
+                <circle cx="570" cy="320" r="3" fill="#2F3C6A" opacity="0.85" />
+                <circle cx="640" cy="240" r="4" fill="#FFFFFF" opacity="0.7" />
+                <circle cx="500" cy="240" r="2.5" fill="#FFFFFF" opacity="0.6" />
+                <circle cx="380" cy="170" r="2.5" fill="#FFFFFF" opacity="0.6" />
+                <circle cx="220" cy="160" r="2.5" fill="#FFFFFF" opacity="0.6" />
+                <circle cx="350" cy="50"  r="2.5" fill="#FFFFFF" opacity="0.5" />
+                <circle cx="600" cy="80"  r="2.5" fill="#FFFFFF" opacity="0.5" />
+                <circle cx="120" cy="280" r="2.5" fill="#FFFFFF" opacity="0.5" />
+                <circle cx="350" cy="350" r="2.5" fill="#FFFFFF" opacity="0.5" />
+                <circle cx="490" cy="280" r="2.5" fill="#FFFFFF" opacity="0.6" />
+                <circle cx="660" cy="180" r="2.5" fill="#FFFFFF" opacity="0.5" />
+                <circle cx="40"  cy="80"  r="2"   fill="#FFFFFF" opacity="0.45" />
+                <circle cx="40"  cy="320" r="2"   fill="#FFFFFF" opacity="0.45" />
             </g>
         </svg>
 
@@ -90,47 +148,46 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <path d="M9 12l2 2 4-4"></path>
             </svg>
-            <span>Secure. Private. Enterprise ready.</span>
+            <span>Seguro. Privado. Listo para empresas.</span>
         </div>
     </aside>
 
-    <!-- ===================== PANEL DERECHO (CREAM) ===================== -->
+    <!-- ===================== MAIN CREAM ===================== -->
     <main class="login-main">
         <section class="login-card-wrap">
             <div class="login-card">
                 <header class="login-card-head">
-                    <h2 class="login-headline">Welcome back</h2>
+                    <h2 class="login-headline">Bienvenido de nuevo</h2>
                     <p class="login-sub">
-                        Sign in to your
-                        <strong *ngIf="branding.companyName() !== branding.platformName()">{{ branding.companyName() }}</strong>
-                        <strong *ngIf="branding.companyName() === branding.platformName()">Acten</strong>
-                        workspace.
+                        Inicia sesión en tu espacio de
+                        <strong>{{ branding.companyName() || 'Acten' }}</strong>.
                     </p>
                 </header>
 
                 <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form" novalidate>
                     <div class="field" *ngIf="showTenantField">
-                        <label for="tenantSlug">Workspace</label>
+                        <label for="tenantSlug">Empresa</label>
                         <input id="tenantSlug" type="text" [(ngModel)]="tenantSlug" name="tenantSlug"
                                placeholder="acten" autocomplete="off"
                                [readonly]="tenantLocked" />
                     </div>
 
                     <div class="field">
-                        <label for="email">Email</label>
+                        <label for="email">Correo electrónico</label>
                         <input id="email" type="email" [(ngModel)]="email" name="email" required
-                               placeholder="you@company.com" autocomplete="email" />
+                               placeholder="tu@empresa.com" autocomplete="email" />
                     </div>
 
                     <div class="field">
-                        <label for="password">Password</label>
+                        <label for="password">Contraseña</label>
                         <div class="password-wrap">
                             <input [type]="showPassword ? 'text' : 'password'" id="password" name="password"
                                    [(ngModel)]="password" required placeholder="••••••••••••"
                                    autocomplete="current-password" />
                             <button type="button" class="password-toggle" (click)="togglePassword()">
-                                {{ showPassword ? 'Hide' : 'Show' }}
+                                {{ showPassword ? 'Ocultar' : 'Mostrar' }}
                             </button>
                         </div>
                     </div>
@@ -138,9 +195,9 @@
                     <div class="row-between">
                         <label class="checkbox-row">
                             <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
-                            <span>Remember me</span>
+                            <span>Recuérdame</span>
                         </label>
-                        <a routerLink="/forgot-password" class="forgot-link">Forgot password?</a>
+                        <a routerLink="/forgot-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
                     </div>
 
                     <div class="error-banner" *ngIf="errorMessage" role="alert">
@@ -148,8 +205,8 @@
                     </div>
 
                     <button type="submit" class="btn-signin" [disabled]="!loginForm.form.valid || isLoading">
-                        <span class="btn-signin-label" *ngIf="!isLoading">Sign in</span>
-                        <span class="btn-signin-label" *ngIf="isLoading">Signing in…</span>
+                        <span class="btn-signin-label" *ngIf="!isLoading">Iniciar sesión</span>
+                        <span class="btn-signin-label" *ngIf="isLoading">Iniciando sesión…</span>
                         <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -163,14 +220,14 @@
                             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                         </svg>
-                        Sign in with SSO
+                        Iniciar sesión con SSO
                     </button>
 
-                    <div class="or-divider"><span>or</span></div>
+                    <div class="or-divider"><span>o</span></div>
 
                     <p class="contact-admin">
-                        Don't have an account?
-                        <a href="#" (click)="ssoUnavailable($event)">Contact your admin.</a>
+                        ¿No tienes una cuenta?
+                        <a href="#" (click)="ssoUnavailable($event)">Contacta a tu administrador.</a>
                     </p>
                 </form>
             </div>
@@ -178,25 +235,25 @@
 
         <footer class="login-footer">
             <div class="footer-links">
-                <a href="#" (click)="$event.preventDefault()">
+                <a routerLink="/help">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                     </svg>
-                    Help center
+                    Centro de ayuda
                 </a>
-                <a href="#" (click)="$event.preventDefault()">
+                <a routerLink="/privacy">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                     </svg>
-                    Privacy
+                    Privacidad
                 </a>
             </div>
             <div class="footer-copy">
-                © {{ year }} {{ branding.platformName() }}, Inc. All rights reserved.
+                © {{ year }} {{ branding.platformName() }}, Inc. Todos los derechos reservados.
             </div>
         </footer>
     </main>

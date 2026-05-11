@@ -1,0 +1,184 @@
+.privacy-page {
+    background: var(--color-bg-base);
+    min-height: 100vh;
+    padding: var(--space-32) var(--space-24);
+    font-family: var(--font-sans);
+    color: var(--color-fg-default);
+}
+
+.privacy-header {
+    max-width: 1100px;
+    margin: 0 auto var(--space-32);
+}
+
+.privacy-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-6);
+    color: var(--color-fg-muted);
+    text-decoration: none;
+    font-size: var(--text-13);
+    font-weight: var(--fw-medium);
+    margin-bottom: var(--space-32);
+}
+.privacy-back:hover { color: var(--color-fg-default); }
+
+.privacy-eyebrow {
+    font-size: var(--text-12);
+    font-weight: var(--fw-semibold);
+    color: var(--color-success);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    margin-bottom: var(--space-12);
+}
+
+.privacy-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.5vw, 2.75rem);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-fg-default);
+    margin: 0 0 var(--space-8);
+    line-height: 1.10;
+}
+
+.privacy-meta {
+    color: var(--color-fg-muted);
+    font-size: var(--text-13);
+    margin: 0;
+}
+
+/* === Layout: TOC + content === */
+.privacy-layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--space-48);
+    align-items: start;
+}
+
+.privacy-toc {
+    position: sticky;
+    top: var(--space-32);
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-16);
+}
+
+.privacy-toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.privacy-toc a {
+    display: block;
+    padding: var(--space-6) var(--space-8);
+    border-radius: var(--radius-sm);
+    color: var(--color-fg-muted);
+    text-decoration: none;
+    font-size: var(--text-13);
+    font-weight: var(--fw-medium);
+    transition: var(--transition);
+}
+
+.privacy-toc a:hover {
+    background: var(--brand-cream-100);
+    color: var(--color-fg-default);
+}
+
+.privacy-content {
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-40);
+    line-height: 1.7;
+    color: var(--color-fg-default);
+}
+
+.privacy-content section {
+    margin-bottom: var(--space-32);
+}
+
+.privacy-content section:last-child { margin-bottom: 0; }
+
+.privacy-content h2 {
+    font-family: var(--font-sans);
+    font-size: var(--text-20);
+    font-weight: var(--fw-semibold);
+    color: var(--color-fg-default);
+    margin: 0 0 var(--space-12);
+    scroll-margin-top: var(--space-32);
+}
+
+.privacy-content p {
+    color: var(--color-fg-muted);
+    font-size: var(--text-14);
+    margin: 0 0 var(--space-12);
+}
+
+.privacy-content p strong {
+    color: var(--color-fg-default);
+}
+
+.privacy-content ul {
+    margin: 0 0 var(--space-12) var(--space-20);
+    padding: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-14);
+}
+
+.privacy-content ul li {
+    margin-bottom: var(--space-6);
+}
+
+.privacy-content a {
+    color: var(--color-accent);
+    font-weight: var(--fw-semibold);
+    text-decoration: none;
+}
+.privacy-content a:hover { text-decoration: underline; }
+
+.privacy-content code {
+    background: var(--brand-cream-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    padding: 1px 6px;
+    font-family: var(--font-mono);
+    font-size: var(--text-12);
+}
+
+/* === Footer === */
+.privacy-footer {
+    max-width: 1100px;
+    margin: var(--space-32) auto 0;
+    padding-top: var(--space-24);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--color-fg-muted);
+    font-size: var(--text-12);
+    border-top: 1px solid var(--color-border);
+}
+
+.privacy-footer a {
+    color: var(--color-fg-muted);
+    text-decoration: none;
+    font-weight: var(--fw-medium);
+}
+.privacy-footer a:hover { color: var(--color-fg-default); }
+
+/* === Responsive === */
+@media (max-width: 860px) {
+    .privacy-layout {
+        grid-template-columns: 1fr;
+    }
+    .privacy-toc {
+        position: static;
+    }
+    .privacy-content {
+        padding: var(--space-24);
+    }
+}
