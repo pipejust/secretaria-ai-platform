@@ -443,6 +443,25 @@
 
 .contact-admin a:hover { text-decoration: underline; }
 
+/* Demo banner — visible solo cuando el password vino por query param.
+   Avisa al usuario que está en modo testing y NO debe usarlo en prod. */
+.demo-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-8) var(--space-12);
+    border-radius: var(--radius-md);
+    background: rgba(217, 164, 65, 0.12);
+    border: 1px solid rgba(217, 164, 65, 0.30);
+    color: var(--brand-amber-scale-700);
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    font-weight: var(--fw-medium);
+    margin-bottom: var(--space-16);
+}
+
+.demo-banner svg { flex-shrink: 0; }
+
 /* Link "Cambiar de empresa" — para revelar el campo workspace cuando
    el usuario tiene credenciales de un tenant distinto al default. */
 .switch-tenant {

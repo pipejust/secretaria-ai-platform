@@ -139,6 +139,16 @@
                     </p>
                 </header>
 
+                <div class="demo-banner" *ngIf="demoMode" role="alert">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    Modo demo · credenciales precargadas desde la URL. No usar en producción.
+                </div>
+
                 <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form" novalidate>
                     <div class="field" *ngIf="showTenantField">
                         <label for="tenantSlug">
@@ -192,11 +202,6 @@
                             <polyline points="12 5 19 12 12 19"></polyline>
                         </svg>
                     </button>
-
-                    <p class="contact-admin">
-                        ¿No tienes una cuenta?
-                        <a href="#" (click)="ssoUnavailable($event)">Contacta a tu administrador.</a>
-                    </p>
 
                     <button type="button" class="switch-tenant" *ngIf="!showTenantField"
                             (click)="revealTenantField()">
