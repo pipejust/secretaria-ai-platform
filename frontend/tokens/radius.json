@@ -1,10 +1,10 @@
 {
-  "$comment": "Radii — más generosos para coincidir con el mockup adjunto. md=14 e lg=20 dan la sensación de bordes claramente redondeados.",
+  "$comment": "Radii del mockup adjunto — botones e inputs SUTILMENTE redondeados (10px). Cards más curvos (lg=20). Pills full.",
   "radius": {
     "none": "0",
     "xs":   "0.375rem",
     "sm":   "0.625rem",
-    "md":   "0.875rem",
+    "md":   "0.625rem",
     "lg":   "1.25rem",
     "xl":   "1.75rem",
     "full": "9999px"
