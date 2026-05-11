@@ -42,10 +42,10 @@ const DEFAULT_BRAND: Branding = {
   company_address: '',
   company_website: '',
   company_phone: '',
-  // Paleta del brand kit Acten — coherente con tokens.css (--brand-navy-700, etc.)
-  primary_color: '#1F2A52',
-  secondary_color: '#3D6B5E',
-  accent_color: '#C8993B',
+  // Paleta EXACTA del handoff Page 01 — Section 5 (Color System).
+  primary_color: '#223148',
+  secondary_color: '#1B7F67',
+  accent_color: '#D9A441',
   logo_data_url: '',
   favicon_data_url: '',
 };

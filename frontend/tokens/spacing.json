@@ -1,21 +1,22 @@
 {
-  "$comment": "Escala 4px-base con steps usables. NO usar valores fuera de este set.",
+  "$comment": "8pt grid del handoff Page 01 — Section 6 (Spacing scale).",
   "space": {
     "0":  "0",
-    "1":  "0.125rem",
-    "2":  "0.25rem",
-    "3":  "0.375rem",
-    "4":  "0.5rem",
-    "6":  "0.75rem",
-    "8":  "1rem",
-    "12": "1.5rem",
-    "16": "2rem",
-    "20": "2.5rem",
-    "24": "3rem",
-    "32": "4rem",
-    "40": "5rem",
-    "48": "6rem",
-    "64": "8rem",
-    "96": "12rem"
+    "1":  "0.0625rem",
+    "2":  "0.125rem",
+    "4":  "0.25rem",
+    "6":  "0.375rem",
+    "8":  "0.5rem",
+    "12": "0.75rem",
+    "16": "1rem",
+    "20": "1.25rem",
+    "24": "1.5rem",
+    "32": "2rem",
+    "40": "2.5rem",
+    "48": "3rem",
+    "56": "3.5rem",
+    "64": "4rem",
+    "80": "5rem",
+    "96": "6rem"
   }
 }

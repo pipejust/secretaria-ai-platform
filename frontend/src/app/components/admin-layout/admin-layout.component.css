@@ -6,20 +6,21 @@
     background: var(--color-bg-base);
 }
 
-/* Sidebar Acten — navy oscuro con tipografía Sora, separadores cream
-   apenas visibles, acento gold sutil en el item activo. */
+/* Sidebar Acten — Charcoal #111318, 240px expanded / 80px collapsed.
+   Spec del handoff Page 01 — Section 4 (Redesigned Navigation System).
+   Item activo: solo background sutil (sin barra lateral). */
 .sidebar {
-    width: 260px;
+    width: 240px;
     height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--color-bg-sidebar);
     color: var(--brand-cream-200);
-    box-shadow: var(--shadow-md);
     z-index: 10;
     transition: width var(--dur-base) var(--ease-out);
     position: relative;
     font-family: var(--font-sans);
+    flex-shrink: 0;
 }
 
 .sidebar.collapsed {
@@ -27,8 +28,11 @@
 }
 
 .sidebar-header {
-    padding: var(--space-20) var(--space-24);
-    border-bottom: 1px solid rgba(245, 239, 227, 0.08);
+    padding: var(--space-20);
+    border-bottom: 1px solid rgba(247, 244, 238, 0.06);
+    height: 64px;
+    display: flex;
+    align-items: center;
 }
 
 .logo-area {
@@ -42,13 +46,11 @@
 }
 
 .acten-monogram {
-    height: 36px;
-    width: 36px;
+    height: 32px;
+    width: 32px;
     object-fit: contain;
-    /* El PNG tiene fondo blanco; lo blanqueamos con backdrop circular cream
-       para que destaque sobre navy. */
     background: var(--brand-cream-50);
-    padding: 4px;
+    padding: 3px;
     border-radius: var(--radius-sm);
     flex-shrink: 0;
 }
@@ -71,20 +73,21 @@
 
 .brand-company {
     font-family: var(--font-display);
-    font-size: var(--text-20);
+    font-size: var(--text-18);
     font-weight: var(--fw-semibold);
     color: var(--color-fg-on-dark);
     letter-spacing: var(--tracking-tight);
+    line-height: 1;
 }
 
 .brand-platform {
     font-family: var(--font-sans);
-    font-size: 10px;
-    color: var(--brand-cream-500);
+    font-size: var(--text-11);
+    color: var(--color-fg-soft);
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    margin-top: 2px;
-    font-weight: var(--fw-semibold);
+    margin-top: 3px;
+    font-weight: var(--fw-medium);
 }
 
 .sidebar-header h2 span {
@@ -117,7 +120,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 1rem 0;
+    padding: var(--space-12) var(--space-12);
     overflow-y: auto;
 }
 
@@ -128,14 +131,15 @@
     flex: 1;
 }
 
-/* Eyebrow editorial para categorías de la nav. */
+/* Eyebrow editorial discreto para categorías. */
 .nav-category {
-    font-size: var(--text-12);
+    font-family: var(--font-sans);
+    font-size: var(--text-11);
     text-transform: uppercase;
     letter-spacing: var(--tracking-label);
     font-weight: var(--fw-semibold);
-    color: var(--brand-cream-500);
-    margin: var(--space-16) var(--space-24) var(--space-6);
+    color: var(--color-fg-soft);
+    margin: var(--space-16) var(--space-12) var(--space-8);
 }
 
 .sidebar-nav li {
@@ -146,14 +150,15 @@
     display: flex;
     align-items: center;
     gap: var(--space-12);
-    padding: var(--space-12) var(--space-24);
+    padding: var(--space-8) var(--space-12);
     color: var(--brand-cream-200);
     text-decoration: none;
     font-size: var(--text-14);
     font-weight: var(--fw-medium);
     transition: var(--transition);
-    border-left: 3px solid transparent;
+    border-radius: var(--radius-md);
     white-space: nowrap;
+    min-height: 40px;
 }
 
 .sidebar.collapsed .sidebar-nav a {
@@ -170,55 +175,65 @@
 }
 
 .sidebar-nav a:hover {
-    background: rgba(245, 239, 227, 0.06);
+    background: rgba(247, 244, 238, 0.06);
     color: var(--color-fg-on-dark);
 }
 
-/* Item activo: barra gold a la izquierda + sutil tinte cream sobre navy.
-   Coherente con el handoff que usa gold como acento editorial. */
+/* Item activo: solo background sutil, SIN barra lateral.
+   Spec del handoff Page 01 — Section 4. */
 .sidebar-nav a.active {
-    background: rgba(245, 239, 227, 0.08);
+    background: var(--color-bg-sidebar-2);
     color: var(--color-fg-on-dark);
-    border-left-color: var(--brand-gold-500);
     font-weight: var(--fw-semibold);
 }
 
+.sidebar-nav a svg {
+    flex-shrink: 0;
+    color: currentColor;
+    opacity: 0.85;
+}
+
+.sidebar-nav a.active svg {
+    opacity: 1;
+}
+
 .sidebar-footer {
-    padding: var(--space-20) var(--space-24);
-    border-top: 1px solid rgba(245, 239, 227, 0.08);
+    padding: var(--space-16) var(--space-20);
+    border-top: 1px solid rgba(247, 244, 238, 0.06);
 }
 
 .system-status {
     display: flex;
     align-items: center;
     gap: var(--space-6);
-    color: var(--brand-teal-300);
-    font-size: var(--text-12);
+    color: var(--brand-emerald-scale-300);
+    font-size: var(--text-11);
     font-weight: var(--fw-semibold);
     letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: var(--radius-full);
-    background-color: var(--brand-teal-300);
-    box-shadow: 0 0 8px rgba(116, 168, 154, 0.6);
+    background-color: var(--color-success);
+    box-shadow: 0 0 6px rgba(27, 127, 103, 0.55);
 }
 
-/* Toggle del sidebar — círculo gold sobresaliendo del borde derecho. */
+/* Toggle del sidebar — círculo discreto sobre el borde derecho.
+   Mantiene contraste pero NO domina visualmente como antes. */
 .toggle-sidebar-bottom {
     position: absolute;
-    bottom: var(--space-32);
-    right: -16px;
-    width: 32px;
-    height: 32px;
+    bottom: var(--space-20);
+    right: -12px;
+    width: 24px;
+    height: 24px;
     border-radius: var(--radius-full);
-    background: var(--brand-gold-500);
-    color: var(--brand-navy-900);
-    border: 2px solid var(--color-bg-sidebar);
-    box-shadow: var(--shadow-md);
+    background: var(--color-bg-panel);
+    color: var(--color-fg-default);
+    border: 1px solid var(--color-border-strong);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -228,8 +243,8 @@
 }
 
 .toggle-sidebar-bottom:hover {
-    background: var(--brand-gold-300);
-    transform: scale(1.08);
+    background: var(--brand-cream-100);
+    border-color: var(--color-fg-muted);
 }
 
 /* Main Content Area */
@@ -240,20 +255,19 @@
     overflow: hidden;
 }
 
-/* Topbar editorial: superficie blanca con un divider cream sutil.
-   El título de página usa Playfair Display para mantener la jerarquía
-   visual del brand kit (display arriba, sans en la grilla). */
+/* Topbar 64px exacto del handoff Page 01 — Section 4 (Top Bar Height: 64px).
+   Layout 3-col: breadcrumbs (izq) · search central · acciones (der). */
 .topbar {
-    height: 76px;
-    min-height: 76px;
+    height: 64px;
+    min-height: 64px;
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(280px, 520px) auto;
+    grid-template-columns: minmax(220px, 1fr) minmax(320px, 560px) auto;
     align-items: center;
-    padding: 0 var(--space-32);
+    padding: 0 var(--space-24);
     background: var(--color-bg-topbar);
     color: var(--color-fg-default);
     border-bottom: 1px solid var(--color-border);
-    gap: var(--space-24);
+    gap: var(--space-20);
     z-index: 5;
 }
 
@@ -264,31 +278,41 @@
     min-width: 0;
 }
 
+/* Breadcrumb estilo handoff: 3 segmentos navegables con chevron entre. */
 .topbar-titles {
     display: flex;
-    flex-direction: column;
-    line-height: 1.1;
+    align-items: center;
+    gap: var(--space-8);
+    line-height: 1;
     min-width: 0;
 }
 
 .topbar-eyebrow {
     font-family: var(--font-sans);
-    font-size: var(--text-12);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-label);
+    font-size: var(--text-13);
     color: var(--color-fg-muted);
-    font-weight: var(--fw-semibold);
-    margin-bottom: 2px;
+    font-weight: var(--fw-medium);
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0;
+    margin: 0;
+}
+
+.topbar-eyebrow::after {
+    content: '›';
+    margin-left: var(--space-8);
+    color: var(--color-fg-soft);
+    font-weight: var(--fw-regular);
 }
 
 .page-title {
-    font-family: var(--font-display);
-    font-size: var(--text-24);
+    font-family: var(--font-sans);
+    font-size: var(--text-15);
     font-weight: var(--fw-semibold);
-    letter-spacing: var(--tracking-tight);
     color: var(--color-fg-default);
     margin: 0;
-    line-height: var(--lh-display);
+    line-height: 1;
+    letter-spacing: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -299,22 +323,25 @@
     justify-content: center;
 }
 
+/* Search central — pill estilo handoff Page 01 — Section 4 (COMMAND BAR).
+   Width fija, fondo cream-50, kbd ⌘K a la derecha. */
 .topbar-search {
     position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-8);
     width: 100%;
+    height: 36px;
     background: var(--brand-cream-100);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: var(--space-8) var(--space-12);
+    padding: 0 var(--space-12);
     transition: var(--transition);
 }
 
 .topbar-search:focus-within {
     background: var(--color-bg-panel);
-    border-color: var(--brand-navy-300);
+    border-color: var(--color-border-focus);
     box-shadow: var(--shadow-ring-focus);
 }
 
@@ -329,9 +356,10 @@
     background: transparent;
     padding: 0;
     font-family: var(--font-sans);
-    font-size: var(--text-14);
+    font-size: var(--text-13);
     color: var(--color-fg-default);
     min-height: auto;
+    height: 100%;
 }
 
 .topbar-search input:focus {
@@ -344,13 +372,15 @@
 }
 
 .topbar-search kbd {
-    font-family: var(--font-mono);
-    font-size: var(--text-12);
+    font-family: var(--font-sans);
+    font-size: var(--text-11);
+    font-weight: var(--fw-semibold);
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xs);
     padding: 2px 6px;
     color: var(--color-fg-muted);
+    line-height: 1;
 }
 
 .topbar-right {
@@ -365,14 +395,14 @@
     background: transparent;
     border: 1px solid transparent;
     color: var(--color-fg-muted);
-    padding: var(--space-8);
+    padding: var(--space-6);
     border-radius: var(--radius-md);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 40px;
-    width: 40px;
+    min-height: 32px;
+    width: 32px;
     transition: var(--transition);
 }
 
@@ -383,12 +413,12 @@
 
 .dot-indicator {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 8px;
-    height: 8px;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
     border-radius: var(--radius-full);
-    background: var(--brand-gold-500);
+    background: var(--color-danger);
     border: 2px solid var(--color-bg-topbar);
 }
 
@@ -400,8 +430,8 @@
     display: flex;
     align-items: center;
     gap: var(--space-8);
-    padding: var(--space-4) var(--space-8);
-    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-8) var(--space-4) var(--space-4);
+    border-radius: var(--radius-full);
     cursor: pointer;
     transition: var(--transition);
 }
@@ -410,42 +440,44 @@
     background: var(--brand-cream-100);
 }
 
+/* Avatar 32px — spec del handoff Page 01 — Section 7 (Avatars: 24/32/40/48). */
 .top-avatar {
-    width: 40px;
-    height: 40px;
-    font-size: var(--text-14);
-    background: var(--brand-navy-700);
-    color: var(--brand-cream-50);
-    box-shadow: var(--shadow-xs);
+    width: 32px;
+    height: 32px;
+    font-size: var(--text-12);
+    background: var(--brand-deep-indigo-500);
+    color: var(--color-fg-on-dark);
     border-radius: var(--radius-full);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-weight: var(--fw-bold);
+    font-weight: var(--fw-semibold);
     font-family: var(--font-sans);
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: 0;
 }
 
 .user-details {
     display: flex;
     flex-direction: column;
     text-align: left;
+    line-height: 1.1;
 }
 
 .u-name {
     font-family: var(--font-sans);
-    font-size: var(--text-14);
+    font-size: var(--text-13);
     font-weight: var(--fw-semibold);
     color: var(--color-fg-default);
 }
 
 .u-role {
     font-family: var(--font-sans);
-    font-size: var(--text-12);
+    font-size: var(--text-11);
     color: var(--color-fg-muted);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
-    font-weight: var(--fw-semibold);
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: var(--fw-medium);
+    margin-top: 1px;
 }
 
 .chevron-down {

@@ -91,9 +91,9 @@ css += `  /* --- Aliases para retrocompatibilidad con el código viejo --- */
   --transition:     all var(--dur-base) var(--ease-out);
 
   /* --- Brand white-label (BrandingService los sobreescribe en runtime) --- */
-  --brand-primary:   var(--brand-navy-700);
-  --brand-secondary: var(--brand-teal-500);
-  --brand-accent:    var(--brand-gold-500);
+  --brand-primary:   var(--brand-ink-blue-500);
+  --brand-secondary: var(--brand-emerald-500);
+  --brand-accent:    var(--brand-amber-500);
 }
 `;
 

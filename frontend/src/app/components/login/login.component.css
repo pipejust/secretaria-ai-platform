@@ -72,7 +72,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--brand-gold-700);
+  color: var(--brand-amber-scale-700);
   margin-bottom: var(--space-12);
 }
 
@@ -119,9 +119,9 @@
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
-.dot-teal  { background: var(--brand-teal-500); }
-.dot-gold  { background: var(--brand-gold-500); }
-.dot-navy  { background: var(--brand-navy-700); }
+.dot-teal  { background: var(--color-success); }
+.dot-gold  { background: var(--color-warning); }
+.dot-navy  { background: var(--color-accent); }
 .dot-coral { background: var(--color-danger); }
 
 /* ----- Card de form (panel derecho) ----- */

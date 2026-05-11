@@ -38,13 +38,13 @@ DEFAULT_BRANDING: dict[str, Any] = {
     "company_address": "",
     "company_website": "",
     "company_phone": "",
-    # Tema visual — paleta del brand kit Acten:
-    #   primary   = navy-700 (#1F2A52) — sidebar, CTAs, headings
-    #   secondary = teal-500 (#3D6B5E) — semantic success / acento secundario
-    #   accent    = gold-500 (#C8993B) — highlights editoriales
-    "primary_color": "#1F2A52",
-    "secondary_color": "#3D6B5E",
-    "accent_color": "#C8993B",
+    # Tema visual — paleta EXACTA del handoff Page 01 — Section 5:
+    #   primary   = Ink Blue   #223148 — CTAs, accent
+    #   secondary = Emerald    #1B7F67 — success
+    #   accent    = Amber      #D9A441 — highlights editoriales
+    "primary_color": "#223148",
+    "secondary_color": "#1B7F67",
+    "accent_color": "#D9A441",
     # Assets — data URLs (puede ser '')
     "logo_data_url": "",
     "favicon_data_url": "",

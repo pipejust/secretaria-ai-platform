@@ -1,56 +1,60 @@
 {
-  "$comment": "Paleta extraída del brand kit Acten (navy/cream/gold/teal). Cada token tiene contraste WCAG ≥ 4.5:1 sobre los fondos canónicos.",
+  "$comment": "PALETA EXACTA del handoff Page 01 — Section 5 (Color System).",
   "brand": {
+    "charcoal":   { "500": "#111318" },
+    "bone-white": { "500": "#F7F4EE" },
+    "ink-blue":   { "500": "#223148" },
+    "deep-indigo":{ "500": "#2F3C6A" },
+    "emerald":    { "500": "#1B7F67" },
+    "amber":      { "500": "#D9A441" },
+
     "navy": {
       "50":  "#F0F2F8",
       "100": "#D9DEEC",
       "200": "#B3BCD9",
       "300": "#7E8AB7",
-      "500": "#3B4773",
-      "700": "#1F2A52",
-      "900": "#0E1A3D"
+      "500": "#2F3C6A",
+      "700": "#223148",
+      "900": "#111318"
     },
     "cream": {
-      "50":  "#FBF8F2",
-      "100": "#F5EFE3",
-      "200": "#EADFC7",
-      "300": "#DCC9A0",
-      "500": "#C2A674"
+      "50":  "#FBF9F4",
+      "100": "#F7F4EE",
+      "200": "#EFE8D9",
+      "300": "#DCC9A0"
     },
-    "gold": {
+    "amber-scale": {
       "300": "#E5C16E",
-      "500": "#C8993B",
+      "500": "#D9A441",
       "700": "#9A6F1F"
     },
-    "teal": {
+    "emerald-scale": {
       "300": "#74A89A",
-      "500": "#3D6B5E",
-      "700": "#264A40"
-    },
-    "slate": {
-      "300": "#A8B0BD",
-      "500": "#6B7589",
-      "700": "#3F485A"
+      "500": "#1B7F67",
+      "700": "#125443"
     }
   },
   "semantic": {
-    "bg-base":     "#F5EFE3",
-    "bg-elevated": "#FBF8F2",
-    "bg-panel":    "#FFFFFF",
-    "bg-sidebar":  "#0E1A3D",
-    "bg-topbar":   "#FFFFFF",
-    "fg-default":  "#0E1A3D",
-    "fg-muted":    "#6B7589",
-    "fg-soft":     "#A8B0BD",
-    "fg-on-dark":  "#FBF8F2",
-    "fg-accent":   "#3D6B5E",
-    "border":      "#EADFC7",
-    "border-strong":"#DCC9A0",
-    "accent":      "#1F2A52",
-    "accent-hover":"#0E1A3D",
-    "success":     "#3D6B5E",
-    "warning":     "#C8993B",
-    "danger":      "#B23A48",
-    "info":        "#3B4773"
+    "bg-base":      "#F7F4EE",
+    "bg-elevated":  "#FBF9F4",
+    "bg-panel":     "#FFFFFF",
+    "bg-sidebar":   "#111318",
+    "bg-sidebar-2": "#1A1F2E",
+    "bg-topbar":    "#FFFFFF",
+    "fg-default":   "#111318",
+    "fg-muted":     "#687280",
+    "fg-soft":      "#A8B0BD",
+    "fg-on-dark":   "#F7F4EE",
+    "fg-accent":    "#2F3C6A",
+    "border":       "#E5E7EB",
+    "border-strong":"#D1D5DB",
+    "border-focus": "#2F6DBE",
+    "accent":       "#111318",
+    "accent-hover": "#223148",
+    "success":      "#1B7F67",
+    "warning":      "#D9A441",
+    "danger":       "#E03D3D",
+    "info":         "#2F6DBE",
+    "neutral":      "#687280"
   }
 }

@@ -66,40 +66,57 @@ h4 {
   background: var(--color-bg-panel);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ============================================================================
+ * Buttons — spec del handoff Page 01 — Section 7 (Component Anatomy).
+ * Height: 40-44px · Radius: 12px · Variantes: Primary / Secondary / Tertiary / Ghost.
+ * ============================================================================ */
 .btn {
-  padding: var(--space-12) var(--space-20);
+  padding: 0 var(--space-20);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   font-weight: var(--fw-semibold);
   font-family: var(--font-sans);
   font-size: var(--text-14);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: 0;
   cursor: pointer;
   transition: var(--transition);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-8);
-  min-height: 44px; /* a11y hit target */
+  height: 44px;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  height: 36px;
+  padding: 0 var(--space-12);
+  font-size: var(--text-13);
+}
+
+.btn-lg {
+  height: 48px;
+  padding: 0 var(--space-24);
+  font-size: var(--text-15);
 }
 
 .w-full {
   width: 100%;
 }
 
+/* PRIMARY — Charcoal #111318 fill, white text. Default CTA. */
 .btn-primary {
   background: var(--color-accent);
   color: var(--color-fg-on-dark);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--color-accent);
 }
 
 .btn-primary:hover {
   background: var(--color-accent-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--color-accent-hover);
 }
 
 .btn-primary:focus-visible {
@@ -107,46 +124,88 @@ h4 {
   box-shadow: var(--shadow-ring-focus);
 }
 
-/* Variante secundaria editorial: contorno navy sobre cream. Para acciones
-   neutras o "secundarias" en vistas con CTA primario presente. */
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* SECONDARY — outline dark sobre cream/white. Para acciones neutras. */
 .btn-secondary {
-  background: var(--color-bg-elevated);
+  background: var(--color-bg-panel);
   color: var(--color-fg-default);
   border-color: var(--color-border-strong);
 }
 
 .btn-secondary:hover {
-  background: var(--brand-cream-200);
+  background: var(--brand-cream-100);
+  border-color: var(--color-fg-muted);
 }
 
-/* Acento dorado — para CTAs editoriales (poco frecuente). */
-.btn-accent {
-  background: var(--brand-gold-500);
-  color: var(--brand-navy-900);
+.btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-ring-focus);
 }
 
-.btn-accent:hover {
-  background: var(--brand-gold-700);
+/* TERTIARY — solo texto navy, sin border. Para acciones inline. */
+.btn-tertiary {
+  background: transparent;
+  color: var(--color-accent);
+  border-color: transparent;
+  padding: 0 var(--space-12);
+}
+
+.btn-tertiary:hover {
+  background: var(--brand-cream-100);
+}
+
+/* GHOST — texto muted, solo se ve al hover. Para acciones de baja jerarquía. */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-fg-muted);
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--brand-cream-100);
+  color: var(--color-fg-default);
+}
+
+/* DANGER — solo para destructive. */
+.btn-danger {
+  background: var(--color-danger);
   color: var(--color-fg-on-dark);
+  border-color: var(--color-danger);
+}
+
+.btn-danger:hover {
+  background: #B82E2E;
+  border-color: #B82E2E;
 }
 
 .btn-success {
   background: var(--color-success);
   color: var(--color-fg-on-dark);
+  border-color: var(--color-success);
 }
 
 .btn-icon {
   background: transparent;
   color: var(--color-fg-muted);
   padding: var(--space-6);
-  min-height: auto;
+  height: 36px;
+  width: 36px;
+  border-radius: var(--radius-md);
 }
 
 .btn-icon:hover {
-  color: var(--color-danger);
-  background: rgba(178, 58, 72, 0.08);
+  color: var(--color-fg-default);
+  background: var(--brand-cream-100);
 }
 
+/* ============================================================================
+ * Inputs / Select / Textarea — spec del handoff Page 01 — Section 7.
+ * Height: 44px · Radius: 12px · Focus: info-blue ring.
+ * ============================================================================ */
 input,
 select,
 textarea {
@@ -154,18 +213,49 @@ textarea {
   background: var(--color-bg-panel);
   border: 1px solid var(--color-border);
   color: var(--color-fg-default);
-  padding: var(--space-12) var(--space-16);
+  padding: 0 var(--space-16);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
   font-size: var(--text-14);
+  height: 44px;
   transition: var(--transition);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+textarea {
+  height: auto;
+  min-height: 96px;
+  padding: var(--space-12) var(--space-16);
+  resize: vertical;
+  line-height: var(--lh-body);
+}
+
+select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23687280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right var(--space-16) center;
+  padding-right: var(--space-40);
+  cursor: pointer;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-fg-muted);
+  font-family: var(--font-sans);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--color-border-strong);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--color-accent);
+  border-color: var(--color-border-focus);
   box-shadow: var(--shadow-ring-focus);
 }
 
@@ -179,18 +269,27 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  height: auto;
+  padding: 0;
+  accent-color: var(--color-accent);
+}
+
 .form-group {
   margin-bottom: var(--space-16);
 }
 
+/* Labels — Sora medium, NO uppercase (handoff usa label normal). */
 label {
   display: block;
   font-family: var(--font-sans);
-  font-weight: var(--fw-semibold);
-  font-size: var(--text-12);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--color-fg-muted);
+  font-weight: var(--fw-medium);
+  font-size: var(--text-13);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-fg-default);
   margin-bottom: var(--space-6);
 }
 
@@ -299,12 +398,19 @@ label {
   flex: 2 1 500px;
 }
 
+/* ============================================================================
+ * Cards — spec del handoff Page 01 — Section 9 (Card Radius: 12-16px).
+ * ============================================================================ */
 .card {
   background: var(--color-bg-panel);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
   overflow: hidden;
+}
+
+.card-lg {
+  border-radius: var(--radius-lg);
 }
 
 .card-header {
@@ -312,7 +418,7 @@ label {
   border-bottom: none;
   font-family: var(--font-sans);
   font-weight: var(--fw-semibold);
-  font-size: var(--text-18);
+  font-size: var(--text-16);
   color: var(--color-fg-default);
 }
 
@@ -386,44 +492,44 @@ label {
 }
 
 /* ================== UTILIDADES ================== */
+/* ============================================================================
+ * Chips & Badges — spec del handoff Page 01 — Section 7.
+ * Height: 28px · Radius: 999px · Patrón: dot + texto opcional + icono.
+ * Variantes: Completed (success), In Progress (info), Pending (warning),
+ * Blocked (danger), Notes (neutral).
+ * ============================================================================ */
 .badge {
-  padding: var(--space-2) var(--space-8);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 0 var(--space-12);
+  height: 28px;
   font-family: var(--font-sans);
   font-size: var(--text-12);
-  border-radius: var(--radius-full);
   font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: 0;
+  border-radius: var(--radius-full);
   background: var(--brand-cream-100);
   color: var(--color-fg-default);
   border: 1px solid var(--color-border);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  white-space: nowrap;
 }
 
-.badge-primary {
-  background: var(--brand-navy-50);
-  color: var(--brand-navy-700);
-  border-color: var(--brand-navy-100);
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  opacity: 0.7;
 }
 
-.badge-success {
-  background: rgba(61, 107, 94, 0.10);
-  color: var(--brand-teal-700);
-  border-color: rgba(61, 107, 94, 0.25);
-}
-
-.badge-warning {
-  background: rgba(200, 153, 59, 0.12);
-  color: var(--brand-gold-700);
-  border-color: rgba(200, 153, 59, 0.25);
-}
-
-.badge-danger {
-  background: rgba(178, 58, 72, 0.10);
-  color: var(--color-danger);
-  border-color: rgba(178, 58, 72, 0.25);
-}
+.badge-success { background: rgba(27, 127, 103, 0.10); color: var(--brand-emerald-scale-700); border-color: rgba(27, 127, 103, 0.22); }
+.badge-info    { background: rgba(47, 109, 190, 0.10); color: var(--color-info);              border-color: rgba(47, 109, 190, 0.22); }
+.badge-warning { background: rgba(217, 164, 65, 0.12); color: var(--brand-amber-scale-700);   border-color: rgba(217, 164, 65, 0.25); }
+.badge-danger  { background: rgba(224, 61, 61, 0.08);  color: var(--color-danger);            border-color: rgba(224, 61, 61, 0.22); }
+.badge-neutral { background: var(--brand-cream-100);   color: var(--color-fg-muted);          border-color: var(--color-border); }
+.badge-primary { background: rgba(34, 49, 72, 0.06);   color: var(--color-accent);            border-color: rgba(34, 49, 72, 0.18); }
 
 .text-center {
   text-align: center;
