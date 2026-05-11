@@ -55,6 +55,15 @@ export const routes: Routes = [
         },
     },
     {
+        path: 'terms',
+        loadComponent: () => import('./components/terms/terms.component').then(m => m.TermsComponent),
+        title: 'Términos y Condiciones | Acten',
+        data: {
+            description: 'Términos legales para usar la plataforma Acten y reglas de uso aceptable.',
+            robots: 'index, follow',
+        },
+    },
+    {
         path: 'admin',
         component: AdminLayoutComponent,
         canActivate: [authGuard],

@@ -419,7 +419,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return [
             { key: 'meetings',     label: 'Reuniones',     value: meetings,    trend: trend(meetings, prevMeetings),   tone: 'navy',    icon: 'meetings' },
             { key: 'action_items', label: 'Tareas',        value: actionItems, trend: trend(actionItems, prevActions), tone: 'success', icon: 'tasks' },
-            { key: 'decisions',    label: 'Decisiones',    value: decisions,   trend: trend(decisions, prevDecisions), tone: 'navy',    icon: 'decisions' },
+            // Decisiones en verde para consistencia con el mockup: el icono
+            // checkmark refuerza la idea de "resoluciones cerradas" y queda
+            // en familia con Tareas (otro positivo).
+            { key: 'decisions',    label: 'Decisiones',    value: decisions,   trend: trend(decisions, prevDecisions), tone: 'success', icon: 'decisions' },
             { key: 'risks',        label: 'Riesgos',       value: risks,       trend: trend(risks, prevRisks),         tone: 'warning', icon: 'risks' },
         ];
     }

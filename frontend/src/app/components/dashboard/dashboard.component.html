@@ -224,7 +224,6 @@
                           [class.pill-completed]="m.status === 'completed'"
                           [class.pill-pending]="m.status === 'pending'"
                           [class.pill-processing]="m.status === 'processing'">
-                        <span class="pill-dot"></span>
                         {{ statusLabel(m.status) }}
                     </span>
                 </span>
@@ -325,9 +324,11 @@
     <footer class="ov-footer">
         <span>© {{ todayLabel | slice:-4 }} Acten AI · {{ todayLabel }}</span>
         <span class="dot-sep">·</span>
-        <a routerLink="/admin/settings">Privacidad</a>
+        <!-- Apuntan a las páginas legales reales (no a /admin/settings). Abren
+             en nueva pestaña para no sacar al user de su sesión activa. -->
+        <a routerLink="/privacy" target="_blank" rel="noopener">Privacidad</a>
         <span class="dot-sep">·</span>
-        <a routerLink="/admin/settings">Términos</a>
+        <a routerLink="/terms" target="_blank" rel="noopener">Términos</a>
         <span class="ov-version">v1.0</span>
     </footer>
 </div>

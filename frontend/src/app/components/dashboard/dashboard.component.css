@@ -142,18 +142,22 @@
 }
 .ov-kpi:hover { box-shadow: var(--shadow-sm); }
 
+/* KPI icon: cuadrado redondeado (no círculo). Match con el mockup
+   adjunto del overview — radio ~14px le da look "app" moderna sin caer
+   en card-style frío. Tints ligeramente más saturados para que el icono
+   resalte sobre el cream sin gritar. */
 .ov-kpi-icon {
     width: 48px;
     height: 48px;
-    border-radius: var(--radius-full);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
-.ov-kpi-icon[data-tone="navy"]    { background: rgba(34, 49, 72, 0.08);   color: var(--brand-ink-blue-500); }
-.ov-kpi-icon[data-tone="success"] { background: rgba(27, 127, 103, 0.10); color: var(--color-success); }
-.ov-kpi-icon[data-tone="warning"] { background: rgba(217, 164, 65, 0.12); color: var(--brand-amber-scale-700); }
+.ov-kpi-icon[data-tone="navy"]    { background: rgba(0, 34, 115, 0.10);   color: var(--color-accent); }
+.ov-kpi-icon[data-tone="success"] { background: rgba(27, 127, 103, 0.12); color: var(--brand-emerald-scale-700); }
+.ov-kpi-icon[data-tone="warning"] { background: rgba(217, 164, 65, 0.15); color: var(--brand-amber-scale-700); }
 .ov-kpi-icon[data-tone="danger"]  { background: rgba(224, 61, 61, 0.10);  color: var(--color-danger); }
 
 .ov-kpi-body {
@@ -360,10 +364,13 @@
     border-radius: var(--radius-full);
     border: 1px solid transparent;
 }
+/* En el mockup el badge "Connected" está en azul (info), no verde —
+   diferencia visual entre "todo correcto" (connected = healthy/info) y
+   resultado positivo (decisión completada = success). */
 .sync-status.connected {
-    background: rgba(27, 127, 103, 0.10);
-    color: var(--brand-emerald-scale-700);
-    border-color: rgba(27, 127, 103, 0.22);
+    background: rgba(47, 109, 190, 0.10);
+    color: var(--color-info);
+    border-color: rgba(47, 109, 190, 0.22);
 }
 .sync-status.disconnected {
     background: var(--brand-cream-100);
@@ -374,7 +381,7 @@
     width: 6px;
     height: 6px;
     border-radius: var(--radius-full);
-    background: var(--color-success);
+    background: var(--color-info);
 }
 
 /* ---------- RECENT MEETINGS ---------- */
@@ -592,39 +599,43 @@
 }
 
 /* ============================================================================
- * Status pills heredan del global. Aquí solo defensive overrides.
+ * Status pills — match con mockup del overview: sin dot interno, sólo
+ * color de fondo + texto. Mantenemos el borde sutil para definir el
+ * contenedor sobre el fondo cream.
  * ============================================================================ */
 .status-pill {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-6);
+    justify-content: center;
     padding: 0 var(--space-12);
-    height: 24px;
+    height: 26px;
     border-radius: var(--radius-full);
     font-family: var(--font-sans);
-    font-size: var(--text-11);
+    font-size: var(--text-12);
     font-weight: var(--fw-semibold);
     border: 1px solid transparent;
     white-space: nowrap;
-}
-.status-pill .pill-dot {
-    width: 6px; height: 6px; border-radius: var(--radius-full); flex-shrink: 0;
+    letter-spacing: 0;
 }
 .pill-completed {
-    background: rgba(27, 127, 103, 0.10);
+    background: rgba(27, 127, 103, 0.12);
     color: var(--brand-emerald-scale-700);
     border-color: rgba(27, 127, 103, 0.22);
 }
-.pill-completed .pill-dot { background: var(--color-success); }
 .pill-pending {
-    background: rgba(217, 164, 65, 0.12);
+    background: rgba(217, 164, 65, 0.15);
     color: var(--brand-amber-scale-700);
-    border-color: rgba(217, 164, 65, 0.25);
+    border-color: rgba(217, 164, 65, 0.28);
 }
-.pill-pending .pill-dot { background: var(--color-warning); }
 .pill-processing {
-    background: rgba(47, 109, 190, 0.10);
+    background: rgba(47, 109, 190, 0.12);
     color: var(--color-info);
     border-color: rgba(47, 109, 190, 0.22);
 }
+
+/* Mockup overview: los badges de Top Risks / Top Action Items NO muestran
+   el dot pseudoelemento del global (.badge::before). Aquí lo ocultamos
+   sólo dentro del dashboard para no romper otros componentes que sí
+   esperan el dot. */
+.overview-page .badge::before { display: none; }
 .pill-processing .pill-dot { background: var(--color-info); }
