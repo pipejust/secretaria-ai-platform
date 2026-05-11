@@ -195,7 +195,8 @@
     margin-bottom: 0;
 }
 
-/* Inputs grandes y MUY redondeados */
+/* Inputs grandes con esquinas claramente redondeadas pero discretas
+   (radius-sm ≈ 10px) — fiel al mockup adjunto. */
 .field input {
     height: 52px;
     padding: 0 var(--space-20);
@@ -203,7 +204,7 @@
     font-size: var(--text-14);
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-sm);
     color: var(--color-fg-default);
     transition: var(--transition);
 }
@@ -346,7 +347,7 @@
     font-weight: var(--fw-semibold);
     letter-spacing: 0;
     border: 1px solid var(--color-accent);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-sm);
     padding: 0 var(--space-24);
     cursor: pointer;
     transition: var(--transition);
@@ -505,5 +506,5 @@
 
 /* Override del rule global de inputs para los inputs DENTRO de la login card.
    Sin esto el `input { height: 44px, radius: md }` global pisa el spec local. */
-.login-card .field input { height: 52px; border-radius: var(--radius-xl); }
+.login-card .field input { height: 52px; border-radius: var(--radius-sm); }
 .login-card .form-group { margin-bottom: 0; }
