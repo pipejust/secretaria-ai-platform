@@ -18,6 +18,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
  */
 
 const STORAGE_KEY = 'tenant_slug';
+const STORAGE_EXPLICIT_KEY = 'tenant_explicit';
 const DEFAULT_SLUG = 'acten';
 const PATH_RE = /^\/t\/([a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?)(\/|$)/;
 
@@ -35,15 +36,23 @@ export class TenantService {
    * Setea explícitamente el slug. Útil al loguear contra un tenant nuevo,
    * o al super-admin al cambiar de tenant para administrar.
    */
-  setSlug(slug: string): void {
+  setSlug(slug: string, explicit = false): void {
     const norm = (slug || '').trim().toLowerCase() || DEFAULT_SLUG;
     this.slug.set(norm);
-    try { localStorage.setItem(STORAGE_KEY, norm); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, norm);
+      if (explicit) localStorage.setItem(STORAGE_EXPLICIT_KEY, '1');
+    } catch {}
+    if (explicit) this.isExplicit.set(true);
   }
 
   clear(): void {
     this.slug.set(DEFAULT_SLUG);
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    this.isExplicit.set(false);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_EXPLICIT_KEY);
+    } catch {}
   }
 
   // ------------------------------------------------------------------
@@ -57,7 +66,10 @@ export class TenantService {
     const m = PATH_RE.exec(window.location.pathname);
     if (m) {
       const fromPath = m[1];
-      try { localStorage.setItem(STORAGE_KEY, fromPath); } catch {}
+      try {
+        localStorage.setItem(STORAGE_KEY, fromPath);
+        localStorage.setItem(STORAGE_EXPLICIT_KEY, '1');
+      } catch {}
       return fromPath;
     }
 
@@ -67,7 +79,10 @@ export class TenantService {
     const parts = host.split('.');
     if (parts.length >= 3 && !['www', 'app', 'admin', 'localhost'].includes(parts[0])) {
       const fromSub = parts[0].toLowerCase();
-      try { localStorage.setItem(STORAGE_KEY, fromSub); } catch {}
+      try {
+        localStorage.setItem(STORAGE_KEY, fromSub);
+        localStorage.setItem(STORAGE_EXPLICIT_KEY, '1');
+      } catch {}
       return fromSub;
     }
 
@@ -83,9 +98,14 @@ export class TenantService {
 
   private _wasExplicitlyResolved(): boolean {
     if (typeof window === 'undefined') return false;
+    // URL/host actual
     if (PATH_RE.test(window.location.pathname)) return true;
     const parts = window.location.hostname.split('.');
     if (parts.length >= 3 && !['www', 'app', 'admin', 'localhost'].includes(parts[0])) return true;
+    // Sesión anterior que vino por path/host (sobrevive al redirect del Router).
+    try {
+      if (localStorage.getItem(STORAGE_EXPLICIT_KEY) === '1') return true;
+    } catch {}
     return false;
   }
 }

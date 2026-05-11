@@ -164,6 +164,18 @@ export const routes: Routes = [
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
     },
+    /* ──────────────────────────────────────────────────────────────────────
+     * Tenant URL prefix `/t/:slug/...` — el TenantService captura el slug
+     * desde window.location.pathname al bootstrap (antes de que el Router
+     * resuelva), lo persiste con flag explicit=1, y aquí redirigimos al
+     * mismo path sin el prefijo para no dejar URLs zombi en la barra.
+     * ────────────────────────────────────────────────────────────────────── */
+    { path: 't/:slug/login',           redirectTo: '/login',           pathMatch: 'full' },
+    { path: 't/:slug/forgot-password', redirectTo: '/forgot-password', pathMatch: 'full' },
+    { path: 't/:slug/reset-password',  redirectTo: '/reset-password',  pathMatch: 'full' },
+    { path: 't/:slug/admin',           redirectTo: '/admin/dashboard', pathMatch: 'full' },
+    { path: 't/:slug',                 redirectTo: '/login',           pathMatch: 'full' },
+
     { path: '', redirectTo: '/login', pathMatch: 'full' },
     { path: '**', redirectTo: '/login' }
 ];
