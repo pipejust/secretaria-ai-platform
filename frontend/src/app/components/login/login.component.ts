@@ -42,12 +42,26 @@ export class LoginComponent implements OnInit {
         this.tenantSlug = this.tenants.slug();
         this.tenantLocked = this.tenants.isExplicit();
         // Si ya estamos en el tenant default y nadie lo forzó, ocultamos el
-        // campo para no abrumar — el usuario típico ni sabe lo que es.
+        // campo. El usuario puede revelarlo con el link "Otra empresa".
         this.showTenantField = !this.tenants.isDefault() || this.tenantLocked;
 
         if (this.authService.token) {
             this.router.navigate(['/admin/dashboard']);
         }
+    }
+
+    /** Revela el campo "Empresa" para que el usuario pueda escribir un slug
+     *  distinto al default (ej. para entrar a 'nexura' desde la URL default). */
+    revealTenantField() {
+        this.showTenantField = true;
+        // Si el usuario está cambiando de empresa explícitamente, vaciamos
+        // el slug por defecto para que tipee el suyo desde cero.
+        if (this.tenantSlug === 'acten') this.tenantSlug = '';
+        // Foco diferido al input cuando renderice.
+        setTimeout(() => {
+            const el = document.getElementById('tenantSlug') as HTMLInputElement | null;
+            el?.focus();
+        }, 50);
     }
 
     togglePassword() {
@@ -79,7 +93,21 @@ export class LoginComponent implements OnInit {
             error: (err) => {
                 this.isLoading = false;
                 if (err.status === 401) {
-                    this.errorMessage = 'Correo o contraseña incorrectos';
+                    // Revelo el campo de empresa para que el usuario pueda
+                    // probar con otro workspace (típico: credenciales de
+                    // Nexura intentando entrar al tenant Acten por default).
+                    if (!this.showTenantField || this.tenantSlug === 'acten') {
+                        this.showTenantField = true;
+                        this.errorMessage =
+                            'Credenciales inválidas en este workspace. Si tu cuenta es de otra empresa, escríbela aquí abajo.';
+                        setTimeout(() => {
+                            (document.getElementById('tenantSlug') as HTMLInputElement | null)?.focus();
+                        }, 60);
+                    } else {
+                        this.errorMessage = 'Correo o contraseña incorrectos';
+                    }
+                } else if (err.status === 404) {
+                    this.errorMessage = `La empresa "${this.tenantSlug}" no existe o está inactiva.`;
                 } else {
                     this.errorMessage = 'Error conectando al servidor. Inténtalo más tarde.';
                 }

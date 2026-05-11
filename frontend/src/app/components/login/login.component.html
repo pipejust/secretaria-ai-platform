@@ -4,11 +4,9 @@
     <aside class="login-aside">
         <div class="aside-content">
             <a routerLink="/" class="aside-brand" aria-label="Acten — inicio">
-                <!-- Logo oficial /rediseño/logotipo.png procesado a versión "light"
-                     (fondo transparente + trazos navy invertidos a blanco para
-                     que destaque sobre el aside oscuro). Mantiene los acentos
-                     de color originales (check verde, barra ámbar, dot indigo). -->
-                <img src="brand/acten-logo-light.png"
+                <!-- Logo oficial /rediseño/logotipo.png (copiado sin procesar
+                     a frontend/public/brand/acten-logo-full.png). -->
+                <img src="brand/acten-logo-full.png"
                      alt="Acten"
                      class="aside-logo" />
             </a>
@@ -143,10 +141,16 @@
 
                 <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form" novalidate>
                     <div class="field" *ngIf="showTenantField">
-                        <label for="tenantSlug">Empresa</label>
+                        <label for="tenantSlug">
+                            Empresa
+                            <span class="field-optional" *ngIf="!tenantLocked">(workspace)</span>
+                        </label>
                         <input id="tenantSlug" type="text" [(ngModel)]="tenantSlug" name="tenantSlug"
-                               placeholder="acten" autocomplete="off"
+                               placeholder="acten · nexura · …" autocomplete="off"
                                [readonly]="tenantLocked" />
+                        <small class="field-hint" *ngIf="!tenantLocked">
+                            Si tu cuenta es de Acten, escribí <code>acten</code>; si es Nexura, <code>nexura</code>.
+                        </small>
                     </div>
 
                     <div class="field">
@@ -193,6 +197,18 @@
                         ¿No tienes una cuenta?
                         <a href="#" (click)="ssoUnavailable($event)">Contacta a tu administrador.</a>
                     </p>
+
+                    <button type="button" class="switch-tenant" *ngIf="!showTenantField"
+                            (click)="revealTenantField()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="17 1 21 5 17 9"></polyline>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                            <polyline points="7 23 3 19 7 15"></polyline>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                        </svg>
+                        Cambiar de empresa
+                    </button>
                 </form>
             </div>
         </section>
