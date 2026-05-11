@@ -165,16 +165,29 @@ export const routes: Routes = [
         ]
     },
     /* ──────────────────────────────────────────────────────────────────────
-     * Tenant URL prefix `/t/:slug/...` — el TenantService captura el slug
-     * desde window.location.pathname al bootstrap (antes de que el Router
-     * resuelva), lo persiste con flag explicit=1, y aquí redirigimos al
-     * mismo path sin el prefijo para no dejar URLs zombi en la barra.
+     * Tenant URL prefix `/t/:slug/...` — sirven los MISMOS componentes que
+     * las versiones default pero MANTIENEN la URL `/t/:slug/...` en la
+     * barra de direcciones. El TenantService captura el slug desde
+     * pathname al bootstrap. Mantener la URL permite que cualquier link
+     * compartido sea reproducible (mismo tenant, mismo branding).
      * ────────────────────────────────────────────────────────────────────── */
-    { path: 't/:slug/login',           redirectTo: '/login',           pathMatch: 'full' },
-    { path: 't/:slug/forgot-password', redirectTo: '/forgot-password', pathMatch: 'full' },
-    { path: 't/:slug/reset-password',  redirectTo: '/reset-password',  pathMatch: 'full' },
-    { path: 't/:slug/admin',           redirectTo: '/admin/dashboard', pathMatch: 'full' },
-    { path: 't/:slug',                 redirectTo: '/login',           pathMatch: 'full' },
+    {
+        path: 't/:slug/login',
+        component: LoginComponent,
+        title: 'Iniciar Sesión | Acten',
+    },
+    {
+        path: 't/:slug/forgot-password',
+        loadComponent: () => import('./components/forgot-password/forgot-password').then(m => m.ForgotPassword),
+        title: 'Recuperar Contraseña | Acten',
+    },
+    {
+        path: 't/:slug/reset-password',
+        loadComponent: () => import('./components/reset-password/reset-password').then(m => m.ResetPassword),
+        title: 'Restablecer Contraseña | Acten',
+    },
+    // /t/:slug y /t/:slug/ van directo al login del tenant
+    { path: 't/:slug', redirectTo: 't/:slug/login', pathMatch: 'full' },
 
     { path: '', redirectTo: '/login', pathMatch: 'full' },
     { path: '**', redirectTo: '/login' }

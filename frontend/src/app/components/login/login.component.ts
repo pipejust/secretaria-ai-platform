@@ -22,12 +22,14 @@ export class LoginComponent implements OnInit {
     /** Visual-only: el SSO real no está cableado todavía. */
     rememberMe = true;
 
-    /** Multi-tenant: empresa contra la que se loguea. */
+    /** Multi-tenant: derivado SIEMPRE de la URL (TenantService).
+     *  El usuario NUNCA edita esto desde el form — para cambiar de
+     *  empresa tiene que navegar a /t/{otro}/login. */
     tenantSlug = 'acten';
-    /** True si el slug viene de URL/host (no editable). */
-    tenantLocked = false;
-    /** Mostrar el campo solo si NO viene forzado por URL/host. */
-    showTenantField = true;
+    /** True si la URL incluye un slug explícito (/t/:slug/ o subdominio).
+     *  Cuando es true mostramos el chip readonly en el form como
+     *  contexto, no como campo editable. */
+    isTenantUrl = false;
 
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
@@ -40,46 +42,24 @@ export class LoginComponent implements OnInit {
     ) {}
 
     ngOnInit() {
-        // Pre-fill del tenant. Si viene de URL/host, lo bloqueamos para no
-        // dejar al usuario equivocarse (ya está en el contexto correcto).
+        // El slug viene exclusivamente de la URL (path /t/:slug/, subdominio
+        // o dominio custom). Nunca lo edita el usuario desde el form.
         this.tenantSlug = this.tenants.slug();
-        this.tenantLocked = this.tenants.isExplicit();
-        // Si ya estamos en el tenant default y nadie lo forzó, ocultamos el
-        // campo. El usuario puede revelarlo con el link "Otra empresa".
-        this.showTenantField = !this.tenants.isDefault() || this.tenantLocked;
+        this.isTenantUrl = this.tenants.isExplicit();
 
         if (this.authService.token) {
             this.router.navigate(['/admin/dashboard']);
         }
     }
 
-    /** Limpia el TenantService (slug + flag explicit) y navega al login
-     *  default (Acten). Pensado para el botón "Volver al login principal"
-     *  del aside, que aparece solo cuando estamos en un tenant cliente. */
-    backToMainLogin(ev?: Event) {
-        ev?.preventDefault();
-        this.tenants.clear();
-        // Forzar reload completo para que BrandingService + interceptor
-        // releían el slug default desde cero.
-        if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-        } else {
-            this.router.navigateByUrl('/login');
+    /** Link "Olvidaste contraseña" — preserva el prefix de URL del tenant
+     *  para que la pantalla de recuperación siga estando en el mismo
+     *  workspace. Ej: /t/nexura/login → /t/nexura/forgot-password. */
+    get forgotPasswordUrl(): string {
+        if (this.isTenantUrl && this.tenantSlug && this.tenantSlug !== 'acten') {
+            return `/t/${this.tenantSlug}/forgot-password`;
         }
-    }
-
-    /** Revela el campo "Empresa" para que el usuario pueda escribir un slug
-     *  distinto al default (ej. para entrar a 'nexura' desde la URL default). */
-    revealTenantField() {
-        this.showTenantField = true;
-        // Si el usuario está cambiando de empresa explícitamente, vaciamos
-        // el slug por defecto para que tipee el suyo desde cero.
-        if (this.tenantSlug === 'acten') this.tenantSlug = '';
-        // Foco diferido al input cuando renderice.
-        setTimeout(() => {
-            const el = document.getElementById('tenantSlug') as HTMLInputElement | null;
-            el?.focus();
-        }, 50);
+        return '/forgot-password';
     }
 
     togglePassword() {
@@ -111,19 +91,7 @@ export class LoginComponent implements OnInit {
             error: (err) => {
                 this.isLoading = false;
                 if (err.status === 401) {
-                    // Revelo el campo de empresa para que el usuario pueda
-                    // probar con otro workspace (típico: credenciales de
-                    // Nexura intentando entrar al tenant Acten por default).
-                    if (!this.showTenantField || this.tenantSlug === 'acten') {
-                        this.showTenantField = true;
-                        this.errorMessage =
-                            'Credenciales inválidas en este workspace. Si tu cuenta es de otra empresa, escríbela aquí abajo.';
-                        setTimeout(() => {
-                            (document.getElementById('tenantSlug') as HTMLInputElement | null)?.focus();
-                        }, 60);
-                    } else {
-                        this.errorMessage = 'Correo o contraseña incorrectos';
-                    }
+                    this.errorMessage = 'Correo o contraseña incorrectos.';
                 } else if (err.status === 404) {
                     this.errorMessage = `La empresa "${this.tenantSlug}" no existe o está inactiva.`;
                 } else {

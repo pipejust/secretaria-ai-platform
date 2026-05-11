@@ -153,18 +153,6 @@
                 <path d="M9 12l2 2 4-4"></path>
             </svg>
             <span>Seguro. Privado. Listo para empresas.</span>
-
-            <!-- Salida del workspace: solo visible cuando estamos en un tenant
-                 distinto al default. Limpia el TenantService y va a /login. -->
-            <button type="button" class="aside-back" *ngIf="branding.companyName() !== branding.platformName()"
-                    (click)="backToMainLogin($event)" title="Volver al login principal">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                </svg>
-                Volver al login de {{ branding.platformName() }}
-            </button>
         </div>
     </aside>
 
@@ -181,17 +169,19 @@
                 </header>
 
                 <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form" novalidate>
-                    <div class="field" *ngIf="showTenantField">
-                        <label for="tenantSlug">
-                            Empresa
-                            <span class="field-optional" *ngIf="!tenantLocked">(workspace)</span>
-                        </label>
-                        <input id="tenantSlug" type="text" [(ngModel)]="tenantSlug" name="tenantSlug"
-                               placeholder="acten · nexura · …" autocomplete="off"
-                               [readonly]="tenantLocked" />
-                        <small class="field-hint" *ngIf="!tenantLocked">
-                            Si tu cuenta es de Acten, escribí <code>acten</code>; si es Nexura, <code>nexura</code>.
-                        </small>
+                    <!-- Chip readonly que confirma el workspace activo. Sólo
+                         visible cuando el slug vino por URL/subdominio. NO
+                         hay forma de cambiarlo desde el form — para cambiar
+                         de empresa hay que navegar a /t/{otro}/login. -->
+                    <div class="tenant-chip" *ngIf="isTenantUrl">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 21h18"></path>
+                            <path d="M5 21V7l8-4v18"></path>
+                            <path d="M19 21V11l-6-4"></path>
+                        </svg>
+                        <span>Entrando como empresa</span>
+                        <strong>{{ branding.companyName() }}</strong>
                     </div>
 
                     <div class="field">
@@ -217,7 +207,7 @@
                             <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
                             <span>Recuérdame</span>
                         </label>
-                        <a routerLink="/forgot-password" class="forgot-link">¿Olvidaste tu contraseña?</a>
+                        <a [routerLink]="forgotPasswordUrl" class="forgot-link">¿Olvidaste tu contraseña?</a>
                     </div>
 
                     <div class="error-banner" *ngIf="errorMessage" role="alert">
@@ -234,17 +224,6 @@
                         </svg>
                     </button>
 
-                    <button type="button" class="switch-tenant" *ngIf="!showTenantField"
-                            (click)="revealTenantField()">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="17 1 21 5 17 9"></polyline>
-                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                            <polyline points="7 23 3 19 7 15"></polyline>
-                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                        </svg>
-                        Cambiar de empresa
-                    </button>
                 </form>
             </div>
         </section>
