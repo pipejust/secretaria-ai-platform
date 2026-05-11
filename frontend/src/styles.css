@@ -699,3 +699,42 @@ select:not(.glass-select),
 textarea {
   background: #f8fafc;
 }
+
+/* ============================================================================
+ * OVERRIDE GLOBAL — radius coherente del sistema en TODOS los botones e inputs
+ * de la plataforma, incluso aquellos con border-radius hardcodeado en estilos
+ * inline (specificity de inline pisaba a las reglas CSS, así que usamos
+ * !important quirúrgico).
+ *
+ * Excepciones (`:not(...)`) — controles que SÍ deben ser circulares o pill:
+ *  - .btn-icon-soft / .btn-icon          → cuadrados con esquinas leves o circles
+ *  - .toggle-sidebar-bottom              → círculo (toggle del sidebar)
+ *  - .password-toggle                    → texto inline en password input
+ *  - .btn-row-icon-danger                → icono de borrar en filas de tabla
+ *  - .btn-close                          → "×" en modales
+ *  - .checkbox-row input                 → checkbox custom
+ *  - input[type=checkbox/radio]          → controles radio/check nativos
+ *  - .acten-mono / .aside-mono           → SVGs decorativos
+ *  - elementos con border-radius:9999px  → pills explícitas
+ *
+ * Esto garantiza que CUALQUIER nuevo botón añadido por un componente legacy
+ * herede automáticamente la curvatura del mockup adjunto sin que tengamos
+ * que cazar cada `style="border-radius: 4px"` en HTML.
+ * ============================================================================ */
+button:not(.btn-icon):not(.btn-icon-soft):not(.toggle-sidebar-bottom):not(.password-toggle):not(.btn-row-icon-danger):not(.btn-close):not([class*="circle"]) {
+  border-radius: var(--radius-md) !important;
+}
+
+/* Inputs/selects/textareas no-checkbox/radio con el mismo radius. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea {
+  border-radius: var(--radius-md) !important;
+}
+
+/* Quitar el background gris azulado viejo de los inputs sin clase moderna. */
+input:not(.modern-search):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+select:not(.glass-select),
+textarea {
+  background: var(--color-bg-panel) !important;
+}
