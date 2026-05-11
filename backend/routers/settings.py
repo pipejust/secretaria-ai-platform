@@ -37,13 +37,52 @@ def _public_base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
+def _is_token_globally_unique(session: Session, token: str, exclude_setting_id: Optional[int]) -> bool:
+    """True si ningún OTRO IntegrationSetting('fireflies') tiene ese token.
+
+    Multi-tenant: cada empresa debe tener un webhook_token único globalmente
+    para que el resolver de webhooks (`webhook_security`) sepa a qué tenant
+    pertenece cada POST entrante.
+    """
+    if not token:
+        return False
+    rows = session.exec(
+        select(IntegrationSetting).where(IntegrationSetting.provider_name == "fireflies")
+    ).all()
+    for row in rows:
+        if exclude_setting_id is not None and row.id == exclude_setting_id:
+            continue
+        try:
+            cfg = json.loads(row.config_json or "{}")
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if str(cfg.get("webhook_token") or "").strip() == token:
+            return False
+    return True
+
+
+def _gen_unique_webhook_token(session: Session, exclude_setting_id: Optional[int]) -> str:
+    """Genera un token URL-safe de 32 bytes garantizado único entre tenants.
+
+    La probabilidad de colisión con 32 bytes de entropía es ~10⁻⁷⁷, pero
+    aún así verificamos para no dejar la puerta abierta a un escenario
+    donde dos tenants pudieran terminar con el mismo token y un webhook
+    entrante quedase mal-routeado.
+    """
+    for _ in range(8):
+        candidate = secrets.token_urlsafe(32)
+        if _is_token_globally_unique(session, candidate, exclude_setting_id):
+            return candidate
+    # Si tras 8 intentos el RNG falla (prácticamente imposible), abortamos.
+    raise RuntimeError("No se pudo generar un webhook_token único.")
+
+
 def _ensure_webhook_token(
     session: Session, fireflies_setting: Optional[IntegrationSetting]
 ) -> str:
-    """Garantiza que la integración Fireflies tenga un webhook_token persistido.
-
-    - Si el setting no existe, devuelve "" (no lo creamos vacío; espera al POST).
-    - Si existe pero no trae token, genera uno seguro y lo guarda.
+    """Garantiza que la integración Fireflies del tenant tenga un webhook_token
+    único y persistido. El token solo se autogenera server-side; nunca se
+    acepta del cliente.
     """
     if fireflies_setting is None:
         return ""
@@ -54,16 +93,20 @@ def _ensure_webhook_token(
         cfg = {}
 
     token = str(cfg.get("webhook_token") or "").strip()
-    if token:
+    if token and _is_token_globally_unique(session, token, fireflies_setting.id):
         return token
 
-    token = secrets.token_urlsafe(32)
+    # No existe O colisiona con otro tenant: regenerar.
+    token = _gen_unique_webhook_token(session, fireflies_setting.id)
     cfg["webhook_token"] = token
     fireflies_setting.config_json = json.dumps(cfg)
     session.add(fireflies_setting)
     session.commit()
     session.refresh(fireflies_setting)
-    logger.info("webhook_token autogenerado para integración Fireflies.")
+    logger.info(
+        "webhook_token autogenerado para Fireflies del tenant %s.",
+        fireflies_setting.tenant_id,
+    )
     return token
 
 
@@ -125,8 +168,10 @@ def save_settings(
             else config_obj.get("isActive", existing.is_active)
         )
 
-        # Para Fireflies: nunca dejamos pisar el webhook_token con un valor vacío
-        # ni con la `webhookUrl` calculada que el frontend nos devuelve.
+        # Para Fireflies: el `webhook_token` SOLO lo genera el servidor.
+        # Nunca aceptamos el valor que envía el cliente — eso permitiría a un
+        # admin hostil pegar el token de OTRA empresa y secuestrar sus
+        # webhooks entrantes. Si el cliente lo manda, lo descartamos.
         if provider_name == "fireflies":
             existing_cfg = {}
             if existing:
@@ -134,14 +179,17 @@ def save_settings(
                     existing_cfg = json.loads(existing.config_json or "{}")
                 except (json.JSONDecodeError, TypeError):
                     existing_cfg = {}
-            preserved_token = (
-                str(config_obj.get("webhook_token") or "").strip()
-                or str(existing_cfg.get("webhook_token") or "").strip()
-                or secrets.token_urlsafe(32)
-            )
-            config_obj = {**config_obj, "webhook_token": preserved_token}
-            # No persistimos la URL completa, se calcula al vuelo en GET.
-            config_obj.pop("webhookUrl", None)
+            existing_token = str(existing_cfg.get("webhook_token") or "").strip()
+            if existing_token and _is_token_globally_unique(session, existing_token, existing.id if existing else None):
+                preserved_token = existing_token
+            else:
+                preserved_token = _gen_unique_webhook_token(
+                    session, existing.id if existing else None
+                )
+            # Sanitización: quitamos cualquier intento del cliente de pisar
+            # el token o de persistir la URL calculada.
+            config_obj = {k: v for k, v in config_obj.items() if k not in ("webhook_token", "webhookUrl")}
+            config_obj["webhook_token"] = preserved_token
 
         config_json_str = json.dumps(config_obj)
 
