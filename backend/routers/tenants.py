@@ -149,12 +149,20 @@ def create_tenant(
     if payload.domain and db.exec(select(Tenant).where(Tenant.domain == payload.domain)).first():
         raise HTTPException(status_code=409, detail="Ese dominio ya está mapeado a otro tenant.")
 
-    # Crear tenant
+    # Crear tenant — branding inicial usa la paleta Acten (navy/teal/gold).
     tenant = Tenant(
         slug=slug,
         name=payload.name.strip(),
         domain=(payload.domain or None),
-        branding_json=json.dumps({"company_name": payload.name.strip()}, ensure_ascii=False),
+        branding_json=json.dumps(
+            {
+                "company_name": payload.name.strip(),
+                "primary_color": "#1F2A52",
+                "secondary_color": "#3D6B5E",
+                "accent_color": "#C8993B",
+            },
+            ensure_ascii=False,
+        ),
         is_active=True,
     )
     db.add(tenant)

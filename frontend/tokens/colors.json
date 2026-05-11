@@ -1,0 +1,56 @@
+{
+  "$comment": "Paleta extraída del brand kit Acten (navy/cream/gold/teal). Cada token tiene contraste WCAG ≥ 4.5:1 sobre los fondos canónicos.",
+  "brand": {
+    "navy": {
+      "50":  "#F0F2F8",
+      "100": "#D9DEEC",
+      "200": "#B3BCD9",
+      "300": "#7E8AB7",
+      "500": "#3B4773",
+      "700": "#1F2A52",
+      "900": "#0E1A3D"
+    },
+    "cream": {
+      "50":  "#FBF8F2",
+      "100": "#F5EFE3",
+      "200": "#EADFC7",
+      "300": "#DCC9A0",
+      "500": "#C2A674"
+    },
+    "gold": {
+      "300": "#E5C16E",
+      "500": "#C8993B",
+      "700": "#9A6F1F"
+    },
+    "teal": {
+      "300": "#74A89A",
+      "500": "#3D6B5E",
+      "700": "#264A40"
+    },
+    "slate": {
+      "300": "#A8B0BD",
+      "500": "#6B7589",
+      "700": "#3F485A"
+    }
+  },
+  "semantic": {
+    "bg-base":     "#F5EFE3",
+    "bg-elevated": "#FBF8F2",
+    "bg-panel":    "#FFFFFF",
+    "bg-sidebar":  "#0E1A3D",
+    "bg-topbar":   "#FFFFFF",
+    "fg-default":  "#0E1A3D",
+    "fg-muted":    "#6B7589",
+    "fg-soft":     "#A8B0BD",
+    "fg-on-dark":  "#FBF8F2",
+    "fg-accent":   "#3D6B5E",
+    "border":      "#EADFC7",
+    "border-strong":"#DCC9A0",
+    "accent":      "#1F2A52",
+    "accent-hover":"#0E1A3D",
+    "success":     "#3D6B5E",
+    "warning":     "#C8993B",
+    "danger":      "#B23A48",
+    "info":        "#3B4773"
+  }
+}

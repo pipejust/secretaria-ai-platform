@@ -1,31 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Acten Design System — el `:root` con design tokens vive en styles/tokens.css.
+   Se importa aquí para que esté disponible globalmente. NO definas tokens
+   nuevos en este archivo; van a frontend/tokens/*.json y se generan con
+   `node scripts/tokens-build.mjs`. */
+@import url('./styles/tokens.css');
 
-:root {
-  /* === White-label brand vars (BrandingService los sobreescribe en runtime) === */
-  --brand-primary: #4F46E5;
-  --brand-secondary: #06B6D4;
-  --brand-accent: #10B981;
-
-  --bg-main: #f3f4f6;
-  --sidebar-bg: #0b132b;
-  --sidebar-hover: #1e293b;
-  /* topbar/accent leen de --brand-primary y se reescriben en runtime
-     desde BrandingService cuando la empresa cliente cambia el color. */
-  --topbar-bg: var(--brand-primary);
-  --accent-color: var(--brand-primary);
-  --accent-hover: #4338CA;
-  --panel-bg: #ffffff;
-  --text-main: #1f2937;
-  --text-muted: #6b7280;
-  --text-sidebar: #9ca3af;
-  --text-sidebar-active: #ffffff;
-  --success-color: #10b981;
-  --danger-color: #ef4444;
-  --border-color: #e5e7eb;
-  --radius-lg: 12px;
-  --radius-md: 8px;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Tipografía: Playfair Display (serif display) + Sora (sans body).
+   Cargadas via Google Fonts; fallback a system fonts si offline. */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 * {
   margin: 0;
@@ -34,42 +15,75 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg-main);
-  color: var(--text-main);
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-base);
+  color: var(--color-fg-default);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-h1,
+/* Headings — h1 de marca usa Playfair (display). h2-h4 usan Sora bold por
+   peso visual coherente en superficies UI más densas. */
+h1 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-display);
+}
+
 h2,
 h3,
 h4 {
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-heading);
+  color: var(--color-fg-default);
+}
+
+/* Hero / display utility — para portadas o claims editoriales. */
+.acten-display {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* Eyebrow / overline — labels de sección estilo editorial. */
+.acten-eyebrow {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
 }
 
 .glass-panel {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-md);
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
+  padding: var(--space-12) var(--space-20);
   border-radius: var(--radius-md);
-  border: none;
-  font-weight: 600;
-  font-family: inherit;
-  font-size: 0.95rem;
+  border: 1px solid transparent;
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-sans);
+  font-size: var(--text-14);
+  letter-spacing: var(--tracking-wide);
   cursor: pointer;
   transition: var(--transition);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-8);
+  min-height: 44px; /* a11y hit target */
 }
 
 .w-full {
@@ -77,43 +91,73 @@ h4 {
 }
 
 .btn-primary {
-  background: var(--accent-color);
-  color: white;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background: var(--color-accent);
+  color: var(--color-fg-on-dark);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-ring-focus);
+}
+
+/* Variante secundaria editorial: contorno navy sobre cream. Para acciones
+   neutras o "secundarias" en vistas con CTA primario presente. */
+.btn-secondary {
+  background: var(--color-bg-elevated);
+  color: var(--color-fg-default);
+  border-color: var(--color-border-strong);
+}
+
+.btn-secondary:hover {
+  background: var(--brand-cream-200);
+}
+
+/* Acento dorado — para CTAs editoriales (poco frecuente). */
+.btn-accent {
+  background: var(--brand-gold-500);
+  color: var(--brand-navy-900);
+}
+
+.btn-accent:hover {
+  background: var(--brand-gold-700);
+  color: var(--color-fg-on-dark);
 }
 
 .btn-success {
-  background: var(--success-color);
-  color: white;
+  background: var(--color-success);
+  color: var(--color-fg-on-dark);
 }
 
 .btn-icon {
   background: transparent;
-  color: var(--text-muted);
-  padding: 0.4rem;
+  color: var(--color-fg-muted);
+  padding: var(--space-6);
+  min-height: auto;
 }
 
 .btn-icon:hover {
-  color: var(--danger-color);
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  background: rgba(178, 58, 72, 0.08);
 }
 
 input,
 select,
 textarea {
   width: 100%;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  color: #111827;
-  padding: 0.75rem 1rem;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  color: var(--color-fg-default);
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-md);
-  font-family: inherit;
-  font-size: 0.95rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-14);
   transition: var(--transition);
 }
 
@@ -121,29 +165,33 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-ring-focus);
 }
 
 input:read-only,
 input:disabled,
 select:disabled,
 textarea:disabled {
-  background-color: #eff6ff;
-  color: #374151;
-  border-color: #d1d5db;
+  background-color: var(--brand-cream-100);
+  color: var(--color-fg-muted);
+  border-color: var(--color-border);
+  cursor: not-allowed;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-16);
 }
 
 label {
   display: block;
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: #4b5563;
-  margin-bottom: 0.5rem;
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+  margin-bottom: var(--space-6);
 }
 
 /* ================== MODERN INPUTS & FILTERS ================== */
@@ -252,19 +300,20 @@ label {
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid var(--border-color);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
 .card-header {
-  padding: 1.5rem 1.75rem 0.5rem 1.75rem;
+  padding: var(--space-20) var(--space-24) var(--space-8);
   border-bottom: none;
-  font-weight: 700;
-  font-size: 1.15rem;
-  color: #111827;
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-18);
+  color: var(--color-fg-default);
 }
 
 .card-header h3,
@@ -338,18 +387,42 @@ label {
 
 /* ================== UTILIDADES ================== */
 .badge {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.75rem;
-  border-radius: 999px;
-  font-weight: 600;
-  letter-spacing: 0.025em;
-  background: #f3f4f6;
-  color: #374151;
+  padding: var(--space-2) var(--space-8);
+  font-family: var(--font-sans);
+  font-size: var(--text-12);
+  border-radius: var(--radius-full);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-wide);
+  background: var(--brand-cream-100);
+  color: var(--color-fg-default);
+  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .badge-primary {
-  background: #eff6ff;
-  color: #3b82f6;
+  background: var(--brand-navy-50);
+  color: var(--brand-navy-700);
+  border-color: var(--brand-navy-100);
+}
+
+.badge-success {
+  background: rgba(61, 107, 94, 0.10);
+  color: var(--brand-teal-700);
+  border-color: rgba(61, 107, 94, 0.25);
+}
+
+.badge-warning {
+  background: rgba(200, 153, 59, 0.12);
+  color: var(--brand-gold-700);
+  border-color: rgba(200, 153, 59, 0.25);
+}
+
+.badge-danger {
+  background: rgba(178, 58, 72, 0.10);
+  color: var(--color-danger);
+  border-color: rgba(178, 58, 72, 0.25);
 }
 
 .text-center {

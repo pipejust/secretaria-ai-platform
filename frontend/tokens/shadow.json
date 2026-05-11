@@ -1,0 +1,11 @@
+{
+  "$comment": "Sombras editoriales suaves. Nunca usar drop-shadows fuertes.",
+  "shadow": {
+    "xs": "0 1px 2px rgba(14, 26, 61, 0.04)",
+    "sm": "0 2px 4px rgba(14, 26, 61, 0.05), 0 1px 2px rgba(14, 26, 61, 0.04)",
+    "md": "0 4px 12px rgba(14, 26, 61, 0.06), 0 2px 4px rgba(14, 26, 61, 0.04)",
+    "lg": "0 12px 28px rgba(14, 26, 61, 0.08), 0 4px 8px rgba(14, 26, 61, 0.04)",
+    "xl": "0 24px 48px rgba(14, 26, 61, 0.10), 0 8px 16px rgba(14, 26, 61, 0.05)",
+    "ring-focus": "0 0 0 3px rgba(31, 42, 82, 0.15)"
+  }
+}

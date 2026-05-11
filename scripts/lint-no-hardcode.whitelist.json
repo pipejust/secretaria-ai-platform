@@ -1,0 +1,8 @@
+{
+  "$comment": "Archivos/líneas tolerados por el linter mientras se migra incrementalmente al sistema de tokens. Cada entrada debería tener una issue asociada para eliminar.",
+  "paths": [
+    "frontend/src/styles/tokens.css",
+    "frontend/src/index.html"
+  ],
+  "lines": []
+}

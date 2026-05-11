@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-11T01:07Z",
+  "branch": "redesign/acten-v1",
+  "views": [
+    {"slug": "login",            "route": "/login",                    "component": "LoginComponent",            "status": "EXISTE",  "priority": 1, "handoff_refs": ["Handoff_2#login"], "widgets": ["BrandHero","Form"]},
+    {"slug": "forgot-password",  "route": "/forgot-password",          "component": "ForgotPasswordComponent",   "status": "EXISTE",  "priority": 2},
+    {"slug": "reset-password",   "route": "/reset-password",           "component": "ResetPasswordComponent",    "status": "EXISTE",  "priority": 2},
+    {"slug": "admin-layout",     "route": "/admin",                    "component": "AdminLayoutComponent",      "status": "EXISTE",  "priority": 1, "widgets": ["Sidebar","Topbar","Breadcrumb"]},
+    {"slug": "dashboard",        "route": "/admin/dashboard",          "component": "DashboardComponent",        "status": "EXISTE",  "priority": 1, "widgets": ["MetricTile","SessionList","StatusBadge"]},
+    {"slug": "projects",         "route": "/admin/projects",           "component": "ProjectsComponent",         "status": "EXISTE",  "priority": 2},
+    {"slug": "project-detail",   "route": "/admin/projects/:id",       "component": "ProjectDetailComponent",    "status": "EXISTE",  "priority": 2},
+    {"slug": "templates",        "route": "/admin/templates",          "component": "TemplatesComponent",        "status": "EXISTE",  "priority": 2},
+    {"slug": "users",            "route": "/admin/users",              "component": "UsersComponent",            "status": "EXISTE",  "priority": 2},
+    {"slug": "roles",            "route": "/admin/roles",              "component": "RolesComponent",            "status": "EXISTE",  "priority": 3},
+    {"slug": "settings",         "route": "/admin/settings",           "component": "SettingsComponent",         "status": "EXISTE",  "priority": 2},
+    {"slug": "branding",         "route": "/admin/branding",           "component": "BrandingSettingsComponent", "status": "EXISTE",  "priority": 1},
+    {"slug": "super-tenants",    "route": "/admin/super/tenants",      "component": "SuperTenantsComponent",     "status": "EXISTE",  "priority": 1},
+    {"slug": "profile",          "route": "/admin/profile",            "component": "ProfileComponent",          "status": "EXISTE",  "priority": 3},
+    {"slug": "curation",         "route": "/admin/curation/:id",       "component": "CurationPanelComponent",    "status": "EXISTE",  "priority": 1},
+    {"slug": "pendientes",       "route": "/admin/pendientes",         "component": "PendientesComponent",       "status": "EXISTE",  "priority": 2},
+    {"slug": "reportes",         "route": "/admin/reportes",           "component": "ReportesComponent",         "status": "EXISTE",  "priority": 2},
+    {"slug": "ask",              "route": "/admin/ask",                "component": "AskComponent",              "status": "EXISTE",  "priority": 2},
+    {"slug": "calendar",         "route": "/admin/calendar",           "component": "CalendarComponent",         "status": "EXISTE",  "priority": 2},
+    {"slug": "outputs",          "route": "/admin/outputs/:id",        "component": "RoleOutputsComponent",      "status": "EXISTE",  "priority": 3}
+  ],
+  "components_atomic_needed": [
+    "Button","Input","Select","Badge","Avatar","Toast","Card","Modal","Tabs","Breadcrumb","Pagination","Dropdown","Tooltip","Skeleton","EmptyState","Spinner","Icon"
+  ],
+  "components_organism_needed": [
+    "Sidebar","Topbar","PageHeader","MetricTile","ActivityTimeline","DataTable","KanbanBoard","CalendarGrid","ChatThread","CitationCard","ChartLine","ChartBar","ChartDonut"
+  ],
+  "gaps": [
+    "Tipografía actual: Inter. Handoff requiere: Playfair Display + Sora.",
+    "Paleta actual: violet/cyan (#4F46E5/#06B6D4). Handoff: navy/cream/gold/teal.",
+    "Background actual: gris frío (#f3f4f6). Handoff: cream parchment.",
+    "Sidebar actual: navy oscuro acceptable; falta acento gold.",
+    "Sin CSS tokens system; vars hardcoded en :root.",
+    "Sin Storybook (queued para fase posterior).",
+    "Sin Tailwind v4 (queued).",
+    "Sin Playwright visual regression (queued).",
+    "Sin lint-no-hardcode (lo construimos en Phase 2c)."
+  ]
+}

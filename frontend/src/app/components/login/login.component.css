@@ -1,131 +1,168 @@
+/* Login Acten — estilo editorial.
+   Fondo cream con leve textura radial gold/teal, card con borde sutil,
+   tipografía Playfair en el título de marca + Sora en el resto. */
+
 .login-page {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    width: 100%;
-    /* Acento sutil con la marca cliente — el resto del card sigue siendo blanco. */
-    background:
-        radial-gradient(ellipse at top right, rgba(79, 70, 229, 0.08), transparent 50%),
-        radial-gradient(ellipse at bottom left, rgba(6, 182, 212, 0.06), transparent 50%),
-        var(--bg-main);
-}
-
-.logo {
-    text-align: center;
-    margin-bottom: 0.5rem;
-}
-
-.logo h2 {
-    font-size: 1.75rem;
-    color: var(--text-main);
-    margin-bottom: 0.25rem;
-}
-
-.logo p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-}
-
-.logo .company-logo {
-    max-height: 60px;
-    max-width: 200px;
-    margin: 0 auto 1rem;
-    display: block;
-}
-
-.logo .platform-tag {
-    display: block;
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: var(--space-24);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(200, 153, 59, 0.08), transparent 40%),
+    radial-gradient(circle at 88% 92%, rgba(61, 107, 94, 0.06), transparent 45%),
+    var(--color-bg-base);
 }
 
 .login-card {
-    width: 100%;
-    max-width: 400px;
-    padding: 2.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-32);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
-.logo-container {
-    text-align: center;
-    margin-bottom: 1rem;
+.logo {
+  text-align: center;
+  margin-bottom: var(--space-12);
 }
 
-.logo-container h2 {
-    font-size: 2rem;
-    color: var(--text-main);
-    margin-bottom: 0.25rem;
+.logo h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-48);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-display);
+  color: var(--color-fg-default);
+  margin-bottom: var(--space-4);
 }
 
-.logo-container h2 span {
-    color: var(--accent-color);
+.logo .platform-tag {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--text-12);
+  color: var(--color-fg-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  margin-bottom: var(--space-12);
+  font-weight: var(--fw-semibold);
 }
 
-.logo-container p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+.logo p {
+  color: var(--color-fg-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-14);
+  line-height: var(--lh-body);
+  margin-top: var(--space-8);
+  max-width: 32ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.logo .company-logo {
+  max-height: 64px;
+  max-width: 200px;
+  margin: 0 auto var(--space-16);
+  display: block;
 }
 
 .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-bottom: var(--space-16);
 }
 
 .form-group label {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-muted);
+  /* Heredan el estilo eyebrow editorial definido globalmente. */
+  color: var(--color-fg-muted);
 }
 
 .password-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .password-wrapper input {
-    padding-right: 2.5rem;
+  padding-right: var(--space-40);
 }
 
 .toggle-password {
-    position: absolute;
-    right: 0.5rem;
-    background: none;
-    border: none;
-    padding: 0.25rem;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: absolute;
+  right: var(--space-8);
+  background: none;
+  border: none;
+  padding: var(--space-4);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: auto;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
 }
 
 .toggle-password:hover {
-    color: var(--text-main);
-    background: transparent;
+  color: var(--color-fg-default);
+  background: var(--brand-cream-100);
 }
 
 .w-full {
-    width: 100%;
-    padding: 0.75rem;
-    font-size: 1rem;
-    margin-top: 1rem;
+  width: 100%;
+  padding: var(--space-12);
+  font-size: var(--text-14);
+  margin-top: var(--space-8);
 }
 
 .error-msg {
-    color: var(--danger-color);
-    font-size: 0.85rem;
-    text-align: center;
-    background: rgba(239, 68, 68, 0.1);
-    padding: 0.5rem;
-    border-radius: var(--radius-md);
+  color: var(--color-danger);
+  font-family: var(--font-sans);
+  font-size: var(--text-14);
+  text-align: center;
+  background: rgba(178, 58, 72, 0.08);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(178, 58, 72, 0.18);
+}
+
+.hint {
+  font-size: var(--text-12);
+  color: var(--color-fg-soft);
+  margin-top: var(--space-2);
+}
+
+.hint code {
+  background: var(--brand-cream-100);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+}
+
+.forgot-link {
+  text-align: right;
+  margin-top: calc(-1 * var(--space-4));
+  margin-bottom: var(--space-12);
+}
+
+.forgot-link a {
+  font-family: var(--font-sans);
+  font-size: var(--text-14);
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: var(--fw-medium);
+  transition: var(--transition);
+}
+
+.forgot-link a:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
 }

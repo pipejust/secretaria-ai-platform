@@ -35,16 +35,17 @@ export interface Branding {
 
 const DEFAULT_BRAND: Branding = {
   platform_name: 'Acten',
-  platform_tagline: 'Inteligencia para tus reuniones',
+  platform_tagline: 'From conversation to clarity. From clarity to impact.',
   company_name: 'Acten',
   company_tagline: '',
   company_email: '',
   company_address: '',
   company_website: '',
   company_phone: '',
-  primary_color: '#4F46E5',
-  secondary_color: '#06B6D4',
-  accent_color: '#10B981',
+  // Paleta del brand kit Acten — coherente con tokens.css (--brand-navy-700, etc.)
+  primary_color: '#1F2A52',
+  secondary_color: '#3D6B5E',
+  accent_color: '#C8993B',
   logo_data_url: '',
   favicon_data_url: '',
 };

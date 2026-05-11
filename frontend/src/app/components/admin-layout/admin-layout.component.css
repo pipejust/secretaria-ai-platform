@@ -3,23 +3,23 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
-    background: var(--bg-main);
+    background: var(--color-bg-base);
 }
 
+/* Sidebar Acten — navy oscuro con tipografía Sora, separadores cream
+   apenas visibles, acento gold sutil en el item activo. */
 .sidebar {
     width: 260px;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    border-radius: 0;
-    /* Remover bordes translucidos, usar sidebar plana oscura */
-    background: var(--sidebar-bg);
-    color: var(--text-sidebar);
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    background: var(--color-bg-sidebar);
+    color: var(--brand-cream-200);
+    box-shadow: var(--shadow-md);
     z-index: 10;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width var(--dur-base) var(--ease-out);
     position: relative;
-    /* Para el absolute del toggle float */
+    font-family: var(--font-sans);
 }
 
 .sidebar.collapsed {
@@ -27,15 +27,18 @@
 }
 
 .sidebar-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: var(--space-20) var(--space-24);
+    border-bottom: 1px solid rgba(245, 239, 227, 0.08);
 }
 
 .sidebar-header h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: var(--text-24);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--lh-display);
     margin: 0;
-    color: white;
+    color: var(--color-fg-on-dark);
 }
 
 .sidebar-header h2 span {
@@ -79,31 +82,31 @@
     flex: 1;
 }
 
-/* Categorias del menú lateral */
+/* Eyebrow editorial para categorías de la nav. */
 .nav-category {
-    font-size: 0.65rem;
+    font-size: var(--text-12);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.4);
-    margin: 1rem 1.5rem 0.5rem;
+    letter-spacing: var(--tracking-label);
+    font-weight: var(--fw-semibold);
+    color: var(--brand-cream-500);
+    margin: var(--space-16) var(--space-24) var(--space-6);
 }
 
 .sidebar-nav li {
-    margin-bottom: 0.25rem;
+    margin-bottom: var(--space-2);
 }
 
 .sidebar-nav a {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.85rem 1.5rem;
-    color: var(--text-sidebar);
+    gap: var(--space-12);
+    padding: var(--space-12) var(--space-24);
+    color: var(--brand-cream-200);
     text-decoration: none;
-    font-size: 0.95rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border-left: 4px solid transparent;
+    font-size: var(--text-14);
+    font-weight: var(--fw-medium);
+    transition: var(--transition);
+    border-left: 3px solid transparent;
     white-space: nowrap;
 }
 
@@ -121,64 +124,66 @@
 }
 
 .sidebar-nav a:hover {
-    background: var(--sidebar-hover);
-    color: white;
+    background: rgba(245, 239, 227, 0.06);
+    color: var(--color-fg-on-dark);
 }
 
+/* Item activo: barra gold a la izquierda + sutil tinte cream sobre navy.
+   Coherente con el handoff que usa gold como acento editorial. */
 .sidebar-nav a.active {
-    background: rgba(59, 130, 246, 0.15);
-    /* bg azul ligero sobre oscuro */
-    color: var(--text-sidebar-active);
-    border-left-color: var(--accent-color);
+    background: rgba(245, 239, 227, 0.08);
+    color: var(--color-fg-on-dark);
+    border-left-color: var(--brand-gold-500);
+    font-weight: var(--fw-semibold);
 }
 
 .sidebar-footer {
-    padding: 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: var(--space-20) var(--space-24);
+    border-top: 1px solid rgba(245, 239, 227, 0.08);
 }
 
 .system-status {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    color: #4ade80;
-    /* bright green */
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding-left: 0.5rem;
+    gap: var(--space-6);
+    color: var(--brand-teal-300);
+    font-size: var(--text-12);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
 }
 
 .status-dot {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    background-color: #4ade80;
-    box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+    border-radius: var(--radius-full);
+    background-color: var(--brand-teal-300);
+    box-shadow: 0 0 8px rgba(116, 168, 154, 0.6);
 }
 
-/* Toggle Botón Flotante (Bottom Right) */
+/* Toggle del sidebar — círculo gold sobresaliendo del borde derecho. */
 .toggle-sidebar-bottom {
     position: absolute;
-    bottom: 30px;
+    bottom: var(--space-32);
     right: -16px;
     width: 32px;
     height: 32px;
-    border-radius: 50%;
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-full);
+    background: var(--brand-gold-500);
+    color: var(--brand-navy-900);
+    border: 2px solid var(--color-bg-sidebar);
+    box-shadow: var(--shadow-md);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 20;
-    transition: all 0.3s;
+    transition: var(--transition);
 }
 
 .toggle-sidebar-bottom:hover {
-    background: var(--accent-hover);
-    transform: scale(1.1);
+    background: var(--brand-gold-300);
+    transform: scale(1.08);
 }
 
 /* Main Content Area */
@@ -189,24 +194,26 @@
     overflow: hidden;
 }
 
+/* Topbar editorial: superficie blanca con un divider cream sutil.
+   El título de página usa Playfair Display para mantener la jerarquía
+   visual del brand kit (display arriba, sans en la grilla). */
 .topbar {
-    height: 64px;
-    min-height: 64px;
+    height: 72px;
+    min-height: 72px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 2rem;
-    border-radius: 0;
-    background: var(--topbar-bg);
-    color: white;
-    border-bottom: none;
+    padding: 0 var(--space-32);
+    background: var(--color-bg-topbar);
+    color: var(--color-fg-default);
+    border-bottom: 1px solid var(--color-border);
     z-index: 5;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .topbar-left {
     display: flex;
     align-items: center;
+    gap: var(--space-12);
 }
 
 .topbar-right {
@@ -215,9 +222,12 @@
 }
 
 .page-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: white;
+    font-family: var(--font-display);
+    font-size: var(--text-24);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--color-fg-default);
+    margin: 0;
 }
 
 .user-profile-container {
@@ -227,29 +237,31 @@
 .user-profile {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.4rem 0.5rem;
+    gap: var(--space-8);
+    padding: var(--space-4) var(--space-8);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: var(--transition);
 }
 
 .user-profile:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--brand-cream-100);
 }
 
 .top-avatar {
-    width: 36px;
-    height: 36px;
-    font-size: 1.1rem;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    color: var(--accent-color);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: var(--text-14);
+    background: var(--brand-navy-700);
+    color: var(--brand-cream-50);
+    box-shadow: var(--shadow-xs);
+    border-radius: var(--radius-full);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-weight: 700;
+    font-weight: var(--fw-bold);
+    font-family: var(--font-sans);
+    letter-spacing: var(--tracking-tight);
 }
 
 .user-details {
@@ -259,21 +271,24 @@
 }
 
 .u-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: white;
+    font-family: var(--font-sans);
+    font-size: var(--text-14);
+    font-weight: var(--fw-semibold);
+    color: var(--color-fg-default);
 }
 
 .u-role {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.8);
-    background: transparent;
-    padding: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    color: var(--color-fg-muted);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    font-weight: var(--fw-semibold);
 }
 
 .chevron-down {
-    color: rgba(255, 255, 255, 0.8);
-    margin-left: 0.2rem;
+    color: var(--color-fg-muted);
+    margin-left: var(--space-2);
 }
 
 /* Dropdown Floating Menu */
@@ -358,15 +373,16 @@
 
 .content-area {
     flex: 1;
-    padding: 2rem;
+    padding: var(--space-32);
     overflow-y: auto;
+    background: var(--color-bg-base);
 }
 
 /* Mobile Menu & Overlay Utilities */
 .mobile-menu-toggle {
     display: none;
-    margin-right: 1rem;
-    color: white;
+    margin-right: var(--space-12);
+    color: var(--color-fg-default);
 }
 
 .mobile-overlay {

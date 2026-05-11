@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_BRANDING: dict[str, Any] = {
     # Plataforma — NO se sobreescribe (es la marca del SaaS).
     "platform_name": "Acten",
-    "platform_tagline": "Inteligencia para tus reuniones",
+    "platform_tagline": "From conversation to clarity. From clarity to impact.",
     # Empresa cliente — todo esto SÍ se sobreescribe vía /admin/branding.
     "company_name": "Acten",
     "company_tagline": "",
@@ -38,10 +38,13 @@ DEFAULT_BRANDING: dict[str, Any] = {
     "company_address": "",
     "company_website": "",
     "company_phone": "",
-    # Tema visual
-    "primary_color": "#4F46E5",
-    "secondary_color": "#06B6D4",
-    "accent_color": "#10B981",
+    # Tema visual — paleta del brand kit Acten:
+    #   primary   = navy-700 (#1F2A52) — sidebar, CTAs, headings
+    #   secondary = teal-500 (#3D6B5E) — semantic success / acento secundario
+    #   accent    = gold-500 (#C8993B) — highlights editoriales
+    "primary_color": "#1F2A52",
+    "secondary_color": "#3D6B5E",
+    "accent_color": "#C8993B",
     # Assets — data URLs (puede ser '')
     "logo_data_url": "",
     "favicon_data_url": "",

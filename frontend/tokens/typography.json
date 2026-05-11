@@ -1,0 +1,39 @@
+{
+  "$comment": "Playfair Display para hero/display, Sora para todo lo demás (UI + body). JetBrains Mono para code.",
+  "family": {
+    "display": "'Playfair Display', 'Times New Roman', serif",
+    "sans":    "'Sora', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    "mono":    "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
+  },
+  "size": {
+    "12": "0.75rem",
+    "14": "0.875rem",
+    "16": "1rem",
+    "18": "1.125rem",
+    "20": "1.25rem",
+    "24": "1.5rem",
+    "30": "1.875rem",
+    "36": "2.25rem",
+    "48": "3rem",
+    "60": "3.75rem",
+    "72": "4.5rem"
+  },
+  "weight": {
+    "regular": 400,
+    "medium":  500,
+    "semibold":600,
+    "bold":    700
+  },
+  "leading": {
+    "display": 1.15,
+    "heading": 1.3,
+    "body":    1.6,
+    "tight":   1.2
+  },
+  "tracking": {
+    "tight":  "-0.02em",
+    "normal": "0",
+    "wide":   "0.04em",
+    "label":  "0.08em"
+  }
+}

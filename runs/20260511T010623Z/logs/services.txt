@@ -1,0 +1,5 @@
+frontend/src/app/services/auth.service.ts
+frontend/src/app/services/branding.service.ts
+frontend/src/app/services/settings.service.ts
+frontend/src/app/services/tenant.service.ts
+frontend/src/app/services/toast.service.ts

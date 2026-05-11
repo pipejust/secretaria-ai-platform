@@ -1,0 +1,157 @@
+/* ============================================================================
+ * tokens.css — Acten Design System
+ * GENERADO AUTOMÁTICAMENTE por scripts/tokens-build.mjs.
+ * NO editar a mano. Modifica frontend/tokens/*.json y re-corre el script.
+ * ============================================================================ */
+
+:root {
+  /* --- Brand colors --- */
+  --brand-navy-50: #F0F2F8;
+  --brand-navy-100: #D9DEEC;
+  --brand-navy-200: #B3BCD9;
+  --brand-navy-300: #7E8AB7;
+  --brand-navy-500: #3B4773;
+  --brand-navy-700: #1F2A52;
+  --brand-navy-900: #0E1A3D;
+  --brand-cream-50: #FBF8F2;
+  --brand-cream-100: #F5EFE3;
+  --brand-cream-200: #EADFC7;
+  --brand-cream-300: #DCC9A0;
+  --brand-cream-500: #C2A674;
+  --brand-gold-300: #E5C16E;
+  --brand-gold-500: #C8993B;
+  --brand-gold-700: #9A6F1F;
+  --brand-teal-300: #74A89A;
+  --brand-teal-500: #3D6B5E;
+  --brand-teal-700: #264A40;
+  --brand-slate-300: #A8B0BD;
+  --brand-slate-500: #6B7589;
+  --brand-slate-700: #3F485A;
+
+  /* --- Semantic colors --- */
+  --color-bg-base: #F5EFE3;
+  --color-bg-elevated: #FBF8F2;
+  --color-bg-panel: #FFFFFF;
+  --color-bg-sidebar: #0E1A3D;
+  --color-bg-topbar: #FFFFFF;
+  --color-fg-default: #0E1A3D;
+  --color-fg-muted: #6B7589;
+  --color-fg-soft: #A8B0BD;
+  --color-fg-on-dark: #FBF8F2;
+  --color-fg-accent: #3D6B5E;
+  --color-border: #EADFC7;
+  --color-border-strong: #DCC9A0;
+  --color-accent: #1F2A52;
+  --color-accent-hover: #0E1A3D;
+  --color-success: #3D6B5E;
+  --color-warning: #C8993B;
+  --color-danger: #B23A48;
+  --color-info: #3B4773;
+
+  /* --- Typography family --- */
+  --font-display: 'Playfair Display', 'Times New Roman', serif;
+  --font-sans: 'Sora', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Typography size --- */
+  --text-12: 0.75rem;
+  --text-14: 0.875rem;
+  --text-16: 1rem;
+  --text-18: 1.125rem;
+  --text-20: 1.25rem;
+  --text-24: 1.5rem;
+  --text-30: 1.875rem;
+  --text-36: 2.25rem;
+  --text-48: 3rem;
+  --text-60: 3.75rem;
+  --text-72: 4.5rem;
+
+  /* --- Typography weight --- */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* --- Typography leading --- */
+  --lh-display: 1.15;
+  --lh-heading: 1.3;
+  --lh-body: 1.6;
+  --lh-tight: 1.2;
+
+  /* --- Typography tracking --- */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-label: 0.08em;
+
+  /* --- Spacing --- */
+  --space-0: 0;
+  --space-1: 0.125rem;
+  --space-2: 0.25rem;
+  --space-3: 0.375rem;
+  --space-4: 0.5rem;
+  --space-6: 0.75rem;
+  --space-8: 1rem;
+  --space-12: 1.5rem;
+  --space-16: 2rem;
+  --space-20: 2.5rem;
+  --space-24: 3rem;
+  --space-32: 4rem;
+  --space-40: 5rem;
+  --space-48: 6rem;
+  --space-64: 8rem;
+  --space-96: 12rem;
+
+  /* --- Radius --- */
+  --radius-none: 0;
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* --- Shadow --- */
+  --shadow-xs: 0 1px 2px rgba(14, 26, 61, 0.04);
+  --shadow-sm: 0 2px 4px rgba(14, 26, 61, 0.05), 0 1px 2px rgba(14, 26, 61, 0.04);
+  --shadow-md: 0 4px 12px rgba(14, 26, 61, 0.06), 0 2px 4px rgba(14, 26, 61, 0.04);
+  --shadow-lg: 0 12px 28px rgba(14, 26, 61, 0.08), 0 4px 8px rgba(14, 26, 61, 0.04);
+  --shadow-xl: 0 24px 48px rgba(14, 26, 61, 0.10), 0 8px 16px rgba(14, 26, 61, 0.05);
+  --shadow-ring-focus: 0 0 0 3px rgba(31, 42, 82, 0.15);
+
+  /* --- Motion duration --- */
+  --dur-instant: 0ms;
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --dur-slower: 560ms;
+
+  /* --- Motion ease --- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-linear: linear;
+
+  /* --- Aliases para retrocompatibilidad con el código viejo --- */
+  --bg-main:        var(--color-bg-base);
+  --sidebar-bg:     var(--color-bg-sidebar);
+  --sidebar-hover:  rgba(255, 255, 255, 0.06);
+  --topbar-bg:      var(--color-bg-topbar);
+  --panel-bg:       var(--color-bg-panel);
+  --text-main:      var(--color-fg-default);
+  --text-muted:     var(--color-fg-muted);
+  --text-sidebar:   var(--brand-cream-200);
+  --text-sidebar-active: var(--brand-cream-50);
+  --accent-color:   var(--color-accent);
+  --accent-hover:   var(--color-accent-hover);
+  --success-color:  var(--color-success);
+  --danger-color:   var(--color-danger);
+  --border-color:   var(--color-border);
+  --radius-md:      var(--radius-md);
+  --radius-lg:      var(--radius-lg);
+  --transition:     all var(--dur-base) var(--ease-out);
+
+  /* --- Brand white-label (BrandingService los sobreescribe en runtime) --- */
+  --brand-primary:   var(--brand-navy-700);
+  --brand-secondary: var(--brand-teal-500);
+  --brand-accent:    var(--brand-gold-500);
+}
