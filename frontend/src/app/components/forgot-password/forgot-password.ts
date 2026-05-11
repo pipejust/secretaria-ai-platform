@@ -1,44 +1,87 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { BrandingService } from '../../services/branding.service';
+import { TenantService } from '../../services/tenant.service';
 
+/**
+ * Forgot Password — réplica del layout split del login.
+ * Aside navy izq + main cream der. Multi-tenant: envía el slug junto con
+ * el email para que el backend resuelva el workspace correcto.
+ */
 @Component({
-  selector: 'app-forgot-password',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './forgot-password.html',
-  styleUrl: './forgot-password.css'
+    selector: 'app-forgot-password',
+    standalone: true,
+    imports: [CommonModule, FormsModule, RouterModule],
+    templateUrl: './forgot-password.html',
+    styleUrl: './forgot-password.css',
 })
-export class ForgotPassword {
-  email: string = '';
-  isLoading: boolean = false;
-  successMessage: string = '';
-  errorMessage: string = '';
+export class ForgotPassword implements OnInit {
+    email = '';
+    isLoading = false;
+    successMessage = '';
+    errorMessage = '';
 
-  constructor(private http: HttpClient) {}
+    /** Multi-tenant: empresa contra la que se solicita el reseteo. */
+    tenantSlug = 'acten';
+    tenantLocked = false;
+    showTenantField = false;
 
-  onSubmit() {
-    if (!this.email) return;
+    readonly branding = inject(BrandingService);
+    private readonly tenants = inject(TenantService);
+    private readonly http = inject(HttpClient);
+    readonly year = new Date().getFullYear();
 
-    this.isLoading = true;
-    this.successMessage = '';
-    this.errorMessage = '';
+    ngOnInit() {
+        this.tenantSlug = this.tenants.slug();
+        this.tenantLocked = this.tenants.isExplicit();
+        this.showTenantField = !this.tenants.isDefault() || this.tenantLocked;
+    }
 
-    this.http.post<{msg: string}>(`${environment.apiUrl}/auth/forgot-password`, { email: this.email })
-      .subscribe({
-        next: (response) => {
-          this.isLoading = false;
-          this.successMessage = response.msg;
-          this.email = '';
-        },
-        error: (err) => {
-          this.isLoading = false;
-          // Security best practice: generic error message
-          this.errorMessage = "Se ha producido un error intentando enviar el correo. Por favor, inténtelo de nuevo más tarde.";
-          console.error('Forgot password error:', err);
-        }
-      });
-  }
+    revealTenantField() {
+        this.showTenantField = true;
+        if (this.tenantSlug === 'acten') this.tenantSlug = '';
+        setTimeout(() => {
+            const el = document.getElementById('tenantSlug') as HTMLInputElement | null;
+            el?.focus();
+        }, 50);
+    }
+
+    onSubmit() {
+        if (!this.email) return;
+
+        this.isLoading = true;
+        this.successMessage = '';
+        this.errorMessage = '';
+
+        const payload = {
+            email: this.email,
+            tenant_slug: this.tenantSlug || undefined,
+        };
+
+        this.http
+            .post<{ msg: string }>(`${environment.apiUrl}/auth/forgot-password`, payload)
+            .subscribe({
+                next: (response) => {
+                    this.isLoading = false;
+                    this.successMessage = response.msg;
+                    // Limpio el email para evitar reenvío accidental al hacer
+                    // doble click. El user-flow correcto es revisar la bandeja.
+                    this.email = '';
+                },
+                error: (err) => {
+                    this.isLoading = false;
+                    if (err.status === 404) {
+                        this.errorMessage = `La empresa "${this.tenantSlug}" no existe o está inactiva.`;
+                    } else {
+                        this.errorMessage =
+                            'No pudimos procesar tu solicitud. Inténtalo de nuevo en unos minutos.';
+                    }
+                    console.error('Forgot password error:', err);
+                },
+            });
+    }
 }

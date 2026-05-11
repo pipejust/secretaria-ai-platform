@@ -313,9 +313,14 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
         .where(User.email == req.email)
         .where(User.tenant_id == tenant.id)
     ).first()
+    # Mensaje genérico (en español) que devolvemos en ambos casos para no
+    # filtrar si el correo está o no registrado en el workspace.
+    generic_response = {
+        "msg": "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña en los próximos minutos."
+    }
+
     if not user:
-        # Prevent email enumeration by returning success blindly
-        return {"msg": "If the email is registered, you will receive a password reset link."}
+        return generic_response
 
     token = create_password_reset_token(user.email)
 
@@ -329,7 +334,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
     except Exception:
         logger.exception("Error enviando correo de recuperación a %s", user.email)
 
-    return {"msg": "If the email is registered, you will receive a password reset link."}
+    return generic_response
 
 
 class ResetPasswordRequest(BaseModel):
