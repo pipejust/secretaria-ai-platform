@@ -52,6 +52,59 @@
         <input type="text" [(ngModel)]="form.admin_full_name" placeholder="Juan Pérez" />
       </div>
     </div>
+
+    <!-- ===== Branding inicial (logos opcionales) ===== -->
+    <h4 class="brand-section-title">Marca de la empresa <span class="optional-tag">opcional</span></h4>
+    <p class="muted small">
+      Sube ahora el logo y el imagologo de la empresa para que aparezcan
+      desde el primer login. Si no los subes, el cliente podrá hacerlo
+      después desde <code>Marca / Branding</code>.
+    </p>
+
+    <div class="brand-uploads">
+      <!-- Logo full -->
+      <div class="brand-upload-card">
+        <div class="brand-upload-head">
+          <strong>Logo completo</strong>
+          <span class="muted small">Wordmark + monograma · ratio 4:1 ideal · usado en sidebar expandido</span>
+        </div>
+        <div class="brand-preview brand-preview-wide">
+          <img *ngIf="form.logo_data_url" [src]="form.logo_data_url" alt="Logo preview" />
+          <span *ngIf="!form.logo_data_url" class="muted">Sin logo</span>
+        </div>
+        <div class="brand-upload-actions">
+          <label class="btn btn-secondary file-btn">
+            {{ form.logo_data_url ? 'Reemplazar' : 'Subir logo' }}
+            <input type="file" hidden accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                   (change)="onLogoSelected($event)" />
+          </label>
+          <button type="button" class="link-btn danger" *ngIf="form.logo_data_url"
+                  (click)="clearLogo()">Quitar</button>
+        </div>
+      </div>
+
+      <!-- Imagologo -->
+      <div class="brand-upload-card">
+        <div class="brand-upload-head">
+          <strong>Imagologo / icono</strong>
+          <span class="muted small">Cuadrado · usado en sidebar colapsado, avatares y badges compactos</span>
+        </div>
+        <div class="brand-preview brand-preview-square">
+          <img *ngIf="form.icon_data_url" [src]="form.icon_data_url" alt="Icono preview" />
+          <span *ngIf="!form.icon_data_url" class="muted">Sin icono</span>
+        </div>
+        <div class="brand-upload-actions">
+          <label class="btn btn-secondary file-btn">
+            {{ form.icon_data_url ? 'Reemplazar' : 'Subir icono' }}
+            <input type="file" hidden accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                   (change)="onIconSelected($event)" />
+          </label>
+          <button type="button" class="link-btn danger" *ngIf="form.icon_data_url"
+                  (click)="clearIcon()">Quitar</button>
+        </div>
+      </div>
+    </div>
+
     <button class="btn btn-primary" (click)="createTenant()" [disabled]="isCreating">
       {{ isCreating ? 'Creando…' : 'Crear empresa + admin' }}
     </button>

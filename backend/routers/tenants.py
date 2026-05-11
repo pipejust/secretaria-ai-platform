@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -37,6 +37,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Tenants (Empresas)"])
 
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$")
+# Valida que un string sea un data URL `data:image/<sub>;base64,...`. Lo usamos
+# para sanity-check rápido antes de persistirlos en branding_json. El upload
+# vía POST /api/branding/logo|icon ya valida MIME y tamaño en serio.
+DATA_URL_RE = re.compile(r"^data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$")
+
+
+def _is_valid_data_url(value: str) -> bool:
+    return bool(value) and bool(DATA_URL_RE.match(value))
 
 
 class TenantCreate(BaseModel):
@@ -48,6 +56,20 @@ class TenantCreate(BaseModel):
                               description="Email del PRIMER admin del tenant")
     admin_password: str = Field(min_length=8, max_length=128, description="Password inicial")
     admin_full_name: str = Field(min_length=2, max_length=120)
+    # Branding inicial — opcional. Si vienen, los persistimos en branding_json
+    # del tenant nuevo. Aceptamos data URLs `data:image/...;base64,...` (lo que
+    # ya producen los pickers del frontend) o '' para "no traer".
+    # NB: validamos formato pero NO MIME — el cliente sube y el backend confía
+    # en su validación previa (en /api/branding/logo sí re-validamos por upload
+    # multipart). Tope: 3 MB de string base64 por logo.
+    logo_data_url: Optional[str] = Field(
+        None, max_length=4 * 1024 * 1024,
+        description="Logo completo (wordmark+monograma) como data URL"
+    )
+    icon_data_url: Optional[str] = Field(
+        None, max_length=4 * 1024 * 1024,
+        description="Imagologo / icono cuadrado como data URL"
+    )
 
 
 class TenantUpdate(BaseModel):
@@ -150,19 +172,25 @@ def create_tenant(
         raise HTTPException(status_code=409, detail="Ese dominio ya está mapeado a otro tenant.")
 
     # Crear tenant — branding inicial usa la paleta Acten (navy/teal/gold).
+    # Si el super-admin subió logo/icono al crear la empresa, los embebemos
+    # como data URLs desde ya — quedan listos sin que el admin del tenant
+    # tenga que entrar a /admin/branding para subirlos manualmente.
+    initial_branding: dict[str, Any] = {
+        "company_name": payload.name.strip(),
+        "primary_color": "#1F2A52",
+        "secondary_color": "#3D6B5E",
+        "accent_color": "#C8993B",
+    }
+    if payload.logo_data_url and _is_valid_data_url(payload.logo_data_url):
+        initial_branding["logo_data_url"] = payload.logo_data_url
+    if payload.icon_data_url and _is_valid_data_url(payload.icon_data_url):
+        initial_branding["icon_data_url"] = payload.icon_data_url
+
     tenant = Tenant(
         slug=slug,
         name=payload.name.strip(),
         domain=(payload.domain or None),
-        branding_json=json.dumps(
-            {
-                "company_name": payload.name.strip(),
-                "primary_color": "#1F2A52",
-                "secondary_color": "#3D6B5E",
-                "accent_color": "#C8993B",
-            },
-            ensure_ascii=False,
-        ),
+        branding_json=json.dumps(initial_branding, ensure_ascii=False),
         is_active=True,
     )
     db.add(tenant)

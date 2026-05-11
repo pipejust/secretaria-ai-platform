@@ -190,6 +190,46 @@
     box-shadow: 0 0 6px rgba(27, 127, 103, 0.55);
 }
 
+/* "Powered by Acten" — solo para tenants externos. Discreto: label
+   uppercase + imagologo PNG (con transparencia, queda bien sobre el
+   navy oscuro del sidebar). */
+.powered-by {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+    font-family: var(--font-sans);
+    text-decoration: none;
+    opacity: 0.85;
+}
+
+.powered-by-label {
+    font-size: var(--text-10, 10px);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--brand-cream-200);
+}
+
+.powered-by-icon {
+    height: 18px;
+    width: 18px;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
+}
+
+.powered-by.collapsed {
+    margin-top: var(--space-12);
+    justify-content: center;
+    width: 100%;
+}
+
+.powered-by.collapsed .powered-by-icon {
+    height: 22px;
+    width: 22px;
+}
+
 /* Toggle del sidebar — círculo discreto sobre el borde derecho.
    Mantiene contraste pero NO domina visualmente como antes. */
 .toggle-sidebar-bottom {

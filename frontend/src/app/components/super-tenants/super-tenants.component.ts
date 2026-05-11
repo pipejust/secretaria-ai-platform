@@ -23,7 +23,16 @@ interface CreateForm {
   admin_email: string;
   admin_password: string;
   admin_full_name: string;
+  /** Data URL del logo "completo" (wordmark + monograma). Opcional. */
+  logo_data_url: string;
+  /** Data URL del imagologo cuadrado. Opcional. */
+  icon_data_url: string;
 }
+
+/** Límite duro client-side antes de mandar al backend. El backend acepta
+ *  hasta 4 MB de string base64 (~3 MB binario). Lo cortamos antes para
+ *  evitar pedirle al admin que reintente. */
+const MAX_BRAND_FILE_BYTES = 2 * 1024 * 1024;
 
 /**
  * Pantalla `/admin/super/tenants`.
@@ -65,8 +74,53 @@ export class SuperTenantsComponent implements OnInit {
     return {
       slug: '', name: '', domain: '',
       admin_email: '', admin_password: '', admin_full_name: '',
+      logo_data_url: '', icon_data_url: '',
     };
   }
+
+  /** Lee un File del input y lo convierte a data URL base64 — formato que
+   *  espera el backend en `logo_data_url`/`icon_data_url`. Resuelve a '' si
+   *  el archivo es demasiado grande o no es imagen, dejando un mensaje de
+   *  error en `errorMsg` para que el usuario sepa qué pasó. */
+  private async _fileToDataUrl(file: File): Promise<string> {
+    if (!file.type.startsWith('image/')) {
+      this.errorMsg = `"${file.name}" no es una imagen válida.`;
+      return '';
+    }
+    if (file.size > MAX_BRAND_FILE_BYTES) {
+      this.errorMsg = `"${file.name}" pesa ${(file.size / 1024 / 1024).toFixed(1)} MB. Máximo permitido: ${MAX_BRAND_FILE_BYTES / 1024 / 1024} MB.`;
+      return '';
+    }
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async onLogoSelected(ev: Event): Promise<void> {
+    this.errorMsg = '';
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const url = await this._fileToDataUrl(file);
+    if (url) this.form.logo_data_url = url;
+    input.value = '';
+  }
+
+  async onIconSelected(ev: Event): Promise<void> {
+    this.errorMsg = '';
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const url = await this._fileToDataUrl(file);
+    if (url) this.form.icon_data_url = url;
+    input.value = '';
+  }
+
+  clearLogo(): void { this.form.logo_data_url = ''; }
+  clearIcon(): void { this.form.icon_data_url = ''; }
 
   async refresh(): Promise<void> {
     this.loading = true;
@@ -96,6 +150,10 @@ export class SuperTenantsComponent implements OnInit {
           admin_email: this.form.admin_email.trim().toLowerCase(),
           admin_password: this.form.admin_password,
           admin_full_name: this.form.admin_full_name.trim(),
+          // Solo mando los logos si el super-admin los subió. El backend
+          // valida que el data URL sea válido antes de persistirlo.
+          logo_data_url: this.form.logo_data_url || undefined,
+          icon_data_url: this.form.icon_data_url || undefined,
         }, { headers: this._headers() }),
       );
       this.tenants = [...this.tenants, out];

@@ -46,7 +46,13 @@ DEFAULT_BRANDING: dict[str, Any] = {
     "secondary_color": "#1B7F67",
     "accent_color": "#D9A441",
     # Assets — data URLs (puede ser '')
+    # logo_data_url:    versión "completa" (wordmark + monograma juntos).
+    #                   Usado en sidebar expandido, login, headers de emails/PDFs.
+    # icon_data_url:    imagologo / monograma cuadrado. Usado en sidebar
+    #                   colapsado, avatares default, badges compactos.
+    # favicon_data_url: el .ico/.png chiquito que va en la pestaña del browser.
     "logo_data_url": "",
+    "icon_data_url": "",
     "favicon_data_url": "",
 }
 

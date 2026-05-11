@@ -76,8 +76,12 @@
 
     <!-- ============ COLUMN 2: logo + preview ============ -->
     <section class="panel">
-      <h3>Logo</h3>
-      <p class="muted small">PNG/SVG/WEBP. Máx 2 MB. Recomendado: ratio 4:1, fondo transparente.</p>
+      <h3>Logo completo</h3>
+      <p class="muted small">
+        Wordmark + monograma juntos. PNG/SVG/WEBP. Máx 2 MB. Ratio ideal 4:1,
+        fondo transparente. Se usa en el sidebar expandido, login y headers
+        de emails.
+      </p>
 
       <div class="logo-preview" [style.background]="'linear-gradient(135deg,' + form.primary_color + ',' + form.secondary_color + ')'">
         <img *ngIf="form.logo_data_url" [src]="form.logo_data_url" [alt]="form.company_name" />
@@ -94,6 +98,31 @@
         </label>
         <button class="btn btn-icon-danger" (click)="removeLogo()" *ngIf="form.logo_data_url" [disabled]="isUploading">
           Quitar logo
+        </button>
+      </div>
+
+      <h3 class="mt-lg">Imagologo / icono</h3>
+      <p class="muted small">
+        Versión cuadrada (sólo el monograma). Se usa cuando el sidebar está
+        colapsado, en avatares y badges compactos. Si no lo subes, usamos
+        el logo completo o el icono Acten por defecto.
+      </p>
+
+      <div class="icon-preview" [style.background]="form.primary_color">
+        <img *ngIf="form.icon_data_url" [src]="form.icon_data_url" [alt]="form.company_name + ' icono'" />
+        <div *ngIf="!form.icon_data_url" class="logo-placeholder icon-placeholder">
+          {{ (form.company_name || 'A')[0].toUpperCase() }}
+        </div>
+      </div>
+
+      <div class="logo-actions">
+        <label class="btn btn-primary file-btn">
+          <span *ngIf="!isUploadingIcon">{{ form.icon_data_url ? 'Reemplazar icono' : 'Subir icono' }}</span>
+          <span *ngIf="isUploadingIcon">Subiendo…</span>
+          <input type="file" hidden accept="image/png,image/jpeg,image/svg+xml,image/webp" (change)="onIconSelected($event)" />
+        </label>
+        <button class="btn btn-icon-danger" (click)="removeIcon()" *ngIf="form.icon_data_url" [disabled]="isUploadingIcon">
+          Quitar icono
         </button>
       </div>
 

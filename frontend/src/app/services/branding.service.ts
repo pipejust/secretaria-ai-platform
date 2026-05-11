@@ -92,6 +92,16 @@ export class BrandingService {
       ACTEN_DEFAULT_ICON,
   );
 
+  /** True cuando el tenant ES Acten — usamos esto para decidir si mostrar
+   *  el "Powered by Acten" (solo tiene sentido en tenants externos). */
+  readonly isActenTenant = computed(
+    () => (this.brand().company_name || 'Acten').toLowerCase() === 'acten',
+  );
+
+  /** Path del imagologo Acten para usar como badge "Powered by". Siempre
+   *  el mismo asset estático, NUNCA el del tenant — es la marca de Acten. */
+  readonly actenIconUrl = ACTEN_DEFAULT_ICON;
+
   /** Carga inicial — invocado por APP_INITIALIZER y por la pantalla de admin. */
   async loadFromServer(): Promise<void> {
     try {
@@ -142,6 +152,33 @@ export class BrandingService {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token || ''}` });
     const updated = await firstValueFrom(
       this.http.delete<Branding>(`${this.apiUrl}/logo`, { headers }),
+    );
+    const merged: Branding = { ...DEFAULT_BRAND, ...updated };
+    this.brand.set(merged);
+    this.applyToRoot(merged);
+    this.applyDocumentMeta(merged);
+    return merged;
+  }
+
+  /** Sube el imagologo / icono cuadrado del tenant (multipart). */
+  async uploadIcon(file: File, token: string | null): Promise<Branding> {
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token || ''}` });
+    const form = new FormData();
+    form.append('file', file);
+    const updated = await firstValueFrom(
+      this.http.post<Branding>(`${this.apiUrl}/icon`, form, { headers }),
+    );
+    const merged: Branding = { ...DEFAULT_BRAND, ...updated };
+    this.brand.set(merged);
+    this.applyToRoot(merged);
+    this.applyDocumentMeta(merged);
+    return merged;
+  }
+
+  async deleteIcon(token: string | null): Promise<Branding> {
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token || ''}` });
+    const updated = await firstValueFrom(
+      this.http.delete<Branding>(`${this.apiUrl}/icon`, { headers }),
     );
     const merged: Branding = { ...DEFAULT_BRAND, ...updated };
     this.brand.set(merged);

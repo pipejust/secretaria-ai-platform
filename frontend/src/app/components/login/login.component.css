@@ -58,43 +58,10 @@
     object-fit: contain;
 }
 
-/* Monograma + wordmark del tenant cuando no tiene logo personalizado. */
-.aside-mono {
-    width: 64px;
-    height: 64px;
-    object-fit: contain;
-    background: var(--brand-cream-50);
-    padding: 6px;
-    border-radius: var(--radius-md);
-    flex-shrink: 0;
-}
-
-/* Cuadrado con la primera letra del tenant — fallback cuando el cliente
-   aún no subió un logo PNG/SVG. */
-.aside-mono-letter {
-    width: 64px;
-    height: 64px;
-    border-radius: var(--radius-md);
-    background: var(--brand-cream-50);
-    color: var(--brand-charcoal-500);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-display);
-    font-size: 36px;
-    font-weight: var(--fw-bold);
-    line-height: 1;
-    flex-shrink: 0;
-}
-
-.aside-wordmark {
-    font-family: var(--font-display);
-    font-size: clamp(2.25rem, 3vw, 3rem);
-    font-weight: var(--fw-semibold);
-    color: #FFFFFF;
-    letter-spacing: var(--tracking-tight);
-    line-height: 1;
-}
+/* Nota: eliminamos .aside-mono / .aside-mono-letter / .aside-wordmark
+   porque ahora SIEMPRE renderizamos una imagen PNG. Si el tenant no
+   subió logo, displayLogoUrl cae al Acten full logo. Evita el caso
+   "wordmark del tenant en negro sobre navy → invisible". */
 
 /* "Powered by Acten" — solo visible cuando el tenant no es default. */
 .aside-powered {
@@ -109,17 +76,11 @@
 }
 
 .aside-powered img {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     object-fit: contain;
-    background: rgba(255, 255, 255, 0.10);
-    padding: 2px;
-    border-radius: var(--radius-xs);
-}
-
-.aside-powered .powered-name {
-    color: rgba(255, 255, 255, 0.80);
-    font-weight: var(--fw-semibold);
+    /* Sin caja: el imagologo ya tiene su propio tratamiento visual
+       (contorno blanco + acentos). Cualquier fondo competiría con eso. */
 }
 
 .aside-hero {
@@ -588,8 +549,7 @@
         min-height: 320px;
     }
     .aside-brand { margin-bottom: var(--space-24); }
-    .aside-wordmark { font-size: 56px; }
-    .aside-mono { width: 64px; height: 64px; }
+    .aside-logo { height: 56px; }
     .aside-constellation { display: none; }
     .login-main { padding: var(--space-24); }
     .login-card { padding: var(--space-24); }

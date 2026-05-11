@@ -42,6 +42,7 @@ export class BrandingSettingsComponent implements OnInit {
 
   isSaving = false;
   isUploading = false;
+  isUploadingIcon = false;
   successMsg = '';
   errorMsg = '';
 
@@ -109,6 +110,39 @@ export class BrandingSettingsComponent implements OnInit {
       this.errorMsg = err?.error?.detail || 'No se pudo eliminar el logo.';
     } finally {
       this.isUploading = false;
+    }
+  }
+
+  async onIconSelected(ev: Event): Promise<void> {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.isUploadingIcon = true;
+    this.successMsg = '';
+    this.errorMsg = '';
+    try {
+      await this.branding.uploadIcon(file, this.auth.token);
+      this.form.icon_data_url = this.branding.brand().icon_data_url;
+      this.successMsg = 'Imagologo subido correctamente.';
+    } catch (err: any) {
+      this.errorMsg = err?.error?.detail || 'No se pudo subir el imagologo.';
+    } finally {
+      this.isUploadingIcon = false;
+      input.value = '';
+    }
+  }
+
+  async removeIcon(): Promise<void> {
+    if (!confirm('¿Quitar el imagologo? El sidebar colapsado volverá al icono Acten por defecto.')) return;
+    this.isUploadingIcon = true;
+    try {
+      await this.branding.deleteIcon(this.auth.token);
+      this.form.icon_data_url = '';
+      this.successMsg = 'Imagologo eliminado.';
+    } catch (err: any) {
+      this.errorMsg = err?.error?.detail || 'No se pudo eliminar el imagologo.';
+    } finally {
+      this.isUploadingIcon = false;
     }
   }
 }

@@ -182,6 +182,20 @@
                     <div class="status-dot"></div>
                     <span>Sistema Activo</span>
                 </div>
+
+                <!-- "Powered by Acten" — solo en tenants externos. Para Acten
+                     mismo no tiene sentido. Usa el imagologo PNG (sin texto
+                     en el icono — el wordmark "Acten" va aparte). Versión
+                     colapsada: solo el imagologo, centrado, sin label. -->
+                <div class="powered-by"
+                     *ngIf="!branding.isActenTenant()"
+                     [class.collapsed]="isCollapsed"
+                     title="Powered by Acten">
+                    <span class="powered-by-label" *ngIf="!isCollapsed">Powered by</span>
+                    <img [src]="branding.actenIconUrl"
+                         alt="Acten"
+                         class="powered-by-icon" />
+                </div>
             </div>
 
             <!-- Floating Toggle Button at Bottom Right corner -->

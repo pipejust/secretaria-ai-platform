@@ -3,22 +3,17 @@
     <!-- ===================== ASIDE NAVY ===================== -->
     <aside class="login-aside">
         <div class="aside-content">
-            <a routerLink="/" class="aside-brand" [attr.aria-label]="branding.companyName() + ' — inicio'">
-                <!-- Cliente con logo propio cargado en /admin/branding -->
-                <img *ngIf="branding.hasLogo()"
-                     [src]="branding.logoUrl()"
+            <a routerLink="/" class="aside-brand"
+               [attr.aria-label]="branding.companyName() + ' — inicio'">
+                <!-- Sólo IMAGEN. Si el tenant subió su logo lo usamos, si
+                     no caemos al Acten full logo (asset PNG con buen
+                     contraste sobre el navy). NUNCA renderizamos el nombre
+                     como texto sobre fondo oscuro: si viene en negro
+                     (caso típico de wordmarks negros) no se vería. -->
+                <img [src]="branding.displayLogoUrl()"
                      [alt]="branding.companyName()"
-                     class="aside-logo aside-logo-client" />
-                <!-- Tenant cliente SIN logo: monograma genérico cream + wordmark -->
-                <ng-container *ngIf="!branding.hasLogo() && branding.companyName() !== branding.platformName()">
-                    <span class="aside-mono-letter">{{ branding.companyName().charAt(0).toUpperCase() }}</span>
-                    <span class="aside-wordmark">{{ branding.companyName() }}</span>
-                </ng-container>
-                <!-- Tenant DEFAULT (Acten): logo oficial -->
-                <img *ngIf="!branding.hasLogo() && branding.companyName() === branding.platformName()"
-                     src="brand/acten-logo-full.png"
-                     alt="Acten"
-                     class="aside-logo" />
+                     class="aside-logo"
+                     [class.aside-logo-client]="branding.hasLogo()" />
             </a>
 
             <h1 class="aside-hero">
@@ -46,10 +41,13 @@
                 </ng-template>
             </p>
 
-            <p class="aside-powered" *ngIf="branding.companyName() !== branding.platformName()">
+            <!-- "Powered by Acten" — sólo cuando el tenant NO es Acten.
+                 Usa el imagologo PNG de Acten (mismo asset que el sidebar
+                 colapsado), nunca un SVG. -->
+            <p class="aside-powered" *ngIf="!branding.isActenTenant()">
                 <span>Powered by</span>
-                <img src="brand/acten-monogram.png" alt="" aria-hidden="true" />
-                <span class="powered-name">{{ branding.platformName() }}</span>
+                <img [src]="branding.actenIconUrl"
+                     [alt]="branding.platformName()" />
             </p>
         </div>
 

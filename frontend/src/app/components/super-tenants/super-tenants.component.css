@@ -53,3 +53,91 @@
 .link-btn { background: none; border: none; color: var(--brand-primary, #4f46e5); cursor: pointer; padding: 0; font-size: .85rem; }
 .link-btn:hover { text-decoration: underline; }
 .link-btn.danger { color: #b91c1c; }
+
+/* ===== Branding inicial — uploads de logo + imagologo ===== */
+.brand-section-title {
+  margin: var(--space-24) 0 var(--space-4) 0;
+  font-family: var(--font-display);
+  font-size: var(--text-15);
+  font-weight: var(--fw-semibold);
+  color: var(--color-fg-default);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.optional-tag {
+  font-family: var(--font-sans);
+  font-size: var(--text-11);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  font-weight: var(--fw-medium);
+  color: var(--color-fg-muted);
+  background: var(--brand-cream-100);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  padding: 2px 8px;
+}
+
+.brand-uploads {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-16);
+  margin: var(--space-12) 0 var(--space-20);
+}
+
+.brand-upload-card {
+  background: var(--brand-cream-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.brand-upload-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.brand-upload-head strong {
+  font-family: var(--font-display);
+  font-size: var(--text-14);
+  font-weight: var(--fw-semibold);
+  color: var(--color-fg-default);
+}
+
+.brand-preview {
+  background:
+    repeating-conic-gradient(#fff 0% 25%, #f3f0e8 0% 50%) 0 0 / 16px 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.brand-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.brand-preview .muted { font-size: var(--text-12); }
+
+.brand-preview-wide   { height: 96px; }
+.brand-preview-square { height: 96px; aspect-ratio: 1 / 1; margin: 0 auto; max-width: 96px; }
+
+.brand-upload-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.file-btn {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .brand-uploads { grid-template-columns: 1fr; }
+  .brand-preview-square { margin: 0; max-width: none; aspect-ratio: auto; height: 96px; width: 96px; }
+}

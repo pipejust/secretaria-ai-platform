@@ -3,8 +3,10 @@
 GET  /api/branding/             público — resuelve tenant desde
                                 X-Tenant-Slug, ?tenant=slug, o cae al default.
 PUT  /api/branding/             admin del tenant — patch parcial.
-POST /api/branding/logo         admin del tenant — sube logo.
+POST /api/branding/logo         admin del tenant — sube logo (full / wordmark).
 DELETE /api/branding/logo       admin del tenant — borra logo.
+POST /api/branding/icon         admin del tenant — sube imagologo (cuadrado).
+DELETE /api/branding/icon       admin del tenant — borra imagologo.
 POST /api/branding/favicon      admin del tenant — sube favicon.
 """
 
@@ -103,6 +105,41 @@ def delete_logo(
     tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     return branding_service.update_branding(db, tenant.id, {"logo_data_url": ""})
+
+
+@router.post("/icon")
+async def upload_icon(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    """Imagologo / icono cuadrado de la marca. Mismo flujo que /logo —
+    validación de mime + tamaño + persistencia como data URL en branding_json.
+    """
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Tipo no permitido. Acepto: {sorted(ALLOWED_MIME_TYPES)}",
+        )
+    data = await file.read()
+    if len(data) > MAX_LOGO_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Imagologo demasiado grande (>{MAX_LOGO_BYTES // 1024} KB).",
+        )
+    b64 = base64.b64encode(data).decode("ascii")
+    data_url = f"data:{file.content_type};base64,{b64}"
+    return branding_service.update_branding(db, tenant.id, {"icon_data_url": data_url})
+
+
+@router.delete("/icon")
+def delete_icon(
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    return branding_service.update_branding(db, tenant.id, {"icon_data_url": ""})
 
 
 @router.post("/favicon")
