@@ -219,7 +219,7 @@
 .field input:focus {
     outline: none;
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(34, 49, 72, 0.10);
+    box-shadow: 0 0 0 3px rgba(0, 34, 115, 0.12);
 }
 
 /* "Mostrar" link inline a la derecha del password */
@@ -329,14 +329,16 @@
     border-radius: var(--radius-md);
 }
 
-/* ===== CTAs muy redondeados ===== */
+/* ===== CTAs ·  réplica del mockup ·  radius 16, color #002273 ===== */
+/* La flecha va al EXTREMO DERECHO (space-between), texto centrado en
+   medio. Color de marca royal blue del handoff. */
 .btn-signin {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-8);
+    position: relative;
     width: 100%;
-    height: 56px;
+    height: 60px;
     background: var(--color-accent);
     color: #FFFFFF;
     font-family: var(--font-sans);
@@ -344,21 +346,35 @@
     font-weight: var(--fw-semibold);
     letter-spacing: 0;
     border: 1px solid var(--color-accent);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
+    padding: 0 var(--space-24);
     cursor: pointer;
     transition: var(--transition);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 1px 2px rgba(0, 34, 115, 0.15);
+}
+
+.btn-signin .btn-signin-label {
+    /* Texto centrado matemáticamente respecto al botón completo. */
+}
+
+.btn-signin svg {
+    /* Flecha al extremo derecho, no junto al texto. */
+    position: absolute;
+    right: var(--space-24);
+    top: 50%;
+    transform: translateY(-50%);
+    stroke-width: 1.75;
 }
 
 .btn-signin:hover:not(:disabled) {
     background: var(--color-accent-hover);
     border-color: var(--color-accent-hover);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 8px rgba(0, 34, 115, 0.20);
 }
 
 .btn-signin:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(34, 49, 72, 0.20);
+    box-shadow: 0 0 0 3px rgba(0, 34, 115, 0.25);
 }
 
 .btn-signin:disabled {
@@ -370,9 +386,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-8);
+    gap: var(--space-12);
     width: 100%;
-    height: 56px;
+    height: 60px;
     background: var(--color-bg-panel);
     color: var(--color-accent);
     font-family: var(--font-sans);
@@ -380,13 +396,13 @@
     font-weight: var(--fw-semibold);
     letter-spacing: 0;
     border: 1.5px solid var(--color-accent);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition: var(--transition);
 }
 
 .btn-sso:hover {
-    background: rgba(34, 49, 72, 0.04);
+    background: rgba(0, 34, 115, 0.04);
 }
 
 .btn-sso svg { color: var(--color-accent); flex-shrink: 0; }
