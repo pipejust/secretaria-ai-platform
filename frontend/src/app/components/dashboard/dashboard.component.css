@@ -286,9 +286,33 @@
     background-clip: padding-box;
 }
 
+/* Botones-leyenda con toggle. Clickeables: ocultan/muestran la serie. */
+.legend-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-6);
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    font-weight: var(--fw-medium);
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.legend-toggle:hover {
+    background: var(--brand-cream-50);
+    border-color: var(--color-border);
+    color: var(--color-fg-default);
+}
+.legend-toggle.is-off { opacity: 0.45; }
+.legend-toggle.is-off .legend-dot { background: var(--color-fg-soft); border-color: var(--color-fg-soft); }
+
 .ov-chart-wrap {
+    position: relative;
     width: 100%;
-    overflow: hidden;
 }
 .ov-chart {
     width: 100%;
@@ -309,23 +333,243 @@
     fill: var(--color-bg-panel);
     stroke: var(--color-info);
     stroke-width: 2;
+    transition: r 120ms var(--ease-out);
+}
+.ov-chart-points circle.is-hovered {
+    fill: var(--color-info);
+    filter: drop-shadow(0 0 4px rgba(47, 109, 190, 0.45));
 }
 
-/* ---------- FOLLOWUP ---------- */
-.ov-followup { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-12); }
-.ov-followup li {
+/* Línea vertical de guía que aparece al hacer hover sobre un punto. */
+.ov-chart-guide {
+    stroke: var(--color-border-strong);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    pointer-events: none;
+}
+
+/* Hotspots transparentes: capturan hover en toda la altura del chart
+   para no exigir precisión de pixel sobre el círculo de 3.5px. */
+.ov-chart-hotspots rect {
+    fill: transparent;
+    cursor: crosshair;
+}
+
+/* Tooltip flotante. Positioning vía left% (computado desde la x del
+   viewBox). transform=-50% lo centra sobre el punto; nudge en y para
+   que no tape el dato. */
+.ov-chart-tooltip {
+    position: absolute;
+    top: 8px;
+    transform: translateX(-50%);
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-10, 10px) var(--space-12);
+    min-width: 140px;
+    pointer-events: none;
+    z-index: 2;
+    font-family: var(--font-sans);
+}
+.tt-date {
+    margin: 0 0 6px 0;
+    font-size: var(--text-11);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--color-fg-muted);
+    font-weight: var(--fw-semibold);
+}
+.tt-row {
+    margin: 4px 0 0 0;
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: 10px 1fr auto;
     align-items: center;
     gap: var(--space-8);
+    font-size: var(--text-13);
+}
+.tt-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+}
+.tt-dot-primary { background: var(--color-info); }
+.tt-dot-secondary {
+    background: transparent;
+    border: 1.5px dashed var(--color-info);
+}
+.tt-label { color: var(--color-fg-muted); }
+.tt-value {
+    font-weight: var(--fw-bold);
+    color: var(--color-fg-default);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- FOLLOWUP STATUS (donut + leyenda + cheer banner) ---------- */
+/* Layout: donut a la izquierda, leyenda a la derecha, banner ocupa todo
+   el ancho debajo. Replica el mockup adjunto. */
+.ov-followup-card { gap: var(--space-20); }
+
+.followup-body {
+    display: flex;
+    align-items: center;
+    gap: var(--space-20);
+}
+
+.followup-donut-wrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    flex-shrink: 0;
+}
+
+.followup-donut {
+    width: 100%;
+    height: 100%;
+    /* Track parte arriba (rotate -90 lo hace en cada segmento); el
+       wrapper en sí lo deja "horizontal". */
+}
+
+.donut-track {
+    stroke: var(--brand-cream-100);
+}
+
+.donut-seg {
+    transition: stroke-dasharray var(--dur-base) var(--ease-out);
+}
+
+.followup-donut-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.donut-total {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-30);
+    font-weight: var(--fw-bold);
+    color: var(--color-fg-default);
+    line-height: 1;
+    letter-spacing: var(--tracking-tight);
+}
+
+.donut-total-label {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--font-sans);
+    font-size: var(--text-11);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--color-fg-muted);
+    font-weight: var(--fw-semibold);
+}
+
+/* Leyenda — grid de 4 columnas: dot, label, count, pct */
+.followup-legend {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-10, 10px);
+}
+.followup-legend li {
+    display: grid;
+    grid-template-columns: 12px 1fr auto auto;
+    align-items: center;
+    gap: var(--space-10, 10px);
     font-family: var(--font-sans);
     font-size: var(--text-13);
     color: var(--color-fg-default);
 }
-.fu-dot { width: 8px; height: 8px; border-radius: var(--radius-full); }
-.fu-label { font-weight: var(--fw-medium); }
-.fu-count { font-weight: var(--fw-semibold); }
-.fu-pct { color: var(--color-fg-muted); font-size: var(--text-12); }
+.legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+.legend-label {
+    font-weight: var(--fw-medium);
+    color: var(--color-fg-default);
+}
+.legend-count {
+    font-weight: var(--fw-bold);
+    color: var(--color-fg-default);
+    font-variant-numeric: tabular-nums;
+}
+.legend-pct {
+    color: var(--color-fg-muted);
+    font-size: var(--text-12);
+    font-variant-numeric: tabular-nums;
+    min-width: 44px;
+    text-align: right;
+}
+
+/* Banner adaptativo de ánimo. Tone success = verde, info = azul,
+   neutral = cream. */
+.followup-cheer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+    padding: var(--space-12) var(--space-16);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+}
+.followup-cheer[data-tone="success"] {
+    background: rgba(27, 127, 103, 0.10);
+    border-color: rgba(27, 127, 103, 0.22);
+}
+.followup-cheer[data-tone="info"] {
+    background: rgba(47, 109, 190, 0.10);
+    border-color: rgba(47, 109, 190, 0.22);
+}
+.followup-cheer[data-tone="neutral"] {
+    background: var(--brand-cream-100);
+    border-color: var(--color-border);
+}
+
+.cheer-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-panel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.followup-cheer[data-tone="success"] .cheer-icon { color: var(--brand-emerald-scale-700); }
+.followup-cheer[data-tone="info"] .cheer-icon    { color: var(--color-info); }
+.followup-cheer[data-tone="neutral"] .cheer-icon { color: var(--color-fg-muted); }
+
+.cheer-body { display: flex; flex-direction: column; min-width: 0; }
+.cheer-title {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-13);
+    font-weight: var(--fw-semibold);
+    color: var(--color-fg-default);
+    line-height: 1.3;
+}
+.cheer-sub {
+    margin: 2px 0 0 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    color: var(--color-fg-muted);
+    line-height: 1.4;
+}
+
+/* Responsive: en cards muy estrechas (sidebar móvil), donut arriba,
+   leyenda abajo en lugar de side-by-side. */
+@media (max-width: 480px) {
+    .followup-body { flex-direction: column; align-items: stretch; }
+    .followup-donut-wrap { margin: 0 auto; }
+}
 
 /* ---------- SYNC HEALTH ---------- */
 .ov-sync { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-12); }

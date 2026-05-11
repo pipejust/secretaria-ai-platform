@@ -79,21 +79,38 @@
 
     <!-- ============= MAIN GRID ============= -->
     <section class="ov-main-grid">
-        <!-- Activity Chart -->
+        <!-- Activity Chart — interactivo: hover muestra tooltip con los
+             valores del día, click en la leyenda esconde/muestra serie. -->
         <article class="ov-card ov-card-chart">
             <header class="ov-card-head">
                 <div>
                     <h2 class="ov-card-title">Actividad de Reuniones</h2>
                     <p class="ov-card-sub">Últimos {{ overviewPeriod === '7d' ? 7 : overviewPeriod === '30d' ? 30 : 14 }} días</p>
                 </div>
-                <div class="ov-card-legend">
-                    <span class="legend-dot legend-meetings"></span> <span>Reuniones</span>
-                    <span class="legend-dot legend-analyzed"></span> <span>Analizadas</span>
+                <div class="ov-card-legend" role="group" aria-label="Series visibles">
+                    <button type="button" class="legend-toggle"
+                            [class.is-off]="!seriesVisible.meetings"
+                            (click)="toggleSeries('meetings')"
+                            [attr.aria-pressed]="seriesVisible.meetings"
+                            title="Mostrar / ocultar Reuniones">
+                        <span class="legend-dot legend-meetings"></span>
+                        <span>Reuniones</span>
+                    </button>
+                    <button type="button" class="legend-toggle"
+                            [class.is-off]="!seriesVisible.analyzed"
+                            (click)="toggleSeries('analyzed')"
+                            [attr.aria-pressed]="seriesVisible.analyzed"
+                            title="Mostrar / ocultar Analizadas">
+                        <span class="legend-dot legend-analyzed"></span>
+                        <span>Analizadas</span>
+                    </button>
                 </div>
             </header>
 
             <div class="ov-chart-wrap">
-                <svg class="ov-chart" viewBox="0 0 600 220" preserveAspectRatio="none">
+                <svg class="ov-chart" viewBox="0 0 600 220"
+                     preserveAspectRatio="none"
+                     (mouseleave)="clearChartHover()">
                     <defs>
                         <linearGradient id="meetingsGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stop-color="#2F6DBE" stop-opacity="0.18"/>
@@ -118,22 +135,71 @@
                         <text x="12" y="194" text-anchor="end">0</text>
                     </g>
 
-                    <!-- Meetings area + line -->
-                    <path class="ov-chart-area" [attr.d]="chartAreaPath(activitySeries.meetings, chartYMax)" fill="url(#meetingsGrad)"/>
-                    <path class="ov-chart-line ov-chart-line-primary" [attr.d]="chartPath(activitySeries.meetings, chartYMax)"/>
-                    <!-- Analyzed (dashed) -->
-                    <path class="ov-chart-line ov-chart-line-secondary" [attr.d]="chartPath(activitySeries.analyzed, chartYMax)" stroke-dasharray="4 4"/>
+                    <!-- Guía vertical en hover -->
+                    <line *ngIf="chartHover" class="ov-chart-guide"
+                          [attr.x1]="chartHover.x" y1="20"
+                          [attr.x2]="chartHover.x" y2="200"/>
 
-                    <!-- Puntos -->
-                    <g class="ov-chart-points">
-                        <circle *ngFor="let p of chartPoints(activitySeries.meetings, chartYMax)" [attr.cx]="p.cx" [attr.cy]="p.cy" r="3.5"/>
+                    <!-- Meetings area + line -->
+                    <ng-container *ngIf="seriesVisible.meetings">
+                        <path class="ov-chart-area"
+                              [attr.d]="chartAreaPath(activitySeries.meetings, chartYMax)"
+                              fill="url(#meetingsGrad)"/>
+                        <path class="ov-chart-line ov-chart-line-primary"
+                              [attr.d]="chartPath(activitySeries.meetings, chartYMax)"/>
+                    </ng-container>
+
+                    <!-- Analyzed (dashed) -->
+                    <path *ngIf="seriesVisible.analyzed"
+                          class="ov-chart-line ov-chart-line-secondary"
+                          [attr.d]="chartPath(activitySeries.analyzed, chartYMax)"
+                          stroke-dasharray="4 4"/>
+
+                    <!-- Puntos visibles para Reuniones (los que destacamos
+                         con halo en hover). Analizadas se infieren del
+                         tooltip pero no las puntuamos para no saturar. -->
+                    <g class="ov-chart-points" *ngIf="seriesVisible.meetings">
+                        <circle *ngFor="let p of chartPoints(activitySeries.meetings, chartYMax); let i = index"
+                                [attr.cx]="p.cx" [attr.cy]="p.cy"
+                                [attr.r]="chartHover && chartHover.index === i ? 5.5 : 3.5"
+                                [class.is-hovered]="chartHover && chartHover.index === i"/>
                     </g>
 
                     <!-- X labels -->
                     <g class="ov-chart-x-labels">
-                        <text *ngFor="let l of chartXLabels; let i = index" [attr.x]="30 + i * 140" y="215" text-anchor="middle">{{ l }}</text>
+                        <text *ngFor="let l of chartXLabels; let i = index"
+                              [attr.x]="30 + i * 140" y="215"
+                              text-anchor="middle">{{ l }}</text>
+                    </g>
+
+                    <!-- Hotspots transparentes: una banda vertical por punto
+                         para capturar hover en todo el alto del chart, no
+                         sólo en el círculo de 3.5px de radio. -->
+                    <g class="ov-chart-hotspots">
+                        <rect *ngFor="let p of chartPoints(activitySeries.meetings, chartYMax); let i = index"
+                              [attr.x]="p.cx - 18" y="10"
+                              width="36" height="190"
+                              (mouseenter)="onChartHover(i)"
+                              (mousemove)="onChartHover(i)"/>
                     </g>
                 </svg>
+
+                <!-- Tooltip flotante. left:% se calcula desde la x del
+                     viewBox (600 unidades de ancho). -->
+                <div class="ov-chart-tooltip" *ngIf="chartHover"
+                     [style.left.%]="(chartHover.x / 600) * 100">
+                    <p class="tt-date">{{ chartHover.label }}</p>
+                    <p class="tt-row" *ngIf="seriesVisible.meetings">
+                        <span class="tt-dot tt-dot-primary"></span>
+                        <span class="tt-label">Reuniones</span>
+                        <span class="tt-value">{{ chartHover.meetings }}</span>
+                    </p>
+                    <p class="tt-row" *ngIf="seriesVisible.analyzed">
+                        <span class="tt-dot tt-dot-secondary"></span>
+                        <span class="tt-label">Analizadas</span>
+                        <span class="tt-value">{{ chartHover.analyzed }}</span>
+                    </p>
+                </div>
             </div>
 
             <a class="ov-card-link" routerLink="/admin/reportes">Ver toda la actividad →</a>
@@ -141,19 +207,79 @@
 
         <!-- Right column: Follow-up + Sync Health -->
         <div class="ov-side-stack">
-            <article class="ov-card">
+            <article class="ov-card ov-followup-card">
                 <header class="ov-card-head">
                     <h2 class="ov-card-title">Estado de seguimiento</h2>
-                    <span class="ov-card-sub-right">Total: {{ followupTotal }} tareas</span>
                 </header>
-                <ul class="ov-followup">
-                    <li *ngFor="let f of followupBreakdown">
-                        <span class="fu-dot" [style.background]="f.color"></span>
-                        <span class="fu-label">{{ f.label }}</span>
-                        <span class="fu-count">{{ f.count }}</span>
-                        <span class="fu-pct">({{ f.pct }}%)</span>
-                    </li>
-                </ul>
+
+                <!-- Donut + leyenda. Si no hay tareas, mostramos un ring
+                     placeholder gris para no romper el layout. -->
+                <div class="followup-body">
+                    <div class="followup-donut-wrap" role="img"
+                         [attr.aria-label]="followupTotal + ' tareas totales'">
+                        <svg class="followup-donut" viewBox="0 0 100 100"
+                             aria-hidden="true">
+                            <!-- Track gris de fondo (siempre visible) -->
+                            <circle class="donut-track"
+                                    cx="50" cy="50" [attr.r]="donutRadius"
+                                    fill="none" stroke-width="14"/>
+                            <!-- Segmentos de cada status -->
+                            <circle *ngFor="let s of donutSegments"
+                                    cx="50" cy="50" [attr.r]="donutRadius"
+                                    fill="none"
+                                    [attr.stroke]="s.color"
+                                    stroke-width="14"
+                                    stroke-linecap="butt"
+                                    [attr.stroke-dasharray]="s.dashArray"
+                                    [attr.stroke-dashoffset]="s.dashOffset"
+                                    transform="rotate(-90 50 50)"
+                                    class="donut-seg"/>
+                        </svg>
+                        <div class="followup-donut-center">
+                            <span class="donut-total">{{ followupTotal }}</span>
+                            <span class="donut-total-label">Total</span>
+                        </div>
+                    </div>
+
+                    <ul class="followup-legend">
+                        <li *ngFor="let f of followupBreakdown">
+                            <span class="legend-swatch" [style.background]="f.color"></span>
+                            <span class="legend-label">{{ f.label }}</span>
+                            <span class="legend-count">{{ f.count }}</span>
+                            <span class="legend-pct">({{ f.pct }}%)</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Banner adaptativo de ánimo, basado en % completadas. -->
+                <div class="followup-cheer" [attr.data-tone]="encouragementMessage.tone">
+                    <div class="cheer-icon" aria-hidden="true">
+                        <svg *ngIf="encouragementMessage.tone === 'success'"
+                             width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <svg *ngIf="encouragementMessage.tone === 'info'"
+                             width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <svg *ngIf="encouragementMessage.tone === 'neutral'"
+                             width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="cheer-body">
+                        <p class="cheer-title">{{ encouragementMessage.title }}</p>
+                        <p class="cheer-sub">{{ encouragementMessage.sub }}</p>
+                    </div>
+                </div>
             </article>
 
             <article class="ov-card" *ngIf="canManageIntegrations">

@@ -13,6 +13,14 @@ interface ChartPoint { date: Date; label: string; value: number; }
 interface KpiTile { key: string; label: string; value: number; trend: number; tone: 'navy'|'success'|'warning'|'danger'; icon: 'meetings'|'tasks'|'decisions'|'risks'; }
 interface SyncProvider { id: string; name: string; iconColor: string; iconLetter: string; connected: boolean; }
 interface FollowupBreakdown { label: string; count: number; pct: number; color: string; }
+/** Segmento de arco del donut chart de Estado de seguimiento.
+ *  Usa la técnica clásica de stroke-dasharray sobre un <circle>: cada
+ *  segmento pinta sólo su porción del perímetro y deja todo lo demás
+ *  como hueco. dashOffset (negativo) lo rota para no superponerse con
+ *  el segmento anterior. */
+interface DonutSegment { color: string; dashArray: string; dashOffset: number; }
+/** Estado del hover sobre el chart de actividad. Coords en viewBox-space. */
+interface ChartHover { x: number; index: number; label: string; meetings: number; analyzed: number; }
 
 @Component({
     selector: 'app-dashboard',
@@ -35,6 +43,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
      *  llegan del backend sin rango); cuando el backend soporte ?since=,
      *  esto pasa a filtrar. */
     overviewPeriod: '7d' | '14d' | '30d' = '14d';
+
+    /** Hover state del chart de actividad. null = nada hovereado. */
+    chartHover: ChartHover | null = null;
+
+    /** Visibilidad por serie en el chart de actividad. Click en la leyenda
+     *  oculta/muestra la serie correspondiente. */
+    seriesVisible: { meetings: boolean; analyzed: boolean } = { meetings: true, analyzed: true };
 
     showUploadModal = false;
     uploadTab: 'audio' | 'text' = 'audio';
@@ -539,6 +554,117 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     get followupTotal(): number {
         return (this.allActionItems || []).length;
+    }
+
+    // ----- Donut Estado de seguimiento ----------------------------------
+
+    /** Radio del círculo del donut (viewBox 0 0 100 100). Stroke-width 14
+     *  → diámetro visual interno ≈ 80 - 14 = 66 → centro del aro a r=33,
+     *  pero usamos r=40 simple; el centro se calcula con stroke. */
+    readonly donutRadius = 40;
+
+    /** Perímetro del círculo. Lo precomputamos para no recalcular en cada
+     *  binding del template. */
+    readonly donutCircumference = 2 * Math.PI * 40;
+
+    /** Pequeño gap visual entre segmentos para que se distinga uno del otro
+     *  (en unidades de viewBox; ~2 unidades = ~1.4° de arco). */
+    private readonly donutGap = 2;
+
+    /** Devuelve los segmentos del donut listos para bindear en SVG.
+     *  Filtramos los que tienen count===0 para no dejar arcos invisibles
+     *  ocupando lugar. */
+    get donutSegments(): DonutSegment[] {
+        const items = this.followupBreakdown.filter((b) => b.count > 0);
+        const total = items.reduce((s, i) => s + i.count, 0);
+        if (!total) return [];
+        const C = this.donutCircumference;
+        const gap = items.length > 1 ? this.donutGap : 0;
+        let cumulative = 0;
+        return items.map((item) => {
+            const rawLen = (item.count / total) * C;
+            // Restamos el gap a cada segmento (excepto si sólo hay uno).
+            const len = Math.max(0.5, rawLen - gap);
+            const seg: DonutSegment = {
+                color: item.color,
+                // dasharray = "<segmento> <resto>" → pinta solo su porción.
+                dashArray: `${len} ${C - len}`,
+                // offset negativo = rotación clockwise desde el top.
+                dashOffset: -cumulative,
+            };
+            cumulative += rawLen;
+            return seg;
+        });
+    }
+
+    /** Porcentaje de tareas completadas (para el banner de ánimo). */
+    get completedPercent(): number {
+        const c = this.followupBreakdown.find((b) => b.label === 'Completadas');
+        return c?.pct || 0;
+    }
+
+    /** Copy adaptativo del banner de ánimo. Sin total, mostramos algo
+     *  neutro para no felicitar a un workspace vacío. */
+    get encouragementMessage(): { title: string; sub: string; tone: 'success' | 'info' | 'neutral' } {
+        if (this.followupTotal === 0) {
+            return {
+                title: 'Aún no hay tareas registradas.',
+                sub: 'Sube tu primera reunión y la IA generará las acciones automáticamente.',
+                tone: 'neutral',
+            };
+        }
+        const pct = this.completedPercent;
+        if (pct >= 70) {
+            return { title: `¡Excelente! ${pct}% de las tareas completadas.`, sub: 'Mantén el ritmo del equipo.', tone: 'success' };
+        }
+        if (pct >= 40) {
+            return { title: `¡Buen trabajo! ${pct}% de las tareas completadas.`, sub: 'Mantén el momentum.', tone: 'success' };
+        }
+        if (pct >= 15) {
+            return { title: `Vas avanzando: ${pct}% completadas.`, sub: 'Revisa las pendientes para acelerar el cierre.', tone: 'info' };
+        }
+        return {
+            title: 'Hay tareas que necesitan atención.',
+            sub: 'Empieza con las vencidas o asignadas a tu equipo.',
+            tone: 'info',
+        };
+    }
+
+    // ----- Interactividad del chart de actividad ------------------------
+
+    /** Calcula la posición X (viewBox) de un índice dado. */
+    private chartXAt(index: number): number {
+        const series = this.activitySeries.meetings;
+        const W = 600, padX = 20;
+        const dx = (W - 2 * padX) / Math.max(1, series.length - 1);
+        return padX + index * dx;
+    }
+
+    /** Hover sobre la columna del chart: aplica para ambas series. */
+    onChartHover(index: number): void {
+        const m = this.activitySeries.meetings[index];
+        const a = this.activitySeries.analyzed[index];
+        if (!m) { this.chartHover = null; return; }
+        this.chartHover = {
+            index,
+            x: this.chartXAt(index),
+            label: m.label,
+            meetings: m.value,
+            analyzed: a?.value || 0,
+        };
+    }
+
+    /** Reset del tooltip al salir del SVG. */
+    clearChartHover(): void { this.chartHover = null; }
+
+    /** Toggle de visibilidad de serie por click en su item de la leyenda.
+     *  Si ambas terminarían apagadas, no permitimos apagar la última
+     *  (evita un chart completamente vacío). */
+    toggleSeries(key: 'meetings' | 'analyzed'): void {
+        const next = !this.seriesVisible[key];
+        const other = key === 'meetings' ? this.seriesVisible.analyzed : this.seriesVisible.meetings;
+        if (!next && !other) return;
+        this.seriesVisible[key] = next;
     }
 
     /** Sync Health — providers que muestran en el handoff. */
