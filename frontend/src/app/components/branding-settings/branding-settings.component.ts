@@ -36,6 +36,7 @@ export class BrandingSettingsComponent implements OnInit {
     secondary_color: '#06B6D4',
     accent_color: '#10B981',
     logo_data_url: '',
+    icon_data_url: '',
     favicon_data_url: '',
   };
 

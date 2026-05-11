@@ -29,7 +29,12 @@ export interface Branding {
   primary_color: string;
   secondary_color: string;
   accent_color: string;
+  /** Logo "completo" — wordmark + monograma juntos. Usado en sidebar
+   *  expandido, login, emails, header de exports. */
   logo_data_url: string;
+  /** Imagologo / icono cuadrado — versión compacta de la marca para
+   *  espacios chicos: sidebar colapsado, favicon visual, avatar default. */
+  icon_data_url: string;
   favicon_data_url: string;
 }
 
@@ -47,8 +52,15 @@ const DEFAULT_BRAND: Branding = {
   secondary_color: '#1B7F67',
   accent_color: '#D9A441',
   logo_data_url: '',
+  icon_data_url: '',
   favicon_data_url: '',
 };
+
+/** Defaults estáticos de Acten (assets en `/public/brand/`). Se usan si el
+ *  tenant no tiene su propio logo subido. Mantenerlos sincronizados con
+ *  los archivos físicos en `frontend/public/brand/`. */
+const ACTEN_DEFAULT_LOGO_FULL = 'brand/acten-logo-full.png';
+const ACTEN_DEFAULT_ICON      = 'brand/imagologo.png';
 
 @Injectable({ providedIn: 'root' })
 export class BrandingService {
@@ -63,6 +75,22 @@ export class BrandingService {
   readonly platformName = computed(() => this.brand().platform_name || 'Acten');
   readonly logoUrl = computed(() => this.brand().logo_data_url || '');
   readonly hasLogo = computed(() => !!this.brand().logo_data_url);
+  readonly iconUrl = computed(() => this.brand().icon_data_url || '');
+  readonly hasIcon = computed(() => !!this.brand().icon_data_url);
+
+  /** Resuelven SIEMPRE a algo renderizable: si el tenant subió su logo
+   *  o icono lo usan; si no, caen al default visual de Acten. Estos son
+   *  los que el sidebar y otros chrome elements consumen para nunca
+   *  quedarse sin imagen aunque la marca no esté configurada. */
+  readonly displayLogoUrl = computed(
+    () => this.brand().logo_data_url || ACTEN_DEFAULT_LOGO_FULL,
+  );
+  readonly displayIconUrl = computed(
+    () =>
+      this.brand().icon_data_url ||
+      this.brand().logo_data_url ||
+      ACTEN_DEFAULT_ICON,
+  );
 
   /** Carga inicial — invocado por APP_INITIALIZER y por la pantalla de admin. */
   async loadFromServer(): Promise<void> {

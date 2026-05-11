@@ -6,22 +6,17 @@
     <aside class="sidebar" [class.collapsed]="isCollapsed" [class.mobile-open]="isMobileOpen">
         <div class="sidebar-header">
             <a routerLink="/admin/dashboard" class="logo-area" title="Ir al inicio">
-                <!-- Si la empresa subió su logo, lo usamos. -->
-                <img *ngIf="branding.hasLogo() && !isCollapsed"
-                     [src]="branding.logoUrl()"
+                <!-- Sidebar expandido → logo "completo" (wordmark + monograma).
+                     Sidebar colapsado → imagologo / icono cuadrado.
+                     Ambos resuelven a default Acten si el tenant no subió el suyo. -->
+                <img *ngIf="!isCollapsed"
+                     [src]="branding.displayLogoUrl()"
                      [alt]="branding.companyName()"
-                     class="company-logo-sidebar" />
-                <!-- Default: monograma "A" Acten + nombre de empresa. -->
-                <ng-container *ngIf="!branding.hasLogo()">
-                    <img src="brand/acten-monogram.png" alt="" class="acten-monogram"
-                         [class.collapsed]="isCollapsed" />
-                    <span *ngIf="!isCollapsed" class="brand-text">
-                        <span class="brand-company">{{ branding.companyName() }}</span>
-                        <span class="brand-platform" *ngIf="branding.companyName() !== branding.platformName()">
-                            powered by Acten
-                        </span>
-                    </span>
-                </ng-container>
+                     class="sidebar-logo-full" />
+                <img *ngIf="isCollapsed"
+                     [src]="branding.displayIconUrl()"
+                     [alt]="branding.companyName()"
+                     class="sidebar-logo-icon" />
             </a>
         </div>
 
