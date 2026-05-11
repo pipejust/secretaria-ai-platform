@@ -136,13 +136,32 @@ def seed_output_templates(db: Session) -> None:
 def seed_default_integrations(db: Session) -> None:
     """Pre-crear los settings vacíos para que el frontend muestre los formularios."""
     defaults = [
-        ("smtp", {"provider": "Resend", "apiKey": "", "senderEmail": "no-reply@notiva.local"}),
+        ("smtp", {"provider": "Resend", "apiKey": "", "senderEmail": "no-reply@acten.local"}),
         ("fireflies", {"apiKey": ""}),
         ("trello", {"api_key": "", "token": "", "isActive": False}),
         ("jira", {"email": "", "api_token": "", "domain": "", "isActive": False}),
         ("clickup", {"api_token": "", "isActive": False}),
         ("azure_devops", {"organization": "", "project": "", "pat": "", "isActive": False}),
         ("autoCuration", {"isEnabled": False, "timeoutHours": 24}),
+        # White-label: defaults pre-poblados para que /admin/branding muestre
+        # algo en una instalación fresca. NO incluye platform_name (lo añade
+        # `branding_service.get_branding` desde DEFAULT_BRANDING).
+        (
+            "branding",
+            {
+                "company_name": "Acten",
+                "company_tagline": "",
+                "company_email": "",
+                "company_address": "",
+                "company_website": "",
+                "company_phone": "",
+                "primary_color": "#4F46E5",
+                "secondary_color": "#06B6D4",
+                "accent_color": "#10B981",
+                "logo_data_url": "",
+                "favicon_data_url": "",
+            },
+        ),
     ]
     for name, cfg in defaults:
         existing = db.exec(

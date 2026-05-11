@@ -1,0 +1,205 @@
+.branding-page {
+  padding: 1.25rem 1.5rem 3rem;
+  max-width: 1200px;
+}
+
+.page-head {
+  margin-bottom: 1.5rem;
+}
+
+.page-head h2 {
+  margin: 0 0 .25rem;
+  font-size: 1.6rem;
+}
+
+.muted { color: var(--text-muted); font-size: .9rem; }
+.muted.small { font-size: .8rem; margin-top: -.25rem; }
+.mt-lg { margin-top: 1.75rem; }
+
+.alert {
+  padding: .75rem 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  font-size: .9rem;
+}
+.alert-ok { background: rgba(16, 185, 129, .1); color: #047857; border: 1px solid rgba(16, 185, 129, .25); }
+.alert-err { background: rgba(239, 68, 68, .08); color: #b91c1c; border: 1px solid rgba(239, 68, 68, .25); }
+
+.brand-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .brand-grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.panel h3 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  margin-bottom: 1rem;
+}
+
+.form-row label {
+  font-size: .8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  font-weight: 600;
+}
+
+.form-row input[type="text"],
+.form-row input[type="email"],
+.form-row input[type="url"],
+.form-row input[type="tel"],
+.form-row textarea {
+  padding: .65rem .85rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: .95rem;
+  font-family: inherit;
+  background: #fff;
+}
+
+.form-row textarea { resize: vertical; }
+
+.form-row.colors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.form-row.colors > div {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.form-row.colors input[type="color"] {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: transparent;
+  padding: 2px;
+}
+
+.form-row.colors input[type="text"] {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: .85rem;
+  text-align: center;
+}
+
+.btn-icon-danger {
+  background: transparent;
+  color: var(--danger-color);
+  border: 1px solid rgba(239, 68, 68, .35);
+  padding: .55rem 1rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 500;
+}
+.btn-icon-danger:hover { background: rgba(239, 68, 68, .08); }
+
+.file-btn { cursor: pointer; }
+
+.logo-preview {
+  height: 140px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .75rem;
+  overflow: hidden;
+}
+
+.logo-preview img {
+  max-height: 90px;
+  max-width: 80%;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.18));
+}
+
+.logo-placeholder {
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.logo-actions {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1.5rem;
+}
+
+.email-preview {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-size: .85rem;
+}
+
+.email-preview .email-header {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: #fff;
+}
+
+.email-preview .email-header img {
+  max-height: 40px;
+  margin: 0 auto .5rem;
+  display: block;
+}
+
+.email-preview .email-header .company {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.email-preview .email-header .tag {
+  font-size: .75rem;
+  opacity: .85;
+  margin-top: .25rem;
+}
+
+.email-preview .email-body {
+  padding: 1.25rem 1rem;
+  background: #fff;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.email-preview .email-box {
+  background: #f8fafc;
+  border-left: 4px solid #10b981;
+  padding: .65rem .85rem;
+  margin-top: .75rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.email-preview .email-footer {
+  background: #f9fafb;
+  border-top: 1px solid var(--border-color);
+  padding: .75rem 1rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: .75rem;
+}

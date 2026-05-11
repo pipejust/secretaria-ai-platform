@@ -22,17 +22,30 @@
     border: 1px solid #e1e8ed;
   }
   .header {
-    background: linear-gradient(135deg, #111827 0%, #374151 100%);
+    background: linear-gradient(135deg, {{ brand.primary_color | default('#4F46E5') }} 0%, {{ brand.secondary_color | default('#06B6D4') }} 100%);
     padding: 35px 40px;
     text-align: center;
     color: white;
   }
+  .header img.logo {
+    max-height: 56px;
+    max-width: 220px;
+    margin: 0 auto 12px;
+    display: block;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
+  }
   .header h1 {
     margin: 0;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 700;
-    letter-spacing: -0.5px;
-    text-transform: uppercase;
+    letter-spacing: -0.3px;
+  }
+  .header .tagline {
+    margin: 6px 0 0 0;
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.85;
+    letter-spacing: 0.2px;
   }
   .content {
     padding: 45px 40px;
@@ -54,7 +67,7 @@
   }
   .box {
     background-color: #f8fafc;
-    border-left: 5px solid #10b981;
+    border-left: 5px solid {{ brand.accent_color | default('#10b981') }};
     padding: 25px;
     margin-bottom: 30px;
     border-radius: 0 12px 12px 0;
@@ -82,24 +95,51 @@
     line-height: 1.5;
   }
   .footer a {
-    color: #374151;
+    color: {{ brand.primary_color | default('#4F46E5') }};
     text-decoration: underline;
+  }
+  .footer .meta {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #9ca3af;
   }
 </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Notiva</h1>
+      {% if brand and brand.logo_data_url %}
+        <img class="logo" src="{{ brand.logo_data_url }}" alt="{{ brand.company_name | default('Acten') }}">
+      {% endif %}
+      <h1>{{ brand.company_name | default('Acten') }}</h1>
+      {% if brand and brand.company_tagline %}
+        <p class="tagline">{{ brand.company_tagline }}</p>
+      {% endif %}
     </div>
-    
+
     <div class="content">
       {% block content %}{% endblock %}
     </div>
-    
+
     <div class="footer">
-      <p>&copy; {{ current_year }} Notiva Platform. Todos los derechos reservados.</p>
-      <p>Has recibido este correo porque estás registrado o fuiste mencionado en un acta de reunión.</p>
+      <p>
+        &copy; {{ current_year }} {{ brand.company_name | default('Acten') }}.
+        Todos los derechos reservados.
+      </p>
+      {% if brand and (brand.company_email or brand.company_website or brand.company_phone or brand.company_address) %}
+      <p class="meta">
+        {% if brand.company_address %}{{ brand.company_address }}{% if brand.company_phone or brand.company_email %} · {% endif %}{% endif %}
+        {% if brand.company_phone %}{{ brand.company_phone }}{% if brand.company_email %} · {% endif %}{% endif %}
+        {% if brand.company_email %}<a href="mailto:{{ brand.company_email }}">{{ brand.company_email }}</a>{% endif %}
+        {% if brand.company_website %}
+          <br><a href="{{ brand.company_website }}">{{ brand.company_website }}</a>
+        {% endif %}
+      </p>
+      {% endif %}
+      <p class="meta">
+        Enviado por <strong>{{ brand.platform_name | default('Acten') }}</strong> ·
+        Has recibido este correo porque estás registrado o fuiste mencionado en un acta de reunión.
+      </p>
     </div>
   </div>
 </body>

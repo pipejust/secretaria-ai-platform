@@ -4,6 +4,44 @@
     justify-content: center;
     min-height: 100vh;
     width: 100%;
+    /* Acento sutil con la marca cliente — el resto del card sigue siendo blanco. */
+    background:
+        radial-gradient(ellipse at top right, rgba(79, 70, 229, 0.08), transparent 50%),
+        radial-gradient(ellipse at bottom left, rgba(6, 182, 212, 0.06), transparent 50%),
+        var(--bg-main);
+}
+
+.logo {
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.logo h2 {
+    font-size: 1.75rem;
+    color: var(--text-main);
+    margin-bottom: 0.25rem;
+}
+
+.logo p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.logo .company-logo {
+    max-height: 60px;
+    max-width: 200px;
+    margin: 0 auto 1rem;
+    display: block;
+}
+
+.logo .platform-tag {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
 }
 
 .login-card {

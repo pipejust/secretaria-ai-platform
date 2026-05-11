@@ -5,9 +5,13 @@
     <!-- Sidebar -->
     <aside class="sidebar" [class.collapsed]="isCollapsed" [class.mobile-open]="isMobileOpen">
         <div class="sidebar-header">
-            <a routerLink="/admin/dashboard" class="logo-area" style="text-decoration:none; color:inherit; cursor:pointer;" title="Ir al inicio">
-                <h2 *ngIf="!isCollapsed">Notiva</h2>
-                <h2 *ngIf="isCollapsed" class="logo-collapsed">N</h2>
+            <a routerLink="/admin/dashboard" class="logo-area" style="text-decoration:none; color:inherit; cursor:pointer; display:flex; align-items:center; gap:.5rem;" title="Ir al inicio">
+                <img *ngIf="branding.hasLogo() && !isCollapsed"
+                     [src]="branding.logoUrl()"
+                     [alt]="branding.companyName()"
+                     style="max-height:36px; max-width:140px;" />
+                <h2 *ngIf="!isCollapsed && !branding.hasLogo()">{{ branding.companyName() }}</h2>
+                <h2 *ngIf="isCollapsed" class="logo-collapsed">{{ (branding.companyName() || 'A').charAt(0) }}</h2>
             </a>
         </div>
 
@@ -52,14 +56,14 @@
                     </a>
                 </li>
                 <li>
-                    <a routerLink="/admin/ask" routerLinkActive="active" title="Pregúntale a Notiva sobre tus actas (RAG)">
+                    <a routerLink="/admin/ask" routerLinkActive="active" title="Pregúntale a la IA sobre tus actas (RAG)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                         </svg>
-                        <span class="nav-text" *ngIf="!isCollapsed">Ask Notiva</span>
+                        <span class="nav-text" *ngIf="!isCollapsed">Ask Acten</span>
                     </a>
                 </li>
                 <li>
@@ -115,6 +119,19 @@
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                         </svg>
                         <span class="nav-text" *ngIf="!isCollapsed">Roles</span>
+                    </a>
+                </li>
+                <li *ngIf="isAdmin">
+                    <a routerLink="/admin/branding" routerLinkActive="active" title="Personaliza la marca: logo, colores, datos de tu empresa">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="13.5" cy="6.5" r="1.5"></circle>
+                            <circle cx="17.5" cy="10.5" r="1.5"></circle>
+                            <circle cx="8.5" cy="7.5" r="1.5"></circle>
+                            <circle cx="6.5" cy="12.5" r="1.5"></circle>
+                            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+                        </svg>
+                        <span class="nav-text" *ngIf="!isCollapsed">Marca / Branding</span>
                     </a>
                 </li>
                 <li *ngIf="isAdmin">

@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { BrandingService } from '../../services/branding.service';
 
 @Component({
     selector: 'app-login',
@@ -17,6 +18,9 @@ export class LoginComponent implements OnInit {
     showPassword = false;
     isLoading = false;
     errorMessage = '';
+
+    /** Marca white-label expuesta al template (logo, nombre, colores). */
+    readonly branding = inject(BrandingService);
 
     constructor(private authService: AuthService, private router: Router) { }
 

@@ -15,8 +15,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Notiva Backend",
-    description="Orquestador principal para procesamiento de actas y tareas",
+    title="Acten Backend",
+    description="Acten — plataforma white-label de actas y tareas. Procesa reuniones, extrae decisiones/tareas y dispara correos/integraciones con la marca de cada cliente.",
     version="1.0.0"
 )
 
@@ -131,8 +131,10 @@ from routers import analytics  # Sprint 10
 app.include_router(analytics.router)
 from routers import api_keys  # Sprint 11
 app.include_router(api_keys.router)
+from routers import branding  # White-label
+app.include_router(branding.router)
 
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "Notiva Backend está corriendo"}
+    return {"status": "ok", "message": "Acten Backend está corriendo"}

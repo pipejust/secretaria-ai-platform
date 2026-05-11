@@ -4,6 +4,7 @@ import json
 from jinja2 import Environment, FileSystemLoader
 from sqlmodel import Session, select
 from models import IntegrationSetting
+from services import branding_service
 
 # Resend se configura SIEMPRE desde /admin/settings (UI) →
 # IntegrationSetting('smtp').config_json.{apiKey, senderEmail}.
@@ -50,6 +51,9 @@ class EmailService:
         
         self.api_key = None
         self.from_email = DEFAULT_FROM_EMAIL
+        # Branding (white-label) — siempre presente en el contexto de Jinja
+        # incluso si la DB no está disponible.
+        self.branding = dict(branding_service.DEFAULT_BRANDING)
 
         if db:
             setting = db.exec(select(IntegrationSetting).where(IntegrationSetting.provider_name == 'smtp')).first()
@@ -62,6 +66,11 @@ class EmailService:
                         self.from_email = config.get("senderEmail")
                 except Exception as e:
                     print(f"Error parsing local SMTP settings: {e}")
+            # Cargamos branding también — los emails llevan la marca del cliente.
+            try:
+                self.branding = branding_service.get_branding(db)
+            except Exception as exc:
+                print(f"Error cargando branding para email: {exc}")
 
         if self.api_key:
             resend.api_key = self.api_key
@@ -122,7 +131,8 @@ class EmailService:
             decisions=decisions,
             risks=risks,
             agreements=agreements,
-            current_year=2026
+            current_year=2026,
+            brand=self.branding,
         )
         await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content, attachments=attachments)
 
@@ -161,29 +171,36 @@ class EmailService:
             decisions=decisions,
             risks=risks,
             agreements=agreements,
-            current_year=2026
+            current_year=2026,
+            brand=self.branding,
         )
         await self._send_html_email(to_email, f"Tienes {task_count} nueva{plural} tarea{plural} asignada{plural} en: {project_name}", html_content, attachments=attachments)
-        
+
     async def send_welcome_email(self, to_email: str, user_name: str, role: str, login_url: str = ""):
         template = self.jinja_env.get_template('email_welcome.html')
-        frontend_url = getattr(settings, "frontend_url", "http://localhost:4200").rstrip('/')
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip('/')
         html_content = template.render(
             user_name=user_name,
             email=to_email,
             role=role,
             login_url=login_url or f"{frontend_url}/login",
-            current_year=2026
+            current_year=2026,
+            brand=self.branding,
         )
-        await self._send_html_email(to_email, f"¡Bienvenido a Notiva!", html_content)
+        company = self.branding.get("company_name") or self.branding.get("platform_name") or "Acten"
+        await self._send_html_email(to_email, f"¡Bienvenido a {company}!", html_content)
 
     async def send_forgot_password_email(self, to_email: str, user_name: str, reset_token: str):
-        frontend_url = getattr(settings, "frontend_url", "http://localhost:4200").rstrip('/')
-        # En el front-end crearemos la ruta /reset-password
+        # Bug histórico: faltaba cargar el template — el render usaba `template`
+        # del scope previo (NameError en el primer envío). Lo cargamos aquí.
+        template = self.jinja_env.get_template('email_forgot_password.html')
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip('/')
         reset_url = f"{frontend_url}/reset-password?token={reset_token}"
         html_content = template.render(
             user_name=user_name,
             reset_url=reset_url,
-            current_year=2026
+            current_year=2026,
+            brand=self.branding,
         )
-        await self._send_html_email(to_email, f"Restablecer Contraseña - Notiva", html_content)
+        company = self.branding.get("company_name") or self.branding.get("platform_name") or "Acten"
+        await self._send_html_email(to_email, f"Restablecer Contraseña - {company}", html_content)

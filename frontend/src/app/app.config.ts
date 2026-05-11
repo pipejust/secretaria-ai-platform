@@ -1,5 +1,7 @@
 import {
   ApplicationConfig,
+  inject,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
@@ -7,6 +9,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth-interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor';
+import { BrandingService } from './services/branding.service';
 
 import { routes } from './app.routes';
 
@@ -21,6 +24,10 @@ import { routes } from './app.routes';
  * Activamos Zone.js + `eventCoalescing` para que TODA la app reaccione
  * automáticamente a mutaciones en callbacks async, evitando tener que
  * inyectar `ChangeDetectorRef` en cada componente.
+ *
+ * White-label: cargamos la marca antes de que arranque cualquier ruta para
+ * evitar el flash de "Acten" → marca cliente y para tener los colores
+ * aplicados desde la primera pintura.
  */
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -28,5 +35,6 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    provideAppInitializer(() => inject(BrandingService).loadFromServer()),
   ],
 };

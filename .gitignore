@@ -37,6 +37,8 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 supabase_backup.sql
+*.dump
+.db-migrations/
 
 # Logs
 *.log

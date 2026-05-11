@@ -1,0 +1,122 @@
+<div class="branding-page">
+  <header class="page-head">
+    <div>
+      <h2>Marca / Branding</h2>
+      <p class="muted">
+        Personaliza la apariencia de la plataforma para tu empresa. La plataforma siempre se llama
+        <strong>{{ branding.platformName() }}</strong>, pero el nombre, logo, colores y datos de contacto
+        que ven tus usuarios y reciben los correos los defines aquí.
+      </p>
+    </div>
+  </header>
+
+  <div *ngIf="successMsg" class="alert alert-ok">{{ successMsg }}</div>
+  <div *ngIf="errorMsg" class="alert alert-err">{{ errorMsg }}</div>
+
+  <div class="brand-grid">
+    <!-- ============ COLUMN 1: form ============ -->
+    <section class="panel">
+      <h3>Identidad de la empresa</h3>
+
+      <div class="form-row">
+        <label>Nombre de la empresa</label>
+        <input type="text" [(ngModel)]="form.company_name" placeholder="Acten" maxlength="120" />
+      </div>
+
+      <div class="form-row">
+        <label>Tagline / lema (opcional)</label>
+        <input type="text" [(ngModel)]="form.company_tagline" placeholder="Inteligencia para tus reuniones" maxlength="240" />
+      </div>
+
+      <div class="form-row">
+        <label>Email corporativo</label>
+        <input type="email" [(ngModel)]="form.company_email" placeholder="contacto@tuempresa.com" />
+      </div>
+
+      <div class="form-row">
+        <label>Sitio web</label>
+        <input type="url" [(ngModel)]="form.company_website" placeholder="https://tuempresa.com" />
+      </div>
+
+      <div class="form-row">
+        <label>Teléfono</label>
+        <input type="tel" [(ngModel)]="form.company_phone" placeholder="+57 300 123 4567" />
+      </div>
+
+      <div class="form-row">
+        <label>Dirección</label>
+        <textarea [(ngModel)]="form.company_address" rows="2" placeholder="Calle 123 #45-67, Bogotá"></textarea>
+      </div>
+
+      <h3 class="mt-lg">Tema visual</h3>
+
+      <div class="form-row colors">
+        <div>
+          <label>Primario</label>
+          <input type="color" [(ngModel)]="form.primary_color" />
+          <input type="text" [(ngModel)]="form.primary_color" pattern="#[0-9A-Fa-f]{6}" />
+        </div>
+        <div>
+          <label>Secundario</label>
+          <input type="color" [(ngModel)]="form.secondary_color" />
+          <input type="text" [(ngModel)]="form.secondary_color" pattern="#[0-9A-Fa-f]{6}" />
+        </div>
+        <div>
+          <label>Acento</label>
+          <input type="color" [(ngModel)]="form.accent_color" />
+          <input type="text" [(ngModel)]="form.accent_color" pattern="#[0-9A-Fa-f]{6}" />
+        </div>
+      </div>
+
+      <button class="btn btn-primary" (click)="save()" [disabled]="isSaving">
+        <span *ngIf="!isSaving">Guardar cambios</span>
+        <span *ngIf="isSaving">Guardando…</span>
+      </button>
+    </section>
+
+    <!-- ============ COLUMN 2: logo + preview ============ -->
+    <section class="panel">
+      <h3>Logo</h3>
+      <p class="muted small">PNG/SVG/WEBP. Máx 2 MB. Recomendado: ratio 4:1, fondo transparente.</p>
+
+      <div class="logo-preview" [style.background]="'linear-gradient(135deg,' + form.primary_color + ',' + form.secondary_color + ')'">
+        <img *ngIf="form.logo_data_url" [src]="form.logo_data_url" [alt]="form.company_name" />
+        <div *ngIf="!form.logo_data_url" class="logo-placeholder">
+          {{ form.company_name || 'Acten' }}
+        </div>
+      </div>
+
+      <div class="logo-actions">
+        <label class="btn btn-primary file-btn">
+          <span *ngIf="!isUploading">{{ form.logo_data_url ? 'Reemplazar logo' : 'Subir logo' }}</span>
+          <span *ngIf="isUploading">Subiendo…</span>
+          <input type="file" hidden accept="image/png,image/jpeg,image/svg+xml,image/webp" (change)="onLogoSelected($event)" />
+        </label>
+        <button class="btn btn-icon-danger" (click)="removeLogo()" *ngIf="form.logo_data_url" [disabled]="isUploading">
+          Quitar logo
+        </button>
+      </div>
+
+      <h3 class="mt-lg">Vista previa del email</h3>
+      <div class="email-preview">
+        <div class="email-header"
+             [style.background]="'linear-gradient(135deg,' + form.primary_color + ',' + form.secondary_color + ')'">
+          <img *ngIf="form.logo_data_url" [src]="form.logo_data_url" [alt]="form.company_name" />
+          <div class="company">{{ form.company_name || 'Acten' }}</div>
+          <div class="tag" *ngIf="form.company_tagline">{{ form.company_tagline }}</div>
+        </div>
+        <div class="email-body">
+          <p>Hola Juan,</p>
+          <p>Te asignamos una nueva tarea en el acta del proyecto <strong>X</strong>. Podés verla y editarla en
+            <a href="#" [style.color]="form.primary_color">la plataforma</a>.</p>
+          <div class="email-box" [style.borderLeftColor]="form.accent_color">
+            <strong>Tarea:</strong> Revisar el documento de arquitectura
+          </div>
+        </div>
+        <div class="email-footer">
+          &copy; {{ form.company_name || 'Acten' }} · Enviado por <strong>{{ branding.platformName() }}</strong>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

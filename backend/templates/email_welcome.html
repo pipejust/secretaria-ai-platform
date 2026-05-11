@@ -3,7 +3,7 @@
 {% block content %}
   <h2>¡Bienvenido/a, {{ user_name }}! 👋</h2>
   
-  <p>Estamos muy felices de que te unas a la Plataforma Notiva. Hemos configurado todo para que tu cuenta esté lista para organizar tus reuniones y proyectos inteligentemente.</p>
+  <p>Estamos muy felices de que te unas a la plataforma {{ brand.platform_name | default("Acten") }}. Hemos configurado todo para que tu cuenta esté lista para organizar tus reuniones y proyectos inteligentemente.</p>
   
   <div class="box">
     <h3 class="box-title">Tus credenciales de acceso:</h3>
@@ -16,7 +16,7 @@
   <p>Para comenzar a utilizar la plataforma, haz clic en el botón de abajo e inicia sesión con la contraseña que registraste o que tu administrador te proporcionó.</p>
 
   <div class="button-container">
-    <a href="{{ login_url }}" class="button">Ir a Notiva</a>
+    <a href="{{ login_url }}" class="button">Ir a {{ brand.platform_name | default("Acten") }}</a>
   </div>
 
   <p>Si tienes cualquier problema, no dudes en contactar a soporte.</p>

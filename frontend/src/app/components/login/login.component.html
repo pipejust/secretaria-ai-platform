@@ -1,7 +1,14 @@
 <div class="login-page fade-in">
     <div class="login-card glass-panel">
             <div class="logo">
-                <h2>Notiva</h2>
+                <img *ngIf="branding.hasLogo()"
+                     [src]="branding.logoUrl()"
+                     [alt]="branding.companyName()"
+                     class="company-logo" />
+                <h2>{{ branding.companyName() }}</h2>
+                <small class="platform-tag" *ngIf="branding.companyName() !== branding.platformName()">
+                    Powered by {{ branding.platformName() }}
+                </small>
                 <p>Inicia sesión para gestionar actas, tareas y configuraciones.</p>
             </div>
 

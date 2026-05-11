@@ -1,17 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
+  /* === White-label brand vars (BrandingService los sobreescribe en runtime) === */
+  --brand-primary: #4F46E5;
+  --brand-secondary: #06B6D4;
+  --brand-accent: #10B981;
+
   --bg-main: #f3f4f6;
   --sidebar-bg: #0b132b;
   --sidebar-hover: #1e293b;
-  --topbar-bg: #3b82f6;
+  /* topbar/accent leen de --brand-primary y se reescriben en runtime
+     desde BrandingService cuando la empresa cliente cambia el color. */
+  --topbar-bg: var(--brand-primary);
+  --accent-color: var(--brand-primary);
+  --accent-hover: #4338CA;
   --panel-bg: #ffffff;
   --text-main: #1f2937;
   --text-muted: #6b7280;
   --text-sidebar: #9ca3af;
   --text-sidebar-active: #ffffff;
-  --accent-color: #3b82f6;
-  --accent-hover: #2563eb;
   --success-color: #10b981;
   --danger-color: #ef4444;
   --border-color: #e5e7eb;

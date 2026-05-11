@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
+import { BrandingService } from '../../services/branding.service';
 
 interface CurrentUser {
     email?: string;
@@ -24,6 +25,9 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     isCollapsed = false;
     isMobileOpen = false;
     isProfileDropdownOpen = false;
+
+    /** Marca white-label expuesta al template (logo, nombre, colores). */
+    readonly branding = inject(BrandingService);
 
     private readonly destroy$ = new Subject<void>();
 
