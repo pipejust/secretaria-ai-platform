@@ -778,11 +778,35 @@
 
     /* 6. Layout adjustments */
     .topbar {
-        padding: 0 1rem;
+        padding: 0 var(--space-12);
+        gap: var(--space-8);
     }
 
     .content-area {
         padding: 1rem;
+    }
+
+    /* Compactamos la topbar en mobile: ocultamos search central y
+       breadcrumb largo. La CTA pasa a tamaño compacto. */
+    .topbar-search { display: none; }
+    .topbar-titles { display: none; }      /* breadcrumb redundante en mobile */
+    .topbar-center { justify-content: flex-end; }
+    .topbar-cta {
+        height: 34px;
+        padding: 0 12px;
+        font-size: var(--text-13);
+        gap: 6px;
+    }
+    .topbar-cta .topbar-cta-label,
+    .topbar-cta span { font-size: var(--text-13); }
+    .user-details { display: none; }       /* solo avatar visible en mobile */
+    .btn-icon-soft { width: 36px; height: 36px; }
+    /* Asegurar que el badge "2" del bell quede dentro de su botón */
+    .btn-icon-soft.has-badge { overflow: visible; }
+    .topbar-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
     }
 }
 /* ============================================================================
