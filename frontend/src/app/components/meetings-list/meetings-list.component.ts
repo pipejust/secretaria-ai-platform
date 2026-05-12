@@ -75,6 +75,11 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     filterDate = '';
     filterSource = '';
 
+    /** Visibilidad del bloque de filtros (Status / Equipo / Fecha / Origen).
+     *  El botón "Filtros" lo hace toggle. Por defecto OCULTO para que la
+     *  vista arranque limpia y el user los expanda si los necesita. */
+    showFilters = false;
+
     currentPage: number = 1;
     limit: number = 10;
     totalPages: number = 1;
@@ -284,12 +289,26 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
 
     onSearchInput(): void { this.cdr.detectChanges(); }
 
-    /** Resetea los filtros visuales adicionales que aún no llaman al
-     *  backend pero permiten al user "abrir/cerrar" los selectores. */
-    clearVisualFilters(): void {
-        this.filterTeam = '';
-        this.filterDate = '';
-        this.filterSource = '';
+    /** Toggle del panel de filtros. Si se cierra, limpia los selectores
+     *  visuales para no dejar filtros aplicados "invisibles". El filtro
+     *  de estado y proyecto SÍ se conservan porque viven en el header
+     *  tabular original (no en este panel). */
+    toggleFilters(): void {
+        this.showFilters = !this.showFilters;
+        if (!this.showFilters) {
+            // Cuando cerrás los filtros, los reseteamos para evitar el caso
+            // "filtros aplicados pero no visibles". Si los querés mantener,
+            // dejá el panel abierto.
+            this.filterDate = '';
+            this.filterSource = '';
+        }
+    }
+
+    /** Cuántos filtros del panel están activos. Se muestra como contador
+     *  en el botón "Filtros (N)" para que el user sepa que hay filtros
+     *  aplicados aunque el panel esté cerrado. */
+    get activeFiltersCount(): number {
+        return [this.filterDate, this.filterSource].filter(Boolean).length;
     }
 
     /** Resultado final de la tabla: aplica filtros y sub-tab del header. */

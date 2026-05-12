@@ -137,14 +137,15 @@
 .metric-foot-up svg { flex-shrink: 0; }
 
 /* ============================================================
- *  FILTROS HORIZONTALES
+ *  SEARCH ROW (search + botón Filtros toggle, siempre visible)
  * ============================================================ */
-.mt-filters {
+.mt-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr)) auto;
-    gap: 10px;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-12);
+    align-items: center;
 }
+
 .filter-search {
     position: relative;
     display: flex;
@@ -152,26 +153,51 @@
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    height: 40px;
-    padding: 0 var(--space-12);
+    height: 42px;
+    padding: 0 var(--space-14, 14px);
+    gap: var(--space-10, 10px);
     transition: var(--transition);
+    min-width: 0;
 }
+.filter-search:hover { border-color: var(--color-border-strong); }
 .filter-search:focus-within {
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px rgba(0, 34, 115, 0.10);
 }
-.filter-search svg { color: var(--color-fg-muted); flex-shrink: 0; }
+.filter-search > svg {
+    color: var(--color-fg-soft);
+    flex-shrink: 0;
+}
 .filter-search input {
     flex: 1;
+    min-width: 0;
     border: none;
     outline: none;
     background: transparent;
-    margin-left: var(--space-8);
+    padding: 0;
+    line-height: 1;
     font-family: var(--font-sans);
-    font-size: var(--text-13);
+    font-size: var(--text-14);
     color: var(--color-fg-default);
+    height: 100%;
 }
-.filter-search input::placeholder { color: var(--color-fg-soft); }
+.filter-search input::placeholder { color: var(--color-fg-soft); opacity: 1; }
+
+/* ============================================================
+ *  PANEL DE FILTROS EXPANDIBLE (solo cuando showFilters)
+ * ============================================================ */
+.mt-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+    /* Slide-in suave para que el toggle no sea jarring */
+    animation: mt-filters-slide 180ms var(--ease-out);
+}
+@keyframes mt-filters-slide {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
 
 .filter-group {
     display: flex;
@@ -219,21 +245,63 @@
 .filters-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-6);
-    height: 40px;
-    padding: 0 14px;
+    gap: var(--space-8);
+    height: 42px;
+    padding: 0 var(--space-14, 14px);
     background: var(--color-bg-panel);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    color: var(--color-accent);
+    color: var(--color-fg-default);
     font-family: var(--font-sans);
     font-size: var(--text-13);
     font-weight: var(--fw-semibold);
     cursor: pointer;
     transition: var(--transition);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
-.filters-btn:hover { background: rgba(0, 34, 115, 0.04); }
-.filters-btn svg { flex-shrink: 0; }
+.filters-btn > svg:first-of-type { color: var(--color-fg-muted); flex-shrink: 0; }
+.filters-btn:hover {
+    background: var(--brand-cream-50);
+    border-color: var(--color-border-strong);
+}
+/* Estado "panel abierto": resalto el botón en accent */
+.filters-btn.is-open {
+    background: rgba(0, 34, 115, 0.06);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+.filters-btn.is-open > svg:first-of-type { color: var(--color-accent); }
+/* Estado "filtros aplicados": acento visible aunque el panel esté cerrado */
+.filters-btn.has-active {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+/* Badge con número de filtros activos */
+.filters-btn-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    background: var(--color-accent);
+    color: #fff;
+    border-radius: var(--radius-full);
+    font-size: var(--text-11);
+    font-weight: var(--fw-bold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+/* Chevron indicador de estado abierto/cerrado */
+.filters-btn-chevron {
+    color: var(--color-fg-muted);
+    flex-shrink: 0;
+    transition: transform 180ms var(--ease-out);
+}
+.filters-btn-chevron.flipped { transform: rotate(180deg); color: var(--color-accent); }
 
 /* ============================================================
  *  TABS (All / Analyzed / Drafts / Archived)
@@ -1019,8 +1087,6 @@
         grid-template-columns: 1fr 1fr;
         gap: var(--space-10, 10px);
     }
-    .mt-filters .filter-search { grid-column: span 2; }
-    .filters-btn { grid-column: span 2; justify-content: center; }
 }
 
 /* Mobile: las filas pasan de tabla a CARD apilable. Layout en 4 zonas:
@@ -1086,30 +1152,31 @@
     .pg-center { flex-wrap: wrap; justify-content: center; }
 }
 
-/* Smartphone pequeño: métricas 1 columna, filtros también */
+/* Smartphone pequeño: métricas 1 columna, filtros también, PERO la card
+   mantiene el grid de 2 columnas (title+kebab arriba, etc.) que ya
+   establece el breakpoint de 780px. Es solo cuestión de apretar
+   spacing y proporcionar valores compactos. */
 @media (max-width: 560px) {
     .mt-metrics { grid-template-columns: 1fr; }
-    .mt-filters {
-        grid-template-columns: 1fr;
-    }
-    .mt-filters .filter-search { grid-column: span 1; }
-    .filters-btn { grid-column: span 1; }
+    .mt-filters { grid-template-columns: 1fr; }
+    /* En mobile, el botón "Filtros" queda más compacto pero sin perder
+       el badge ni el chevron. */
+    .mt-search-row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-8); }
+    .filters-btn { padding: 0 12px; height: 42px; }
+    /* Label "Filtros" se mantiene visible; quitamos el chevron en muy
+       pequeño para ganar espacio. */
+    .filters-btn-chevron { display: none; }
 
-    /* En pantallas muy chicas, el row collapse aún más:
-       todo en una sola columna, alineado izquierda. */
+    /* Card más compacta: misma estructura del breakpoint anterior pero
+       con padding/gap menores. NO revertimos a 1 col porque eso dejaba
+       todo apilado en líneas sueltas — feo. */
     .mt-tr {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "title"
-            "date"
-            "participants"
-            "duration"
-            "source"
-            "status"
-            "actions";
-        gap: 8px;
+        padding: var(--space-12) var(--space-14, 14px);
+        gap: 8px var(--space-10, 10px);
     }
-    .cell-actions, .cell-duration, .cell-status { justify-self: start; }
     .mt-cta { width: 100%; justify-content: center; }
     .mt-header-left { flex: 1 1 100%; }
+
+    /* Truncamos textos largos para evitar overflow horizontal */
+    .row-title, .row-subtitle, .cell-date-main { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
