@@ -236,11 +236,13 @@
 }
 .acn-chart-line {
     fill: none;
-    stroke: var(--acn-blue);
     stroke-width: 2.2;
     stroke-linejoin: round;
     stroke-linecap: round;
 }
+.acn-chart-line-primary   { stroke: var(--acn-blue); }
+.acn-chart-line-secondary { stroke: var(--acn-green); }
+
 .acn-chart-points circle {
     fill: var(--acn-blue);
     stroke: #FFFFFF;
@@ -248,8 +250,48 @@
     transition: r 120ms ease;
 }
 .acn-chart-points circle.is-hovered { stroke-width: 2.5; }
+.acn-chart-points-secondary circle { fill: var(--acn-green); }
 .acn-chart-guide { stroke: var(--acn-blue); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.4; }
 .acn-chart-hotspots rect { fill: transparent; cursor: pointer; }
+
+/* Leyenda interactiva al lado del select del header de Actividad. */
+.acn-card-head-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.acn-chart-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.acn-chart-legend .legend-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--acn-border);
+    color: var(--acn-text);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 120ms ease, background 120ms ease;
+}
+.acn-chart-legend .legend-toggle.is-off {
+    opacity: 0.4;
+    background: var(--acn-border-soft);
+}
+.acn-chart-legend .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.acn-chart-legend .legend-meetings { background: var(--acn-blue); }
+.acn-chart-legend .legend-analyzed { background: var(--acn-green); }
 
 .acn-chart-tooltip {
     position: absolute;
@@ -265,7 +307,9 @@
 }
 .acn-chart-tooltip .tt-date { margin: 0 0 4px 0; opacity: 0.7; }
 .acn-chart-tooltip .tt-row { margin: 0; display: flex; align-items: center; gap: 6px; }
-.acn-chart-tooltip .tt-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--acn-blue); }
+.acn-chart-tooltip .tt-dot { width: 8px; height: 8px; border-radius: 50%; }
+.acn-chart-tooltip .tt-dot-primary   { background: var(--acn-blue); }
+.acn-chart-tooltip .tt-dot-secondary { background: var(--acn-green); }
 .acn-chart-tooltip .tt-value { margin-left: auto; font-weight: 600; }
 
 .acn-activity-stats {

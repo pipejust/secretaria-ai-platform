@@ -132,11 +132,11 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
         return name.substring(0, 2).toUpperCase();
     }
 
-    /** "May 12, 2026" — etiqueta que renderiza el date selector del topbar. */
+    /** "12 may 2026" — etiqueta que renderiza el date selector del topbar. */
     get todayLabel(): string {
         const d = new Date();
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     }
 
     /** Año actual para el copy del footer. */

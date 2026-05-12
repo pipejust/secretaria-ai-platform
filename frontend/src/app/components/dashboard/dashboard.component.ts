@@ -396,21 +396,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // OVERVIEW — propiedades derivadas para los widgets del handoff
     // ========================================================================
 
-    /** Saludo según hora local. Devuelve la versión en inglés que pide
-     *  el mockup ("Good morning, …"). El idioma de UI es el del handoff;
-     *  microcopy interno (toasts, validations) sigue en español. */
+    /** Saludo según hora local. UI completa en español. */
     get greeting(): string {
         const h = new Date().getHours();
-        if (h < 12) return 'Good morning';
-        if (h < 19) return 'Good afternoon';
-        return 'Good evening';
-    }
-
-    /** Header date: "May 16, 2024" */
-    get todayLabelEn(): string {
-        const d = new Date();
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        if (h < 12) return 'Buenos días';
+        if (h < 19) return 'Buenas tardes';
+        return 'Buenas noches';
     }
 
     get userFirstName(): string {
@@ -482,10 +473,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const prevActions = prev.reduce((acc) => acc, Math.max(0, actionItems - 5));
 
         return [
-            { key: 'meetings',     label: 'Meetings',     value: meetings,    trend: trend(meetings, prevMeetings),   tone: 'navy',    icon: 'meetings',  sparkline: this._sparkSessionsCount() },
-            { key: 'action_items', label: 'Action Items', value: actionItems, trend: trend(actionItems, prevActions), tone: 'success', icon: 'tasks',     sparkline: this._sparkActionItems() },
-            { key: 'decisions',    label: 'Decisions',    value: decisions,   trend: trend(decisions, prevDecisions), tone: 'success', icon: 'decisions', sparkline: this._sparkDecisions() },
-            { key: 'risks',        label: 'Risks',        value: risks,       trend: trend(risks, prevRisks),         tone: 'warning', icon: 'risks',     sparkline: this._sparkRisks() },
+            { key: 'meetings',     label: 'Reuniones',  value: meetings,    trend: trend(meetings, prevMeetings),   tone: 'navy',    icon: 'meetings',  sparkline: this._sparkSessionsCount() },
+            { key: 'action_items', label: 'Tareas',     value: actionItems, trend: trend(actionItems, prevActions), tone: 'success', icon: 'tasks',     sparkline: this._sparkActionItems() },
+            { key: 'decisions',    label: 'Decisiones', value: decisions,   trend: trend(decisions, prevDecisions), tone: 'success', icon: 'decisions', sparkline: this._sparkDecisions() },
+            { key: 'risks',        label: 'Riesgos',    value: risks,       trend: trend(risks, prevRisks),         tone: 'warning', icon: 'risks',     sparkline: this._sparkRisks() },
         ];
     }
 
@@ -959,7 +950,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
             return {
                 id: m.id,
-                title: m.title || 'Untitled meeting',
+                title: m.title || 'Sin título',
                 date: this.formatTableDate(m.date),
                 participants: visible,
                 extra,
@@ -969,12 +960,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         });
     }
 
-    /** "May 16, 2024" para la columna Date de la tabla. */
+    /** "16 may 2024" para la columna Fecha de la tabla. */
     formatTableDate(v: any): string {
         const d = this._toDate(v);
         if (!d) return '';
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     }
 
     // ========================================================================
@@ -1011,7 +1002,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     : 'Low';
                 out.push({
                     id: s.id,
-                    sessionTitle: s.title || 'Untitled',
+                    sessionTitle: s.title || 'Sin título',
                     sessionDate: this.formatTableDate(s.date),
                     text: line.slice(0, 110),
                     impact,
@@ -1037,40 +1028,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
             const accents: Array<'success' | 'info' | 'warning'> = ['success', 'info', 'warning'];
             return {
                 id: it.id,
-                title: it.title || 'Untitled task',
-                sessionTitle: it?.session_title || it?.session?.title || 'Untitled meeting',
+                title: it.title || 'Tarea sin título',
+                sessionTitle: it?.session_title || it?.session?.title || 'Reunión sin título',
                 sessionDate: this.formatTableDate(it?.session_date || it?.session?.date),
                 owner: {
                     initials: this.initials(it.owner_name || 'NN'),
                     tone: idx % 5,
                 },
-                dueLabel: this.formatTableDate(it.due_date) || 'No due date',
+                dueLabel: this.formatTableDate(it.due_date) || 'Sin fecha',
                 accent: accents[idx % 3],
             };
         });
     }
 
-    // ========================================================================
-    // QUICK ACTIONS — versión 6 botones del mockup, en inglés.
-    // ========================================================================
-
-    /** Mismas acciones que ya existían pero con copy en inglés (mockup). */
-    get quickActionsEn() {
-        // Refiltra por permiso, igual que `quickActions`, pero re-rotula.
-        const labels: Record<string, { label: string; sub: string }> = {
-            'new-meeting': { label: 'Schedule Meeting', sub: 'Plan and invite participants' },
-            upload:        { label: 'Upload Transcript', sub: 'Analyze past meetings' },
-            projects:      { label: 'Create Project',    sub: 'Organize work and teams' },
-            ask:           { label: 'Ask Acten',         sub: 'Get AI-powered insights' },
-            calendar:      { label: 'Add Task',          sub: 'Track action items' },
-            reports:       { label: 'View Reports',      sub: 'Explore analytics' },
-        };
-        return this.quickActions.map((qa: any) => ({
-            ...qa,
-            label: labels[qa.id]?.label || qa.label,
-            sub: labels[qa.id]?.sub || qa.sub,
-        }));
-    }
 
     /** Top 3 sesiones completadas más recientes para el panel "Recent". */
     get recentMeetings(): any[] {

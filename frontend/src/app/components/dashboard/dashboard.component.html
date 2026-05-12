@@ -11,7 +11,7 @@
     <!-- ============= HERO ============= -->
     <header class="acn-hero">
         <h1 class="acn-greeting">{{ greeting }}, {{ userFirstName }}</h1>
-        <p class="acn-greeting-sub">Here&rsquo;s what&rsquo;s happening across your meetings and projects.</p>
+        <p class="acn-greeting-sub">Esto es lo que está pasando en tus reuniones y proyectos.</p>
     </header>
 
     <!-- ============= KPI TILES ============= -->
@@ -56,7 +56,7 @@
                         </svg>
                         <span *ngIf="k.trend !== 0">{{ k.trend > 0 ? '' : '' }}{{ k.trend | number:'1.0-0' }}%</span>
                         <span *ngIf="k.trend === 0">0%</span>
-                        <span class="trend-suffix">vs last 7 days</span>
+                        <span class="trend-suffix">vs últimos 7 días</span>
                     </span>
                 </div>
                 <svg class="acn-kpi-spark" viewBox="0 0 80 28" preserveAspectRatio="none" aria-hidden="true">
@@ -72,12 +72,34 @@
         <!-- Meeting Activity -->
         <article class="acn-card acn-card-activity">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Meeting Activity (Last 30 Days)</h2>
-                <select class="acn-select" [(ngModel)]="overviewPeriod" (change)="setOverviewPeriod(overviewPeriod)" aria-label="Period">
-                    <option value="7d">Daily</option>
-                    <option value="14d">Weekly</option>
-                    <option value="30d">Monthly</option>
-                </select>
+                <h2 class="acn-card-title">Actividad de Reuniones (Últimos 30 Días)</h2>
+                <div class="acn-card-head-right">
+                    <!-- Leyenda interactiva: click oculta/muestra cada serie.
+                         Permite comparar reuniones recibidas vs procesadas. -->
+                    <div class="acn-chart-legend" role="group" aria-label="Series visibles">
+                        <button type="button" class="legend-toggle"
+                                [class.is-off]="!seriesVisible.meetings"
+                                (click)="toggleSeries('meetings')"
+                                [attr.aria-pressed]="seriesVisible.meetings"
+                                title="Mostrar / ocultar Sesiones">
+                            <span class="legend-dot legend-meetings"></span>
+                            Sesiones
+                        </button>
+                        <button type="button" class="legend-toggle"
+                                [class.is-off]="!seriesVisible.analyzed"
+                                (click)="toggleSeries('analyzed')"
+                                [attr.aria-pressed]="seriesVisible.analyzed"
+                                title="Mostrar / ocultar Procesadas">
+                            <span class="legend-dot legend-analyzed"></span>
+                            Procesadas
+                        </button>
+                    </div>
+                    <select class="acn-select" [(ngModel)]="overviewPeriod" (change)="setOverviewPeriod(overviewPeriod)" aria-label="Período">
+                        <option value="7d">Diario</option>
+                        <option value="14d">Semanal</option>
+                        <option value="30d">Mensual</option>
+                    </select>
+                </div>
             </header>
 
             <div class="acn-chart-wrap">
@@ -109,16 +131,33 @@
                           [attr.x1]="chartHover.x" y1="20"
                           [attr.x2]="chartHover.x" y2="200"/>
 
-                    <path class="acn-chart-area"
-                          [attr.d]="chartAreaPath(activitySeries.meetings, chartYMax)"
-                          fill="url(#meetingsGrad)"/>
-                    <path class="acn-chart-line"
-                          [attr.d]="chartPath(activitySeries.meetings, chartYMax)"/>
+                    <!-- Serie 1 — Sesiones (área + línea sólida azul) -->
+                    <ng-container *ngIf="seriesVisible.meetings">
+                        <path class="acn-chart-area"
+                              [attr.d]="chartAreaPath(activitySeries.meetings, chartYMax)"
+                              fill="url(#meetingsGrad)"/>
+                        <path class="acn-chart-line acn-chart-line-primary"
+                              [attr.d]="chartPath(activitySeries.meetings, chartYMax)"/>
+                    </ng-container>
 
-                    <g class="acn-chart-points">
+                    <!-- Serie 2 — Procesadas (línea punteada verde, comparativa) -->
+                    <path *ngIf="seriesVisible.analyzed"
+                          class="acn-chart-line acn-chart-line-secondary"
+                          [attr.d]="chartPath(activitySeries.analyzed, chartYMax)"
+                          stroke-dasharray="5 4"/>
+
+                    <g class="acn-chart-points" *ngIf="seriesVisible.meetings">
                         <circle *ngFor="let p of chartPoints(activitySeries.meetings, chartYMax); let i = index"
                                 [attr.cx]="p.cx" [attr.cy]="p.cy"
                                 [attr.r]="chartHover && chartHover.index === i ? 5 : 3"
+                                [class.is-hovered]="chartHover && chartHover.index === i"/>
+                    </g>
+
+                    <!-- Puntos de Procesadas — más chicos para no saturar. -->
+                    <g class="acn-chart-points acn-chart-points-secondary" *ngIf="seriesVisible.analyzed">
+                        <circle *ngFor="let p of chartPoints(activitySeries.analyzed, chartYMax); let i = index"
+                                [attr.cx]="p.cx" [attr.cy]="p.cy"
+                                [attr.r]="chartHover && chartHover.index === i ? 4 : 2.5"
                                 [class.is-hovered]="chartHover && chartHover.index === i"/>
                     </g>
 
@@ -138,10 +177,15 @@
 
                 <div class="acn-chart-tooltip" *ngIf="chartHover" [style.left.%]="(chartHover.x / 600) * 100">
                     <p class="tt-date">{{ chartHover.label }}</p>
-                    <p class="tt-row">
-                        <span class="tt-dot"></span>
-                        <span class="tt-label">Meetings</span>
+                    <p class="tt-row" *ngIf="seriesVisible.meetings">
+                        <span class="tt-dot tt-dot-primary"></span>
+                        <span class="tt-label">Sesiones</span>
                         <span class="tt-value">{{ chartHover.meetings }}</span>
+                    </p>
+                    <p class="tt-row" *ngIf="seriesVisible.analyzed">
+                        <span class="tt-dot tt-dot-secondary"></span>
+                        <span class="tt-label">Procesadas</span>
+                        <span class="tt-value">{{ chartHover.analyzed }}</span>
                     </p>
                 </div>
             </div>
@@ -150,19 +194,19 @@
             <div class="acn-activity-stats">
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.totalMeetings }}</span>
-                    <span class="acn-stat-label">Total Meetings</span>
+                    <span class="acn-stat-label">Reuniones Totales</span>
                 </div>
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.totalDuration }}</span>
-                    <span class="acn-stat-label">Total Duration</span>
+                    <span class="acn-stat-label">Duración Total</span>
                 </div>
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.avgParticipants }}</span>
-                    <span class="acn-stat-label">Avg. Participants</span>
+                    <span class="acn-stat-label">Participantes Promedio</span>
                 </div>
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.avgConfidence }}</span>
-                    <span class="acn-stat-label">Avg. AI Confidence</span>
+                    <span class="acn-stat-label">Confianza IA Promedio</span>
                 </div>
             </div>
         </article>
@@ -170,7 +214,7 @@
         <!-- Follow-up Status -->
         <article class="acn-card acn-card-followup">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Follow-up Status</h2>
+                <h2 class="acn-card-title">Estado de Seguimiento</h2>
             </header>
 
             <div class="acn-followup-body">
@@ -227,8 +271,8 @@
         <!-- Sync Health -->
         <article class="acn-card acn-card-sync">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Sync Health</h2>
-                <a class="acn-card-link" routerLink="/admin/settings">View all</a>
+                <h2 class="acn-card-title">Estado de Sincronización</h2>
+                <a class="acn-card-link" routerLink="/admin/settings">Ver todo</a>
             </header>
 
             <ul class="acn-sync-list">
@@ -242,14 +286,14 @@
                             <svg *ngIf="p.connected" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            {{ p.connected ? 'Connected' : 'Disconnected' }}
+                            {{ p.connected ? 'Conectado' : 'Desconectado' }}
                         </span>
                         <span class="sync-ago" *ngIf="p.connected">{{ p.syncedAgo }}</span>
                     </div>
                 </li>
             </ul>
 
-            <a class="acn-sync-manage" routerLink="/admin/settings">Manage Integrations</a>
+            <a class="acn-sync-manage" routerLink="/admin/settings">Gestionar Integraciones</a>
         </article>
     </section>
 
@@ -259,17 +303,17 @@
         <!-- Recently Analyzed Meetings -->
         <article class="acn-card acn-card-meetings">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Recently Analyzed Meetings</h2>
-                <a class="acn-card-link" routerLink="/admin/meetings">View all</a>
+                <h2 class="acn-card-title">Reuniones Analizadas Recientemente</h2>
+                <a class="acn-card-link" routerLink="/admin/meetings">Ver todas</a>
             </header>
 
             <div class="acn-table">
                 <div class="acn-table-row acn-table-head">
-                    <span>Meeting Title</span>
-                    <span>Date</span>
-                    <span>Participants</span>
-                    <span>Duration</span>
-                    <span class="t-right">AI Confidence</span>
+                    <span>Reunión</span>
+                    <span>Fecha</span>
+                    <span>Participantes</span>
+                    <span>Duración</span>
+                    <span class="t-right">Confianza IA</span>
                 </div>
                 <div class="acn-table-row" *ngFor="let r of recentMeetingsRows" (click)="viewCuration(r.id)" role="button">
                     <span class="acn-table-title">{{ r.title }}</span>
@@ -286,24 +330,24 @@
                               [class.is-high]="r.confidence === 'High'"
                               [class.is-medium]="r.confidence === 'Medium'"
                               [class.is-low]="r.confidence === 'Low'">
-                            {{ r.confidence }}
+                            {{ r.confidence === 'High' ? 'Alta' : r.confidence === 'Medium' ? 'Media' : 'Baja' }}
                         </span>
                     </span>
                 </div>
                 <div *ngIf="!recentMeetingsRows.length" class="acn-empty">
-                    No analyzed meetings yet. Upload your first one with
-                    <button class="link-btn" (click)="openUploadModal()">+ New Meeting</button>
+                    Aún no hay reuniones analizadas. Sube la primera con
+                    <button class="link-btn" (click)="openUploadModal()">+ Nueva Reunión</button>
                 </div>
             </div>
 
-            <a class="acn-card-foot-link" routerLink="/admin/meetings">View all meetings</a>
+            <a class="acn-card-foot-link" routerLink="/admin/meetings">Ver todas las reuniones</a>
         </article>
 
         <!-- Top Risks -->
         <article class="acn-card acn-card-risks">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Top Risks</h2>
-                <a class="acn-card-link" routerLink="/admin/pendientes">View all</a>
+                <h2 class="acn-card-title">Riesgos Principales</h2>
+                <a class="acn-card-link" routerLink="/admin/pendientes">Ver todos</a>
             </header>
 
             <ul class="acn-risk-list">
@@ -323,20 +367,20 @@
                           [class.is-high]="r.impact === 'High'"
                           [class.is-medium]="r.impact === 'Medium'"
                           [class.is-low]="r.impact === 'Low'">
-                        {{ r.impact }}
+                        {{ r.impact === 'High' ? 'Alto' : r.impact === 'Medium' ? 'Medio' : 'Bajo' }}
                     </span>
                 </li>
-                <li *ngIf="!topRisksRich.length" class="acn-empty-li">No risks identified yet.</li>
+                <li *ngIf="!topRisksRich.length" class="acn-empty-li">Aún no hay riesgos identificados.</li>
             </ul>
 
-            <a class="acn-card-foot-link" routerLink="/admin/pendientes">View all risks</a>
+            <a class="acn-card-foot-link" routerLink="/admin/pendientes">Ver todos los riesgos</a>
         </article>
 
         <!-- Top Action Items -->
         <article class="acn-card acn-card-actions">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Top Action Items</h2>
-                <a class="acn-card-link" routerLink="/admin/pendientes">View all</a>
+                <h2 class="acn-card-title">Tareas Principales</h2>
+                <a class="acn-card-link" routerLink="/admin/pendientes">Ver todas</a>
             </header>
 
             <ul class="acn-task-list">
@@ -353,18 +397,18 @@
                     <span class="task-owner" [attr.data-tone]="t.owner.tone">{{ t.owner.initials }}</span>
                     <span class="task-due muted">{{ t.dueLabel }}</span>
                 </li>
-                <li *ngIf="!topActionItemsRich.length" class="acn-empty-li">No open action items.</li>
+                <li *ngIf="!topActionItemsRich.length" class="acn-empty-li">No hay tareas abiertas.</li>
             </ul>
 
-            <a class="acn-card-foot-link" routerLink="/admin/pendientes">View all action items</a>
+            <a class="acn-card-foot-link" routerLink="/admin/pendientes">Ver todas las tareas</a>
         </article>
     </section>
 
     <!-- ============= QUICK ACTIONS ============= -->
-    <section class="acn-quick" aria-label="Quick actions">
-        <h3 class="acn-quick-title">QUICK ACTIONS</h3>
+    <section class="acn-quick" aria-label="Acciones rápidas">
+        <h3 class="acn-quick-title">ACCIONES RÁPIDAS</h3>
         <div class="acn-quick-grid">
-            <button class="acn-qa" *ngFor="let qa of quickActionsEn" (click)="triggerQuickAction(qa)" type="button">
+            <button class="acn-qa" *ngFor="let qa of quickActions" (click)="triggerQuickAction(qa)" type="button">
                 <span class="qa-icon" [ngSwitch]="qa.icon">
                     <svg *ngSwitchCase="'mic'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     <svg *ngSwitchCase="'upload'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
