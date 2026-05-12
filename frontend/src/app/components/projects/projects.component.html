@@ -266,93 +266,399 @@
     </div>
 </div>
 
-<div class="fade-in">
-    <!-- Header identical to dashboard -->
-    <div class="header-actions">
-        <div>
-            <h2 class="section-title">Gestión de Proyectos</h2>
-            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra tus proyectos y los participantes que se incorporan en cada reunión.</p>
-        </div>
-        <button class="btn btn-primary" (click)="showProjectModal = true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0.5rem;">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                <line x1="12" y1="11" x2="12" y2="17"></line>
-                <line x1="9" y1="14" x2="15" y2="14"></line>
-            </svg>
-            Crear Proyecto
-        </button>
-    </div>
+<!-- ============================================================================
+     Pantalla Proyectos — réplica visual del mockup adjunto.
+     Layout: header → search + CTA → filtros → tabs → tabla → paginación
+              · panel lateral derecho con Sync / Resumen / Insights
+     Toda la lógica de modales (crear/editar/participantes/rutas) se reusa
+     del componente original; aquí sólo cambia la presentación.
+     ============================================================================ -->
+<div class="acten-projects" (click)="closeActions()">
 
-    <!-- Tabla Full-Width -->
-    <div class="card glass-panel w-full">
-        <div class="card-body p-0">
-            <div class="table-container" *ngIf="isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th><div class="skeleton skeleton-text" style="width: 40px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 150px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 200px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 80px;"></div></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let i of [1,2,3]">
-                            <td><div class="skeleton skeleton-text" style="width: 30px;"></div></td>
-                            <td><div class="skeleton skeleton-title" style="margin-bottom: 0;"></div></td>
-                            <td><div class="skeleton skeleton-text" style="width: 180px;"></div></td>
-                            <td><div class="skeleton skeleton-text" style="width: 80px; height: 32px;"></div></td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Page header -->
+    <header class="ap-header">
+        <h1 class="ap-title">Proyectos</h1>
+    </header>
+
+    <div class="ap-layout">
+
+        <!-- ============= MAIN COLUMN ============= -->
+        <section class="ap-main">
+
+            <!-- Search + CTA -->
+            <div class="ap-search-row">
+                <div class="ap-search">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text"
+                           placeholder="Buscar proyectos por nombre, responsable o palabra clave..."
+                           [(ngModel)]="searchText"
+                           (input)="onSearchInput()" />
+                </div>
+                <button type="button" class="ap-cta" (click)="showProjectModal = true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Nuevo Proyecto
+                </button>
             </div>
 
-            <div class="table-container" *ngIf="!isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre del proyecto</th>
-                            <th>Responsable</th>
-                            <th>Descripción</th>
-                            <th>Acciones Disponibles</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let p of projects">
-                            <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{ p.id }}</span></td>
-                            <td>
-                                <a [routerLink]="['/admin/projects', p.id]"
-                                   title="Abrir detalle del proyecto"
-                                   style="text-decoration:none;">
-                                    <strong><span class="badge badge-primary" style="cursor:pointer;">{{ p.name }}</span></strong>
-                                </a>
-                            </td>
-                            <td>{{ ownerNameFor(p) }}</td>
-                            <td>{{ p.description || 'N/A' }}</td>
-                            <td>
-                                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                                    <button class="btn btn-sm" style="background:#4f46e5; color:#fff; border:1px solid #4338ca; font-weight:600;" (click)="manageContacts(p)">👥 Participantes</button>
-                                    <button class="btn btn-sm" style="background:#dbeafe; color:#2563eb; border:1px solid #bfdbfe;" (click)="manageRoutings(p)">Rutas</button>
-                                    <button class="btn btn-sm" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;" (click)="editProject(p)">Editar</button>
-                                    <button class="btn btn-sm" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;" (click)="deleteProject(p.id)" [disabled]="isDeleting">Eliminar</button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr *ngIf="projects.length === 0">
-                            <td colspan="5" class="p-0">
-                                <div class="empty-state">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Filtros -->
+            <div class="ap-filters">
+                <div class="ap-filter">
+                    <label>Estado</label>
+                    <select [(ngModel)]="filterStatus" (change)="onSearchInput()">
+                        <option value="all">Todos</option>
+                        <option value="active">Activos</option>
+                        <option value="archived">Archivados</option>
+                    </select>
+                </div>
+                <div class="ap-filter">
+                    <label>Responsable</label>
+                    <select [(ngModel)]="filterOwner">
+                        <option value="all">Todos</option>
+                        <option *ngFor="let u of users" [value]="u.id">{{ u.full_name || u.email }}</option>
+                    </select>
+                </div>
+                <div class="ap-filter">
+                    <label>Equipo</label>
+                    <select [(ngModel)]="filterTeam">
+                        <option value="all">Todos</option>
+                    </select>
+                </div>
+                <div class="ap-filter">
+                    <label>Etiquetas</label>
+                    <select [(ngModel)]="filterTag">
+                        <option value="all">Todas</option>
+                    </select>
+                </div>
+                <button type="button" class="ap-more-filters">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Más filtros
+                </button>
+                <button type="button" class="ap-clear-link" (click)="clearFilters()">Limpiar</button>
+            </div>
+
+            <!-- Tabs + Tabla card -->
+            <div class="ap-card">
+                <nav class="ap-tabs">
+                    <button type="button"
+                            [class.active]="activeTab === 'all'"
+                            (click)="setTab('all')">Todos</button>
+                    <button type="button"
+                            [class.active]="activeTab === 'active'"
+                            (click)="setTab('active')">Activos</button>
+                    <button type="button"
+                            [class.active]="activeTab === 'archived'"
+                            (click)="setTab('archived')">Archivados</button>
+                </nav>
+
+                <div class="ap-table-wrap">
+                    <!-- Skeleton durante loading -->
+                    <div *ngIf="isLoading" class="ap-loading">
+                        <p>Cargando proyectos…</p>
+                    </div>
+
+                    <table class="ap-table" *ngIf="!isLoading">
+                        <thead>
+                            <tr>
+                                <th>Proyecto</th>
+                                <th>Responsable</th>
+                                <th>Estado</th>
+                                <th>Última sincronización</th>
+                                <th>Progreso</th>
+                                <th>Equipo</th>
+                                <th class="t-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let p of paginatedProjects"
+                                (click)="closeActions()">
+                                <!-- Proyecto: icono + nombre + subtítulo -->
+                                <td>
+                                    <a [routerLink]="['/admin/projects', p.id]" class="ap-project-cell">
+                                        <span class="ap-proj-icon" [attr.data-tone]="projectTone(p)">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                <polyline points="14 2 14 8 20 8"></polyline>
+                                            </svg>
+                                        </span>
+                                        <span class="ap-proj-text">
+                                            <span class="ap-proj-name">{{ p.name }}</span>
+                                            <span class="ap-proj-sub">{{ projectSubtitle(p) }}</span>
+                                        </span>
+                                    </a>
+                                </td>
+
+                                <!-- Responsable: avatar + nombre + rol -->
+                                <td>
+                                    <div class="ap-owner-cell">
+                                        <span class="ap-owner-avatar" [attr.data-tone]="projectTone(p)">{{ ownerInitials(p) }}</span>
+                                        <span class="ap-owner-text">
+                                            <span class="ap-owner-name">{{ ownerNameFor(p) }}</span>
+                                            <span class="ap-owner-role">{{ ownerRoleFor(p) }}</span>
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- Estado: badge -->
+                                <td>
+                                    <span class="ap-status-badge" [attr.data-key]="projectStatus(p).key">
+                                        <span class="ap-status-dot"></span>
+                                        {{ projectStatus(p).label }}
+                                    </span>
+                                </td>
+
+                                <!-- Última sincronización: fecha + hora -->
+                                <td>
+                                    <div class="ap-sync-cell">
+                                        <span class="ap-sync-date">{{ lastSyncFor(p).date }}</span>
+                                        <span class="ap-sync-time">{{ lastSyncFor(p).time }}</span>
+                                    </div>
+                                </td>
+
+                                <!-- Progreso: % + barra -->
+                                <td>
+                                    <div class="ap-progress-cell">
+                                        <span class="ap-progress-pct">{{ projectProgress(p) }}%</span>
+                                        <span class="ap-progress-track">
+                                            <span class="ap-progress-fill" [style.width.%]="projectProgress(p)"></span>
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- Equipo: avatares + extra -->
+                                <td>
+                                    <span class="ap-team-stack">
+                                        <span class="ap-team-av" *ngFor="let a of teamAvatars(p)" [attr.data-tone]="a.tone">{{ a.initials }}</span>
+                                        <span class="ap-team-extra" *ngIf="teamExtra(p) > 0">+{{ teamExtra(p) }}</span>
+                                    </span>
+                                </td>
+
+                                <!-- Acciones: 3 puntos verticales con menú -->
+                                <td class="t-right">
+                                    <div class="ap-actions-wrap" (click)="$event.stopPropagation()">
+                                        <button type="button" class="ap-actions-btn"
+                                                (click)="toggleActions(p.id, $event)"
+                                                title="Más acciones">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="5" r="1"></circle>
+                                                <circle cx="12" cy="12" r="1"></circle>
+                                                <circle cx="12" cy="19" r="1"></circle>
+                                            </svg>
+                                        </button>
+                                        <ul class="ap-actions-menu" *ngIf="openActionsId === p.id">
+                                            <li (click)="manageContacts(p); closeActions()">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                                    <circle cx="9" cy="7" r="4"></circle>
+                                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                                </svg>
+                                                Participantes
+                                            </li>
+                                            <li (click)="manageRoutings(p); closeActions()">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                                </svg>
+                                                Rutas de integración
+                                            </li>
+                                            <li (click)="editProject(p); closeActions()">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                </svg>
+                                                Editar
+                                            </li>
+                                            <li class="danger" (click)="deleteProject(p.id); closeActions()">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                                </svg>
+                                                Eliminar
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr *ngIf="!isLoading && filteredProjects.length === 0">
+                                <td colspan="7" class="ap-empty">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                                     </svg>
-                                    <h4>No hay proyectos creados</h4>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                    <p>No hay proyectos que coincidan con los filtros.</p>
+                                    <button class="ap-cta" (click)="showProjectModal = true">+ Nuevo Proyecto</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                <footer class="ap-pagination">
+                    <span class="ap-pag-info">
+                        Mostrando {{ pageStart }} a {{ pageEnd }} de {{ filteredProjects.length }} proyectos
+                    </span>
+                    <div class="ap-pag-controls">
+                        <button type="button" class="ap-pag-btn" (click)="prevPage()" [disabled]="currentPage === 1" title="Anterior">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <button type="button" class="ap-pag-btn is-active" title="Página actual">{{ currentPage }}</button>
+                        <button type="button" class="ap-pag-btn" (click)="nextPage()" [disabled]="currentPage >= totalPagesCount" title="Siguiente">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                        <span class="ap-pag-sep">Mostrar</span>
+                        <select class="ap-pag-size" [(ngModel)]="pageSize" (change)="currentPage = 1">
+                            <option [ngValue]="10">10</option>
+                            <option [ngValue]="20">20</option>
+                            <option [ngValue]="50">50</option>
+                        </select>
+                    </div>
+                </footer>
             </div>
-        </div>
+        </section>
+
+        <!-- ============= RIGHT PANEL ============= -->
+        <aside class="ap-side">
+
+            <!-- Sync Status -->
+            <article class="ap-card ap-card-sync">
+                <header class="ap-card-head">
+                    <h2 class="ap-card-title">ESTADO DE SINCRONIZACIÓN</h2>
+                </header>
+                <div class="ap-sync-row">
+                    <div class="ap-sync-body">
+                        <p class="ap-sync-main">
+                            <span class="ap-sync-pulse"></span>
+                            Todos los sistemas operativos
+                        </p>
+                        <p class="ap-sync-sub">Última sincronización {{ lastSyncLabel }}</p>
+                    </div>
+                    <div class="ap-sync-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                        </svg>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Project Overview -->
+            <article class="ap-card">
+                <header class="ap-card-head">
+                    <h2 class="ap-card-title">RESUMEN DE PROYECTOS</h2>
+                </header>
+                <ul class="ap-overview-list">
+                    <li>
+                        <span class="ov-icon ov-icon-blue">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                        </span>
+                        <span class="ov-label">Total de proyectos</span>
+                        <span class="ov-value">{{ overviewCounts.total }}</span>
+                    </li>
+                    <li>
+                        <span class="ov-icon ov-icon-green">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </span>
+                        <span class="ov-label">Proyectos activos</span>
+                        <span class="ov-value">{{ overviewCounts.active }}</span>
+                    </li>
+                    <li>
+                        <span class="ov-icon ov-icon-grey">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                                <rect x="1" y="3" width="22" height="5"></rect>
+                                <line x1="10" y1="12" x2="14" y2="12"></line>
+                            </svg>
+                        </span>
+                        <span class="ov-label">Proyectos archivados</span>
+                        <span class="ov-value">{{ overviewCounts.archived }}</span>
+                    </li>
+                    <li>
+                        <span class="ov-icon ov-icon-amber">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </span>
+                        <span class="ov-label">En progreso</span>
+                        <span class="ov-value">{{ overviewCounts.inProgress }}</span>
+                    </li>
+                </ul>
+            </article>
+
+            <!-- Insights -->
+            <article class="ap-card">
+                <header class="ap-card-head">
+                    <h2 class="ap-card-title">INSIGHTS</h2>
+                </header>
+                <ul class="ap-insights-list">
+                    <li *ngFor="let ins of sidePanelInsights" [attr.data-tone]="ins.tone">
+                        <span class="ins-icon">
+                            <svg *ngIf="ins.tone === 'success'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 15 12 9 18 15"></polyline>
+                            </svg>
+                            <svg *ngIf="ins.tone === 'info'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <svg *ngIf="ins.tone === 'warning'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </span>
+                        <div class="ins-body">
+                            <p class="ins-title">{{ ins.title }}</p>
+                            <p class="ins-sub">{{ ins.sub }}</p>
+                        </div>
+                    </li>
+                </ul>
+                <a class="ap-insights-link" routerLink="/admin/dashboard">Ver todos los insights →</a>
+            </article>
+        </aside>
     </div>
 </div>

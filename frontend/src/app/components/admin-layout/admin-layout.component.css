@@ -927,11 +927,12 @@
 }
 .app-footer-right .dot-sep { color: var(--color-fg-soft); }
 
-/* Si el componente hijo activo es el nuevo dashboard (.acten-dashboard),
-   anulamos el padding del content-area — el dashboard ya tiene los 32px
-   internos definidos en su propio CSS. Para el resto de páginas admin,
-   conservamos el padding cream original. */
-.content-area:has(.acten-dashboard) { padding: 0; background: #F7F9FC; }
+/* Si el componente hijo activo es uno de los rediseños SaaS modernos
+   (dashboard o proyectos), anulamos el padding del content-area — esas
+   páginas ya tienen los 32px internos en su propio CSS. Para el resto
+   de páginas admin, conservamos el padding cream original. */
+.content-area:has(.acten-dashboard),
+.content-area:has(.acten-projects) { padding: 0; background: #F7F9FC; }
 
 @media (max-width: 720px) {
     .app-footer { grid-template-columns: 1fr; height: auto; padding: 12px 16px; gap: 6px; text-align: center; }
