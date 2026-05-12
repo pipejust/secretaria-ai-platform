@@ -242,6 +242,7 @@ def get_project_dashboard(
     project_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
 ):
     """Resumen del proyecto: contactos, últimas sesiones, decisiones recientes,
     tareas activas y métricas. Usado por la pantalla `/admin/projects/:id`."""
@@ -251,8 +252,11 @@ def get_project_dashboard(
 
     db_project = _get_project_or_404(session, project_id, tenant)
 
+    # Multi-tenant: las queries que siguen también deben filtrar por tenant
+    # para no leer sesiones/tareas/contactos de otra empresa.
     sessions_raw = session.exec(
         select(MeetingSession)
+        .where(MeetingSession.tenant_id == tenant.id)
         .where(MeetingSession.project_id == project_id)
         .where(MeetingSession.status != "archived")
         .order_by(MeetingSession.id.desc())
