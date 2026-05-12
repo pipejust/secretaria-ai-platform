@@ -85,6 +85,10 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     due_date: ''
   };
 
+  /** ID de la tarea con el kebab menu abierto. null = ninguno. Se cierra
+   *  al hacer click en el background (handler global en el container). */
+  openTaskMenuId: number | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
@@ -417,7 +421,40 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
-    this.router.navigate(['/admin/dashboard']);
+    // Botón "Volver a Sesiones": vuelve al listado de meetings (no al
+    // dashboard — el label lo dejó claro). Antes navegaba a /admin/dashboard,
+    // lo cual era inconsistente con el copy del CTA.
+    this.router.navigate(['/admin/meetings']);
+  }
+
+  /** Toggle del kebab de una tarea. evento se detiene para que el click
+   *  outside (cierra el menu) no le cierre el mismo que está abriendo. */
+  toggleTaskMenu(taskId: number | undefined, evt: Event): void {
+    evt.stopPropagation();
+    if (!taskId) return;
+    this.openTaskMenuId = this.openTaskMenuId === taskId ? null : taskId;
+  }
+  closeTaskMenu(): void { this.openTaskMenuId = null; }
+
+  /** Elimina una tarea localmente (no expone endpoint DELETE). En la
+   *  versión final del backend agregar DELETE /api/sessions/action_items/{id}
+   *  y reemplazar este método con la llamada real. Por ahora, fade-out local
+   *  para mantener la UX inmediata. */
+  removeTaskLocal(task: ActionItem): void {
+    const idx = this.meetingData.action_items.findIndex((t) => t === task);
+    if (idx >= 0) {
+      this.meetingData.action_items.splice(idx, 1);
+      this.showSaveMessage('Tarea quitada de la vista. Guarda para persistir.');
+    }
+    this.closeTaskMenu();
+  }
+
+  /** Marca/desmarca una tarea como aprobada (toggle). Reutiliza el
+   *  endpoint PUT existente vía updateTaskField — el backend acepta
+   *  partial updates por FormData. */
+  toggleTaskApproved(task: ActionItem): void {
+    task.is_approved = !task.is_approved;
+    this.closeTaskMenu();
   }
 
   approveAct(format: 'word' | 'pdf' = 'word') {

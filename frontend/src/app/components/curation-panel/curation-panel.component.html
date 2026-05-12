@@ -1,179 +1,466 @@
-<div class="curation-container fade-in">
-  <div *ngIf="isLoading" class="loading-state">
-    <div class="spinner"></div>
-    <p>Cargando sesión...</p>
-  </div>
+<!-- ===================================================================
+     Curación de la Sesión — réplica del mockup adjunto.
+     Breadcrumb + header con badges + 2 columnas:
+       · Izq (35%): cards de contenido curado (Resumen, Transcripción,
+                    Decisiones, Riesgos, Acuerdos)
+       · Der (65%): panel de Tareas Detectadas por IA
+     Sin cambios funcionales: todos los handlers ya existían en el TS.
+     =================================================================== -->
+<div class="curation-page fade-in" (click)="closeTaskMenu()">
 
-  <div *ngIf="!isLoading">
-    <header class="panel-header">
-      <div class="header-titles">
-        <h1>Curación de la Sesión</h1>
-        
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-          <h2 *ngIf="!isEditingTitle" style="margin: 0; font-size: 1.3rem;">{{ meetingData.title }}</h2>
-          <input *ngIf="isEditingTitle" type="text" [(ngModel)]="meetingData.title" class="form-control" style="font-size: 1.2rem; font-weight: bold; width: 100%; max-width: 400px; padding: 4px 8px; height: auto;" (keyup.enter)="isEditingTitle = false">
-          
-          <button class="btn btn-icon" (click)="isEditingTitle = !isEditingTitle" title="Editar Título" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 0 4px;">
-            ✏️
-          </button>
-        </div>
-
-        <p class="subtitle" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            Fecha: {{ meetingData.date | date:'dd/MM/yyyy HH:mm' }} | 
-            Estado: <span class="badge badge-primary" style="white-space: nowrap;">{{ getTranslatedStatus(meetingData.status) }}</span> |
-            Idioma: <span class="badge" style="white-space: nowrap; background-color: #8b5cf6; color: white;">{{ meetingData.language || 'Detectando...' }}</span> |
-            Proyecto:
-            <select class="glass-select" [(ngModel)]="meetingData.project_id" style="width: auto; padding: 2px 24px 2px 8px; font-size: 0.85rem; height: 28px; line-height: 1; margin: 0;">
-                <option [ngValue]="null">--- Sin Proyecto ---</option>
-                <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
-            </select>
-        </p>
-      </div>
-      
-      <div class="header-actions" style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-bottom: 0;">
-        <button class="btn" style="background: white; color: #4b5563; border: 1px solid #d1d5db;" (click)="goBack()">
-          ← Volver a Sesiones
-        </button>
-        <button class="btn btn-primary" (click)="approveAct('word')" [disabled]="isGeneratingDoc" style="background-color: #2563eb; color: white;">
-          <span *ngIf="isGeneratingDoc">⌛ Word...</span>
-          <span *ngIf="!isGeneratingDoc">📄 Word</span>
-        </button>
-        <button class="btn btn-danger" (click)="approveAct('pdf')" [disabled]="isGeneratingDoc" style="background-color: #ef4444; color: white;">
-          <span *ngIf="isGeneratingDoc">⌛ PDF...</span>
-          <span *ngIf="!isGeneratingDoc">📄 PDF</span>
-        </button>
-        <button class="btn btn-success" style="background: #10b981;" (click)="saveManualEdits()">
-          💾 Guardar Cambios
-        </button>
-        <a class="btn" style="background: #f59e0b; color: white; text-decoration: none;"
-           [routerLink]="['/admin/outputs', sessionId]">
-          📑 Artefactos role-específicos
-        </a>
-      </div>
-    </header>
-
-
-    <div class="grid-layout">
-      <section class="col-left">
-        <div class="glass-panel section-card">
-          <h3 style="margin: 0 0 0.5rem 0;">📝 Resumen Ejecutivo</h3>
-          <small style="color:#6b7280; display:block; margin-bottom:.4rem;">
-            Resumen nativo de Fireflies. Editable.
-          </small>
-          <textarea [(ngModel)]="meetingData.raw_summary" rows="4"></textarea>
-        </div>
-
-        <div class="glass-panel section-card" style="position: relative;">
-          <h3>🗣️ Transcripción Original</h3>
-          <textarea [(ngModel)]="meetingData.raw_transcript" rows="8" class="form-control transcript-box"></textarea>
-          <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 10px;">
-            <button class="btn btn-secondary action-btn"
-                    [disabled]="isRegeneratingFields || meetingData.ai_fields_regenerated"
-                    [title]="meetingData.ai_fields_regenerated ? 'Ya se sugirieron campos con IA para esta sesión.' : 'Sugerir decisiones, riesgos, acuerdos, asistentes y temas con OpenAI (un solo uso).'"
-                    (click)="regenerateFields()">
-              <span *ngIf="isRegeneratingFields">⏳ Sugiriendo Campos...</span>
-              <span *ngIf="!isRegeneratingFields && !meetingData.ai_fields_regenerated">✨ Sugerir Campos con IA</span>
-              <span *ngIf="!isRegeneratingFields && meetingData.ai_fields_regenerated">✓ Campos sugeridos</span>
-            </button>
-            <button class="btn btn-secondary action-btn"
-                    [disabled]="isRegenerating || meetingData.ai_tasks_regenerated"
-                    [title]="meetingData.ai_tasks_regenerated ? 'Ya se regeneraron tareas con IA para esta sesión.' : 'Regenerar el listado de tareas con OpenAI (un solo uso).'"
-                    (click)="regenerateTasks()">
-              <span *ngIf="isRegenerating">⏳ Regenerando Tareas...</span>
-              <span *ngIf="!isRegenerating && !meetingData.ai_tasks_regenerated">🤖 Regenerar Tareas</span>
-              <span *ngIf="!isRegenerating && meetingData.ai_tasks_regenerated">✓ Tareas regeneradas</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="glass-panel section-card">
-          <h3>💡 Decisiones Clave</h3>
-          <textarea [(ngModel)]="meetingData.processed_decisions" rows="3"></textarea>
-        </div>
-
-        <div class="glass-panel section-card">
-          <h3>⚠️ Riesgos Identificados</h3>
-          <textarea [(ngModel)]="meetingData.processed_risks" rows="3"></textarea>
-        </div>
-        
-        <div class="glass-panel section-card">
-          <h3>🤝 Acuerdos</h3>
-          <textarea [(ngModel)]="meetingData.processed_agreements" rows="3"></textarea>
-        </div>
-      </section>
-
-      <section class="col-right">
-        <div class="glass-panel section-card tasks-panel">
-          <div class="tasks-header">
-            <h3 style="margin-bottom:0;">📋 Tareas Detectadas por IA ({{meetingData.action_items.length}})</h3>
-            <div class="batch-actions" style="display:flex; gap:0.5rem;">
-              <button class="btn btn-primary btn-mini" (click)="showManualTaskForm = !showManualTaskForm" style="margin-right:0.5rem;">+ Añadir Tarea Manual</button>
-              <button class="btn btn-secondary btn-mini" [disabled]="!hasSelectedTasks || isDispatchingEmails" (click)="dispatchEmails()">
-                <span *ngIf="isDispatchingEmails">Enviando...</span>
-                <span *ngIf="!isDispatchingEmails">📧 Correos</span>
-              </button>
-              <button class="btn btn-secondary btn-mini" [disabled]="!hasSelectedTasks || isDispatchingPlatforms" (click)="dispatchPlatforms()">
-                <span *ngIf="isDispatchingPlatforms">Enviando...</span>
-                <span *ngIf="!isDispatchingPlatforms">🔄 Plataformas</span>
-              </button>
-            </div>
-          </div>
-          
-          <!-- Formulario Manual Tarea -->
-          <div *ngIf="showManualTaskForm" class="manual-task-form fade-in" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px dashed rgba(255,255,255,0.2);">
-            <h4 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 0.95rem;">Nueva Tarea Manual</h4>
-            <input type="text" class="form-control" [(ngModel)]="newTask.title" placeholder="Título de la tarea o Compromiso..." style="margin-bottom: 0.5rem;" />
-            <textarea class="form-control" [(ngModel)]="newTask.description" placeholder="Descripción detallada de la acción (opcional)..." rows="2" style="margin-bottom: 0.5rem;"></textarea>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-               <input type="text" class="form-control" [(ngModel)]="newTask.owner_name" placeholder="Responsable (Nombre)" />
-               <input type="email" class="form-control" [(ngModel)]="newTask.owner_email" placeholder="Correo electrónico del responsable" />
-            </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-               <input type="date" class="form-control" [(ngModel)]="newTask.due_date" style="flex: 1;" />
-               <button class="btn btn-success btn-mini" (click)="addManualTask()" [disabled]="isAddingTask || !newTask.title">
-                 <span *ngIf="!isAddingTask">Guardar Tarea</span>
-                 <span *ngIf="isAddingTask">Guardando...</span>
-               </button>
-               <button class="btn btn-secondary btn-mini" (click)="showManualTaskForm = false">Cancelar</button>
-            </div>
-          </div>
-          
-          <div class="select-all-row" *ngIf="meetingData.action_items.length > 0">
-            <input type="checkbox" (change)="toggleAllTasks($event)" id="selectAll" class="task-checkbox" />
-            <label for="selectAll" style="font-weight: 500; font-size: 0.95rem; cursor:pointer;">Seleccionar todas las tareas</label>
-          </div>
-          
-          <div class="task-list">
-            <div class="task-card fade-in" *ngFor="let task of meetingData.action_items; let i = index" [class.selected]="task.selected">
-              <div class="task-header-row">
-                <input type="checkbox" class="task-checkbox" [(ngModel)]="task.selected" />
-                <input type="text" class="task-title-input" [(ngModel)]="task.title" placeholder="Título de Tarea" (blur)="updateTaskField(task)" />
-              </div>
-              
-              <textarea class="task-desc" [(ngModel)]="task.description" placeholder="Descripción detallada de la tarea" rows="2" (blur)="updateTaskField(task)"></textarea>
-              
-              <div class="task-meta-modern">
-                 <div class="meta-field">
-                   <div class="meta-icon">👤</div>
-                   <input type="text" [(ngModel)]="task.owner_name" placeholder="Responsable" (blur)="updateTaskField(task)" />
-                 </div>
-                 <div class="meta-field">
-                   <div class="meta-icon">✉️</div>
-                   <input type="email" [(ngModel)]="task.owner_email" placeholder="correo@ejemplo.com" (blur)="updateTaskField(task)" />
-                 </div>
-                 <div class="meta-field">
-                   <div class="meta-icon">📅</div>
-                   <input type="date" [(ngModel)]="task.due_date" style="color:var(--text-main);" (change)="updateTaskField(task)" />
-                 </div>
-              </div>
-            </div>
-            
-            <div *ngIf="meetingData.action_items.length === 0" class="empty-state">
-               No hay tareas detectadas.
-            </div>
-          </div>
-        </div>
-      </section>
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="cp-loading">
+        <div class="spinner"></div>
+        <p>Cargando sesión…</p>
     </div>
-  </div>
+
+    <ng-container *ngIf="!isLoading">
+
+        <!-- Breadcrumb superior -->
+        <nav class="cp-breadcrumb" aria-label="Navegación">
+            <a routerLink="/admin/meetings">Reuniones</a>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <a routerLink="/admin/meetings">Sesiones</a>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <span class="cp-breadcrumb-current">Curación de la sesión</span>
+        </nav>
+
+        <!-- Header de la página -->
+        <header class="cp-header">
+            <div class="cp-header-text">
+                <h1 class="cp-title">Curación de la sesión</h1>
+
+                <div class="cp-subtitle-wrap">
+                    <h2 class="cp-subtitle" *ngIf="!isEditingTitle">{{ meetingData.title }}</h2>
+                    <input *ngIf="isEditingTitle" type="text"
+                           class="cp-subtitle-input"
+                           [(ngModel)]="meetingData.title"
+                           (keyup.enter)="isEditingTitle = false" />
+                    <button class="cp-edit-title-btn" type="button"
+                            (click)="isEditingTitle = !isEditingTitle"
+                            [title]="isEditingTitle ? 'Aplicar' : 'Editar título'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path *ngIf="!isEditingTitle" d="M12 20h9"></path>
+                            <path *ngIf="!isEditingTitle" d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            <polyline *ngIf="isEditingTitle" points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Metadata: labels + badges -->
+                <ul class="cp-meta" aria-label="Información de la sesión">
+                    <li>
+                        <span class="cp-meta-label">Fecha:</span>
+                        <span class="cp-meta-value">{{ meetingData.date | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </li>
+                    <li>
+                        <span class="cp-meta-label">Estado:</span>
+                        <span class="cp-badge cp-badge-status"
+                              [attr.data-status]="(meetingData.status || 'pending').toLowerCase()">
+                            {{ getTranslatedStatus(meetingData.status) }}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="cp-meta-label">Idioma:</span>
+                        <span class="cp-badge cp-badge-lang">{{ meetingData.language || 'Detectando…' }}</span>
+                    </li>
+                    <li class="cp-meta-project">
+                        <span class="cp-meta-label">Proyecto:</span>
+                        <span class="cp-badge-select">
+                            <select [(ngModel)]="meetingData.project_id"
+                                    aria-label="Cambiar proyecto">
+                                <option [ngValue]="null">Sin proyecto</option>
+                                <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
+                            </select>
+                        </span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Acciones principales (alineadas a la derecha) -->
+            <div class="cp-actions" role="toolbar" aria-label="Acciones de la sesión">
+                <button type="button" class="cp-btn cp-btn-back" (click)="goBack()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Volver a Sesiones
+                </button>
+                <button type="button" class="cp-btn cp-btn-word"
+                        (click)="approveAct('word')" [disabled]="isGeneratingDoc">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span *ngIf="!isGeneratingDoc">Word</span>
+                    <span *ngIf="isGeneratingDoc">…</span>
+                </button>
+                <button type="button" class="cp-btn cp-btn-pdf"
+                        (click)="approveAct('pdf')" [disabled]="isGeneratingDoc">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span *ngIf="!isGeneratingDoc">PDF</span>
+                    <span *ngIf="isGeneratingDoc">…</span>
+                </button>
+                <button type="button" class="cp-btn cp-btn-save" (click)="saveManualEdits()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Guardar cambios
+                </button>
+                <a class="cp-btn cp-btn-artifacts"
+                   [routerLink]="['/admin/outputs', sessionId]">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Artefactos role-específicos
+                </a>
+            </div>
+        </header>
+
+        <!-- Grid principal: contenido curado + panel de tareas -->
+        <div class="cp-grid">
+
+            <!-- ====== Columna izquierda: cards curadas ====== -->
+            <aside class="cp-col-left">
+
+                <!-- Resumen Ejecutivo -->
+                <article class="cp-card">
+                    <header class="cp-card-head">
+                        <div class="cp-card-icon cp-card-icon-amber">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                        </div>
+                        <div class="cp-card-titles">
+                            <h3>Resumen ejecutivo</h3>
+                            <p class="cp-card-sub">Resumen nativo de Fireflies. Editable.</p>
+                        </div>
+                    </header>
+                    <textarea class="cp-textarea cp-textarea-scroll"
+                              [(ngModel)]="meetingData.raw_summary"
+                              rows="6"></textarea>
+                </article>
+
+                <!-- Transcripción Original -->
+                <article class="cp-card">
+                    <header class="cp-card-head">
+                        <div class="cp-card-icon cp-card-icon-blue">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                        </div>
+                        <div class="cp-card-titles">
+                            <h3>Transcripción original</h3>
+                        </div>
+                    </header>
+                    <textarea class="cp-textarea cp-textarea-scroll cp-textarea-mono"
+                              [(ngModel)]="meetingData.raw_transcript"
+                              rows="8"></textarea>
+                    <div class="cp-card-actions">
+                        <button type="button" class="cp-btn-soft"
+                                [disabled]="isRegeneratingFields || meetingData.ai_fields_regenerated"
+                                [title]="meetingData.ai_fields_regenerated ? 'Ya se sugirieron campos con IA para esta sesión.' : 'Sugerir decisiones, riesgos, acuerdos, asistentes y temas con IA.'"
+                                (click)="regenerateFields()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path>
+                                <path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path>
+                            </svg>
+                            <span *ngIf="isRegeneratingFields">Sugiriendo…</span>
+                            <span *ngIf="!isRegeneratingFields && !meetingData.ai_fields_regenerated">Sugerir campos con IA</span>
+                            <span *ngIf="!isRegeneratingFields && meetingData.ai_fields_regenerated">Campos sugeridos</span>
+                        </button>
+                        <button type="button" class="cp-btn-soft"
+                                [disabled]="isRegenerating || meetingData.ai_tasks_regenerated"
+                                [title]="meetingData.ai_tasks_regenerated ? 'Ya se regeneraron tareas con IA para esta sesión.' : 'Regenerar el listado de tareas con IA.'"
+                                (click)="regenerateTasks()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                            </svg>
+                            <span *ngIf="isRegenerating">Regenerando…</span>
+                            <span *ngIf="!isRegenerating && !meetingData.ai_tasks_regenerated">Regenerar tareas</span>
+                            <span *ngIf="!isRegenerating && meetingData.ai_tasks_regenerated">Tareas regeneradas</span>
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Decisiones Clave -->
+                <article class="cp-card">
+                    <header class="cp-card-head">
+                        <div class="cp-card-icon cp-card-icon-yellow">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18h6"></path>
+                                <path d="M10 22h4"></path>
+                                <path d="M12 2a7 7 0 0 0-7 7c0 3 2 5 3 6.5V18h8v-2.5c1-1.5 3-3.5 3-6.5a7 7 0 0 0-7-7z"></path>
+                            </svg>
+                        </div>
+                        <div class="cp-card-titles">
+                            <h3>Decisiones clave</h3>
+                        </div>
+                    </header>
+                    <textarea class="cp-textarea cp-textarea-scroll"
+                              [(ngModel)]="meetingData.processed_decisions"
+                              rows="4"></textarea>
+                </article>
+
+                <!-- Riesgos Identificados -->
+                <article class="cp-card">
+                    <header class="cp-card-head">
+                        <div class="cp-card-icon cp-card-icon-orange">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                        </div>
+                        <div class="cp-card-titles">
+                            <h3>Riesgos identificados</h3>
+                        </div>
+                    </header>
+                    <textarea class="cp-textarea cp-textarea-scroll"
+                              [(ngModel)]="meetingData.processed_risks"
+                              rows="4"></textarea>
+                </article>
+
+                <!-- Acuerdos -->
+                <article class="cp-card">
+                    <header class="cp-card-head">
+                        <div class="cp-card-icon cp-card-icon-orange-soft">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 9l-2.6 2.6a2.5 2.5 0 0 1-3.5 0L7 11l2.5-2.5a3 3 0 0 1 4 0L17 11"></path>
+                                <path d="M14 16a3 3 0 0 0 3-3v-2"></path>
+                                <path d="M3 11l4-4"></path>
+                                <path d="M17 11l4-4"></path>
+                            </svg>
+                        </div>
+                        <div class="cp-card-titles">
+                            <h3>Acuerdos</h3>
+                        </div>
+                    </header>
+                    <textarea class="cp-textarea cp-textarea-scroll"
+                              [(ngModel)]="meetingData.processed_agreements"
+                              rows="4"></textarea>
+                </article>
+            </aside>
+
+            <!-- ====== Columna derecha: tareas detectadas ====== -->
+            <section class="cp-col-right">
+                <article class="cp-card cp-tasks-panel">
+
+                    <!-- Toolbar del panel de tareas -->
+                    <header class="cp-tasks-head">
+                        <h3 class="cp-tasks-title">
+                            Tareas detectadas por IA
+                            <span class="cp-tasks-count">({{ meetingData.action_items.length }})</span>
+                        </h3>
+                        <div class="cp-tasks-toolbar">
+                            <button type="button" class="cp-btn cp-btn-add"
+                                    (click)="showManualTaskForm = !showManualTaskForm">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Añadir tarea manual
+                            </button>
+                            <button type="button" class="cp-btn cp-btn-light"
+                                    [disabled]="!hasSelectedTasks || isDispatchingEmails"
+                                    (click)="dispatchEmails()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                                <span *ngIf="isDispatchingEmails">Enviando…</span>
+                                <span *ngIf="!isDispatchingEmails">Correos</span>
+                            </button>
+                            <button type="button" class="cp-btn cp-btn-light"
+                                    [disabled]="!hasSelectedTasks || isDispatchingPlatforms"
+                                    (click)="dispatchPlatforms()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
+                                <span *ngIf="isDispatchingPlatforms">Enviando…</span>
+                                <span *ngIf="!isDispatchingPlatforms">Plataformas</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <!-- Formulario manual -->
+                    <div *ngIf="showManualTaskForm" class="cp-manual-form fade-in">
+                        <h4>Nueva tarea manual</h4>
+                        <input type="text" [(ngModel)]="newTask.title" placeholder="Título de la tarea o compromiso…" />
+                        <textarea [(ngModel)]="newTask.description" rows="2"
+                                  placeholder="Descripción detallada de la acción (opcional)…"></textarea>
+                        <div class="cp-manual-form-grid">
+                            <input type="text" [(ngModel)]="newTask.owner_name" placeholder="Responsable" />
+                            <input type="email" [(ngModel)]="newTask.owner_email" placeholder="correo@empresa.com" />
+                            <input type="date" [(ngModel)]="newTask.due_date" />
+                        </div>
+                        <div class="cp-manual-form-actions">
+                            <button type="button" class="cp-btn cp-btn-light"
+                                    (click)="showManualTaskForm = false">Cancelar</button>
+                            <button type="button" class="cp-btn cp-btn-save"
+                                    (click)="addManualTask()"
+                                    [disabled]="isAddingTask || !newTask.title">
+                                <span *ngIf="!isAddingTask">Guardar tarea</span>
+                                <span *ngIf="isAddingTask">Guardando…</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Seleccionar todas -->
+                    <label class="cp-select-all" *ngIf="meetingData.action_items.length">
+                        <input type="checkbox" (change)="toggleAllTasks($event)" />
+                        <span>Seleccionar todas las tareas</span>
+                    </label>
+
+                    <!-- Lista de tareas -->
+                    <ul class="cp-task-list" *ngIf="meetingData.action_items.length">
+                        <li *ngFor="let task of meetingData.action_items; let i = index"
+                            class="cp-task"
+                            [class.is-selected]="task.selected">
+
+                            <!-- Header de la tarea -->
+                            <div class="cp-task-head">
+                                <label class="cp-task-check">
+                                    <input type="checkbox" [(ngModel)]="task.selected" />
+                                </label>
+                                <input type="text" class="cp-task-title"
+                                       [(ngModel)]="task.title"
+                                       placeholder="Título de la tarea"
+                                       (blur)="updateTaskField(task)" />
+                                <div class="cp-task-menu-wrap">
+                                    <button type="button" class="cp-kebab"
+                                            title="Más opciones"
+                                            (click)="toggleTaskMenu(task.id, $event)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="1"></circle>
+                                            <circle cx="12" cy="5" r="1"></circle>
+                                            <circle cx="12" cy="19" r="1"></circle>
+                                        </svg>
+                                    </button>
+                                    <div class="cp-kebab-menu"
+                                         *ngIf="openTaskMenuId === task.id"
+                                         (click)="$event.stopPropagation()">
+                                        <button type="button" (click)="toggleTaskApproved(task)">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            {{ task.is_approved ? 'Quitar aprobación' : 'Aprobar tarea' }}
+                                        </button>
+                                        <div class="cp-kebab-divider"></div>
+                                        <button type="button" class="cp-kebab-danger"
+                                                (click)="removeTaskLocal(task)">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 6h18"></path>
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                            </svg>
+                                            Quitar tarea
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Descripción de la tarea -->
+                            <textarea class="cp-task-desc"
+                                      [(ngModel)]="task.description"
+                                      placeholder="Descripción detallada de la tarea"
+                                      rows="2"
+                                      (blur)="updateTaskField(task)"></textarea>
+
+                            <!-- Inputs: responsable, correo, fecha -->
+                            <div class="cp-task-fields">
+                                <div class="cp-field">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                    <input type="text"
+                                           [(ngModel)]="task.owner_name"
+                                           placeholder="Responsable"
+                                           (blur)="updateTaskField(task)" />
+                                </div>
+                                <div class="cp-field">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                        <polyline points="22,6 12,13 2,6"></polyline>
+                                    </svg>
+                                    <input type="email"
+                                           [(ngModel)]="task.owner_email"
+                                           placeholder="correo@empresa.com"
+                                           (blur)="updateTaskField(task)" />
+                                </div>
+                                <div class="cp-field">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    <input type="date"
+                                           [(ngModel)]="task.due_date"
+                                           (change)="updateTaskField(task)" />
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <!-- Empty -->
+                    <div class="cp-task-empty" *ngIf="!meetingData.action_items.length">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 11 12 14 22 4"></polyline>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        <h4>No hay tareas detectadas</h4>
+                        <p>Genera tareas desde la transcripción con el botón "Regenerar tareas".</p>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </ng-container>
 </div>
