@@ -32,7 +32,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
     /** Título dinámico del topbar derivado de la ruta activa
      *  (route.data.title o route.title con sufijo " | Acten" recortado). */
-    currentPageTitle = 'Overview';
+    currentPageTitle = 'Resumen';
 
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);

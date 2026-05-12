@@ -71,13 +71,13 @@ export const routes: Routes = [
             {
                 path: 'dashboard',
                 component: DashboardComponent,
-                title: 'Overview | Acten',
+                title: 'Resumen | Acten',
                 data: { description: 'Resumen ejecutivo en tiempo real: métricas, actividad, riesgos y tareas prioritarias.', robots: 'noindex, nofollow' }
             },
             {
                 path: 'meetings',
                 loadComponent: () => import('./components/meetings-list/meetings-list.component').then(m => m.MeetingsListComponent),
-                title: 'Sesiones Generadas | Acten',
+                title: 'Reuniones | Acten',
                 data: { description: 'Listado completo de sesiones procesadas por IA con filtros, subida manual, y acciones por sesión.', robots: 'noindex, nofollow' },
             },
             { 
@@ -113,7 +113,7 @@ export const routes: Routes = [
             {
                 path: 'branding',
                 loadComponent: () => import('./components/branding-settings/branding-settings.component').then(m => m.BrandingSettingsComponent),
-                title: 'Marca / Branding | Acten',
+                title: 'Marca | Acten',
                 data: { description: 'Personaliza el nombre, logo, colores y datos de contacto de tu empresa.', robots: 'noindex, nofollow' },
             },
             {
@@ -131,7 +131,7 @@ export const routes: Routes = [
             {
                 path: 'curation/:id',
                 loadComponent: () => import('./components/curation-panel/curation-panel.component').then(m => m.CurationPanelComponent),
-                title: 'Panel de Curaduría | Acten',
+                title: 'Curación de la sesión | Acten',
                 data: { description: 'Modera, edita y despacha manualmente las tareas, compromisos y correos extraídos de la sesión virtual antes de ser enviados.', robots: 'noindex, nofollow' }
             },
             {
@@ -155,7 +155,7 @@ export const routes: Routes = [
             {
                 path: 'ask',
                 loadComponent: () => import('./components/ask/ask.component').then(m => m.AskComponent),
-                title: 'Ask Acten | Acten',
+                title: 'Pregunta a Acten | Acten',
                 data: { description: 'Chat con RAG sobre tus actas anteriores.', robots: 'noindex, nofollow' }
             },
             {
@@ -167,7 +167,7 @@ export const routes: Routes = [
             {
                 path: 'outputs/:id',
                 loadComponent: () => import('./components/role-outputs/role-outputs.component').then(m => m.RoleOutputsComponent),
-                title: 'Outputs | Acten',
+                title: 'Artefactos | Acten',
                 data: { description: 'Genera artefactos role-específicos a partir del acta.', robots: 'noindex, nofollow' }
             },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }

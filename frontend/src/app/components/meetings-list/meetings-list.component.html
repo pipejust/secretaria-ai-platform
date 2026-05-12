@@ -476,7 +476,7 @@
         <nav class="dt-tabs" aria-label="Secciones del detalle">
             <button [class.active]="detailTab === 'summary'"    (click)="setDetailTab('summary')">Resumen</button>
             <button [class.active]="detailTab === 'transcript'" (click)="setDetailTab('transcript')">Transcripción</button>
-            <button [class.active]="detailTab === 'insights'"   (click)="setDetailTab('insights')">Insights</button>
+            <button [class.active]="detailTab === 'insights'"   (click)="setDetailTab('insights')">Hallazgos</button>
             <button [class.active]="detailTab === 'notes'"      (click)="setDetailTab('notes')">Notas</button>
             <button [class.active]="detailTab === 'files'"      (click)="setDetailTab('files')">Archivos</button>
         </nav>
@@ -593,7 +593,7 @@
                 <article class="dt-card">
                     <header class="dt-card-head">
                         <h3 *ngIf="detailTab === 'transcript'">Transcripción</h3>
-                        <h3 *ngIf="detailTab === 'insights'">Insights</h3>
+                        <h3 *ngIf="detailTab === 'insights'">Hallazgos</h3>
                         <h3 *ngIf="detailTab === 'notes'">Notas</h3>
                         <h3 *ngIf="detailTab === 'files'">Archivos</h3>
                     </header>
