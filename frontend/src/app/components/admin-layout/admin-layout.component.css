@@ -270,13 +270,13 @@
     height: 64px;
     min-height: 64px;
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(320px, 560px) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     padding: 0 var(--space-24);
-    background: var(--color-bg-topbar);
+    background: #FFFFFF;
     color: var(--color-fg-default);
     border-bottom: 1px solid var(--color-border);
-    gap: var(--space-20);
+    gap: var(--space-16);
     z-index: 5;
 }
 
@@ -330,6 +330,76 @@
 .topbar-center {
     display: flex;
     justify-content: center;
+    align-items: center;
+    gap: var(--space-12);
+    width: 100%;
+}
+
+/* Date pill al inicio del topbar — réplica del mockup. */
+.topbar-date {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-8);
+    height: 36px;
+    padding: 0 var(--space-12);
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: var(--text-13);
+    font-weight: var(--fw-medium);
+    color: var(--color-fg-default);
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+.topbar-date svg { color: var(--color-fg-muted); flex-shrink: 0; }
+.topbar-date:hover { background: var(--brand-cream-100); border-color: var(--color-border-strong); }
+
+/* CTA azul "+ New Meeting" del topbar (réplica del mockup). */
+.topbar-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    background: #2563EB;
+    border: 1px solid #2563EB;
+    border-radius: var(--radius-md);
+    color: #FFFFFF;
+    font-family: var(--font-sans);
+    font-size: var(--text-13);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition: background 120ms ease, box-shadow 120ms ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.topbar-cta:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
+}
+.topbar-cta svg { stroke-width: 2.5; }
+
+/* Badge rojo del bell de notificaciones. */
+.btn-icon-soft.has-badge { position: relative; }
+.topbar-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #EF4444;
+    color: #FFFFFF;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    border: 2px solid var(--color-bg-topbar, #FFFFFF);
 }
 
 /* Search central — pill estilo handoff Page 01 — Section 4 (COMMAND BAR).
@@ -714,4 +784,132 @@
     .content-area {
         padding: 1rem;
     }
+}
+/* ============================================================================
+ * Sidebar user-card (réplica del mockup): avatar + nombre + rol + chevron.
+ * Vive al pie del <aside class="sidebar"> y se contrae a solo avatar cuando
+ * la sidebar está colapsada.
+ * ============================================================================ */
+.sidebar { padding-bottom: 0; }
+.sidebar-user {
+    margin: 0 var(--space-12) var(--space-16);
+    padding: var(--space-12) var(--space-12);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-10);
+    cursor: pointer;
+    transition: background 120ms ease;
+    color: var(--color-fg-on-dark, #F7F4EE);
+}
+.sidebar-user:hover { background: rgba(255, 255, 255, 0.07); }
+
+.sidebar-user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563EB, #1E3A8A);
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.10);
+}
+.sidebar-user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.sidebar-user-meta .su-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #FFFFFF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sidebar-user-meta .su-role {
+    font-size: 11px;
+    color: rgba(247, 244, 238, 0.55);
+}
+.sidebar-user .su-chevron {
+    color: rgba(247, 244, 238, 0.55);
+    flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-user {
+    margin: 0 0 var(--space-16);
+    padding: var(--space-10) 0;
+    background: transparent;
+    border: 0;
+    justify-content: center;
+}
+
+/* ============================================================================
+ * App footer: vive al pie del <main>. Width-full, distribución 3-col.
+ * ============================================================================ */
+.app-footer {
+    flex-shrink: 0;
+    height: 56px;
+    padding: 0 var(--space-24);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-16);
+    background: #FFFFFF;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-fg-muted);
+    font-family: var(--font-sans);
+    font-size: 12px;
+}
+.app-footer-left {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-8);
+}
+.app-footer-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+.app-footer-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-fg-default);
+    font-size: 13px;
+}
+.app-footer-domain {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-fg-muted);
+    text-decoration: none;
+}
+.app-footer-domain:hover { color: var(--color-fg-default); }
+.app-footer-domain svg { color: var(--color-fg-soft); }
+.app-footer-center { text-align: center; }
+.app-footer-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-self: end;
+}
+.app-footer-right .dot-sep { color: var(--color-fg-soft); }
+
+/* Si el componente hijo activo es el nuevo dashboard (.acten-dashboard),
+   anulamos el padding del content-area — el dashboard ya tiene los 32px
+   internos definidos en su propio CSS. Para el resto de páginas admin,
+   conservamos el padding cream original. */
+.content-area:has(.acten-dashboard) { padding: 0; background: #F7F9FC; }
+
+@media (max-width: 720px) {
+    .app-footer { grid-template-columns: 1fr; height: auto; padding: 12px 16px; gap: 6px; text-align: center; }
+    .app-footer-left, .app-footer-right { justify-content: center; }
 }

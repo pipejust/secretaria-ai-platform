@@ -210,6 +210,20 @@
                 </svg>
             </button>
         </nav>
+
+        <!-- User card al pie del sidebar (réplica del mockup). En colapsado
+             se reduce a solo avatar; en expanded muestra nombre/rol/chevron. -->
+        <div class="sidebar-user" *ngIf="user" (click)="toggleProfileDropdown()" role="button" tabindex="0">
+            <div class="sidebar-user-avatar">{{ getInitials(user.full_name) }}</div>
+            <div class="sidebar-user-meta" *ngIf="!isCollapsed">
+                <span class="su-name">{{ user.full_name }}</span>
+                <span class="su-role">{{ user.role | titlecase }}</span>
+            </div>
+            <svg *ngIf="!isCollapsed" class="su-chevron" width="14" height="14" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
     </aside>
 
     <!-- Main Content -->
@@ -224,32 +238,54 @@
                         <line x1="3" y1="18" x2="21" y2="18"></line>
                     </svg>
                 </button>
-                <nav class="topbar-titles" aria-label="Breadcrumb">
-                    <span class="topbar-eyebrow">{{ branding.companyName() }}</span>
-                    <h3 class="page-title">{{ currentPageTitle }}</h3>
-                </nav>
+                <!-- Date pill — réplica del mockup. Cosmético por ahora,
+                     no abre date picker (no hay endpoint que filtre por
+                     rango global todavía). -->
+                <button type="button" class="topbar-date" title="Today">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>{{ todayLabel }}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
             </div>
 
             <div class="topbar-center">
+                <button type="button" class="topbar-cta" (click)="goNewMeeting()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    New Meeting
+                </button>
                 <div class="topbar-search">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input type="text" placeholder="Buscar sesiones, proyectos, tareas…" />
-                    <kbd>⌘K</kbd>
+                    <input type="text" placeholder="Search meetings, tasks, people..." />
+                    <kbd>⌘ K</kbd>
                 </div>
             </div>
 
             <div class="topbar-right">
                 <div class="notif-wrap">
-                    <button class="btn-icon-soft" (click)="toggleNotifPanel($event)" title="Notificaciones">
+                    <button class="btn-icon-soft has-badge" (click)="toggleNotifPanel($event)" title="Notifications">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                         </svg>
+                        <span class="topbar-badge">2</span>
                     </button>
                     <div class="notif-panel" *ngIf="showNotifPanel" (click)="$event.stopPropagation()">
                         <header>Notificaciones</header>
@@ -320,5 +356,28 @@
         <div class="content-area" (click)="closeProfileDropdown()">
             <router-outlet></router-outlet>
         </div>
+
+        <!-- App-wide footer (réplica del mockup). -->
+        <footer class="app-footer">
+            <div class="app-footer-left">
+                <img src="brand/imagologo.png" alt="" class="app-footer-icon" />
+                <span class="app-footer-brand">{{ branding.platformName() }}</span>
+                <a class="app-footer-domain" href="https://acten.ai" target="_blank" rel="noopener">
+                    {{ (branding.companyName() === 'Acten' ? 'Acten.ai' : branding.companyName()) }}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                </a>
+            </div>
+            <div class="app-footer-center">Confidential &nbsp;·&nbsp; For internal use only</div>
+            <div class="app-footer-right">
+                <span>Version 1.0</span>
+                <span class="dot-sep">·</span>
+                <span>{{ todayLabel }}</span>
+            </div>
+        </footer>
     </main>
 </div>

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -103,12 +103,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private cdr: ChangeDetectorRef,
         private router: Router,
+        private route: ActivatedRoute,
         private toast: ToastService,
     ) { }
 
     ngOnInit(): void {
         this.loadOverview();
         this.loadProjects();
+
+        // El topbar puede pedir abrir el modal de upload navegando con
+        // ?new=meeting. Lo escuchamos una sola vez al entrar al dashboard.
+        this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+            if (params['new'] === 'meeting' && this.canCreateMeeting && !this.showUploadModal) {
+                setTimeout(() => this.openUploadModal(), 80);
+                // Limpia el query param para no re-abrir al volver con back.
+                this.router.navigate([], { queryParams: { new: null }, queryParamsHandling: 'merge' });
+            }
+        });
     }
 
     /** Carga TODO lo que necesita el overview: sesiones recientes, action

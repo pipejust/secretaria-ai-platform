@@ -131,4 +131,21 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
         }
         return name.substring(0, 2).toUpperCase();
     }
+
+    /** "May 12, 2026" — etiqueta que renderiza el date selector del topbar. */
+    get todayLabel(): string {
+        const d = new Date();
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+
+    /** Año actual para el copy del footer. */
+    get currentYear(): number { return new Date().getFullYear(); }
+
+    /** Botón "+ New Meeting" del topbar — navega al dashboard con query
+     *  param para que el componente abra el modal de upload existente.
+     *  No introduce nueva lógica de negocio; sólo orquesta la UX. */
+    goNewMeeting(): void {
+        this.router.navigate(['/admin/dashboard'], { queryParams: { new: 'meeting' } });
+    }
 }
