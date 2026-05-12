@@ -8,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { MdRenderPipe } from '../../pipes/md-render.pipe';
 
 interface ActionItem {
   id?: number;
@@ -43,7 +44,7 @@ interface MeetingData {
 @Component({
   selector: 'app-curation-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe],
   templateUrl: './curation-panel.component.html',
   styleUrl: './curation-panel.component.css'
 })
@@ -88,6 +89,20 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   /** ID de la tarea con el kebab menu abierto. null = ninguno. Se cierra
    *  al hacer click en el background (handler global en el container). */
   openTaskMenuId: number | null = null;
+
+  /** Modo edición por card de contenido curado. Cada card vive en modo
+   *  "view" por defecto (renderiza markdown como HTML) y al hacer click en
+   *  el botón ✎ pasa a modo "edit" (textarea editable). */
+  editing: { summary: boolean; decisions: boolean; risks: boolean; agreements: boolean } = {
+    summary: false,
+    decisions: false,
+    risks: false,
+    agreements: false,
+  };
+
+  /** ID de la tarea que está mostrando su descripción expandida. Por
+   *  defecto las tareas muestran un resumen corto; el user puede expandir. */
+  expandedTaskId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -425,6 +440,17 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     // dashboard — el label lo dejó claro). Antes navegaba a /admin/dashboard,
     // lo cual era inconsistente con el copy del CTA.
     this.router.navigate(['/admin/meetings']);
+  }
+
+  /** Toggle del modo edit/view de una card. */
+  toggleEdit(key: 'summary' | 'decisions' | 'risks' | 'agreements'): void {
+    this.editing[key] = !this.editing[key];
+  }
+
+  /** Toggle expand/collapse de la descripción de una tarea. */
+  toggleTaskExpand(taskId: number | undefined): void {
+    if (!taskId) return;
+    this.expandedTaskId = this.expandedTaskId === taskId ? null : taskId;
   }
 
   /** Toggle del kebab de una tarea. evento se detiene para que el click

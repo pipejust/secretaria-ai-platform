@@ -131,6 +131,53 @@
                     </svg>
                     Artefactos role-específicos
                 </a>
+
+                <!-- Acciones de IA al final de la fila de acciones — son
+                     one-shot: se ejecutan una sola vez por sesión y luego
+                     quedan deshabilitadas con un check. Visualmente más
+                     discretas que los CTAs primarios. -->
+                <button type="button" class="cp-btn cp-btn-ai"
+                        [disabled]="isRegeneratingFields || meetingData.ai_fields_regenerated"
+                        [class.is-done]="meetingData.ai_fields_regenerated"
+                        [title]="meetingData.ai_fields_regenerated ? 'Ya se sugirieron campos con IA para esta sesión.' : 'Sugerir decisiones, riesgos, acuerdos y temas con IA (un solo uso).'"
+                        (click)="regenerateFields()">
+                    <svg *ngIf="!meetingData.ai_fields_regenerated"
+                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path>
+                        <path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path>
+                    </svg>
+                    <svg *ngIf="meetingData.ai_fields_regenerated"
+                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span *ngIf="isRegeneratingFields">Sugiriendo…</span>
+                    <span *ngIf="!isRegeneratingFields && !meetingData.ai_fields_regenerated">Sugerir campos con IA</span>
+                    <span *ngIf="!isRegeneratingFields && meetingData.ai_fields_regenerated">Campos sugeridos</span>
+                </button>
+                <button type="button" class="cp-btn cp-btn-ai"
+                        [disabled]="isRegenerating || meetingData.ai_tasks_regenerated"
+                        [class.is-done]="meetingData.ai_tasks_regenerated"
+                        [title]="meetingData.ai_tasks_regenerated ? 'Ya se regeneraron tareas con IA para esta sesión.' : 'Regenerar el listado de tareas con IA (un solo uso).'"
+                        (click)="regenerateTasks()">
+                    <svg *ngIf="!meetingData.ai_tasks_regenerated"
+                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                        <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                    </svg>
+                    <svg *ngIf="meetingData.ai_tasks_regenerated"
+                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span *ngIf="isRegenerating">Regenerando…</span>
+                    <span *ngIf="!isRegenerating && !meetingData.ai_tasks_regenerated">Regenerar tareas</span>
+                    <span *ngIf="!isRegenerating && meetingData.ai_tasks_regenerated">Tareas regeneradas</span>
+                </button>
             </div>
         </header>
 
@@ -156,10 +203,32 @@
                             <h3>Resumen ejecutivo</h3>
                             <p class="cp-card-sub">Resumen nativo de Fireflies. Editable.</p>
                         </div>
+                        <button type="button" class="cp-card-edit"
+                                [class.is-editing]="editing.summary"
+                                (click)="toggleEdit('summary')"
+                                [title]="editing.summary ? 'Volver a vista' : 'Editar'">
+                            <svg *ngIf="!editing.summary"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                            <svg *ngIf="editing.summary"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </button>
                     </header>
-                    <textarea class="cp-textarea cp-textarea-scroll"
+                    <div *ngIf="!editing.summary"
+                         class="cp-md-view cp-textarea-scroll"
+                         [innerHTML]="meetingData.raw_summary | mdRender"></div>
+                    <div *ngIf="!editing.summary && !meetingData.raw_summary"
+                         class="cp-md-empty">No hay resumen disponible. Pulsa el lápiz para añadir uno.</div>
+                    <textarea *ngIf="editing.summary"
+                              class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.raw_summary"
-                              rows="6"></textarea>
+                              rows="8"></textarea>
                 </article>
 
                 <!-- Transcripción Original -->
@@ -178,39 +247,12 @@
                             <h3>Transcripción original</h3>
                         </div>
                     </header>
+                    <!-- La transcripción se queda como textarea editable
+                         (no es markdown, es el dump literal). Los botones
+                         de IA viven ahora en el header de la página. -->
                     <textarea class="cp-textarea cp-textarea-scroll cp-textarea-mono"
                               [(ngModel)]="meetingData.raw_transcript"
                               rows="8"></textarea>
-                    <div class="cp-card-actions">
-                        <button type="button" class="cp-btn-soft"
-                                [disabled]="isRegeneratingFields || meetingData.ai_fields_regenerated"
-                                [title]="meetingData.ai_fields_regenerated ? 'Ya se sugirieron campos con IA para esta sesión.' : 'Sugerir decisiones, riesgos, acuerdos, asistentes y temas con IA.'"
-                                (click)="regenerateFields()">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path>
-                                <path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path>
-                            </svg>
-                            <span *ngIf="isRegeneratingFields">Sugiriendo…</span>
-                            <span *ngIf="!isRegeneratingFields && !meetingData.ai_fields_regenerated">Sugerir campos con IA</span>
-                            <span *ngIf="!isRegeneratingFields && meetingData.ai_fields_regenerated">Campos sugeridos</span>
-                        </button>
-                        <button type="button" class="cp-btn-soft"
-                                [disabled]="isRegenerating || meetingData.ai_tasks_regenerated"
-                                [title]="meetingData.ai_tasks_regenerated ? 'Ya se regeneraron tareas con IA para esta sesión.' : 'Regenerar el listado de tareas con IA.'"
-                                (click)="regenerateTasks()">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="23 4 23 10 17 10"></polyline>
-                                <polyline points="1 20 1 14 7 14"></polyline>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-                                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
-                            </svg>
-                            <span *ngIf="isRegenerating">Regenerando…</span>
-                            <span *ngIf="!isRegenerating && !meetingData.ai_tasks_regenerated">Regenerar tareas</span>
-                            <span *ngIf="!isRegenerating && meetingData.ai_tasks_regenerated">Tareas regeneradas</span>
-                        </button>
-                    </div>
                 </article>
 
                 <!-- Decisiones Clave -->
@@ -227,10 +269,32 @@
                         <div class="cp-card-titles">
                             <h3>Decisiones clave</h3>
                         </div>
+                        <button type="button" class="cp-card-edit"
+                                [class.is-editing]="editing.decisions"
+                                (click)="toggleEdit('decisions')"
+                                [title]="editing.decisions ? 'Volver a vista' : 'Editar'">
+                            <svg *ngIf="!editing.decisions"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                            <svg *ngIf="editing.decisions"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </button>
                     </header>
-                    <textarea class="cp-textarea cp-textarea-scroll"
+                    <div *ngIf="!editing.decisions && meetingData.processed_decisions"
+                         class="cp-md-view cp-textarea-scroll"
+                         [innerHTML]="meetingData.processed_decisions | mdRender"></div>
+                    <div *ngIf="!editing.decisions && !meetingData.processed_decisions"
+                         class="cp-md-empty">Aún no se identificaron decisiones.</div>
+                    <textarea *ngIf="editing.decisions"
+                              class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.processed_decisions"
-                              rows="4"></textarea>
+                              rows="6"></textarea>
                 </article>
 
                 <!-- Riesgos Identificados -->
@@ -247,10 +311,32 @@
                         <div class="cp-card-titles">
                             <h3>Riesgos identificados</h3>
                         </div>
+                        <button type="button" class="cp-card-edit"
+                                [class.is-editing]="editing.risks"
+                                (click)="toggleEdit('risks')"
+                                [title]="editing.risks ? 'Volver a vista' : 'Editar'">
+                            <svg *ngIf="!editing.risks"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                            <svg *ngIf="editing.risks"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </button>
                     </header>
-                    <textarea class="cp-textarea cp-textarea-scroll"
+                    <div *ngIf="!editing.risks && meetingData.processed_risks"
+                         class="cp-md-view cp-textarea-scroll"
+                         [innerHTML]="meetingData.processed_risks | mdRender"></div>
+                    <div *ngIf="!editing.risks && !meetingData.processed_risks"
+                         class="cp-md-empty">No se identificaron riesgos.</div>
+                    <textarea *ngIf="editing.risks"
+                              class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.processed_risks"
-                              rows="4"></textarea>
+                              rows="6"></textarea>
                 </article>
 
                 <!-- Acuerdos -->
@@ -268,10 +354,32 @@
                         <div class="cp-card-titles">
                             <h3>Acuerdos</h3>
                         </div>
+                        <button type="button" class="cp-card-edit"
+                                [class.is-editing]="editing.agreements"
+                                (click)="toggleEdit('agreements')"
+                                [title]="editing.agreements ? 'Volver a vista' : 'Editar'">
+                            <svg *ngIf="!editing.agreements"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                            <svg *ngIf="editing.agreements"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </button>
                     </header>
-                    <textarea class="cp-textarea cp-textarea-scroll"
+                    <div *ngIf="!editing.agreements && meetingData.processed_agreements"
+                         class="cp-md-view cp-textarea-scroll"
+                         [innerHTML]="meetingData.processed_agreements | mdRender"></div>
+                    <div *ngIf="!editing.agreements && !meetingData.processed_agreements"
+                         class="cp-md-empty">No hay acuerdos registrados.</div>
+                    <textarea *ngIf="editing.agreements"
+                              class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.processed_agreements"
-                              rows="4"></textarea>
+                              rows="6"></textarea>
                 </article>
             </aside>
 
@@ -402,12 +510,26 @@
                                 </div>
                             </div>
 
-                            <!-- Descripción de la tarea -->
-                            <textarea class="cp-task-desc"
+                            <!-- Descripción: por defecto rendereada con el
+                                 pipe markdown (saltos de línea correctos +
+                                 listas / bold). Click la convierte a
+                                 textarea para editar. -->
+                            <div *ngIf="expandedTaskId !== task.id && task.description"
+                                 class="cp-task-desc-view"
+                                 [innerHTML]="task.description | mdRender"
+                                 (click)="toggleTaskExpand(task.id)"
+                                 title="Click para editar"></div>
+                            <div *ngIf="expandedTaskId !== task.id && !task.description"
+                                 class="cp-task-desc-empty"
+                                 (click)="toggleTaskExpand(task.id)">
+                                Click para añadir descripción
+                            </div>
+                            <textarea *ngIf="expandedTaskId === task.id"
+                                      class="cp-task-desc"
                                       [(ngModel)]="task.description"
                                       placeholder="Descripción detallada de la tarea"
-                                      rows="2"
-                                      (blur)="updateTaskField(task)"></textarea>
+                                      rows="4"
+                                      (blur)="updateTaskField(task); expandedTaskId = null"></textarea>
 
                             <!-- Inputs: responsable, correo, fecha -->
                             <div class="cp-task-fields">
