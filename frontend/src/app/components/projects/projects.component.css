@@ -38,7 +38,14 @@
 }
 
 /* ====== Header ====== */
-.ap-header { margin-bottom: 24px; }
+.ap-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.ap-header-left { display: flex; flex-direction: column; gap: 4px; }
 .ap-title {
     font-family: var(--ap-font);
     font-size: 28px;
@@ -46,6 +53,12 @@
     color: var(--ap-text);
     margin: 0;
     letter-spacing: -0.01em;
+}
+.ap-sub {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ap-text-muted);
+    line-height: 1.4;
 }
 
 /* ====== Layout grid ====== */
@@ -58,130 +71,190 @@
 .ap-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .ap-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-/* ====== Search row ====== */
-.ap-search-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
-}
-.ap-search {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #FFFFFF;
-    border: 1px solid var(--ap-border);
-    border-radius: var(--ap-radius-input);
-    padding: 0 14px;
-    height: 44px;
-    transition: border-color 120ms ease, box-shadow 120ms ease;
-}
-.ap-search:focus-within {
-    border-color: var(--ap-blue);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
-}
-.ap-search svg { color: var(--ap-text-soft); flex-shrink: 0; }
-.ap-search input {
-    flex: 1;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    font-family: inherit;
-    font-size: 13px;
-    color: var(--ap-text);
-    height: 100%;
-    padding: 0;
-}
-.ap-search input::placeholder { color: var(--ap-text-soft); }
-
+/* ====== CTA principal del page header ====== */
 .ap-cta {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 44px;
-    padding: 0 18px;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
     background: var(--ap-blue);
     color: #FFFFFF;
     border: 1px solid var(--ap-blue);
     border-radius: var(--ap-radius-input);
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
+    flex-shrink: 0;
     transition: background 120ms ease, box-shadow 120ms ease;
 }
 .ap-cta:hover { background: #1D4ED8; border-color: #1D4ED8; box-shadow: 0 4px 10px rgba(37,99,235,0.18); }
+.ap-cta svg { flex-shrink: 0; }
 
-/* ====== Filtros ====== */
-.ap-filters {
-    display: flex;
+/* ============================================================
+ *  Search row + Filters toggle — réplica EXACTA del patrón de
+ *  /admin/meetings (.mt-search-row / .filter-search / .filters-btn)
+ *  para que ambas páginas tengan la misma zona de búsqueda.
+ * ============================================================ */
+.acten-projects .mt-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    margin-top: 4px;
+    align-items: center;
 }
-.ap-filter {
+
+.acten-projects .filter-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #FFFFFF;
+    border: 1px solid var(--ap-border);
+    border-radius: 12px;
+    height: 42px;
+    padding: 0 14px;
+    gap: 10px;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    min-width: 0;
+}
+.acten-projects .filter-search:hover { border-color: #CBD5E1; }
+.acten-projects .filter-search:focus-within {
+    border-color: var(--ap-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+.acten-projects .filter-search > svg {
+    color: var(--ap-text-soft);
+    flex-shrink: 0;
+}
+.acten-projects .filter-search input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    line-height: 1;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ap-text);
+    height: 100%;
+}
+.acten-projects .filter-search input::placeholder { color: var(--ap-text-soft); opacity: 1; }
+
+/* Panel de filtros expandible */
+.acten-projects .mt-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+    animation: ap-filters-slide 180ms ease;
+}
+@keyframes ap-filters-slide {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.acten-projects .filter-group {
     display: flex;
     flex-direction: column;
-    gap: 2px;
     background: #FFFFFF;
     border: 1px solid var(--ap-border);
-    border-radius: var(--ap-radius-input);
-    padding: 8px 14px;
-    min-width: 130px;
+    border-radius: 12px;
+    padding: 4px 12px;
+    height: 40px;
+    justify-content: center;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-.ap-filter label {
-    font-size: 11px;
+.acten-projects .filter-group:focus-within {
+    border-color: var(--ap-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+.acten-projects .filter-group label {
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
     color: var(--ap-text-muted);
-    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    line-height: 1;
 }
-.ap-filter select {
-    border: 0;
-    outline: 0;
-    padding: 0;
+.acten-projects .filter-group select {
+    appearance: none;
+    -webkit-appearance: none;
     background: transparent;
+    border: none;
+    outline: none;
     font-family: inherit;
     font-size: 13px;
-    font-weight: 600;
     color: var(--ap-text);
-    appearance: none;
+    padding: 0 16px 0 0;
+    margin-top: 2px;
     cursor: pointer;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 0 center;
-    padding-right: 16px;
+    background-position: right center;
+    background-size: 12px;
 }
-.ap-more-filters {
+
+/* Botón "Filtros" (toggle del panel) */
+.acten-projects .filters-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 50px;
-    padding: 0 16px;
+    gap: 8px;
+    height: 42px;
+    padding: 0 14px;
     background: #FFFFFF;
     border: 1px solid var(--ap-border);
-    border-radius: var(--ap-radius-input);
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ap-blue);
-    cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease;
-}
-.ap-more-filters:hover { background: var(--ap-blue-soft); border-color: var(--ap-blue); }
-.ap-clear-link {
-    margin-left: auto;
-    background: transparent;
-    border: 0;
-    color: var(--ap-blue);
+    border-radius: 12px;
+    color: var(--ap-text);
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    padding: 0 4px;
-    height: 50px;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
-.ap-clear-link:hover { text-decoration: underline; }
+.acten-projects .filters-btn > svg:first-of-type { color: var(--ap-text-muted); flex-shrink: 0; }
+.acten-projects .filters-btn:hover {
+    background: var(--ap-grey-soft);
+    border-color: #CBD5E1;
+}
+.acten-projects .filters-btn.is-open {
+    background: var(--ap-blue-soft);
+    border-color: var(--ap-blue);
+    color: var(--ap-blue);
+}
+.acten-projects .filters-btn.is-open > svg:first-of-type { color: var(--ap-blue); }
+.acten-projects .filters-btn.has-active {
+    border-color: var(--ap-blue);
+    color: var(--ap-blue);
+}
+
+.acten-projects .filters-btn-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    background: var(--ap-blue);
+    color: #FFFFFF;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.acten-projects .filters-btn-chevron {
+    color: var(--ap-text-muted);
+    flex-shrink: 0;
+    transition: transform 180ms ease;
+}
+.acten-projects .filters-btn-chevron.flipped { transform: rotate(180deg); color: var(--ap-blue); }
 
 /* ====== Card / Tabs ====== */
 .ap-card {
@@ -636,10 +709,10 @@
 }
 @media (max-width: 720px) {
     .acten-projects { padding: 20px; }
-    .ap-search-row { grid-template-columns: 1fr; }
+    .ap-header { flex-direction: column; align-items: stretch; }
     .ap-cta { width: 100%; justify-content: center; }
-    .ap-filters { flex-direction: column; align-items: stretch; }
-    .ap-filter, .ap-more-filters, .ap-clear-link { width: 100%; }
+    .acten-projects .mt-search-row { grid-template-columns: 1fr; }
+    .acten-projects .mt-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ap-table-wrap { overflow-x: auto; }
     .ap-table { min-width: 800px; }
     .ap-pagination { flex-direction: column; align-items: stretch; }

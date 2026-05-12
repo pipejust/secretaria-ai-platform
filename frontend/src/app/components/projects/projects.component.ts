@@ -33,9 +33,12 @@ export class ProjectsComponent implements OnInit {
      *  expone owners/teams/tags como facets). Cuando esté listo el endpoint,
      *  los wireamos. */
     filterStatus = 'all';
-    filterOwner = 'all';
+    filterOwner: 'all' | number = 'all';
     filterTeam = 'all';
     filterTag = 'all';
+
+    /** Toggle del panel de filtros expandible (mismo patrón que /admin/meetings). */
+    showFilters = false;
 
     /** Paginación local. */
     pageSize = 10;
@@ -646,6 +649,17 @@ export class ProjectsComponent implements OnInit {
         this.searchText = '';
         this.activeTab = 'all';
         this.currentPage = 1;
+    }
+    toggleFilters(): void { this.showFilters = !this.showFilters; }
+
+    /** Cuántos filtros tienen un valor distinto al default (para badge). */
+    get activeFiltersCount(): number {
+        let n = 0;
+        if (this.filterStatus !== 'all') n++;
+        if (this.filterOwner !== 'all') n++;
+        if (this.filterTeam !== 'all') n++;
+        if (this.filterTag !== 'all') n++;
+        return n;
     }
     nextPage(): void {
         if (this.currentPage < this.totalPagesCount) this.currentPage++;

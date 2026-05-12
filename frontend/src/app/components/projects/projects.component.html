@@ -275,9 +275,21 @@
      ============================================================================ -->
 <div class="acten-projects" (click)="closeActions()">
 
-    <!-- Page header -->
+    <!-- Page header — réplica del de /admin/meetings: título a la izquierda
+         + CTA primaria a la derecha. -->
     <header class="ap-header">
-        <h1 class="ap-title">Proyectos</h1>
+        <div class="ap-header-left">
+            <h1 class="ap-title">Proyectos</h1>
+            <p class="ap-sub">Gestiona, sincroniza y prioriza los proyectos de tu equipo.</p>
+        </div>
+        <button type="button" class="ap-cta" (click)="showProjectModal = true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nuevo Proyecto
+        </button>
     </header>
 
     <div class="ap-layout">
@@ -285,31 +297,46 @@
         <!-- ============= MAIN COLUMN ============= -->
         <section class="ap-main">
 
-            <!-- Search + CTA -->
-            <div class="ap-search-row">
-                <div class="ap-search">
+            <!-- Búsqueda principal + botón toggle de filtros (mismo patrón
+                 que /admin/meetings: search ancho + "Filtros" colapsable). -->
+            <section class="mt-search-row" aria-label="Buscar proyectos">
+                <div class="filter-search">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                     <input type="text"
-                           placeholder="Buscar proyectos por nombre, responsable o palabra clave..."
+                           placeholder="Buscar proyectos por nombre, responsable o palabra clave…"
                            [(ngModel)]="searchText"
                            (input)="onSearchInput()" />
                 </div>
-                <button type="button" class="ap-cta" (click)="showProjectModal = true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Nuevo Proyecto
-                </button>
-            </div>
 
-            <!-- Filtros -->
-            <div class="ap-filters">
-                <div class="ap-filter">
+                <button class="filters-btn"
+                        type="button"
+                        [class.is-open]="showFilters"
+                        [class.has-active]="activeFiltersCount > 0"
+                        [attr.aria-expanded]="showFilters"
+                        (click)="toggleFilters()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filtros
+                    <span class="filters-btn-count" *ngIf="activeFiltersCount > 0">
+                        {{ activeFiltersCount }}
+                    </span>
+                    <svg class="filters-btn-chevron" [class.flipped]="showFilters"
+                         width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </section>
+
+            <!-- Panel de filtros expandible — solo visible al togglear el
+                 botón "Filtros". Misma estructura que /admin/meetings. -->
+            <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+                <div class="filter-group">
                     <label>Estado</label>
                     <select [(ngModel)]="filterStatus" (change)="onSearchInput()">
                         <option value="all">Todos</option>
@@ -317,34 +344,26 @@
                         <option value="archived">Archivados</option>
                     </select>
                 </div>
-                <div class="ap-filter">
+                <div class="filter-group">
                     <label>Responsable</label>
                     <select [(ngModel)]="filterOwner">
-                        <option value="all">Todos</option>
-                        <option *ngFor="let u of users" [value]="u.id">{{ u.full_name || u.email }}</option>
+                        <option [ngValue]="'all'">Todos</option>
+                        <option *ngFor="let u of users" [ngValue]="u.id">{{ u.full_name || u.email }}</option>
                     </select>
                 </div>
-                <div class="ap-filter">
+                <div class="filter-group">
                     <label>Equipo</label>
                     <select [(ngModel)]="filterTeam">
                         <option value="all">Todos</option>
                     </select>
                 </div>
-                <div class="ap-filter">
+                <div class="filter-group">
                     <label>Etiquetas</label>
                     <select [(ngModel)]="filterTag">
                         <option value="all">Todas</option>
                     </select>
                 </div>
-                <button type="button" class="ap-more-filters">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                    </svg>
-                    Más filtros
-                </button>
-                <button type="button" class="ap-clear-link" (click)="clearFilters()">Limpiar</button>
-            </div>
+            </section>
 
             <!-- Tabs + Tabla card -->
             <div class="ap-card">
