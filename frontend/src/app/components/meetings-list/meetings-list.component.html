@@ -148,10 +148,8 @@
                 <label>Origen</label>
                 <select [(ngModel)]="filterSource">
                     <option value="">Todos los orígenes</option>
-                    <option value="zoom">Zoom</option>
-                    <option value="meet">Google Meet</option>
-                    <option value="teams">Microsoft Teams</option>
-                    <option value="manual">Manual</option>
+                    <option value="manual">Subida manual</option>
+                    <option value="web">Web</option>
                 </select>
             </div>
 
@@ -216,21 +214,22 @@
                      role="button"
                      tabindex="0">
 
-                    <!-- Título + equipo -->
+                    <!-- Título + equipo. El icono representa el origen real:
+                         manual = upload, web = nube (webhook). -->
                     <div class="cell-title">
                         <div class="row-icon"
                              [attr.data-source]="sessionSource(s).key">
-                            <svg *ngIf="sessionSource(s).key === 'zoom' || sessionSource(s).key === 'meet' || sessionSource(s).key === 'teams'"
-                                 width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                            </svg>
                             <svg *ngIf="sessionSource(s).key === 'manual'"
                                  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <svg *ngIf="sessionSource(s).key === 'web'"
+                                 width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
                             </svg>
                         </div>
                         <div class="cell-title-text">
@@ -245,15 +244,20 @@
                         <span class="cell-date-time">{{ formatTimeLine(s) }}</span>
                     </div>
 
-                    <!-- Participantes (avatares stub) -->
+                    <!-- Participantes: avatar con SOLO las iniciales del nombre.
+                         Tooltip rico al hover (nombre + rol + empresa). -->
                     <div class="cell-participants">
                         <ng-container *ngIf="attendeesOf(s).length as attCount">
-                            <span class="avatar"
-                                  *ngFor="let name of attendeesOf(s).slice(0, 3); let i = index"
-                                  [style.background]="initialsColor(name)"
-                                  [style.zIndex]="3 - i"
-                                  [title]="name">
-                                {{ initials(name) }}
+                            <span class="avatar avatar-tip-host"
+                                  *ngFor="let a of attendeesOf(s).slice(0, 3); let i = index"
+                                  [style.background]="initialsColor(a.name)"
+                                  [style.zIndex]="3 - i">
+                                <span class="avatar-text">{{ initials(a.name) }}</span>
+                                <span class="avatar-tip" role="tooltip">
+                                    <strong class="avatar-tip-name">{{ a.name }}</strong>
+                                    <span class="avatar-tip-meta" *ngIf="a.role">{{ a.role }}</span>
+                                    <span class="avatar-tip-meta" *ngIf="a.company">{{ a.company }}</span>
+                                </span>
                             </span>
                             <span class="avatar-more" *ngIf="attCount > 3">+{{ attCount - 3 }}</span>
                         </ng-container>
@@ -425,15 +429,19 @@
             </button>
         </header>
 
-        <!-- Participantes -->
+        <!-- Participantes: mismo patrón de tooltip enriquecido del listado. -->
         <div class="dt-participants" *ngIf="selectedAttendees.length">
             <div class="participants-avatars">
-                <span class="avatar avatar-lg"
-                      *ngFor="let name of selectedAttendees.slice(0, 4); let i = index"
-                      [style.background]="initialsColor(name)"
-                      [style.zIndex]="4 - i"
-                      [title]="name">
-                    {{ initials(name) }}
+                <span class="avatar avatar-lg avatar-tip-host"
+                      *ngFor="let a of selectedAttendees.slice(0, 4); let i = index"
+                      [style.background]="initialsColor(a.name)"
+                      [style.zIndex]="4 - i">
+                    <span class="avatar-text">{{ initials(a.name) }}</span>
+                    <span class="avatar-tip" role="tooltip">
+                        <strong class="avatar-tip-name">{{ a.name }}</strong>
+                        <span class="avatar-tip-meta" *ngIf="a.role">{{ a.role }}</span>
+                        <span class="avatar-tip-meta" *ngIf="a.company">{{ a.company }}</span>
+                    </span>
                 </span>
                 <span class="avatar-more avatar-more-lg" *ngIf="selectedAttendees.length > 4">
                     +{{ selectedAttendees.length - 4 }}

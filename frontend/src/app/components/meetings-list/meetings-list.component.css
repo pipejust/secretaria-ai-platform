@@ -275,9 +275,22 @@
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    overflow: hidden;
+    /* overflow visible permite que el tooltip de los avatares salga del
+       wrap sin ser cortado. Las esquinas redondeadas las da el header/última
+       fila explícitamente abajo. */
+    overflow: visible;
 }
-.mt-table { display: flex; flex-direction: column; }
+.mt-table { display: flex; flex-direction: column; border-radius: inherit; }
+/* Esquinas redondeadas en el header (primer mt-tr) y la última fila para
+   que el fondo no sangre fuera del border-radius del wrap. */
+.mt-table > .mt-tr:first-child {
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+}
+.mt-table > .mt-tr:last-child {
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
 
 .mt-tr {
     display: grid;
@@ -337,10 +350,11 @@
     justify-content: center;
     flex-shrink: 0;
 }
-.row-icon[data-source="zoom"]   { background: rgba(36, 109, 230, 0.10); color: #246DE6; }
-.row-icon[data-source="meet"]   { background: rgba(34, 134, 58, 0.10);  color: #22863A; }
-.row-icon[data-source="teams"]  { background: rgba(70, 79, 188, 0.10);  color: #464FBC; }
+/* Sólo dos orígenes reales en el modelo:
+   - manual: el usuario subió la transcripción/archivo (color ámbar/upload)
+   - web:    llegó por webhook de un proveedor externo (color azul/cloud) */
 .row-icon[data-source="manual"] { background: rgba(217, 164, 65, 0.12); color: #B8862E; }
+.row-icon[data-source="web"]    { background: rgba(21, 94, 239, 0.10);  color: #155EEF; }
 
 .cell-title-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .row-title {
@@ -368,6 +382,7 @@
 /* Cell: participantes */
 .cell-participants { display: flex; align-items: center; }
 .avatar {
+    position: relative;          /* anclaje para el tooltip absoluto */
     width: 26px;
     height: 26px;
     border-radius: var(--radius-full);
@@ -382,8 +397,73 @@
     border: 2px solid var(--color-bg-panel);
     margin-left: -8px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    cursor: default;
 }
 .avatar:first-child { margin-left: 0; }
+
+/* Texto interno: las INICIALES (ej. "FC"). El tooltip se renderiza
+   aparte para que no se confunda con el contenido visible del avatar. */
+.avatar-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    user-select: none;
+    pointer-events: none;
+    /* Forzamos a ignorar cualquier hijo del tooltip que sangre */
+}
+
+/* Tooltip CSS-only. Se posiciona arriba del avatar; muestra nombre,
+   rol y empresa. Sin libs externas, sólo opacity + transform. */
+.avatar-tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translate(-50%, 4px);
+    min-width: 160px;
+    max-width: 240px;
+    padding: 8px 10px;
+    background: var(--color-fg-default);
+    color: #fff;
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: normal;
+    /* Flecha-puntero hacia abajo */
+}
+.avatar-tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--color-fg-default);
+}
+.avatar-tip-name {
+    font-weight: var(--fw-bold);
+    color: #fff;
+    font-size: var(--text-13);
+}
+.avatar-tip-meta {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: var(--text-11);
+}
+.avatar-tip-host:hover .avatar-tip,
+.avatar-tip-host:focus-visible .avatar-tip {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
 .avatar-more {
     width: 26px;
     height: 26px;
@@ -420,10 +500,8 @@
     border: 1px solid var(--color-border);
 }
 .source-dot { width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--color-fg-muted); flex-shrink: 0; }
-.source-chip[data-source="zoom"]   .source-dot { background: #246DE6; }
-.source-chip[data-source="meet"]   .source-dot { background: #22863A; }
-.source-chip[data-source="teams"]  .source-dot { background: #464FBC; }
 .source-chip[data-source="manual"] .source-dot { background: #B8862E; }
+.source-chip[data-source="web"]    .source-dot { background: #155EEF; }
 
 /* Cell: status badge */
 .cell-status { display: flex; }
@@ -635,10 +713,8 @@
 .dt-meta-item { display: inline-flex; align-items: center; gap: 4px; }
 .dt-meta-item svg { flex-shrink: 0; }
 .dt-meta-dot { opacity: 0.5; }
-.dt-meta-source[data-source="zoom"]   { color: #246DE6; }
-.dt-meta-source[data-source="meet"]   { color: #22863A; }
-.dt-meta-source[data-source="teams"]  { color: #464FBC; }
 .dt-meta-source[data-source="manual"] { color: #B8862E; }
+.dt-meta-source[data-source="web"]    { color: #155EEF; }
 .dt-meta-source .source-dot { width: 6px; height: 6px; }
 
 .dt-close {

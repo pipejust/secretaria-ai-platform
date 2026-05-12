@@ -23,6 +23,15 @@ interface ActionItemDTO {
     priority?: string;          // si el backend lo expone (low/medium/high)
 }
 
+/** Participante normalizado para avatares + tooltip. El backend persiste
+ *  `processed_attendees` como JSON array de objetos {name, role, entity}.
+ *  Lo tipamos acá para no perder rol/empresa en la UI. */
+interface Attendee {
+    name: string;
+    role?: string;
+    company?: string;
+}
+
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
@@ -296,6 +305,12 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             filtered = filtered.filter((s) => s?.status === 'archived');
         }
 
+        // Filtro de origen (Subida manual / Web). Client-side: derivado de
+        // fireflies_id en sessionSource().
+        if (this.filterSource) {
+            filtered = filtered.filter((s) => this.sessionSource(s).key === this.filterSource);
+        }
+
         // Buscador local (encima de filtros server-side).
         const raw = (this.searchText || '').trim().toLowerCase();
         if (raw) {
@@ -375,14 +390,52 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         return this._parseList(this.selectedSession?.processed_decisions);
     }
 
-    /** Lista de attendees del campo processed_attendees. */
-    get selectedAttendees(): string[] {
-        return this._parseList(this.selectedSession?.processed_attendees);
+    /** Lista de attendees tipados de la sesión seleccionada (panel lateral). */
+    get selectedAttendees(): Attendee[] {
+        return this.attendeesOf(this.selectedSession);
     }
 
-    /** Wrapper público para los templates: lista de attendees de la
-     *  fila de la tabla. _parseList queda privado. */
-    attendeesOf(s: any): string[] { return this._parseList(s?.processed_attendees); }
+    /** Lista de attendees tipados (name + role + company) para una sesión.
+     *  Maneja los tres formatos en los que el backend persiste el campo:
+     *  (1) array de objetos {name, role, entity}; (2) JSON-string del (1);
+     *  (3) texto plano separado por saltos/viñetas. */
+    attendeesOf(s: any): Attendee[] {
+        const raw = s?.processed_attendees;
+        if (!raw) return [];
+        const arr: any[] = Array.isArray(raw)
+            ? raw
+            : this._tryParseArray(String(raw));
+        if (!arr.length) return [];
+        return arr
+            .map((x): Attendee | null => {
+                if (!x) return null;
+                if (typeof x === 'string') {
+                    const trimmed = x.trim();
+                    return trimmed ? { name: trimmed } : null;
+                }
+                const name = x.name || x.full_name || x.fullName || x.email || '';
+                if (!name) return null;
+                return {
+                    name: String(name).trim(),
+                    role: x.role || x.position || x.job_title || x.jobTitle || undefined,
+                    company: x.entity || x.company || x.organization || x.org || undefined,
+                };
+            })
+            .filter((a): a is Attendee => !!a);
+    }
+
+    private _tryParseArray(s: string): any[] {
+        // 1) intento JSON
+        try {
+            const obj = JSON.parse(s);
+            if (Array.isArray(obj)) return obj;
+            if (typeof obj === 'string') {
+                return obj.split(/\n|,|•/).map((x) => x.trim()).filter(Boolean);
+            }
+        } catch { /* fall through */ }
+        // 2) plain text separado por saltos/viñetas/comas
+        return s.split(/\n|,|•/).map((x) => x.trim()).filter(Boolean);
+    }
 
     /** Helper genérico: el backend persiste algunos campos como JSON-string
      *  (lista) y otros como texto plano con saltos de línea o viñetas.
@@ -454,18 +507,17 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         return palette[Math.abs(h) % palette.length];
     }
 
-    /** Heurística para determinar el "origen" (Zoom / Meet / Teams / Manual).
-     *  Por ahora no hay campo source en el modelo — derivamos del
-     *  fireflies_id (los manuales arrancan con "MANUAL-") o del título.
-     *  Cuando el backend exponga `source`, este método se reemplaza. */
-    sessionSource(s: any): { name: string; key: 'zoom' | 'meet' | 'teams' | 'manual' } {
-        const ff = (s?.fireflies_id || '').toLowerCase();
-        const title = (s?.title || '').toLowerCase();
-        const haystack = ff + ' ' + title;
-        if (/zoom/.test(haystack)) return { name: 'Zoom', key: 'zoom' };
-        if (/meet|google/.test(haystack)) return { name: 'Google Meet', key: 'meet' };
-        if (/teams|microsoft/.test(haystack)) return { name: 'Microsoft Teams', key: 'teams' };
-        return { name: 'Manual', key: 'manual' };
+    /** Origen real de la sesión.
+     *  - 'manual': el usuario subió el archivo/transcripción desde la UI
+     *    (sessions_upload genera fireflies_id con prefijo "MANUAL-").
+     *  - 'web':    la sesión llegó por webhook (Fireflies real), donde
+     *    el fireflies_id es el ID del proveedor.
+     *  Cualquier otra heurística (Zoom/Teams) requiere un campo `source`
+     *  dedicado en el modelo, todavía no expuesto. */
+    sessionSource(s: any): { name: string; key: 'manual' | 'web' } {
+        const ff = String(s?.fireflies_id || '').toUpperCase();
+        if (!ff || ff.startsWith('MANUAL-')) return { name: 'Subida manual', key: 'manual' };
+        return { name: 'Web', key: 'web' };
     }
 
     /** Duración estimada del item de tabla. Hasta que exista el campo
