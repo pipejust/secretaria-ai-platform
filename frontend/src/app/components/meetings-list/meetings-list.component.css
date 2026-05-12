@@ -65,6 +65,8 @@
     cursor: pointer;
     transition: var(--transition);
     box-shadow: 0 1px 2px rgba(0, 34, 115, 0.15);
+    white-space: nowrap;       /* nunca partir el label en 2 líneas */
+    flex-shrink: 0;
 }
 .mt-cta:hover {
     background: var(--color-accent-hover);
@@ -1001,24 +1003,113 @@
 /* ============================================================
  *  RESPONSIVE
  * ============================================================ */
+
+/* Tablet: panel lateral pasa abajo, métricas a 2×2 */
 @media (max-width: 1200px) {
     .meetings-page.has-detail { grid-template-columns: 1fr; }
     .meetings-detail { position: static; max-height: none; }
 }
+
+/* Mid breakpoint — antes de mobile total, ya empiezan a apretarse las
+   métricas y el header. Filas siguen siendo grid de 7 columnas. */
 @media (max-width: 980px) {
+    .mt-header { flex-wrap: wrap; row-gap: var(--space-12); }
     .mt-metrics { grid-template-columns: repeat(2, 1fr); }
-    .mt-filters { grid-template-columns: 1fr 1fr; }
+    .mt-filters {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-10, 10px);
+    }
     .mt-filters .filter-search { grid-column: span 2; }
     .filters-btn { grid-column: span 2; justify-content: center; }
-    .mt-tr {
-        grid-template-columns: 1fr;
-        gap: 4px;
-        padding: var(--space-12);
-    }
-    .mt-th { display: none; }
-    .mt-pagination { grid-template-columns: 1fr; gap: var(--space-8); }
-    .pg-left, .pg-right { justify-self: center; }
 }
+
+/* Mobile: las filas pasan de tabla a CARD apilable. Layout en 4 zonas:
+        row 1: título + (kebab right)
+        row 2: fecha + duración (split)
+        row 3: participantes (full)
+        row 4: origen + estado (split)
+   El header tabular se oculta. */
+@media (max-width: 780px) {
+    .meetings-page { gap: var(--space-16); }
+    .mt-title { font-size: 1.5rem; }
+    .mt-sub { font-size: var(--text-13); }
+
+    .mt-tabs { gap: var(--space-16); overflow-x: auto; padding-bottom: 2px; }
+    .mt-tabs button { white-space: nowrap; }
+
+    .mt-table-wrap { background: transparent; border: none; padding: 0; }
+    .mt-table { gap: var(--space-10, 10px); }
+
+    .mt-tr {
+        background: var(--color-bg-panel);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-14, 14px) var(--space-16);
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "title       actions"
+            "date        duration"
+            "participants participants"
+            "source      status";
+        gap: 10px var(--space-12);
+        align-items: center;
+        border-bottom: 1px solid var(--color-border);   /* sobre-escribe el rule global */
+    }
+    /* Aplicar redondeo al primer/último row (el wrap ya no lo aplica) */
+    .mt-table > .mt-tr:first-child,
+    .mt-table > .mt-tr:last-child {
+        border-radius: var(--radius-lg);
+    }
+    .mt-th { display: none; }   /* el header tabular no tiene sentido en card-mode */
+
+    .mt-row.is-selected {
+        box-shadow: inset 3px 0 0 var(--color-accent);
+    }
+
+    .cell-title          { grid-area: title;        min-width: 0; }
+    .cell-actions        { grid-area: actions;      justify-self: end; align-self: start; }
+    .cell-date           { grid-area: date; }
+    .cell-duration       { grid-area: duration;     justify-self: end; color: var(--color-fg-muted); }
+    .cell-participants   { grid-area: participants; }
+    .cell-source         { grid-area: source; }
+    .cell-status         { grid-area: status;       justify-self: end; }
+
+    /* Labels prefijo para dar pista de qué es cada dato en mobile */
+    .cell-duration::before {
+        content: '⏱ ';
+        opacity: 0.6;
+    }
+
+    /* Paginación apilada */
+    .mt-pagination { grid-template-columns: 1fr; gap: var(--space-10, 10px); }
+    .pg-left, .pg-right { justify-self: center; }
+    .pg-center { flex-wrap: wrap; justify-content: center; }
+}
+
+/* Smartphone pequeño: métricas 1 columna, filtros también */
 @media (max-width: 560px) {
     .mt-metrics { grid-template-columns: 1fr; }
+    .mt-filters {
+        grid-template-columns: 1fr;
+    }
+    .mt-filters .filter-search { grid-column: span 1; }
+    .filters-btn { grid-column: span 1; }
+
+    /* En pantallas muy chicas, el row collapse aún más:
+       todo en una sola columna, alineado izquierda. */
+    .mt-tr {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "title"
+            "date"
+            "participants"
+            "duration"
+            "source"
+            "status"
+            "actions";
+        gap: 8px;
+    }
+    .cell-actions, .cell-duration, .cell-status { justify-self: start; }
+    .mt-cta { width: 100%; justify-content: center; }
+    .mt-header-left { flex: 1 1 100%; }
 }
