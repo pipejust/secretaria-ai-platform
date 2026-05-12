@@ -1,181 +1,133 @@
-<div class="overview-page">
+<!-- ============================================================================
+     Dashboard Overview — réplica visual del handoff "Good morning, Karan".
+     Layout: 4 KPI tiles → Activity (chart) + Follow-up (donut) + Sync Health
+              → Recently Analyzed Meetings + Top Risks + Top Action Items
+              → Quick Actions horizontal
+     Toda la lógica/datos viene del DashboardComponent existente; aquí sólo
+     re-estilamos para parecernos al mockup.
+     ============================================================================ -->
+<div class="acten-dashboard">
 
     <!-- ============= HERO ============= -->
-    <header class="ov-hero">
-        <div class="ov-hero-left">
-            <h1 class="ov-greeting">{{ greeting }}, {{ userFirstName }}</h1>
-            <p class="ov-greeting-sub">Esto es lo que está pasando hoy.</p>
-        </div>
-        <div class="ov-hero-actions">
-            <div class="ov-period">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                <select class="ov-period-select" [(ngModel)]="overviewPeriod" (change)="setOverviewPeriod(overviewPeriod)">
-                    <option value="7d">Últimos 7 días</option>
-                    <option value="14d">Últimos 14 días</option>
-                    <option value="30d">Últimos 30 días</option>
-                </select>
-            </div>
-            <button class="ov-cta-primary" (click)="openUploadModal()" *ngIf="canCreateMeeting">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Nueva reunión
-            </button>
-            <span class="ov-role-hint" *ngIf="!canCreateMeeting" [title]="'Rol actual: ' + (currentRole || 'desconocido')">
-                Solo lectura
-            </span>
-        </div>
+    <header class="acn-hero">
+        <h1 class="acn-greeting">{{ greeting }}, {{ userFirstName }}</h1>
+        <p class="acn-greeting-sub">Here&rsquo;s what&rsquo;s happening across your meetings and projects.</p>
     </header>
 
     <!-- ============= KPI TILES ============= -->
-    <section class="ov-kpis" aria-label="Métricas principales">
-        <article class="ov-kpi" *ngFor="let k of kpiTiles" [attr.data-tone]="k.tone">
-            <div class="ov-kpi-icon" [attr.data-tone]="k.tone" [ngSwitch]="k.icon">
-                <svg *ngSwitchCase="'meetings'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                <svg *ngSwitchCase="'tasks'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 11 12 14 22 4"></polyline>
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                </svg>
-                <svg *ngSwitchCase="'decisions'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                <svg *ngSwitchCase="'risks'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
+    <section class="acn-kpis" aria-label="Key metrics">
+        <article class="acn-kpi" *ngFor="let k of kpiTiles" [attr.data-tone]="k.tone">
+            <div class="acn-kpi-head">
+                <div class="acn-kpi-icon" [attr.data-tone]="k.tone" [ngSwitch]="k.icon">
+                    <svg *ngSwitchCase="'meetings'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <svg *ngSwitchCase="'tasks'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <svg *ngSwitchCase="'decisions'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6l9-3 9 3v6c0 5-4 8-9 9-5-1-9-4-9-9V6z"></path>
+                    </svg>
+                    <svg *ngSwitchCase="'risks'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <span class="acn-kpi-label">{{ k.label }}</span>
             </div>
-            <div class="ov-kpi-body">
-                <span class="ov-kpi-value">{{ k.value }}</span>
-                <span class="ov-kpi-label">{{ k.label }}</span>
-                <span class="ov-kpi-trend"
-                      [class.trend-up]="k.trend > 0"
-                      [class.trend-down]="k.trend < 0"
-                      [class.trend-flat]="k.trend === 0">
-                    <svg *ngIf="k.trend > 0" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="18 15 12 9 6 15"></polyline>
-                    </svg>
-                    <svg *ngIf="k.trend < 0" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                    <span *ngIf="k.trend === 0">— sin cambio</span>
-                    <span *ngIf="k.trend !== 0">{{ k.trend > 0 ? '+' : '' }}{{ k.trend }}% vs período anterior</span>
-                </span>
+
+            <div class="acn-kpi-body">
+                <div class="acn-kpi-left">
+                    <span class="acn-kpi-value">{{ k.value }}</span>
+                    <span class="acn-kpi-trend"
+                          [class.is-up]="k.trend > 0"
+                          [class.is-down]="k.trend < 0"
+                          [class.is-flat]="k.trend === 0">
+                        <svg *ngIf="k.trend > 0" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 15 12 9 18 15"></polyline>
+                        </svg>
+                        <svg *ngIf="k.trend < 0" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <span *ngIf="k.trend !== 0">{{ k.trend > 0 ? '' : '' }}{{ k.trend | number:'1.0-0' }}%</span>
+                        <span *ngIf="k.trend === 0">0%</span>
+                        <span class="trend-suffix">vs last 7 days</span>
+                    </span>
+                </div>
+                <svg class="acn-kpi-spark" viewBox="0 0 80 28" preserveAspectRatio="none" aria-hidden="true">
+                    <path [attr.d]="sparklinePath(k.sparkline)" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
             </div>
         </article>
     </section>
 
-    <!-- ============= MAIN GRID ============= -->
-    <section class="ov-main-grid">
-        <!-- Activity Chart — interactivo: hover muestra tooltip con los
-             valores del día, click en la leyenda esconde/muestra serie. -->
-        <article class="ov-card ov-card-chart">
-            <header class="ov-card-head">
-                <div>
-                    <h2 class="ov-card-title">Actividad de Reuniones</h2>
-                    <p class="ov-card-sub">Últimos {{ overviewPeriod === '7d' ? 7 : overviewPeriod === '30d' ? 30 : 14 }} días</p>
-                </div>
-                <div class="ov-card-legend" role="group" aria-label="Series visibles">
-                    <button type="button" class="legend-toggle"
-                            [class.is-off]="!seriesVisible.meetings"
-                            (click)="toggleSeries('meetings')"
-                            [attr.aria-pressed]="seriesVisible.meetings"
-                            title="Mostrar / ocultar Reuniones">
-                        <span class="legend-dot legend-meetings"></span>
-                        <span>Reuniones</span>
-                    </button>
-                    <button type="button" class="legend-toggle"
-                            [class.is-off]="!seriesVisible.analyzed"
-                            (click)="toggleSeries('analyzed')"
-                            [attr.aria-pressed]="seriesVisible.analyzed"
-                            title="Mostrar / ocultar Analizadas">
-                        <span class="legend-dot legend-analyzed"></span>
-                        <span>Analizadas</span>
-                    </button>
-                </div>
+    <!-- ============= ANALYTICS ROW: Activity · Follow-up · Sync Health ============= -->
+    <section class="acn-analytics-grid">
+
+        <!-- Meeting Activity -->
+        <article class="acn-card acn-card-activity">
+            <header class="acn-card-head">
+                <h2 class="acn-card-title">Meeting Activity (Last 30 Days)</h2>
+                <select class="acn-select" [(ngModel)]="overviewPeriod" (change)="setOverviewPeriod(overviewPeriod)" aria-label="Period">
+                    <option value="7d">Daily</option>
+                    <option value="14d">Weekly</option>
+                    <option value="30d">Monthly</option>
+                </select>
             </header>
 
-            <div class="ov-chart-wrap">
-                <svg class="ov-chart" viewBox="0 0 600 220"
-                     preserveAspectRatio="none"
-                     (mouseleave)="clearChartHover()">
+            <div class="acn-chart-wrap">
+                <svg class="acn-chart" viewBox="0 0 600 220" preserveAspectRatio="none" (mouseleave)="clearChartHover()">
                     <defs>
                         <linearGradient id="meetingsGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#2F6DBE" stop-opacity="0.18"/>
+                            <stop offset="0%"   stop-color="#2F6DBE" stop-opacity="0.16"/>
                             <stop offset="100%" stop-color="#2F6DBE" stop-opacity="0"/>
                         </linearGradient>
                     </defs>
 
-                    <!-- gridlines horizontales -->
-                    <g class="ov-chart-grid">
-                        <line x1="20" y1="20"  x2="580" y2="20"  />
-                        <line x1="20" y1="70"  x2="580" y2="70"  />
-                        <line x1="20" y1="120" x2="580" y2="120" />
-                        <line x1="20" y1="170" x2="580" y2="170" />
+                    <g class="acn-chart-grid">
+                        <line x1="20" y1="20"  x2="580" y2="20"  stroke-dasharray="3 3"/>
+                        <line x1="20" y1="65"  x2="580" y2="65"  stroke-dasharray="3 3"/>
+                        <line x1="20" y1="110" x2="580" y2="110" stroke-dasharray="3 3"/>
+                        <line x1="20" y1="155" x2="580" y2="155" stroke-dasharray="3 3"/>
+                        <line x1="20" y1="200" x2="580" y2="200" stroke-dasharray="3 3"/>
                     </g>
 
-                    <!-- Y axis labels -->
-                    <g class="ov-chart-y-labels">
-                        <text x="12" y="24"  text-anchor="end">{{ chartYMax }}</text>
-                        <text x="12" y="74"  text-anchor="end">{{ chartYMax * 0.75 | number:'1.0-0' }}</text>
-                        <text x="12" y="124" text-anchor="end">{{ chartYMax * 0.5 | number:'1.0-0' }}</text>
-                        <text x="12" y="174" text-anchor="end">{{ chartYMax * 0.25 | number:'1.0-0' }}</text>
-                        <text x="12" y="194" text-anchor="end">0</text>
+                    <g class="acn-chart-y-labels">
+                        <text x="14" y="24"  text-anchor="end">{{ chartYMax }}</text>
+                        <text x="14" y="69"  text-anchor="end">{{ chartYMax * 0.75 | number:'1.0-0' }}</text>
+                        <text x="14" y="114" text-anchor="end">{{ chartYMax * 0.5 | number:'1.0-0' }}</text>
+                        <text x="14" y="159" text-anchor="end">{{ chartYMax * 0.25 | number:'1.0-0' }}</text>
+                        <text x="14" y="204" text-anchor="end">0</text>
                     </g>
 
-                    <!-- Guía vertical en hover -->
-                    <line *ngIf="chartHover" class="ov-chart-guide"
+                    <line *ngIf="chartHover" class="acn-chart-guide"
                           [attr.x1]="chartHover.x" y1="20"
                           [attr.x2]="chartHover.x" y2="200"/>
 
-                    <!-- Meetings area + line -->
-                    <ng-container *ngIf="seriesVisible.meetings">
-                        <path class="ov-chart-area"
-                              [attr.d]="chartAreaPath(activitySeries.meetings, chartYMax)"
-                              fill="url(#meetingsGrad)"/>
-                        <path class="ov-chart-line ov-chart-line-primary"
-                              [attr.d]="chartPath(activitySeries.meetings, chartYMax)"/>
-                    </ng-container>
+                    <path class="acn-chart-area"
+                          [attr.d]="chartAreaPath(activitySeries.meetings, chartYMax)"
+                          fill="url(#meetingsGrad)"/>
+                    <path class="acn-chart-line"
+                          [attr.d]="chartPath(activitySeries.meetings, chartYMax)"/>
 
-                    <!-- Analyzed (dashed) -->
-                    <path *ngIf="seriesVisible.analyzed"
-                          class="ov-chart-line ov-chart-line-secondary"
-                          [attr.d]="chartPath(activitySeries.analyzed, chartYMax)"
-                          stroke-dasharray="4 4"/>
-
-                    <!-- Puntos visibles para Reuniones (los que destacamos
-                         con halo en hover). Analizadas se infieren del
-                         tooltip pero no las puntuamos para no saturar. -->
-                    <g class="ov-chart-points" *ngIf="seriesVisible.meetings">
+                    <g class="acn-chart-points">
                         <circle *ngFor="let p of chartPoints(activitySeries.meetings, chartYMax); let i = index"
                                 [attr.cx]="p.cx" [attr.cy]="p.cy"
-                                [attr.r]="chartHover && chartHover.index === i ? 5.5 : 3.5"
+                                [attr.r]="chartHover && chartHover.index === i ? 5 : 3"
                                 [class.is-hovered]="chartHover && chartHover.index === i"/>
                     </g>
 
-                    <!-- X labels -->
-                    <g class="ov-chart-x-labels">
+                    <g class="acn-chart-x-labels">
                         <text *ngFor="let l of chartXLabels; let i = index"
-                              [attr.x]="30 + i * 140" y="215"
-                              text-anchor="middle">{{ l }}</text>
+                              [attr.x]="30 + i * 140" y="216" text-anchor="middle">{{ l }}</text>
                     </g>
 
-                    <!-- Hotspots transparentes: una banda vertical por punto
-                         para capturar hover en todo el alto del chart, no
-                         sólo en el círculo de 3.5px de radio. -->
-                    <g class="ov-chart-hotspots">
+                    <g class="acn-chart-hotspots">
                         <rect *ngFor="let p of chartPoints(activitySeries.meetings, chartYMax); let i = index"
                               [attr.x]="p.cx - 18" y="10"
                               width="36" height="190"
@@ -184,320 +136,253 @@
                     </g>
                 </svg>
 
-                <!-- Tooltip flotante. left:% se calcula desde la x del
-                     viewBox (600 unidades de ancho). -->
-                <div class="ov-chart-tooltip" *ngIf="chartHover"
-                     [style.left.%]="(chartHover.x / 600) * 100">
+                <div class="acn-chart-tooltip" *ngIf="chartHover" [style.left.%]="(chartHover.x / 600) * 100">
                     <p class="tt-date">{{ chartHover.label }}</p>
-                    <p class="tt-row" *ngIf="seriesVisible.meetings">
-                        <span class="tt-dot tt-dot-primary"></span>
-                        <span class="tt-label">Reuniones</span>
+                    <p class="tt-row">
+                        <span class="tt-dot"></span>
+                        <span class="tt-label">Meetings</span>
                         <span class="tt-value">{{ chartHover.meetings }}</span>
                     </p>
-                    <p class="tt-row" *ngIf="seriesVisible.analyzed">
-                        <span class="tt-dot tt-dot-secondary"></span>
-                        <span class="tt-label">Analizadas</span>
-                        <span class="tt-value">{{ chartHover.analyzed }}</span>
-                    </p>
                 </div>
             </div>
 
-            <a class="ov-card-link" routerLink="/admin/reportes">Ver toda la actividad →</a>
+            <!-- Stats footer -->
+            <div class="acn-activity-stats">
+                <div class="acn-stat">
+                    <span class="acn-stat-value">{{ activitySummary.totalMeetings }}</span>
+                    <span class="acn-stat-label">Total Meetings</span>
+                </div>
+                <div class="acn-stat">
+                    <span class="acn-stat-value">{{ activitySummary.totalDuration }}</span>
+                    <span class="acn-stat-label">Total Duration</span>
+                </div>
+                <div class="acn-stat">
+                    <span class="acn-stat-value">{{ activitySummary.avgParticipants }}</span>
+                    <span class="acn-stat-label">Avg. Participants</span>
+                </div>
+                <div class="acn-stat">
+                    <span class="acn-stat-value">{{ activitySummary.avgConfidence }}</span>
+                    <span class="acn-stat-label">Avg. AI Confidence</span>
+                </div>
+            </div>
         </article>
 
-        <!-- Right column: Follow-up + Sync Health -->
-        <div class="ov-side-stack">
-            <article class="ov-card ov-followup-card">
-                <header class="ov-card-head followup-head">
-                    <h2 class="ov-card-title">Estado de seguimiento</h2>
-                    <!-- Segmented control: alterna entre breakdown de
-                         sesiones (estado del pipeline) o tareas (estado
-                         de cierre del equipo). -->
-                    <div class="followup-source-toggle" role="tablist"
-                         aria-label="Fuente del breakdown">
-                        <button type="button" role="tab"
-                                [class.active]="followupSource === 'sessions'"
-                                [attr.aria-selected]="followupSource === 'sessions'"
-                                (click)="setFollowupSource('sessions')">
-                            Sesiones
-                        </button>
-                        <button type="button" role="tab"
-                                [class.active]="followupSource === 'tasks'"
-                                [attr.aria-selected]="followupSource === 'tasks'"
-                                (click)="setFollowupSource('tasks')">
-                            Tareas
-                        </button>
-                    </div>
-                </header>
-
-                <!-- Donut + leyenda interactiva. Hover en segmento ↔ leyenda. -->
-                <div class="followup-body">
-                    <div class="followup-donut-wrap" role="img"
-                         [attr.aria-label]="followupTotal + ' ' + followupUnitPlural + ' totales'"
-                         (mouseleave)="clearSegmentHover()">
-                        <svg class="followup-donut" viewBox="0 0 100 100"
-                             aria-hidden="true">
-                            <!-- Track gris de fondo -->
-                            <circle class="donut-track"
-                                    cx="50" cy="50" [attr.r]="donutRadius"
-                                    fill="none" stroke-width="14"/>
-                            <!-- Segmentos: cada uno responde a hover. Cuando
-                                 otro segmento está activo, los inactivos se
-                                 atenúan para guiar la vista. -->
-                            <circle *ngFor="let s of donutSegments; let i = index"
-                                    cx="50" cy="50" [attr.r]="donutRadius"
-                                    fill="none"
-                                    [attr.stroke]="s.color"
-                                    [attr.stroke-width]="hoveredSegmentIdx === i ? 17 : 14"
-                                    stroke-linecap="butt"
-                                    [attr.stroke-dasharray]="s.dashArray"
-                                    [attr.stroke-dashoffset]="s.dashOffset"
-                                    transform="rotate(-90 50 50)"
-                                    class="donut-seg"
-                                    [class.is-active]="hoveredSegmentIdx === i"
-                                    [class.is-dimmed]="hoveredSegmentIdx !== -1 && hoveredSegmentIdx !== i"
-                                    (mouseenter)="onSegmentHover(i)"/>
-                        </svg>
-
-                        <!-- Centro: cuando hay hover, muestra el segmento activo;
-                             sino, el total y el sustantivo. -->
-                        <div class="followup-donut-center">
-                            <ng-container *ngIf="hoveredSegmentIdx === -1; else hoveredCenter">
-                                <span class="donut-total">{{ followupTotal }}</span>
-                                <span class="donut-total-label">Total</span>
-                            </ng-container>
-                            <ng-template #hoveredCenter>
-                                <span class="donut-total">{{ followupBreakdown[hoveredSegmentIdx].count }}</span>
-                                <span class="donut-total-label">{{ followupBreakdown[hoveredSegmentIdx].label }}</span>
-                                <span class="donut-total-pct">{{ followupBreakdown[hoveredSegmentIdx].pct }}%</span>
-                            </ng-template>
-                        </div>
-                    </div>
-
-                    <!-- Leyenda interactiva: cada item también responde a
-                         hover y dispara el mismo destacado en el donut. -->
-                    <ul class="followup-legend" (mouseleave)="clearSegmentHover()">
-                        <li *ngFor="let f of followupBreakdown; let i = index"
-                            [class.is-active]="hoveredSegmentIdx === i"
-                            [class.is-dimmed]="hoveredSegmentIdx !== -1 && hoveredSegmentIdx !== i"
-                            (mouseenter)="onSegmentHover(i)">
-                            <span class="legend-swatch" [style.background]="f.color"></span>
-                            <span class="legend-label">{{ f.label }}</span>
-                            <span class="legend-count">{{ f.count }}</span>
-                            <span class="legend-pct">({{ f.pct }}%)</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Banner adaptativo de ánimo, basado en % completadas. -->
-                <div class="followup-cheer" [attr.data-tone]="encouragementMessage.tone">
-                    <div class="cheer-icon" aria-hidden="true">
-                        <svg *ngIf="encouragementMessage.tone === 'success'"
-                             width="20" height="20" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                        <svg *ngIf="encouragementMessage.tone === 'info'"
-                             width="20" height="20" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                        <svg *ngIf="encouragementMessage.tone === 'neutral'"
-                             width="20" height="20" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                    </div>
-                    <div class="cheer-body">
-                        <p class="cheer-title">{{ encouragementMessage.title }}</p>
-                        <p class="cheer-sub">{{ encouragementMessage.sub }}</p>
-                    </div>
-                </div>
-            </article>
-
-            <article class="ov-card" *ngIf="canManageIntegrations">
-                <header class="ov-card-head">
-                    <h2 class="ov-card-title">Sync Health</h2>
-                    <span class="ov-card-sub-right">Estado de integraciones</span>
-                </header>
-                <ul class="ov-sync">
-                    <li *ngFor="let p of syncProviders">
-                        <span class="sync-logo" [style.background]="p.iconColor">{{ p.iconLetter }}</span>
-                        <span class="sync-name">{{ p.name }}</span>
-                        <span class="sync-status" [class.connected]="p.connected" [class.disconnected]="!p.connected">
-                            <span class="sync-pulse" *ngIf="p.connected"></span>
-                            {{ p.connected ? 'Conectado' : 'Sin conectar' }}
-                        </span>
-                    </li>
-                </ul>
-                <a class="ov-card-link" routerLink="/admin/settings">Gestionar integraciones →</a>
-            </article>
-            <article class="ov-card" *ngIf="!canManageIntegrations">
-                <header class="ov-card-head">
-                    <h2 class="ov-card-title">Mi actividad</h2>
-                    <span class="ov-card-sub-right">Resumen rápido</span>
-                </header>
-                <ul class="ov-followup">
-                    <li><span class="fu-dot" style="background: var(--color-info)"></span>
-                        <span class="fu-label">Rol asignado</span>
-                        <span class="fu-count">{{ currentRole | titlecase }}</span>
-                        <span class="fu-pct"></span>
-                    </li>
-                    <li><span class="fu-dot" style="background: var(--color-success)"></span>
-                        <span class="fu-label">Tareas a mi cargo</span>
-                        <span class="fu-count">—</span>
-                        <span class="fu-pct"></span>
-                    </li>
-                </ul>
-            </article>
-        </div>
-    </section>
-
-    <!-- ============= RECENT MEETINGS ============= -->
-    <section class="ov-card ov-recent">
-        <header class="ov-card-head">
-            <div>
-                <h2 class="ov-card-title">Reuniones recientes</h2>
-                <p class="ov-card-sub">Últimas analizadas por la IA</p>
-            </div>
-            <a class="ov-card-link" routerLink="/admin/meetings">Ver todas →</a>
-        </header>
-        <div class="ov-recent-table">
-            <div class="ov-recent-row ov-recent-head">
-                <span>Reunión</span>
-                <span>Fecha</span>
-                <span>Proyecto</span>
-                <span>Resumen</span>
-                <span class="t-right">Estado</span>
-            </div>
-            <div class="ov-recent-row" *ngFor="let m of recentMeetings" (click)="viewCuration(m.id)" role="button">
-                <div class="ov-recent-title">
-                    <span class="ov-recent-id">#{{ m.id }}</span>
-                    <span class="ov-recent-name">{{ m.title }}</span>
-                </div>
-                <span class="ov-recent-date">{{ formatShortDate(m.date) }}</span>
-                <span class="ov-recent-project">{{ getProjectName(m.project_id) }}</span>
-                <span class="ov-recent-summary">{{ (m.raw_summary || 'Sin resumen aún.') | slice:0:80 }}{{ m.raw_summary && m.raw_summary.length > 80 ? '…' : '' }}</span>
-                <span class="t-right">
-                    <span class="status-pill"
-                          [class.pill-completed]="m.status === 'completed'"
-                          [class.pill-pending]="m.status === 'pending'"
-                          [class.pill-processing]="m.status === 'processing'">
-                        {{ statusLabel(m.status) }}
-                    </span>
-                </span>
-            </div>
-            <div *ngIf="!recentMeetings.length && !isLoadingOverview" class="ov-empty">
-                Aún no hay reuniones registradas. Subí la primera con
-                <button class="link-btn" (click)="openUploadModal()">Nueva reunión →</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- ============= BOTTOM ROW: TOP RISKS + TOP ACTIONS + QUICK ACTIONS ============= -->
-    <section class="ov-bottom-grid">
-        <article class="ov-card">
-            <header class="ov-card-head">
-                <h2 class="ov-card-title">Riesgos principales</h2>
-                <a class="ov-card-link-sm" routerLink="/admin/pendientes">Ver todos →</a>
+        <!-- Follow-up Status -->
+        <article class="acn-card acn-card-followup">
+            <header class="acn-card-head">
+                <h2 class="acn-card-title">Follow-up Status</h2>
             </header>
-            <ul class="ov-risks">
-                <li *ngFor="let r of topRisks">
-                    <div class="risk-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+            <div class="acn-followup-body">
+                <div class="acn-donut-wrap" (mouseleave)="clearSegmentHover()">
+                    <svg class="acn-donut" viewBox="0 0 100 100" aria-hidden="true">
+                        <circle class="donut-track" cx="50" cy="50" [attr.r]="donutRadius" fill="none" stroke-width="14"/>
+                        <circle *ngFor="let s of donutSegments; let i = index"
+                                cx="50" cy="50" [attr.r]="donutRadius"
+                                fill="none"
+                                [attr.stroke]="s.color"
+                                [attr.stroke-width]="hoveredSegmentIdx === i ? 16 : 14"
+                                stroke-linecap="butt"
+                                [attr.stroke-dasharray]="s.dashArray"
+                                [attr.stroke-dashoffset]="s.dashOffset"
+                                transform="rotate(-90 50 50)"
+                                class="donut-seg"
+                                [class.is-active]="hoveredSegmentIdx === i"
+                                [class.is-dimmed]="hoveredSegmentIdx !== -1 && hoveredSegmentIdx !== i"
+                                (mouseenter)="onSegmentHover(i)"/>
+                    </svg>
+                    <div class="acn-donut-center">
+                        <span class="dn-value">{{ followupTotal }}</span>
+                        <span class="dn-label">Total</span>
+                    </div>
+                </div>
+
+                <ul class="acn-donut-legend" (mouseleave)="clearSegmentHover()">
+                    <li *ngFor="let f of followupBreakdown; let i = index"
+                        [class.is-active]="hoveredSegmentIdx === i"
+                        [class.is-dimmed]="hoveredSegmentIdx !== -1 && hoveredSegmentIdx !== i"
+                        (mouseenter)="onSegmentHover(i)">
+                        <span class="lg-dot" [style.background]="f.color"></span>
+                        <span class="lg-label">{{ f.label }}</span>
+                        <span class="lg-count">{{ f.count }}</span>
+                        <span class="lg-pct">({{ f.pct }}%)</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="acn-followup-cheer" [attr.data-tone]="encouragementMessage.tone">
+                <div class="cheer-icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <div class="cheer-body">
+                    <p class="cheer-title">{{ encouragementMessage.title }}</p>
+                    <p class="cheer-sub">{{ encouragementMessage.sub }}</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Sync Health -->
+        <article class="acn-card acn-card-sync">
+            <header class="acn-card-head">
+                <h2 class="acn-card-title">Sync Health</h2>
+                <a class="acn-card-link" routerLink="/admin/settings">View all</a>
+            </header>
+
+            <ul class="acn-sync-list">
+                <li *ngFor="let p of syncProviders">
+                    <span class="sync-icon" [style.background]="p.iconColor">{{ p.iconLetter }}</span>
+                    <div class="sync-meta">
+                        <span class="sync-name">{{ p.name }}</span>
+                    </div>
+                    <div class="sync-state">
+                        <span class="sync-status" [class.is-on]="p.connected">
+                            <svg *ngIf="p.connected" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            {{ p.connected ? 'Connected' : 'Disconnected' }}
+                        </span>
+                        <span class="sync-ago" *ngIf="p.connected">{{ p.syncedAgo }}</span>
+                    </div>
+                </li>
+            </ul>
+
+            <a class="acn-sync-manage" routerLink="/admin/settings">Manage Integrations</a>
+        </article>
+    </section>
+
+    <!-- ============= INSIGHTS ROW: Recently Analyzed · Top Risks · Top Actions ============= -->
+    <section class="acn-insights-grid">
+
+        <!-- Recently Analyzed Meetings -->
+        <article class="acn-card acn-card-meetings">
+            <header class="acn-card-head">
+                <h2 class="acn-card-title">Recently Analyzed Meetings</h2>
+                <a class="acn-card-link" routerLink="/admin/meetings">View all</a>
+            </header>
+
+            <div class="acn-table">
+                <div class="acn-table-row acn-table-head">
+                    <span>Meeting Title</span>
+                    <span>Date</span>
+                    <span>Participants</span>
+                    <span>Duration</span>
+                    <span class="t-right">AI Confidence</span>
+                </div>
+                <div class="acn-table-row" *ngFor="let r of recentMeetingsRows" (click)="viewCuration(r.id)" role="button">
+                    <span class="acn-table-title">{{ r.title }}</span>
+                    <span class="acn-table-cell muted">{{ r.date }}</span>
+                    <span class="acn-table-cell">
+                        <span class="avatar-stack">
+                            <span class="avatar-mini" *ngFor="let p of r.participants" [attr.data-tone]="p.tone">{{ p.initials }}</span>
+                            <span class="avatar-extra" *ngIf="r.extra > 0">+{{ r.extra }}</span>
+                        </span>
+                    </span>
+                    <span class="acn-table-cell muted">{{ r.duration }}</span>
+                    <span class="t-right">
+                        <span class="confidence-badge"
+                              [class.is-high]="r.confidence === 'High'"
+                              [class.is-medium]="r.confidence === 'Medium'"
+                              [class.is-low]="r.confidence === 'Low'">
+                            {{ r.confidence }}
+                        </span>
+                    </span>
+                </div>
+                <div *ngIf="!recentMeetingsRows.length" class="acn-empty">
+                    No analyzed meetings yet. Upload your first one with
+                    <button class="link-btn" (click)="openUploadModal()">+ New Meeting</button>
+                </div>
+            </div>
+
+            <a class="acn-card-foot-link" routerLink="/admin/meetings">View all meetings</a>
+        </article>
+
+        <!-- Top Risks -->
+        <article class="acn-card acn-card-risks">
+            <header class="acn-card-head">
+                <h2 class="acn-card-title">Top Risks</h2>
+                <a class="acn-card-link" routerLink="/admin/pendientes">View all</a>
+            </header>
+
+            <ul class="acn-risk-list">
+                <li *ngFor="let r of topRisksRich">
+                    <span class="risk-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                             <line x1="12" y1="9" x2="12" y2="13"></line>
                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                         </svg>
-                    </div>
+                    </span>
                     <div class="risk-body">
                         <p class="risk-text">{{ r.text }}</p>
-                        <p class="risk-meta">{{ r.sessionTitle }}</p>
+                        <p class="risk-meta">{{ r.sessionTitle }} &nbsp;·&nbsp; {{ r.sessionDate }}</p>
                     </div>
-                    <span class="badge"
-                          [class.badge-danger]="r.impact === 'High'"
-                          [class.badge-warning]="r.impact === 'Medium'"
-                          [class.badge-neutral]="r.impact === 'Low'">
-                        {{ r.impact === 'High' ? 'Alto' : r.impact === 'Medium' ? 'Medio' : 'Bajo' }}
+                    <span class="impact-badge"
+                          [class.is-high]="r.impact === 'High'"
+                          [class.is-medium]="r.impact === 'Medium'"
+                          [class.is-low]="r.impact === 'Low'">
+                        {{ r.impact }}
                     </span>
                 </li>
-                <li *ngIf="!topRisks.length" class="ov-empty-li">No hay riesgos identificados todavía.</li>
+                <li *ngIf="!topRisksRich.length" class="acn-empty-li">No risks identified yet.</li>
             </ul>
+
+            <a class="acn-card-foot-link" routerLink="/admin/pendientes">View all risks</a>
         </article>
 
-        <article class="ov-card">
-            <header class="ov-card-head">
-                <h2 class="ov-card-title">Tareas prioritarias</h2>
-                <a class="ov-card-link-sm" routerLink="/admin/pendientes">Ver todas →</a>
+        <!-- Top Action Items -->
+        <article class="acn-card acn-card-actions">
+            <header class="acn-card-head">
+                <h2 class="acn-card-title">Top Action Items</h2>
+                <a class="acn-card-link" routerLink="/admin/pendientes">View all</a>
             </header>
-            <ul class="ov-tasks">
-                <li *ngFor="let t of topActionItems" [class.is-toggling]="togglingTaskId === t.id">
-                    <input type="checkbox"
-                           class="task-check"
-                           [checked]="t.status === 'done'"
-                           [disabled]="!canTickTasks || togglingTaskId === t.id"
-                           (change)="toggleTaskDone(t, $event)"
-                           [title]="canTickTasks ? 'Marcar como completada' : 'Tu rol no puede cambiar el estado'" />
+
+            <ul class="acn-task-list">
+                <li *ngFor="let t of topActionItemsRich">
+                    <span class="task-dot" [attr.data-accent]="t.accent">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                        </svg>
+                    </span>
                     <div class="task-body">
-                        <p class="task-title" [class.done]="t.status === 'done'">{{ t.title }}</p>
-                        <p class="task-meta">{{ t.owner_name || 'Sin asignar' }} · {{ t.due_date || 'Sin fecha' }}</p>
+                        <p class="task-title">{{ t.title }}</p>
+                        <p class="task-meta">{{ t.sessionTitle }} &nbsp;·&nbsp; {{ t.sessionDate }}</p>
                     </div>
-                    <span class="badge"
-                          [class.badge-success]="t.status === 'done'"
-                          [class.badge-info]="t.status === 'in_progress'"
-                          [class.badge-warning]="(t.status === 'pending' || !t.status)"
-                          [class.badge-danger]="t.status === 'blocked'">
-                        {{ t.status === 'done' ? 'Completada' : t.status === 'in_progress' ? 'En curso' : t.status === 'blocked' ? 'Bloqueada' : 'Pendiente' }}
-                    </span>
+                    <span class="task-owner" [attr.data-tone]="t.owner.tone">{{ t.owner.initials }}</span>
+                    <span class="task-due muted">{{ t.dueLabel }}</span>
                 </li>
-                <li *ngIf="!topActionItems.length" class="ov-empty-li">Sin tareas pendientes asignadas.</li>
+                <li *ngIf="!topActionItemsRich.length" class="acn-empty-li">No open action items.</li>
             </ul>
-        </article>
 
-        <article class="ov-card ov-quick">
-            <header class="ov-card-head">
-                <h2 class="ov-card-title">Acciones rápidas</h2>
-            </header>
-            <ul class="ov-quick-list">
-                <li *ngFor="let qa of quickActions" (click)="triggerQuickAction(qa)" role="button" tabindex="0">
-                    <div class="qa-icon" [ngSwitch]="qa.icon">
-                        <svg *ngSwitchCase="'mic'"      xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                        <svg *ngSwitchCase="'upload'"   xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        <svg *ngSwitchCase="'folder'"   xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                        <svg *ngSwitchCase="'sparkle'"  xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path><path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path></svg>
-                        <svg *ngSwitchCase="'calendar'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        <svg *ngSwitchCase="'chart'"    xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                    </div>
-                    <div class="qa-body">
-                        <span class="qa-label">{{ qa.label }}</span>
-                        <span class="qa-sub">{{ qa.sub }}</span>
-                    </div>
-                    <svg class="qa-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                </li>
-            </ul>
+            <a class="acn-card-foot-link" routerLink="/admin/pendientes">View all action items</a>
         </article>
     </section>
 
-    <footer class="ov-footer">
-        <span>© {{ todayLabel | slice:-4 }} Acten AI · {{ todayLabel }}</span>
-        <span class="dot-sep">·</span>
-        <!-- Apuntan a las páginas legales reales (no a /admin/settings). Abren
-             en nueva pestaña para no sacar al user de su sesión activa. -->
-        <a routerLink="/privacy" target="_blank" rel="noopener">Privacidad</a>
-        <span class="dot-sep">·</span>
-        <a routerLink="/terms" target="_blank" rel="noopener">Términos</a>
-        <span class="ov-version">v1.0</span>
-    </footer>
+    <!-- ============= QUICK ACTIONS ============= -->
+    <section class="acn-quick" aria-label="Quick actions">
+        <h3 class="acn-quick-title">QUICK ACTIONS</h3>
+        <div class="acn-quick-grid">
+            <button class="acn-qa" *ngFor="let qa of quickActionsEn" (click)="triggerQuickAction(qa)" type="button">
+                <span class="qa-icon" [ngSwitch]="qa.icon">
+                    <svg *ngSwitchCase="'mic'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <svg *ngSwitchCase="'upload'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <svg *ngSwitchCase="'folder'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    <svg *ngSwitchCase="'sparkle'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path></svg>
+                    <svg *ngSwitchCase="'calendar'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    <svg *ngSwitchCase="'chart'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                </span>
+                <span class="qa-body">
+                    <span class="qa-label">{{ qa.label }}</span>
+                    <span class="qa-sub">{{ qa.sub }}</span>
+                </span>
+            </button>
+        </div>
+    </section>
 </div>
 
-<!-- Modal Upload -->
+<!-- Modal Upload (sin cambios visuales — sólo se conserva el flujo existente) -->
 <div class="modal-backdrop fade-in" *ngIf="showUploadModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
     <div class="card glass-panel" style="width: 500px; max-width: 90vw; max-height: 90vh; overflow-y:auto; position:relative;">
         <button class="btn btn-sm" style="position:absolute; top:1rem; right:1rem; background:transparent; border:none; font-size:1.5rem; line-height:1; cursor:pointer;" (click)="closeUploadModal()">×</button>
@@ -563,7 +448,7 @@
     </div>
 </div>
 
-<!-- Modal Eliminar Sesión -->
+<!-- Modal Eliminar Sesión (sin cambios) -->
 <div class="modal-backdrop fade-in" *ngIf="showDeleteModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
     <div class="card glass-panel" style="width: 400px; max-width: 90vw; position:relative;">
         <div class="card-body" style="text-align: center; padding: 2rem;">

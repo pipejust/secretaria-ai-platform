@@ -9,6 +9,20 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 
+/** Sub-tab de la card del header (filtro rápido por status). */
+type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
+/** Tab activo del panel lateral derecho de detalle. */
+type DetailTab = 'summary' | 'transcript' | 'insights' | 'notes' | 'files';
+
+interface ActionItemDTO {
+    id: number;
+    title: string;
+    owner_name?: string;
+    due_date?: string;
+    status?: string;
+    priority?: string;          // si el backend lo expone (low/medium/high)
+}
+
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
@@ -17,12 +31,14 @@ import { environment } from '../../../environments/environment';
     styleUrls: ['./meetings-list.component.css']
 })
 export class MeetingsListComponent implements OnInit, OnDestroy {
+    // ---------- Datos cargados ----------
     sessions: any[] = [];
     projects: any[] = [];
     isLoading = false;
     isUploading = false;
     generatingIds: { [key: string]: boolean } = {};
 
+    // ---------- Modales (sin cambios) ----------
     showUploadModal = false;
     uploadTab: 'audio' | 'text' = 'audio';
     uploadForm: any = {
@@ -37,6 +53,34 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     showDeleteModal = false;
     sessionToDelete: any = null;
     isDeleting = false;
+
+    // ---------- Filtros + búsqueda + paginación ----------
+    searchText: string = '';
+    statusFilter: string = '';
+    filterProjectId: string = '';
+    /** Filtros visuales adicionales que el mockup pide. Por ahora son
+     *  placeholders client-side: el backend no expone aún team/source/
+     *  date-range. Se mantienen para que la UI quede igual al mockup
+     *  y se cableen cuando los endpoints estén. */
+    filterTeam = '';
+    filterDate = '';
+    filterSource = '';
+
+    currentPage: number = 1;
+    limit: number = 10;
+    totalPages: number = 1;
+    totalItems: number = 0;
+    sortColumn: string = 'id';
+    sortDirection: 'asc' | 'desc' = 'desc';
+
+    /** Sub-tab del header: All / Analyzed / Drafts / Archived. */
+    statusTab: StatusTab = 'all';
+
+    // ---------- Panel lateral de detalle ----------
+    selectedSession: any = null;
+    selectedActionItems: ActionItemDTO[] = [];
+    isLoadingDetail = false;
+    detailTab: DetailTab = 'summary';
 
     private readonly destroy$ = new Subject<void>();
 
@@ -58,15 +102,18 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         this.destroy$.complete();
     }
 
+    // ============================================================
+    // CARGA DE DATOS
+    // ============================================================
+
     loadProjects() {
         const headers = this.authService.getAuthHeaders();
-        this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
-            next: (data) => {
-                this.projects = data;
-                this.cdr.detectChanges();
-            },
-            error: (err) => console.error("Error cargando proyectos", err)
-        });
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (data) => { this.projects = data; this.cdr.detectChanges(); },
+                error: (err) => console.error('Error cargando proyectos', err),
+            });
     }
 
     getProjectName(projectId: any): string {
@@ -75,169 +122,125 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         return p ? p.name : 'General';
     }
 
-    /** Convierte la fecha de la sesión a 'dd/mm/aaaa' para que el buscador
-     *  pueda matchear cuando el usuario tipea fragmentos como '15/03'. */
-    private _sessionDateLabel(s: any): string {
-        let value = s?.date;
-        if (value == null) return '';
-        if (typeof value === 'string' && !isNaN(Number(value))) {
-            value = Number(value);
-        }
-        const d = new Date(value);
-        if (isNaN(d.getTime())) return String(s.date || '');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        return `${dd}/${mm}/${yyyy}`;
-    }
-
-    openUploadModal() {
-        // Set default date to now in yyyy-MM-ddThh:mm format for datetime-local input
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        this.uploadForm.date = now.toISOString().slice(0,16);
-        this.uploadForm.title = '';
-        this.uploadForm.language = 'Español';
-        this.uploadForm.projectId = '';
-        this.uploadForm.textContent = '';
-        this.uploadForm.file = null;
-        this.showUploadModal = true;
-    }
-
-    closeUploadModal() {
-        this.showUploadModal = false;
-    }
-
-    onFileSelected(event: any) {
-        const file: File = event.target.files[0];
-        if (file) {
-            this.uploadForm.file = file;
-            if (!this.uploadForm.title) {
-                // Remove extension for default title
-                this.uploadForm.title = file.name.replace(/\.[^/.]+$/, "");
-            }
-        }
-    }
-
-    submitUpload() {
-        if (!this.uploadForm.title) {
-            this.toast.warning('El título/motivo es obligatorio.');
-            return;
-        }
-
-        if (this.uploadTab === 'audio' && !this.uploadForm.file) {
-            this.toast.warning('Debe subir un archivo de audio para transcribir.');
-            return;
-        }
-
-        if (this.uploadTab === 'text' && !this.uploadForm.textContent.trim()) {
-            this.toast.warning('Debe pegar el texto de la transcripción.');
-            return;
-        }
-
-        this.isUploading = true;
-        const formData = new FormData();
-        formData.append('title', this.uploadForm.title);
-        
-        if (this.uploadForm.date) {
-            // Convert back to UTC ISO string if needed, or keep local
-            const d = new Date(this.uploadForm.date);
-            formData.append('date', d.toISOString());
-        }
-        
-        formData.append('language', this.uploadForm.language);
-        
-        if (this.uploadForm.projectId) {
-            formData.append('project_id', this.uploadForm.projectId);
-        }
-
-        if (this.uploadTab === 'audio' && this.uploadForm.file) {
-            formData.append('file', this.uploadForm.file);
-        } else if (this.uploadTab === 'text') {
-            formData.append('text_content', this.uploadForm.textContent);
-        }
-
-        const headers = this.authService.getAuthHeaders();
-        // Angular's HttpClient will automatically set the correct Content-Type for FormData
-        
-        this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
-            next: () => {
-                this.toast.success('Sesión creada exitosamente.');
-                this.showUploadModal = false;
-                this.isUploading = false;
-                this.loadSessions();
-            },
-            error: (err) => {
-                this.toast.error(
-                    'Error subiendo o creando la sesión: ' + (err?.error?.detail || err?.message || 'desconocido'),
-                );
-                this.isUploading = false;
-            }
-        });
-    }
-
+    /** Carga la página actual de sesiones del backend. Status server-side
+     *  cuando hay filtro explícito; el sub-tab del header se aplica
+     *  client-side encima del resultado para evitar refetches. */
     loadSessions() {
         this.isLoading = true;
-
         let params = `?page=${this.currentPage}&limit=${this.limit}`;
         if (this.statusFilter) params += `&status=${this.statusFilter}`;
         if (this.searchText.trim()) params += `&search=${encodeURIComponent(this.searchText.trim())}`;
         if (this.filterProjectId) params += `&project_id=${this.filterProjectId}`;
-        
-        const headers = this.authService.getAuthHeaders();
-        this.http.get<any>(`${environment.apiUrl}/api/sessions/${params}`, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
-            next: (data) => {
-                const isPaginatedResponse = !!data.items;
-                const items = isPaginatedResponse ? data.items : data;
-                
-                // Ensure dates are parsed correctly
-                let parsedSessions = items.map((s: any) => {
-                    let parsedDate = s.date;
-                    if (typeof parsedDate === 'string' && !isNaN(Number(parsedDate))) {
-                        parsedDate = Number(parsedDate);
-                    }
-                    return { ...s, date: parsedDate };
-                });
-                
-                this.limit = data.limit || 20;
-                this.totalItems = data.total || parsedSessions.length;
-                this.totalPages = data.pages || Math.ceil(this.totalItems / this.limit) || 1;
-                // Si la respuesta no es paginada (backend viejo), aplicamos rebanado local
-                if (!isPaginatedResponse) {
-                    const startIdx = (this.currentPage - 1) * this.limit;
-                    const endIdx = startIdx + this.limit;
-                    this.sessions = parsedSessions.slice(startIdx, endIdx);
-                } else {
-                    this.sessions = parsedSessions;
-                    this.currentPage = data.page || 1;
-                }
 
-                this.isLoading = false;
-                this.cdr.detectChanges();
-            },
-            error: (err) => {
-                console.error('Error fetching sessions:', err);
-                this.sessions = [];
-                this.isLoading = false;
-                this.cdr.detectChanges();
-            }
-        });
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<any>(`${environment.apiUrl}/api/sessions/${params}`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (data) => {
+                    const isPaginatedResponse = !!data.items;
+                    const items = isPaginatedResponse ? data.items : data;
+                    const parsed = items.map((s: any) => ({
+                        ...s,
+                        date: typeof s.date === 'string' && !isNaN(Number(s.date)) ? Number(s.date) : s.date,
+                    }));
+                    this.limit = data.limit || 10;
+                    this.totalItems = data.total ?? parsed.length;
+                    this.totalPages = data.pages ?? Math.max(1, Math.ceil(this.totalItems / this.limit));
+                    if (!isPaginatedResponse) {
+                        const start = (this.currentPage - 1) * this.limit;
+                        this.sessions = parsed.slice(start, start + this.limit);
+                    } else {
+                        this.sessions = parsed;
+                        this.currentPage = data.page || 1;
+                    }
+                    // Auto-seleccionar la primera fila para mostrar el panel
+                    // lateral con datos reales en lugar de un placeholder
+                    // vacío. Sólo si nada está seleccionado todavía.
+                    if (!this.selectedSession && this.sessions.length) {
+                        this.selectSession(this.sessions[0]);
+                    }
+                    this.isLoading = false;
+                    this.cdr.detectChanges();
+                },
+                error: (err) => {
+                    console.error('Error fetching sessions:', err);
+                    this.sessions = [];
+                    this.isLoading = false;
+                    this.cdr.detectChanges();
+                },
+            });
     }
 
-    searchText: string = '';
-    statusFilter: string = '';
-    filterProjectId: string = '';
-    currentPage: number = 1;
-    limit: number = 20;
-    totalPages: number = 1;
-    totalItems: number = 0;
-    sortColumn: string = 'id';
-    sortDirection: 'asc' | 'desc' = 'desc';
+    /** Carga el detalle completo (con action items) de una sesión para
+     *  el panel lateral. Endpoint: GET /api/sessions/{id}. */
+    private loadSessionDetail(id: number) {
+        this.isLoadingDetail = true;
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<any>(`${environment.apiUrl}/api/sessions/${id}`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (data) => {
+                    // Merge: el detalle puede traer campos que el listado
+                    // pagiando no expuso (raw_summary etc.).
+                    this.selectedSession = { ...this.selectedSession, ...(data?.session || {}) };
+                    this.selectedActionItems = (data?.action_items || []) as ActionItemDTO[];
+                    this.isLoadingDetail = false;
+                    this.cdr.detectChanges();
+                },
+                error: () => {
+                    this.selectedActionItems = [];
+                    this.isLoadingDetail = false;
+                    this.cdr.detectChanges();
+                },
+            });
+    }
 
-    /** Cuenta sesiones por status sobre el lote actualmente cargado.
-        Sirve para los KPI tiles del hero del dashboard. */
+    // ============================================================
+    // FILTROS / SUB-TABS / PAGINACIÓN
+    // ============================================================
+
+    /** Devuelve el conteo client-side del status (sobre la página actual)
+     *  para alimentar los KPI tiles del header sin pedir otra API. */
     countByStatus(status: string): number {
         return (this.sessions || []).filter((s) => s?.status === status).length;
+    }
+
+    /** Total reportado por el backend (página) — para Total Meetings. */
+    get totalMeetings(): number { return this.totalItems || this.sessions.length; }
+
+    /** Sesiones completadas en la página actual. */
+    get analyzedCount(): number { return this.countByStatus('completed'); }
+    /** Pendientes en la página actual. */
+    get pendingCount(): number { return this.countByStatus('pending'); }
+    /** Archivadas — visible si filtras por archivadas. Sin endpoint
+     *  dedicado todavía, devuelve lo que esté en el lote. */
+    get archivedCount(): number { return this.countByStatus('archived'); }
+
+    /** Porcentaje del total para los KPI tiles ("66% of total"). */
+    pctOfTotal(count: number): number {
+        const t = this.totalMeetings;
+        if (!t) return 0;
+        return Math.round((count / t) * 100);
+    }
+
+    /** Duración media del lote en minutos. Como el modelo no tiene un
+     *  campo `duration_min`, mostramos guion hasta que exista. */
+    get avgDurationLabel(): string {
+        // TODO(backend): exponer duration_min en MeetingSession.
+        // Por ahora derivamos algo razonable del raw_transcript si lo
+        // hubiera (~1 min por cada 150 palabras estimadas). Si la
+        // página actual no tiene transcripts cargados, devolvemos '—'.
+        const withTranscript = (this.sessions || []).filter((s) => s?.raw_transcript);
+        if (!withTranscript.length) return '—';
+        const avgWords = withTranscript.reduce((acc, s) => acc + ((s.raw_transcript || '').split(/\s+/).length), 0) / withTranscript.length;
+        const minutes = Math.max(1, Math.round(avgWords / 150));
+        return `${minutes}m`;
+    }
+
+    setStatusTab(tab: StatusTab): void {
+        this.statusTab = tab;
+        this.currentPage = 1;
+        this.cdr.detectChanges();
     }
 
     changePage(page: number) {
@@ -247,147 +250,401 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         }
     }
 
+    changeLimit(newLimit: number) {
+        this.limit = newLimit;
+        this.currentPage = 1;
+        this.loadSessions();
+    }
+
+    /** Página[]s a mostrar en el paginator — compactado con elipsis si
+     *  hay muchas. Estilo "1 2 3 … 13" del mockup. */
+    get pageButtons(): (number | '…')[] {
+        const total = Math.max(1, this.totalPages);
+        const cur = this.currentPage;
+        if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+        const out: (number | '…')[] = [];
+        out.push(1);
+        if (cur > 3) out.push('…');
+        for (let p = Math.max(2, cur - 1); p <= Math.min(total - 1, cur + 1); p++) {
+            out.push(p);
+        }
+        if (cur < total - 2) out.push('…');
+        out.push(total);
+        return out;
+    }
+
+    onSearchInput(): void { this.cdr.detectChanges(); }
+
+    /** Resetea los filtros visuales adicionales que aún no llaman al
+     *  backend pero permiten al user "abrir/cerrar" los selectores. */
+    clearVisualFilters(): void {
+        this.filterTeam = '';
+        this.filterDate = '';
+        this.filterSource = '';
+    }
+
+    /** Resultado final de la tabla: aplica filtros y sub-tab del header. */
+    get filteredSessions() {
+        let filtered = this.sessions || [];
+
+        // Sub-tab del header sobre el lote ya cargado.
+        if (this.statusTab === 'analyzed') {
+            filtered = filtered.filter((s) => s?.status === 'completed');
+        } else if (this.statusTab === 'drafts') {
+            filtered = filtered.filter((s) => s?.status === 'pending');
+        } else if (this.statusTab === 'archived') {
+            filtered = filtered.filter((s) => s?.status === 'archived');
+        }
+
+        // Buscador local (encima de filtros server-side).
+        const raw = (this.searchText || '').trim().toLowerCase();
+        if (raw) {
+            filtered = filtered.filter((s) => {
+                const title = (s.title || '').toLowerCase();
+                const project = this.getProjectName(s.project_id).toLowerCase();
+                const date = this._sessionDateLabel(s);
+                return title.includes(raw) || project.includes(raw) || date.includes(raw);
+            });
+        }
+
+        // Sort.
+        return [...filtered].sort((a, b) => {
+            let va = a[this.sortColumn];
+            let vb = b[this.sortColumn];
+            if (this.sortColumn === 'project_id') {
+                va = this.getProjectName(a.project_id).toLowerCase();
+                vb = this.getProjectName(b.project_id).toLowerCase();
+            } else if (this.sortColumn === 'date') {
+                if (typeof va === 'string' && !isNaN(Number(va))) va = Number(va);
+                if (typeof vb === 'string' && !isNaN(Number(vb))) vb = Number(vb);
+                va = new Date(va).getTime() || 0;
+                vb = new Date(vb).getTime() || 0;
+            } else if (typeof va === 'string') {
+                va = va.toLowerCase(); vb = (vb || '').toLowerCase();
+            } else {
+                va = va || 0; vb = vb || 0;
+            }
+            if (va < vb) return this.sortDirection === 'asc' ? -1 : 1;
+            if (va > vb) return this.sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
     sortBy(column: string) {
         if (this.sortColumn === column) {
             this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
             this.sortColumn = column;
-            this.sortDirection = 'asc'; // Default to asc when clicking a new column
-            if (column === 'date' || column === 'id') {
-                this.sortDirection = 'desc'; // Exception: new IDs and dates default to descending
+            this.sortDirection = column === 'date' || column === 'id' ? 'desc' : 'asc';
+        }
+    }
+
+    // ============================================================
+    // SELECCIÓN / PANEL LATERAL
+    // ============================================================
+
+    selectSession(s: any) {
+        this.selectedSession = s;
+        this.selectedActionItems = [];
+        this.detailTab = 'summary';
+        if (s?.id) this.loadSessionDetail(s.id);
+    }
+
+    closeDetailPanel() {
+        this.selectedSession = null;
+        this.selectedActionItems = [];
+    }
+
+    setDetailTab(tab: DetailTab) { this.detailTab = tab; }
+
+    /** Resumen ejecutivo del panel (usa raw_summary si existe). */
+    get selectedExecutiveSummary(): string {
+        const s = this.selectedSession;
+        if (!s?.raw_summary) return '';
+        // Si viene como JSON-string lo intentamos parsear; si no, plano.
+        try {
+            const obj = JSON.parse(s.raw_summary);
+            if (typeof obj === 'string') return obj;
+            if (obj?.summary) return String(obj.summary);
+        } catch { /* plain text */ }
+        return String(s.raw_summary);
+    }
+
+    /** Decisiones parseadas del campo processed_decisions. */
+    get selectedKeyDecisions(): string[] {
+        return this._parseList(this.selectedSession?.processed_decisions);
+    }
+
+    /** Lista de attendees del campo processed_attendees. */
+    get selectedAttendees(): string[] {
+        return this._parseList(this.selectedSession?.processed_attendees);
+    }
+
+    /** Wrapper público para los templates: lista de attendees de la
+     *  fila de la tabla. _parseList queda privado. */
+    attendeesOf(s: any): string[] { return this._parseList(s?.processed_attendees); }
+
+    /** Helper genérico: el backend persiste algunos campos como JSON-string
+     *  (lista) y otros como texto plano con saltos de línea o viñetas.
+     *  Esto los normaliza a string[]. */
+    private _parseList(raw: any): string[] {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw.map(String);
+        try {
+            const obj = JSON.parse(String(raw));
+            if (Array.isArray(obj)) return obj.map((x) => typeof x === 'string' ? x : (x?.text || x?.title || JSON.stringify(x)));
+            if (typeof obj === 'string') return obj.split('\n').filter(Boolean);
+            return [];
+        } catch {
+            return String(raw).split(/[\n•]/).map((s) => s.trim()).filter(Boolean);
+        }
+    }
+
+    // ============================================================
+    // RENDER HELPERS
+    // ============================================================
+
+    /** Convierte la fecha a 'dd/mm/aaaa' para el buscador. */
+    private _sessionDateLabel(s: any): string {
+        let value = s?.date;
+        if (value == null) return '';
+        if (typeof value === 'string' && !isNaN(Number(value))) value = Number(value);
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return String(s.date || '');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        return `${dd}/${mm}/${d.getFullYear()}`;
+    }
+
+    /** Devuelve la fecha "May 16, 2024" + hora "10:00 AM" desglosadas
+     *  para mostrarlas en líneas separadas (como en el mockup). */
+    formatDateLine(s: any): string {
+        const v = typeof s?.date === 'string' && !isNaN(Number(s.date)) ? Number(s.date) : s?.date;
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return String(s?.date || '');
+        return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    formatTimeLine(s: any): string {
+        const v = typeof s?.date === 'string' && !isNaN(Number(s.date)) ? Number(s.date) : s?.date;
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+    formatDueDate(due: any): string {
+        if (!due) return '—';
+        const d = new Date(due);
+        if (isNaN(d.getTime())) return String(due);
+        return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    }
+
+    /** Iniciales para los avatares stub. */
+    initials(name: string): string {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/).slice(0, 2);
+        return parts.map((p) => p.charAt(0).toUpperCase()).join('') || '?';
+    }
+
+    /** Hash determinista para asignar un color al avatar a partir del
+     *  nombre — así dos veces el mismo participante se ven igual. */
+    initialsColor(name: string): string {
+        const palette = ['#155EEF', '#1B7F67', '#D9A441', '#7C3AED', '#0EA5E9', '#E11D48'];
+        if (!name) return palette[0];
+        let h = 0;
+        for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+        return palette[Math.abs(h) % palette.length];
+    }
+
+    /** Heurística para determinar el "origen" (Zoom / Meet / Teams / Manual).
+     *  Por ahora no hay campo source en el modelo — derivamos del
+     *  fireflies_id (los manuales arrancan con "MANUAL-") o del título.
+     *  Cuando el backend exponga `source`, este método se reemplaza. */
+    sessionSource(s: any): { name: string; key: 'zoom' | 'meet' | 'teams' | 'manual' } {
+        const ff = (s?.fireflies_id || '').toLowerCase();
+        const title = (s?.title || '').toLowerCase();
+        const haystack = ff + ' ' + title;
+        if (/zoom/.test(haystack)) return { name: 'Zoom', key: 'zoom' };
+        if (/meet|google/.test(haystack)) return { name: 'Google Meet', key: 'meet' };
+        if (/teams|microsoft/.test(haystack)) return { name: 'Microsoft Teams', key: 'teams' };
+        return { name: 'Manual', key: 'manual' };
+    }
+
+    /** Duración estimada del item de tabla. Hasta que exista el campo
+     *  real, se infiere igual que avgDurationLabel pero por sesión. */
+    durationLabel(s: any): string {
+        const t = (s?.raw_transcript || '');
+        if (!t) return '—';
+        const words = t.split(/\s+/).length;
+        return `${Math.max(1, Math.round(words / 150))}m`;
+    }
+
+    /** Texto legible del status para el badge. */
+    statusBadge(status: string): { label: string; key: string } {
+        switch ((status || '').toLowerCase()) {
+            case 'completed': return { label: 'Analizada', key: 'analyzed' };
+            case 'pending':   return { label: 'Pendiente', key: 'pending' };
+            case 'processing': return { label: 'Procesando', key: 'processing' };
+            case 'archived':  return { label: 'Archivada', key: 'archived' };
+            default:          return { label: 'Borrador', key: 'draft' };
+        }
+    }
+
+    /** Color del badge de prioridad de las action items del panel. */
+    priorityBadge(p: string): { label: string; key: 'high' | 'medium' | 'low' } {
+        const v = (p || '').toLowerCase();
+        if (v === 'high' || v === 'alto')    return { label: 'Alta',   key: 'high' };
+        if (v === 'medium' || v === 'medio') return { label: 'Media',  key: 'medium' };
+        return { label: 'Baja', key: 'low' };
+    }
+
+    /** ¿La action item está cerrada? — para tacharla en la lista. */
+    isActionDone(a: ActionItemDTO): boolean {
+        const s = (a?.status || '').toLowerCase();
+        return s === 'done' || s === 'completed';
+    }
+
+    // ============================================================
+    // ACCIONES (upload / export / delete) — sin cambios funcionales
+    // ============================================================
+
+    openUploadModal() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        this.uploadForm.date = now.toISOString().slice(0, 16);
+        this.uploadForm.title = '';
+        this.uploadForm.language = 'Español';
+        this.uploadForm.projectId = '';
+        this.uploadForm.textContent = '';
+        this.uploadForm.file = null;
+        this.showUploadModal = true;
+    }
+
+    closeUploadModal() { this.showUploadModal = false; }
+
+    onFileSelected(event: any) {
+        const file: File = event.target.files[0];
+        if (file) {
+            this.uploadForm.file = file;
+            if (!this.uploadForm.title) {
+                this.uploadForm.title = file.name.replace(/\.[^/.]+$/, '');
             }
         }
     }
 
-    /**
-     * Live filter del buscador. Reemplaza la búsqueda por ID por:
-     * título, proyecto (nombre) y fecha. Soporta formato dd/mm/aaaa
-     * o dd/mm. Cuando el usuario borra el texto, el listado vuelve a
-     * mostrarse completo automáticamente (sin necesidad de Enter).
-     */
-    onSearchInput(): void {
-        // Solo refresca el filtro local; no recarga del backend en cada tecla
-        // para no saturar la API. Si quisiera buscar a nivel servidor,
-        // hago debounce y disparo loadSessions(). Por ahora client-side.
-        this.cdr.detectChanges();
-    }
-
-    get filteredSessions() {
-        let filtered = this.sessions || [];
-
-        if (this.statusFilter) {
-            filtered = filtered.filter(s => s.status === this.statusFilter);
+    submitUpload() {
+        if (!this.uploadForm.title) { this.toast.warning('El título/motivo es obligatorio.'); return; }
+        if (this.uploadTab === 'audio' && !this.uploadForm.file) {
+            this.toast.warning('Debe subir un archivo de audio para transcribir.'); return;
+        }
+        if (this.uploadTab === 'text' && !this.uploadForm.textContent.trim()) {
+            this.toast.warning('Debe pegar el texto de la transcripción.'); return;
+        }
+        this.isUploading = true;
+        const formData = new FormData();
+        formData.append('title', this.uploadForm.title);
+        if (this.uploadForm.date) {
+            formData.append('date', new Date(this.uploadForm.date).toISOString());
+        }
+        formData.append('language', this.uploadForm.language);
+        if (this.uploadForm.projectId) formData.append('project_id', this.uploadForm.projectId);
+        if (this.uploadTab === 'audio' && this.uploadForm.file) {
+            formData.append('file', this.uploadForm.file);
+        } else if (this.uploadTab === 'text') {
+            formData.append('text_content', this.uploadForm.textContent);
         }
 
-        const rawSearch = (this.searchText || '').trim().toLowerCase();
-        if (rawSearch) {
-            filtered = filtered.filter(s => {
-                const title = (s.title || '').toLowerCase();
-                const projectName = this.getProjectName(s.project_id).toLowerCase();
-                const dateLabel = this._sessionDateLabel(s);
-                return (
-                    title.includes(rawSearch) ||
-                    projectName.includes(rawSearch) ||
-                    dateLabel.includes(rawSearch)
-                );
+        const headers = this.authService.getAuthHeaders();
+        this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: () => {
+                    this.toast.success('Sesión creada exitosamente.');
+                    this.showUploadModal = false;
+                    this.isUploading = false;
+                    this.loadSessions();
+                },
+                error: (err) => {
+                    this.toast.error(
+                        'Error subiendo o creando la sesión: ' + (err?.error?.detail || err?.message || 'desconocido'),
+                    );
+                    this.isUploading = false;
+                },
             });
-        }
-        
-        // Sorting logic based on selected column: Clone array to trigger Angular Change Detection
-        return [...filtered].sort((a, b) => {
-            let valA = a[this.sortColumn];
-            let valB = b[this.sortColumn];
-
-            // Normalize values for sorting
-            if (this.sortColumn === 'project_id') {
-                valA = this.getProjectName(a.project_id).toLowerCase();
-                valB = this.getProjectName(b.project_id).toLowerCase();
-            } else if (this.sortColumn === 'date') {
-                if (typeof valA === 'string' && !isNaN(Number(valA))) valA = Number(valA);
-                if (typeof valB === 'string' && !isNaN(Number(valB))) valB = Number(valB);
-                valA = new Date(valA).getTime() || 0;
-                valB = new Date(valB).getTime() || 0;
-            } else if (typeof valA === 'string') {
-                valA = valA.toLowerCase();
-                valB = valB.toLowerCase();
-            } else {
-                valA = valA || 0;
-                valB = valB || 0;
-            }
-
-            if (valA < valB) {
-                return this.sortDirection === 'asc' ? -1 : 1;
-            }
-            if (valA > valB) {
-                return this.sortDirection === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
     }
 
-    generateActa(session: any, format: 'word' | 'pdf' = 'word') {
+    generateActa(session: any, format: 'word' | 'pdf' = 'word', evt?: Event) {
+        if (evt) { evt.stopPropagation(); evt.preventDefault(); }
         const genKey = `${session.id}_${format}`;
         if (this.generatingIds[genKey]) return;
         this.generatingIds[genKey] = true;
         this.cdr.detectChanges();
-        
+
         const headers = this.authService.getAuthHeaders();
-        this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/${format}`, { headers, responseType: 'blob' }).pipe(takeUntil(this.destroy$)).subscribe({
-            next: (blob: Blob) => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const safeTitle = (session.title || 'Sesion').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
-                const ext = format === 'word' ? 'docx' : 'pdf';
-                a.download = `Sesion_${session.id}_${safeTitle}.${ext}`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                this.generatingIds[genKey] = false;
-                this.cdr.detectChanges();
-            },
-            error: () => {
-                this.toast.error(
-                    `Error descargando el documento ${format.toUpperCase()}. Verifique su conexión.`,
-                );
-                this.generatingIds[genKey] = false;
-                this.cdr.detectChanges();
-            }
-        });
+        this.http.get(`${environment.apiUrl}/api/sessions/${session.id}/export/${format}`, { headers, responseType: 'blob' })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (blob: Blob) => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const safeTitle = (session.title || 'Sesion').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+                    const ext = format === 'word' ? 'docx' : 'pdf';
+                    a.download = `Sesion_${session.id}_${safeTitle}.${ext}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    this.generatingIds[genKey] = false;
+                    this.cdr.detectChanges();
+                },
+                error: () => {
+                    this.toast.error(`Error descargando el documento ${format.toUpperCase()}.`);
+                    this.generatingIds[genKey] = false;
+                    this.cdr.detectChanges();
+                },
+            });
     }
 
-    viewCuration(sessionId: number) {
+    viewCuration(sessionId: number, evt?: Event) {
+        if (evt) { evt.stopPropagation(); }
         this.router.navigate(['/admin/curation', sessionId]);
     }
 
-    deleteSession(session: any) {
+    deleteSession(session: any, evt?: Event) {
+        if (evt) { evt.stopPropagation(); }
         this.sessionToDelete = session;
         this.showDeleteModal = true;
     }
 
-    cancelDeleteSession() {
-        this.showDeleteModal = false;
-        this.sessionToDelete = null;
-    }
+    cancelDeleteSession() { this.showDeleteModal = false; this.sessionToDelete = null; }
 
     confirmDeleteSession() {
         if (!this.sessionToDelete) return;
-        
         this.isDeleting = true;
         const headers = this.authService.getAuthHeaders();
-        this.http.delete(`${environment.apiUrl}/api/sessions/${this.sessionToDelete.id}`, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
-            next: () => {
-                this.isDeleting = false;
-                this.showDeleteModal = false;
-                this.sessionToDelete = null;
-                this.toast.success('Sesión eliminada correctamente.');
-                this.loadSessions();
-            },
-            error: () => {
-                this.isDeleting = false;
-                this.toast.error('Error al intentar eliminar la sesión.');
-            }
-        });
+        this.http.delete(`${environment.apiUrl}/api/sessions/${this.sessionToDelete.id}`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: () => {
+                    this.isDeleting = false;
+                    this.showDeleteModal = false;
+                    this.sessionToDelete = null;
+                    this.toast.success('Sesión eliminada correctamente.');
+                    this.loadSessions();
+                },
+                error: () => {
+                    this.isDeleting = false;
+                    this.toast.error('Error al intentar eliminar la sesión.');
+                },
+            });
     }
+
+    // ============================================================
+    // KEBAB MENU (3-dots de cada fila)
+    // ============================================================
+    openRowMenuId: number | null = null;
+    toggleRowMenu(id: number, evt: Event) {
+        evt.stopPropagation();
+        this.openRowMenuId = this.openRowMenuId === id ? null : id;
+    }
+    closeRowMenu() { this.openRowMenuId = null; }
 }

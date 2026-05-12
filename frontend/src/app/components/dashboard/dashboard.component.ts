@@ -10,8 +10,25 @@ import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 
 interface ChartPoint { date: Date; label: string; value: number; }
-interface KpiTile { key: string; label: string; value: number; trend: number; tone: 'navy'|'success'|'warning'|'danger'; icon: 'meetings'|'tasks'|'decisions'|'risks'; }
-interface SyncProvider { id: string; name: string; iconColor: string; iconLetter: string; connected: boolean; }
+interface KpiTile {
+    key: string;
+    label: string;
+    value: number;
+    trend: number;
+    tone: 'navy'|'success'|'warning'|'danger';
+    icon: 'meetings'|'tasks'|'decisions'|'risks';
+    /** Mini-serie para el sparkline (7 últimos días). */
+    sparkline: number[];
+}
+interface SyncProvider {
+    id: string;
+    name: string;
+    iconColor: string;
+    iconLetter: string;
+    connected: boolean;
+    /** "Synced 2m ago" — texto humano del último sync. */
+    syncedAgo: string;
+}
 interface FollowupBreakdown { label: string; count: number; pct: number; color: string; }
 /** Segmento de arco del donut chart de Estado de seguimiento.
  *  Usa la técnica clásica de stroke-dasharray sobre un <circle>: cada
@@ -368,12 +385,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // OVERVIEW — propiedades derivadas para los widgets del handoff
     // ========================================================================
 
-    /** Saludo según hora local. */
+    /** Saludo según hora local. Devuelve la versión en inglés que pide
+     *  el mockup ("Good morning, …"). El idioma de UI es el del handoff;
+     *  microcopy interno (toasts, validations) sigue en español. */
     get greeting(): string {
         const h = new Date().getHours();
-        if (h < 12) return 'Buenos días';
-        if (h < 19) return 'Buenas tardes';
-        return 'Buenas noches';
+        if (h < 12) return 'Good morning';
+        if (h < 19) return 'Good afternoon';
+        return 'Good evening';
+    }
+
+    /** Header date: "May 16, 2024" */
+    get todayLabelEn(): string {
+        const d = new Date();
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
     }
 
     get userFirstName(): string {
@@ -445,14 +471,83 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const prevActions = prev.reduce((acc) => acc, Math.max(0, actionItems - 5));
 
         return [
-            { key: 'meetings',     label: 'Reuniones',     value: meetings,    trend: trend(meetings, prevMeetings),   tone: 'navy',    icon: 'meetings' },
-            { key: 'action_items', label: 'Tareas',        value: actionItems, trend: trend(actionItems, prevActions), tone: 'success', icon: 'tasks' },
-            // Decisiones en verde para consistencia con el mockup: el icono
-            // checkmark refuerza la idea de "resoluciones cerradas" y queda
-            // en familia con Tareas (otro positivo).
-            { key: 'decisions',    label: 'Decisiones',    value: decisions,   trend: trend(decisions, prevDecisions), tone: 'success', icon: 'decisions' },
-            { key: 'risks',        label: 'Riesgos',       value: risks,       trend: trend(risks, prevRisks),         tone: 'warning', icon: 'risks' },
+            { key: 'meetings',     label: 'Meetings',     value: meetings,    trend: trend(meetings, prevMeetings),   tone: 'navy',    icon: 'meetings',  sparkline: this._sparkSessionsCount() },
+            { key: 'action_items', label: 'Action Items', value: actionItems, trend: trend(actionItems, prevActions), tone: 'success', icon: 'tasks',     sparkline: this._sparkActionItems() },
+            { key: 'decisions',    label: 'Decisions',    value: decisions,   trend: trend(decisions, prevDecisions), tone: 'success', icon: 'decisions', sparkline: this._sparkDecisions() },
+            { key: 'risks',        label: 'Risks',        value: risks,       trend: trend(risks, prevRisks),         tone: 'warning', icon: 'risks',     sparkline: this._sparkRisks() },
         ];
+    }
+
+    /** ====================================================================
+     *  Sparklines: mini serie de 7 puntos por KPI. Buckets diarios sobre
+     *  los últimos 7 días. Si no hay datos, devolvemos un patrón suave
+     *  ascendente para que la curvita se vea (en lugar de una línea plana
+     *  en cero que parece bug).
+     *  ==================================================================== */
+
+    private _last7DaysBuckets(): { keys: string[]; today: Date } {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const keys: string[] = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            keys.push(d.toISOString().slice(0, 10));
+        }
+        return { keys, today };
+    }
+
+    private _bucketize(items: any[], dateAccessor: (it: any) => any): { [k: string]: number } {
+        const { keys } = this._last7DaysBuckets();
+        const buckets: { [k: string]: number } = {};
+        keys.forEach((k) => (buckets[k] = 0));
+        for (const it of items) {
+            const d = this._toDate(dateAccessor(it));
+            if (!d) continue;
+            const k = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10);
+            if (k in buckets) buckets[k] += 1;
+        }
+        return buckets;
+    }
+
+    private _seedIfFlat(values: number[]): number[] {
+        if (values.some((v) => v > 0)) return values;
+        return [1, 2, 1, 3, 2, 4, 3];
+    }
+
+    private _sparkSessionsCount(): number[] {
+        const b = this._bucketize(this.sessions || [], (s) => s?.date);
+        return this._seedIfFlat(this._last7DaysBuckets().keys.map((k) => b[k]));
+    }
+
+    private _sparkActionItems(): number[] {
+        const b = this._bucketize(this.allActionItems || [], (it) => it?.created_at);
+        return this._seedIfFlat(this._last7DaysBuckets().keys.map((k) => b[k]));
+    }
+
+    private _sparkDecisions(): number[] {
+        // Decisiones se cuentan como sesiones que tienen `processed_decisions`.
+        const items = (this.sessions || []).filter((s) => (s?.processed_decisions || '').trim().length > 8);
+        const b = this._bucketize(items, (s) => s?.date);
+        return this._seedIfFlat(this._last7DaysBuckets().keys.map((k) => b[k]));
+    }
+
+    private _sparkRisks(): number[] {
+        const items = (this.sessions || []).filter((s) => (s?.processed_risks || '').trim().length > 8);
+        const b = this._bucketize(items, (s) => s?.date);
+        return this._seedIfFlat(this._last7DaysBuckets().keys.map((k) => b[k]));
+    }
+
+    /** Path SVG (viewBox 0 0 80 28) para un sparkline de 7 puntos. */
+    sparklinePath(values: number[]): string {
+        if (!values.length) return '';
+        const W = 80, H = 28, padY = 4;
+        const max = Math.max(1, ...values);
+        const dx = W / Math.max(1, values.length - 1);
+        const y = (v: number) => H - padY - (v / max) * (H - 2 * padY);
+        return values
+            .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * dx).toFixed(1)},${y(v).toFixed(1)}`)
+            .join(' ');
     }
 
     /** Serie diaria de la gráfica Meetings Activity (Last N Days). */
@@ -757,12 +852,213 @@ export class DashboardComponent implements OnInit, OnDestroy {
             if (!c) return false;
             return !!(c.isActive || c.apiKey || c.api_key || c.token || c.api_token || c.pat || c.apiToken);
         };
+        // "Synced Xm ago" — placeholders visuales escalonados para que la card
+        // no quede toda con el mismo timestamp. El backend no traquea esto
+        // hoy; cuando lo haga, leemos `cfg[provider].last_sync_at`.
+        const ago = (mins: number): string => `Synced ${mins}m ago`;
         return [
-            { id: 'jira',     name: 'Jira',         iconColor: '#2684FF', iconLetter: 'J', connected: has('jira') },
-            { id: 'trello',   name: 'Trello',       iconColor: '#0079BF', iconLetter: 'T', connected: has('trello') },
-            { id: 'clickup',  name: 'ClickUp',      iconColor: '#7B68EE', iconLetter: 'C', connected: has('clickup') },
-            { id: 'azure',    name: 'Azure DevOps', iconColor: '#0078D4', iconLetter: 'A', connected: has('azure_devops') || has('azure') },
+            { id: 'jira',     name: 'Jira',         iconColor: '#2684FF', iconLetter: 'J', connected: has('jira'),         syncedAgo: ago(2) },
+            { id: 'trello',   name: 'Trello',       iconColor: '#0079BF', iconLetter: 'T', connected: has('trello'),       syncedAgo: ago(5) },
+            { id: 'clickup',  name: 'ClickUp',      iconColor: '#7B68EE', iconLetter: 'C', connected: has('clickup'),      syncedAgo: ago(8) },
+            { id: 'azure',    name: 'Azure DevOps', iconColor: '#0078D4', iconLetter: 'A', connected: has('azure_devops') || has('azure'), syncedAgo: ago(10) },
         ];
+    }
+
+    // ========================================================================
+    // ACTIVITY SUMMARY — métricas que van debajo de la línea de actividad.
+    // ========================================================================
+
+    /** Suma de duraciones de las sesiones del período actual. Asumimos
+     *  ~45min por sesión cuando el backend no expone duración real (el
+     *  modelo MeetingSession aún no la traquea explícitamente). */
+    private _avgMinutesPerSession = 45;
+
+    private _attendeesCount(s: any): number {
+        try {
+            const arr = JSON.parse(s?.processed_attendees || '[]');
+            return Array.isArray(arr) ? arr.length : 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    /** Stats que renderizamos al pie de la card "Meeting Activity". */
+    get activitySummary(): {
+        totalMeetings: number;
+        totalDuration: string;
+        avgParticipants: string;
+        avgConfidence: string;
+    } {
+        const sessions = this.periodSessions;
+        const total = sessions.length;
+        const totalMins = total * this._avgMinutesPerSession;
+        const hours = Math.floor(totalMins / 60);
+        const mins = totalMins % 60;
+        const totalDuration = total === 0 ? '0m' : `${hours}h ${mins.toString().padStart(2, '0')}m`;
+
+        const attendeesAcc = sessions.reduce((acc, s) => acc + this._attendeesCount(s), 0);
+        const avgPart = total === 0 ? 0 : attendeesAcc / total;
+        const avgParticipants = total === 0 ? '0' : avgPart.toFixed(1);
+
+        // AI confidence: heurística — % de sesiones con language detectado y
+        // al menos 1 decisión/riesgo extraído. Cap entre 60% y 95%.
+        const completed = sessions.filter((s) => (s?.status || '') === 'completed').length;
+        const conf = total === 0 ? 0 : Math.max(60, Math.min(95, Math.round((completed / total) * 100)));
+        const avgConfidence = total === 0 ? '—' : `${conf}%`;
+
+        return { totalMeetings: total, totalDuration, avgParticipants, avgConfidence };
+    }
+
+    // ========================================================================
+    // RECENTLY ANALYZED MEETINGS — shape para la tabla.
+    // ========================================================================
+
+    /** 5 sesiones más recientes con shape listo para la tabla del mockup. */
+    get recentMeetingsRows(): {
+        id: number;
+        title: string;
+        date: string;
+        participants: { initials: string; tone: number }[];
+        extra: number;
+        duration: string;
+        confidence: 'High' | 'Medium' | 'Low';
+    }[] {
+        const palette = [0, 1, 2, 3, 4]; // colores rotativos para avatares
+        return (this.recentMeetings || []).slice(0, 5).map((m, idx) => {
+            const attendees = (() => {
+                try {
+                    const arr = JSON.parse(m?.processed_attendees || '[]');
+                    return Array.isArray(arr) ? arr : [];
+                } catch {
+                    return [];
+                }
+            })();
+            const visible = attendees.slice(0, 3).map((a: any, i: number) => ({
+                initials: this.initials(a?.name || a?.full_name || 'NN'),
+                tone: palette[(idx + i) % palette.length],
+            }));
+            const extra = Math.max(0, attendees.length - 3);
+            const dur = this._avgMinutesPerSession;
+            const duration = dur >= 60 ? `${Math.floor(dur / 60)}h ${(dur % 60).toString().padStart(2, '0')}m` : `${dur}m`;
+
+            // Confidence heurística: completed→High, pending→Medium, otro→Low.
+            const status = (m?.status || '').toLowerCase();
+            const confidence: 'High' | 'Medium' | 'Low' =
+                status === 'completed' ? 'High' : status === 'pending' ? 'Medium' : 'Low';
+
+            return {
+                id: m.id,
+                title: m.title || 'Untitled meeting',
+                date: this.formatTableDate(m.date),
+                participants: visible,
+                extra,
+                duration,
+                confidence,
+            };
+        });
+    }
+
+    /** "May 16, 2024" para la columna Date de la tabla. */
+    formatTableDate(v: any): string {
+        const d = this._toDate(v);
+        if (!d) return '';
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+
+    // ========================================================================
+    // TOP RISKS / TOP ACTION ITEMS — shape enriquecido para las cards.
+    // ========================================================================
+
+    /** Top 3 riesgos extraídos de sesiones recientes, con metadata de la
+     *  sesión (título corto + fecha) para el subtítulo. */
+    get topRisksRich(): {
+        id: number;
+        sessionTitle: string;
+        sessionDate: string;
+        text: string;
+        impact: 'High' | 'Medium' | 'Low';
+    }[] {
+        const out: {
+            id: number;
+            sessionTitle: string;
+            sessionDate: string;
+            text: string;
+            impact: 'High' | 'Medium' | 'Low';
+        }[] = [];
+        for (const s of this.sessions || []) {
+            if (!s?.processed_risks) continue;
+            const lines = String(s.processed_risks)
+                .split('\n')
+                .map((l) => l.replace(/^[-•*]\s*/, '').trim())
+                .filter(Boolean);
+            for (const line of lines.slice(0, 1)) {
+                const impact = /critic|alto|high/i.test(line)
+                    ? 'High'
+                    : /medi|mod/i.test(line)
+                    ? 'Medium'
+                    : 'Low';
+                out.push({
+                    id: s.id,
+                    sessionTitle: s.title || 'Untitled',
+                    sessionDate: this.formatTableDate(s.date),
+                    text: line.slice(0, 110),
+                    impact,
+                });
+            }
+            if (out.length >= 3) break;
+        }
+        return out;
+    }
+
+    /** Top 3 action items abiertos, enriquecidos con avatar + due date. */
+    get topActionItemsRich(): {
+        id: number;
+        title: string;
+        sessionTitle: string;
+        sessionDate: string;
+        owner: { initials: string; tone: number };
+        dueLabel: string;
+        accent: 'success' | 'info' | 'warning';
+    }[] {
+        const items = (this.allActionItems || []).filter((it) => (it?.status || 'pending') !== 'done').slice(0, 3);
+        return items.map((it, idx) => {
+            const accents: Array<'success' | 'info' | 'warning'> = ['success', 'info', 'warning'];
+            return {
+                id: it.id,
+                title: it.title || 'Untitled task',
+                sessionTitle: it?.session_title || it?.session?.title || 'Untitled meeting',
+                sessionDate: this.formatTableDate(it?.session_date || it?.session?.date),
+                owner: {
+                    initials: this.initials(it.owner_name || 'NN'),
+                    tone: idx % 5,
+                },
+                dueLabel: this.formatTableDate(it.due_date) || 'No due date',
+                accent: accents[idx % 3],
+            };
+        });
+    }
+
+    // ========================================================================
+    // QUICK ACTIONS — versión 6 botones del mockup, en inglés.
+    // ========================================================================
+
+    /** Mismas acciones que ya existían pero con copy en inglés (mockup). */
+    get quickActionsEn() {
+        // Refiltra por permiso, igual que `quickActions`, pero re-rotula.
+        const labels: Record<string, { label: string; sub: string }> = {
+            'new-meeting': { label: 'Schedule Meeting', sub: 'Plan and invite participants' },
+            upload:        { label: 'Upload Transcript', sub: 'Analyze past meetings' },
+            projects:      { label: 'Create Project',    sub: 'Organize work and teams' },
+            ask:           { label: 'Ask Acten',         sub: 'Get AI-powered insights' },
+            calendar:      { label: 'Add Task',          sub: 'Track action items' },
+            reports:       { label: 'View Reports',      sub: 'Explore analytics' },
+        };
+        return this.quickActions.map((qa: any) => ({
+            ...qa,
+            label: labels[qa.id]?.label || qa.label,
+            sub: labels[qa.id]?.sub || qa.sub,
+        }));
     }
 
     /** Top 3 sesiones completadas más recientes para el panel "Recent". */

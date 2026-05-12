@@ -1,356 +1,677 @@
-<div class="acten-dashboard">
-    <!-- Hero del dashboard estilo editorial -->
-    <header class="dash-hero">
-        <div class="dash-hero-left">
-            <p class="acten-eyebrow">Operaciones · Sesiones</p>
-            <h1 class="dash-hero-title">Registro de Sesiones</h1>
-            <p class="dash-hero-sub">
-                Cada conversación, transcrita y curada por IA. Despachá tareas a tu equipo
-                y a tus integraciones sin salir de aquí.
-            </p>
-        </div>
-        <div class="dash-hero-right">
-            <button class="btn-cta-light" (click)="openUploadModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
+<!-- ===================================================================
+     Reuniones — layout split: contenido principal + panel lateral.
+     Estructura espejo del mockup adjunto. Sin SVG-logos, todo PNG.
+     Textos en español (regla global del workspace).
+     =================================================================== -->
+<div class="meetings-page" [class.has-detail]="selectedSession" (click)="closeRowMenu()">
+
+    <!-- ============ CONTENIDO PRINCIPAL ============ -->
+    <main class="meetings-main">
+
+        <!-- Header -->
+        <header class="mt-header">
+            <div class="mt-header-left">
+                <h1 class="mt-title">Reuniones</h1>
+                <p class="mt-sub">Gestiona, analiza y actúa sobre tus reuniones.</p>
+            </div>
+            <button class="mt-cta" (click)="openUploadModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Nueva subida manual
+                Nueva Reunión
             </button>
-        </div>
-    </header>
+        </header>
 
-    <!-- KPI tiles del handoff: 4 métricas con sparkline-style mini -->
-    <section class="kpi-row" aria-label="Métricas del período">
-        <article class="kpi-tile">
-            <span class="kpi-label">Sesiones totales</span>
-            <span class="kpi-value">{{ totalItems || sessions.length }}</span>
-            <span class="kpi-trend kpi-trend-up">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+        <!-- 4 KPI cards -->
+        <section class="mt-metrics" aria-label="Métricas de reuniones">
+            <!-- Total -->
+            <article class="mt-metric">
+                <div class="metric-icon metric-icon-blue">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-label">Reuniones totales</span>
+                    <span class="metric-value">{{ totalMeetings }}</span>
+                    <span class="metric-foot metric-foot-up">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="18 15 12 9 6 15"></polyline>
+                        </svg>
+                        Aisladas por empresa
+                    </span>
+                </div>
+            </article>
+
+            <!-- Analyzed -->
+            <article class="mt-metric">
+                <div class="metric-icon metric-icon-green">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-label">Analizadas</span>
+                    <span class="metric-value">{{ analyzedCount }}</span>
+                    <span class="metric-foot">{{ pctOfTotal(analyzedCount) }}% del total</span>
+                </div>
+            </article>
+
+            <!-- Pending -->
+            <article class="mt-metric">
+                <div class="metric-icon metric-icon-orange">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-label">Pendientes de revisión</span>
+                    <span class="metric-value">{{ pendingCount }}</span>
+                    <span class="metric-foot">{{ pctOfTotal(pendingCount) }}% del total</span>
+                </div>
+            </article>
+
+            <!-- Avg duration -->
+            <article class="mt-metric">
+                <div class="metric-icon metric-icon-indigo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-label">Duración media</span>
+                    <span class="metric-value">{{ avgDurationLabel }}</span>
+                    <span class="metric-foot">Estimada por transcripción</span>
+                </div>
+            </article>
+        </section>
+
+        <!-- Search + filtros horizontales -->
+        <section class="mt-filters" aria-label="Buscar y filtrar">
+            <div class="filter-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <span>Aislado por empresa</span>
-            </span>
-        </article>
-        <article class="kpi-tile">
-            <span class="kpi-label">Pendientes</span>
-            <span class="kpi-value">{{ countByStatus('pending') }}</span>
-            <span class="kpi-trend">Esperan curación humana</span>
-        </article>
-        <article class="kpi-tile">
-            <span class="kpi-label">Completadas</span>
-            <span class="kpi-value">{{ countByStatus('completed') }}</span>
-            <span class="kpi-trend kpi-trend-good">Despachadas a integraciones</span>
-        </article>
-        <article class="kpi-tile">
-            <span class="kpi-label">Proyectos activos</span>
-            <span class="kpi-value">{{ projects.length }}</span>
-            <span class="kpi-trend">Visibles para esta empresa</span>
-        </article>
-    </section>
-
-    <!-- Filtros editoriales -->
-    <div class="filter-bar">
-        <div class="filter-search">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" placeholder="Buscar por título, proyecto o fecha (dd/mm/aaaa)…"
-                   [(ngModel)]="searchText" (input)="onSearchInput()"
-                   (keyup.enter)="currentPage = 1; loadSessions()" />
-        </div>
-
-        <select class="filter-select" [(ngModel)]="filterProjectId" (change)="currentPage = 1; loadSessions()">
-            <option value="">Todos los proyectos</option>
-            <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
-        </select>
-
-        <select class="filter-select" [(ngModel)]="statusFilter" (change)="currentPage = 1; loadSessions()">
-            <option value="">Todos los estados</option>
-            <option value="pending">Pendiente de curación</option>
-            <option value="processing">Procesando IA</option>
-            <option value="completed">Completado</option>
-        </select>
-
-        <button class="btn-filter-action" (click)="currentPage = 1; loadSessions()">Buscar</button>
-    </div>
-
-    <div class="card glass-panel flex-2">
-        <div class="card-body p-0">
-            <!-- Loading State (Skeletons) -->
-            <div class="table-container" *ngIf="isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 40px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 150px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 100px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                            </th>
-                            <th>
-                                <div class="skeleton skeleton-text" style="width: 120px;"></div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let i of [1,2,3]">
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 30px;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-title" style="margin-bottom: 0;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 90px;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 100px;"></div>
-                            </td>
-                            <td>
-                                <div class="skeleton skeleton-text" style="width: 80px;"></div>
-                            </td>
-                            <td>
-                                <div class="flex gap-2">
-                                    <div class="skeleton skeleton-text" style="width: 80px; height: 32px;"></div>
-                                    <div class="skeleton skeleton-text" style="width: 100px; height: 32px;"></div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <input type="text"
+                       placeholder="Buscar reuniones por título, participantes o palabras clave…"
+                       [(ngModel)]="searchText" (input)="onSearchInput()"
+                       (keyup.enter)="currentPage = 1; loadSessions()" />
             </div>
 
-            <div class="table-container" *ngIf="!isLoading">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th style="cursor:pointer;" (click)="sortBy('id')">
-                            ID Sesión 
-                            <span *ngIf="sortColumn === 'id'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('title')">
-                            Reunión / Título
-                            <span *ngIf="sortColumn === 'title'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('project_id')">
-                            Proyecto
-                            <span *ngIf="sortColumn === 'project_id'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('date')">
-                            Fecha
-                            <span *ngIf="sortColumn === 'date'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th style="cursor:pointer;" (click)="sortBy('status')">
-                            Estado
-                            <span *ngIf="sortColumn === 'status'">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
-                        </th>
-                        <th>Acciones Disponibles</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let s of filteredSessions">
-                        <td><span class="badge" style="background:#e0e7ff; color:var(--text-main);">#{{
-                                s.id }}</span></td>
-                        <td>
-                            <strong style="color:var(--text-main);">{{ s.title }}</strong>
-                        </td>
-                        <td style="color: var(--text-light); font-size: 0.9em;">
-                            <i class="fas fa-folder-open" style="opacity: 0.5; margin-right: 4px;"></i> {{ getProjectName(s.project_id) }}
-                        </td>
-                        <td>{{ s.date | date:'dd/MM/yyyy HH:mm' }}</td>
-                        <td>
-                            <span class="status-pill"
-                                  [class.pill-completed]="s.status === 'completed'"
-                                  [class.pill-pending]="s.status === 'pending'"
-                                  [class.pill-processing]="s.status === 'processing'">
-                                <span class="pill-dot"></span>
-                                {{ s.status === 'completed' ? 'Completado' : (s.status === 'processing' ? 'Procesando IA' : 'Pendiente curación') }}
-                            </span>
-                        </td>
-                        <td class="actions-cell">
-                            <div class="actions-wrap">
-                                <button class="btn-row btn-row-primary"
-                                        (click)="viewCuration(s.id)">
-                                    {{ s.status === 'completed' ? 'Detalle' : 'Curar' }}
-                                </button>
-                                <button class="btn-row btn-row-ghost"
-                                        (click)="generateActa(s, 'word')"
-                                        title="Descargar Word"
-                                        [disabled]="generatingIds[s.id + '_word']">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                    {{ generatingIds[s.id + '_word'] ? '…' : 'Word' }}
-                                </button>
-                                <button class="btn-row btn-row-ghost"
-                                        (click)="generateActa(s, 'pdf')"
-                                        title="Descargar PDF"
-                                        [disabled]="generatingIds[s.id + '_pdf']">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
-                                    {{ generatingIds[s.id + '_pdf'] ? '…' : 'PDF' }}
-                                </button>
-                                <button class="btn-row btn-row-icon-danger"
-                                        (click)="deleteSession(s)"
-                                        title="Eliminar Sesión">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M3 6h18"></path>
-                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr *ngIf="sessions.length === 0">
-                        <td colspan="6" class="p-0">
-                            <div class="empty-state">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"
-                                    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
-                                </svg>
-                                <h4>No hay sesiones registradas</h4>
-                                <p style="color:var(--text-muted); margin-top:0.5rem; font-size:0.95rem;">Empieza subiendo una transcripción o graba una nueva sesión.</p>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="filter-group">
+                <label>Estado</label>
+                <select [(ngModel)]="statusFilter"
+                        (change)="currentPage = 1; loadSessions()">
+                    <option value="">Todos los estados</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="processing">Procesando</option>
+                    <option value="completed">Analizada</option>
+                    <option value="archived">Archivada</option>
+                </select>
             </div>
 
-            <!-- Pagination Controls -->
-            <div *ngIf="totalItems > 0 && !isLoading" style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border);">
-                <span style="color:var(--text-muted); font-size: 0.9rem;">
-                    Mostrando página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} sesiones)
-                </span>
-                <div style="display:flex; gap: 0.5rem;">
-                    <button class="btn btn-sm btn-secondary" [disabled]="currentPage === 1" (click)="changePage(currentPage - 1)">
-                        Anterior
-                    </button>
-                    <button class="btn btn-sm btn-secondary" [disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1)">
-                        Siguiente
-                    </button>
+            <div class="filter-group">
+                <label>Equipo</label>
+                <select [(ngModel)]="filterProjectId"
+                        (change)="currentPage = 1; loadSessions()">
+                    <option value="">Todos los equipos</option>
+                    <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Fecha</label>
+                <select [(ngModel)]="filterDate">
+                    <option value="">Cualquier momento</option>
+                    <option value="today">Hoy</option>
+                    <option value="week">Esta semana</option>
+                    <option value="month">Este mes</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Origen</label>
+                <select [(ngModel)]="filterSource">
+                    <option value="">Todos los orígenes</option>
+                    <option value="zoom">Zoom</option>
+                    <option value="meet">Google Meet</option>
+                    <option value="teams">Microsoft Teams</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+
+            <button class="filters-btn" (click)="clearVisualFilters()" title="Limpiar filtros adicionales">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filtros
+            </button>
+        </section>
+
+        <!-- Tabs sobre la tabla -->
+        <nav class="mt-tabs" aria-label="Filtro rápido por estado">
+            <button [class.active]="statusTab === 'all'"      (click)="setStatusTab('all')">Todas</button>
+            <button [class.active]="statusTab === 'analyzed'" (click)="setStatusTab('analyzed')">Analizadas</button>
+            <button [class.active]="statusTab === 'drafts'"   (click)="setStatusTab('drafts')">Borradores</button>
+            <button [class.active]="statusTab === 'archived'" (click)="setStatusTab('archived')">Archivadas</button>
+        </nav>
+
+        <!-- Tabla -->
+        <section class="mt-table-wrap" aria-label="Listado de reuniones">
+
+            <!-- Loading skeleton -->
+            <div class="mt-table" *ngIf="isLoading">
+                <div class="mt-tr mt-th">
+                    <span>Título</span>
+                    <span>Fecha y hora</span>
+                    <span>Participantes</span>
+                    <span>Duración</span>
+                    <span>Origen</span>
+                    <span>Estado</span>
+                    <span class="t-right">Acciones</span>
+                </div>
+                <div class="mt-tr mt-skeleton" *ngFor="let i of [1,2,3,4,5]">
+                    <span><div class="sk sk-md"></div></span>
+                    <span><div class="sk sk-sm"></div></span>
+                    <span><div class="sk sk-xs"></div></span>
+                    <span><div class="sk sk-xs"></div></span>
+                    <span><div class="sk sk-sm"></div></span>
+                    <span><div class="sk sk-xs"></div></span>
+                    <span class="t-right"><div class="sk sk-xs"></div></span>
                 </div>
             </div>
+
+            <!-- Tabla real -->
+            <div class="mt-table" *ngIf="!isLoading">
+                <div class="mt-tr mt-th">
+                    <span (click)="sortBy('title')">Título</span>
+                    <span (click)="sortBy('date')">Fecha y hora</span>
+                    <span>Participantes</span>
+                    <span>Duración</span>
+                    <span>Origen</span>
+                    <span (click)="sortBy('status')">Estado</span>
+                    <span class="t-right">Acciones</span>
+                </div>
+
+                <div class="mt-tr mt-row"
+                     *ngFor="let s of filteredSessions"
+                     [class.is-selected]="selectedSession?.id === s.id"
+                     (click)="selectSession(s)"
+                     role="button"
+                     tabindex="0">
+
+                    <!-- Título + equipo -->
+                    <div class="cell-title">
+                        <div class="row-icon"
+                             [attr.data-source]="sessionSource(s).key">
+                            <svg *ngIf="sessionSource(s).key === 'zoom' || sessionSource(s).key === 'meet' || sessionSource(s).key === 'teams'"
+                                 width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                            </svg>
+                            <svg *ngIf="sessionSource(s).key === 'manual'"
+                                 width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
+                        <div class="cell-title-text">
+                            <span class="row-title">{{ s.title || 'Sin título' }}</span>
+                            <span class="row-subtitle">{{ getProjectName(s.project_id) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Fecha y hora -->
+                    <div class="cell-date">
+                        <span class="cell-date-main">{{ formatDateLine(s) }}</span>
+                        <span class="cell-date-time">{{ formatTimeLine(s) }}</span>
+                    </div>
+
+                    <!-- Participantes (avatares stub) -->
+                    <div class="cell-participants">
+                        <ng-container *ngIf="attendeesOf(s).length as attCount">
+                            <span class="avatar"
+                                  *ngFor="let name of attendeesOf(s).slice(0, 3); let i = index"
+                                  [style.background]="initialsColor(name)"
+                                  [style.zIndex]="3 - i"
+                                  [title]="name">
+                                {{ initials(name) }}
+                            </span>
+                            <span class="avatar-more" *ngIf="attCount > 3">+{{ attCount - 3 }}</span>
+                        </ng-container>
+                        <span class="cell-empty" *ngIf="!attendeesOf(s).length">—</span>
+                    </div>
+
+                    <!-- Duración -->
+                    <div class="cell-duration">{{ durationLabel(s) }}</div>
+
+                    <!-- Origen -->
+                    <div class="cell-source">
+                        <span class="source-chip" [attr.data-source]="sessionSource(s).key">
+                            <span class="source-dot"></span>
+                            {{ sessionSource(s).name }}
+                        </span>
+                    </div>
+
+                    <!-- Estado -->
+                    <div class="cell-status">
+                        <span class="status-badge"
+                              [attr.data-status]="statusBadge(s.status).key">
+                            {{ statusBadge(s.status).label }}
+                        </span>
+                    </div>
+
+                    <!-- Acciones (kebab) -->
+                    <div class="cell-actions t-right">
+                        <button class="kebab" (click)="toggleRowMenu(s.id, $event)" title="Más opciones">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="1"></circle>
+                                <circle cx="12" cy="5" r="1"></circle>
+                                <circle cx="12" cy="19" r="1"></circle>
+                            </svg>
+                        </button>
+                        <div class="kebab-menu" *ngIf="openRowMenuId === s.id" (click)="$event.stopPropagation()">
+                            <button (click)="viewCuration(s.id, $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                Ver detalle
+                            </button>
+                            <button (click)="generateActa(s, 'word', $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Descargar Word
+                            </button>
+                            <button (click)="generateActa(s, 'pdf', $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Descargar PDF
+                            </button>
+                            <div class="kebab-divider"></div>
+                            <button class="kebab-danger" (click)="deleteSession(s, $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                </svg>
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div class="mt-empty" *ngIf="!filteredSessions.length">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <h4>No hay reuniones registradas</h4>
+                    <p>Sube una transcripción o crea una nueva sesión para empezar.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Paginación -->
+        <section class="mt-pagination" *ngIf="!isLoading && totalItems > 0">
+            <div class="pg-left">
+                Mostrando
+                {{ (currentPage - 1) * limit + 1 }}
+                a
+                {{ (currentPage - 1) * limit + filteredSessions.length }}
+                de {{ totalItems }} reuniones
+            </div>
+            <div class="pg-center">
+                <button class="pg-arrow" [disabled]="currentPage === 1"
+                        (click)="changePage(currentPage - 1)" title="Anterior">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <ng-container *ngFor="let p of pageButtons">
+                    <button *ngIf="p !== '…'" class="pg-num"
+                            [class.active]="p === currentPage"
+                            (click)="changePage(+p)">{{ p }}</button>
+                    <span *ngIf="p === '…'" class="pg-ellipsis">…</span>
+                </ng-container>
+                <button class="pg-arrow" [disabled]="currentPage === totalPages"
+                        (click)="changePage(currentPage + 1)" title="Siguiente">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+            <div class="pg-right">
+                <select [ngModel]="limit" (ngModelChange)="changeLimit($event)">
+                    <option [ngValue]="10">10 / página</option>
+                    <option [ngValue]="20">20 / página</option>
+                    <option [ngValue]="50">50 / página</option>
+                </select>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============ PANEL LATERAL DE DETALLE ============ -->
+    <aside class="meetings-detail" *ngIf="selectedSession">
+        <header class="dt-head">
+            <div class="dt-head-text">
+                <h2 class="dt-title">{{ selectedSession.title || 'Sin título' }}</h2>
+                <div class="dt-meta">
+                    <span class="dt-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        {{ formatDateLine(selectedSession) }} · {{ formatTimeLine(selectedSession) }}
+                    </span>
+                    <span class="dt-meta-dot">·</span>
+                    <span class="dt-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        {{ durationLabel(selectedSession) }}
+                    </span>
+                    <span class="dt-meta-dot">·</span>
+                    <span class="dt-meta-item dt-meta-source"
+                          [attr.data-source]="sessionSource(selectedSession).key">
+                        <span class="source-dot"></span>
+                        {{ sessionSource(selectedSession).name }}
+                    </span>
+                </div>
+            </div>
+            <button class="dt-close" (click)="closeDetailPanel()" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Participantes -->
+        <div class="dt-participants" *ngIf="selectedAttendees.length">
+            <div class="participants-avatars">
+                <span class="avatar avatar-lg"
+                      *ngFor="let name of selectedAttendees.slice(0, 4); let i = index"
+                      [style.background]="initialsColor(name)"
+                      [style.zIndex]="4 - i"
+                      [title]="name">
+                    {{ initials(name) }}
+                </span>
+                <span class="avatar-more avatar-more-lg" *ngIf="selectedAttendees.length > 4">
+                    +{{ selectedAttendees.length - 4 }}
+                </span>
+            </div>
+            <button class="dt-view-participants" type="button" title="Ver lista completa de participantes">
+                Ver participantes
+            </button>
         </div>
-    </div>
+
+        <!-- Tabs internos -->
+        <nav class="dt-tabs" aria-label="Secciones del detalle">
+            <button [class.active]="detailTab === 'summary'"    (click)="setDetailTab('summary')">Resumen</button>
+            <button [class.active]="detailTab === 'transcript'" (click)="setDetailTab('transcript')">Transcripción</button>
+            <button [class.active]="detailTab === 'insights'"   (click)="setDetailTab('insights')">Insights</button>
+            <button [class.active]="detailTab === 'notes'"      (click)="setDetailTab('notes')">Notas</button>
+            <button [class.active]="detailTab === 'files'"      (click)="setDetailTab('files')">Archivos</button>
+        </nav>
+
+        <!-- Cuerpo del panel — sólo Summary muestra cards estructuradas;
+             el resto enseña un placeholder hasta que cableemos los tabs. -->
+        <div class="dt-body">
+
+            <ng-container *ngIf="detailTab === 'summary'">
+
+                <!-- Resumen ejecutivo -->
+                <article class="dt-card">
+                    <header class="dt-card-head">
+                        <h3>Resumen ejecutivo</h3>
+                    </header>
+                    <p class="dt-card-text" *ngIf="selectedExecutiveSummary">
+                        {{ selectedExecutiveSummary }}
+                    </p>
+                    <p class="dt-card-empty" *ngIf="!selectedExecutiveSummary && !isLoadingDetail">
+                        Esta sesión aún no tiene resumen ejecutivo generado.
+                    </p>
+                    <p class="dt-card-empty" *ngIf="isLoadingDetail">Cargando…</p>
+                </article>
+
+                <!-- Decisiones clave -->
+                <article class="dt-card">
+                    <header class="dt-card-head">
+                        <h3>Decisiones clave</h3>
+                        <span class="dt-badge-count" *ngIf="selectedKeyDecisions.length">
+                            {{ selectedKeyDecisions.length }}
+                        </span>
+                    </header>
+                    <ul class="dt-list" *ngIf="selectedKeyDecisions.length">
+                        <li *ngFor="let d of selectedKeyDecisions.slice(0, 3)">
+                            <span class="dt-list-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="9 12 11 14 15 10"></polyline>
+                                </svg>
+                            </span>
+                            <span class="dt-list-text">{{ d }}</span>
+                        </li>
+                    </ul>
+                    <p class="dt-card-empty" *ngIf="!selectedKeyDecisions.length && !isLoadingDetail">
+                        Aún no se identificaron decisiones en esta sesión.
+                    </p>
+                    <a class="dt-card-link" *ngIf="selectedKeyDecisions.length > 3"
+                       (click)="viewCuration(selectedSession.id)" role="button">Ver todas las decisiones</a>
+                </article>
+
+                <!-- Action items -->
+                <article class="dt-card">
+                    <header class="dt-card-head">
+                        <h3>Tareas</h3>
+                        <span class="dt-badge-count" *ngIf="selectedActionItems.length">
+                            {{ selectedActionItems.length }}
+                        </span>
+                    </header>
+                    <ul class="dt-tasks" *ngIf="selectedActionItems.length">
+                        <li *ngFor="let a of selectedActionItems.slice(0, 5)"
+                            [class.is-done]="isActionDone(a)">
+                            <input type="checkbox" [checked]="isActionDone(a)" disabled />
+                            <div class="task-body">
+                                <span class="task-title">{{ a.title }}</span>
+                                <span class="task-meta">
+                                    {{ a.owner_name || 'Sin asignar' }}
+                                    <span *ngIf="a.due_date" class="task-due">· {{ formatDueDate(a.due_date) }}</span>
+                                </span>
+                            </div>
+                            <span class="task-prio"
+                                  [attr.data-prio]="priorityBadge(a.priority || '').key">
+                                {{ priorityBadge(a.priority || '').label }}
+                            </span>
+                        </li>
+                    </ul>
+                    <p class="dt-card-empty" *ngIf="!selectedActionItems.length && !isLoadingDetail">
+                        No hay tareas asociadas todavía.
+                    </p>
+                    <a class="dt-card-link" *ngIf="selectedActionItems.length > 5"
+                       (click)="viewCuration(selectedSession.id)" role="button">Ver todas las tareas</a>
+                </article>
+
+                <!-- Acta como archivo descargable (Word) -->
+                <article class="dt-file"
+                         (click)="generateActa(selectedSession, 'word')"
+                         role="button"
+                         [class.is-busy]="generatingIds[selectedSession.id + '_word']">
+                    <div class="dt-file-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="dt-file-text">
+                        <span class="dt-file-name">Acta de la reunión</span>
+                        <span class="dt-file-sub">Word · descarga generada por IA</span>
+                    </div>
+                    <span class="dt-file-action">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                    </span>
+                </article>
+            </ng-container>
+
+            <ng-container *ngIf="detailTab !== 'summary'">
+                <article class="dt-card">
+                    <header class="dt-card-head">
+                        <h3 *ngIf="detailTab === 'transcript'">Transcripción</h3>
+                        <h3 *ngIf="detailTab === 'insights'">Insights</h3>
+                        <h3 *ngIf="detailTab === 'notes'">Notas</h3>
+                        <h3 *ngIf="detailTab === 'files'">Archivos</h3>
+                    </header>
+                    <p class="dt-card-text" *ngIf="detailTab === 'transcript' && selectedSession.raw_transcript">
+                        {{ (selectedSession.raw_transcript || '') | slice:0:480 }}{{ (selectedSession.raw_transcript || '').length > 480 ? '…' : '' }}
+                    </p>
+                    <p class="dt-card-empty" *ngIf="detailTab === 'transcript' && !selectedSession.raw_transcript">
+                        Esta sesión no tiene transcripción cargada.
+                    </p>
+                    <p class="dt-card-empty" *ngIf="detailTab !== 'transcript'">
+                        Próximamente.
+                    </p>
+                    <a class="dt-card-link" *ngIf="detailTab === 'transcript'"
+                       (click)="viewCuration(selectedSession.id)" role="button">Abrir vista de curación</a>
+                </article>
+            </ng-container>
+        </div>
+    </aside>
 </div>
 
-<!-- Modal Upload -->
+<!-- ============ MODAL: subir sesión manual ============ -->
 <div class="modal-backdrop fade-in" *ngIf="showUploadModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
     <div class="card glass-panel" style="width: 500px; max-width: 90vw; max-height: 90vh; overflow-y:auto; position:relative;">
         <button class="btn btn-sm" style="position:absolute; top:1rem; right:1rem; background:transparent; border:none; font-size:1.5rem; line-height:1; cursor:pointer;" (click)="closeUploadModal()">×</button>
-        
         <div class="card-body">
-            <h3 style="margin-top:0; color:var(--text-main); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem;">
+            <h3 style="margin-top:0; color:var(--color-fg-default); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                Subir Acta Manual
+                Subir acta manual
             </h3>
-
-            <!-- Tabs -->
-            <div style="display:flex; border-bottom: 1px solid var(--glass-border); margin-bottom: 1.25rem;">
-                <button [ngStyle]="{'background': uploadTab === 'audio' ? 'rgba(79, 70, 229, 0.1)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'audio' ? '2px solid var(--primary-color)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'audio' ? 'var(--primary-color)' : 'var(--text-muted)', 'font-weight': uploadTab === 'audio' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'audio'">
-                    Procesar Audio
+            <div style="display:flex; border-bottom: 1px solid var(--color-border); margin-bottom: 1.25rem;">
+                <button [ngStyle]="{'background': uploadTab === 'audio' ? 'rgba(0, 34, 115, 0.06)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'audio' ? '2px solid var(--color-accent)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'audio' ? 'var(--color-accent)' : 'var(--color-fg-muted)', 'font-weight': uploadTab === 'audio' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'audio'">
+                    Procesar audio
                 </button>
-                <button [ngStyle]="{'background': uploadTab === 'text' ? 'rgba(79, 70, 229, 0.1)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'text' ? '2px solid var(--primary-color)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'text' ? 'var(--primary-color)' : 'var(--text-muted)', 'font-weight': uploadTab === 'text' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'text'">
-                    Pegar Texto Libre
+                <button [ngStyle]="{'background': uploadTab === 'text' ? 'rgba(0, 34, 115, 0.06)' : 'transparent', 'border':'none', 'border-bottom': uploadTab === 'text' ? '2px solid var(--color-accent)' : '2px solid transparent', 'padding':'0.75rem 1rem', 'cursor':'pointer', 'color': uploadTab === 'text' ? 'var(--color-accent)' : 'var(--color-fg-muted)', 'font-weight': uploadTab === 'text' ? '600' : '400', 'flex':'1'}" (click)="uploadTab = 'text'">
+                    Pegar texto libre
                 </button>
             </div>
-
-            <!-- Formularios Generales -->
             <div class="form-group">
-                <label>Título o Motivo de la Sesión *</label>
-                <input type="text" class="modern-input" [(ngModel)]="uploadForm.title" placeholder="Ej: Comité Estratégico Mensual">
+                <label>Título o motivo de la sesión *</label>
+                <input type="text" [(ngModel)]="uploadForm.title" placeholder="Ej: Comité estratégico mensual">
             </div>
-
             <div style="display:flex; gap:1rem; margin-bottom:1rem;">
                 <div class="form-group" style="flex:1; margin-bottom:0;">
-                    <label>Fecha y Hora</label>
-                    <input type="datetime-local" class="modern-input" [(ngModel)]="uploadForm.date">
+                    <label>Fecha y hora</label>
+                    <input type="datetime-local" [(ngModel)]="uploadForm.date">
                 </div>
                 <div class="form-group" style="flex:1; margin-bottom:0;">
-                    <label>Idioma Principal</label>
-                    <select class="modern-input" [(ngModel)]="uploadForm.language">
+                    <label>Idioma principal</label>
+                    <select [(ngModel)]="uploadForm.language">
                         <option value="Español">Español</option>
                         <option value="Inglés">Inglés</option>
                         <option value="Portugués">Portugués</option>
-                        <option value="Multilingüe">Múltiples Idiomas</option>
+                        <option value="Multilingüe">Múltiples idiomas</option>
                     </select>
                 </div>
             </div>
-
             <div class="form-group">
-                <label>Proyecto (Opcional, para enrutamiento auto)</label>
-                <select class="modern-input" [(ngModel)]="uploadForm.projectId">
-                    <option value="">-- Sin Proyecto (General) --</option>
+                <label>Proyecto (opcional)</label>
+                <select [(ngModel)]="uploadForm.projectId">
+                    <option value="">-- Sin proyecto (General) --</option>
                     <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                 </select>
             </div>
-
-            <!-- Audio Tab -->
-            <div *ngIf="uploadTab === 'audio'" style="background:rgba(255,255,255,0.02); border:1px dashed var(--glass-border); border-radius:8px; padding:1.5rem; text-align:center; margin-bottom:1.5rem;">
+            <div *ngIf="uploadTab === 'audio'" style="background:var(--brand-cream-100); border:1px dashed var(--color-border-strong); border-radius:12px; padding:1.5rem; text-align:center; margin-bottom:1.5rem;">
                 <input type="file" #audioUpload style="display:none;" accept="audio/*,video/mp4" (change)="onFileSelected($event)">
                 <button class="btn btn-secondary" (click)="audioUpload.click()" style="margin-bottom:0.5rem;" [disabled]="isUploading">
-                    Seleccionar Archivo (MP3, WAV, M4A)
+                    Seleccionar archivo (MP3, WAV, M4A)
                 </button>
-                <p style="font-size:0.85rem; color:var(--text-muted); margin:0;" *ngIf="uploadForm.file">Archivo: <strong>{{ uploadForm.file.name }}</strong></p>
+                <p style="font-size:0.85rem; color:var(--color-fg-muted); margin:0;" *ngIf="uploadForm.file">Archivo: <strong>{{ uploadForm.file.name }}</strong></p>
             </div>
-
-            <!-- Text Tab -->
             <div *ngIf="uploadTab === 'text'" class="form-group">
-                <label>Transcripción o Acta Cruda *</label>
-                <textarea class="modern-input" rows="6" [(ngModel)]="uploadForm.textContent" placeholder="Pega aquí todo el texto discutido en la sesión..." [disabled]="isUploading"></textarea>
+                <label>Transcripción o acta cruda *</label>
+                <textarea rows="6" [(ngModel)]="uploadForm.textContent" placeholder="Pega aquí todo el texto discutido en la sesión..." [disabled]="isUploading"></textarea>
             </div>
-
             <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;" (click)="submitUpload()" [disabled]="isUploading">
-                <span *ngIf="!isUploading">Procesar e Inteligenciar Sesión</span>
-                <span *ngIf="isUploading">Subiendo y transcribiendo... ⏳</span>
+                <span *ngIf="!isUploading">Procesar e inteligenciar sesión</span>
+                <span *ngIf="isUploading">Subiendo y transcribiendo…</span>
             </button>
         </div>
     </div>
 </div>
 
-<!-- Modal Eliminar Sesión -->
+<!-- ============ MODAL: eliminar sesión ============ -->
 <div class="modal-backdrop fade-in" *ngIf="showDeleteModal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
     <div class="card glass-panel" style="width: 400px; max-width: 90vw; position:relative;">
         <div class="card-body" style="text-align: center; padding: 2rem;">
-            <div style="background: rgba(239, 68, 68, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: #ef4444;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div style="background: rgba(224, 61, 61, 0.10); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; color: var(--color-danger);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                     <line x1="12" y1="9" x2="12" y2="13"></line>
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
             </div>
-            
-            <h3 style="margin-top:0; color:var(--text-main); font-size: 1.25rem; font-weight: 600;">¿Eliminar Sesión?</h3>
-            <p style="color:var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2rem;">
-                Estás a punto de eliminar permanentemente el registro <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>.<br><br>Todas las tareas extraídas directamente relacionadas a esta sesión se borrarán de la base de datos de Notiva. Esta acción es <strong>irreversible</strong>.
+            <h3 style="margin-top:0; color:var(--color-fg-default); font-size: 1.25rem; font-weight: 600;">¿Eliminar sesión?</h3>
+            <p style="color:var(--color-fg-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 2rem;">
+                Estás a punto de eliminar permanentemente <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>. Esta acción es <strong>irreversible</strong>.
             </p>
-            
             <div style="display: flex; gap: 1rem; width: 100%;">
-                <button class="btn btn-secondary" style="flex:1; justify-content: center;" (click)="cancelDeleteSession()" [disabled]="isDeleting">
-                    Cancelar
-                </button>
-                <button class="btn btn-danger" style="flex:1; justify-content: center; background: #ef4444; color: white;" (click)="confirmDeleteSession()" [disabled]="isDeleting">
-                    <span *ngIf="!isDeleting">Sí, Eliminar</span>
-                    <span *ngIf="isDeleting">Borrando...</span>
+                <button class="btn btn-secondary" style="flex:1; justify-content: center;" (click)="cancelDeleteSession()" [disabled]="isDeleting">Cancelar</button>
+                <button class="btn btn-danger" style="flex:1; justify-content: center;" (click)="confirmDeleteSession()" [disabled]="isDeleting">
+                    <span *ngIf="!isDeleting">Sí, eliminar</span>
+                    <span *ngIf="isDeleting">Borrando…</span>
                 </button>
             </div>
         </div>
