@@ -410,6 +410,41 @@
    el ancho debajo. Replica el mockup adjunto. */
 .ov-followup-card { gap: var(--space-20); }
 
+.followup-head {
+    align-items: center;
+    /* En la header convivimos título a la izquierda y toggle a la derecha. */
+}
+
+/* Segmented control "Sesiones / Tareas" */
+.followup-source-toggle {
+    display: inline-flex;
+    background: var(--brand-cream-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    padding: 3px;
+    gap: 2px;
+}
+.followup-source-toggle button {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 4px 12px;
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    font-weight: var(--fw-semibold);
+    color: var(--color-fg-muted);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: var(--transition);
+    letter-spacing: 0;
+}
+.followup-source-toggle button:hover { color: var(--color-fg-default); }
+.followup-source-toggle button.active {
+    background: var(--color-bg-panel);
+    color: var(--color-accent);
+    box-shadow: var(--shadow-xs);
+}
+
 .followup-body {
     display: flex;
     align-items: center;
@@ -426,17 +461,22 @@
 .followup-donut {
     width: 100%;
     height: 100%;
-    /* Track parte arriba (rotate -90 lo hace en cada segmento); el
-       wrapper en sí lo deja "horizontal". */
 }
 
 .donut-track {
     stroke: var(--brand-cream-100);
 }
 
+/* Cada segmento es interactivo: hover engruesa el stroke (lo hace el TS
+   binding) y los inactivos se atenúan. Cursor pointer para señal de
+   "esto responde". */
 .donut-seg {
-    transition: stroke-dasharray var(--dur-base) var(--ease-out);
+    cursor: pointer;
+    transition: stroke-width 140ms var(--ease-out),
+                opacity 140ms var(--ease-out);
 }
+.donut-seg.is-active { filter: drop-shadow(0 0 4px currentColor); }
+.donut-seg.is-dimmed { opacity: 0.35; }
 
 .followup-donut-center {
     position: absolute;
@@ -468,6 +508,17 @@
     font-weight: var(--fw-semibold);
 }
 
+/* Pct grande que aparece cuando hovereamos un segmento. */
+.donut-total-pct {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    font-weight: var(--fw-bold);
+    color: var(--color-fg-default);
+    font-variant-numeric: tabular-nums;
+}
+
 /* Leyenda — grid de 4 columnas: dot, label, count, pct */
 .followup-legend {
     list-style: none;
@@ -486,7 +537,20 @@
     font-family: var(--font-sans);
     font-size: var(--text-13);
     color: var(--color-fg-default);
+    /* Interactivo: hover sincroniza con donut. Padding interno + radius
+       hacen el target click-friendly. */
+    padding: 4px 8px;
+    margin: 0 -8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
 }
+.followup-legend li:hover { background: var(--brand-cream-50); }
+.followup-legend li.is-active {
+    background: var(--brand-cream-100);
+    transform: translateX(2px);
+}
+.followup-legend li.is-dimmed { opacity: 0.45; }
 .legend-swatch {
     width: 10px;
     height: 10px;

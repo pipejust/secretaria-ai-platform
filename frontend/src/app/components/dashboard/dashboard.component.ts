@@ -51,6 +51,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
      *  oculta/muestra la serie correspondiente. */
     seriesVisible: { meetings: boolean; analyzed: boolean } = { meetings: true, analyzed: true };
 
+    /** Fuente del donut de Estado de seguimiento. 'sessions' por default
+     *  porque es donde el workspace típico tiene la distribución real
+     *  (sesiones procesadas vs pendientes vs archivadas). 'tasks' mira
+     *  el breakdown de action items individuales.
+     *
+     *  El user puede alternar entre ambas con el segmented control de
+     *  la card. */
+    followupSource: 'sessions' | 'tasks' = 'sessions';
+
+    /** Índice del segmento del donut hovereado (o -1 si nada). Se usa
+     *  para destacar el segmento + su item de leyenda de forma sincronizada. */
+    hoveredSegmentIdx = -1;
+
     showUploadModal = false;
     uploadTab: 'audio' | 'text' = 'audio';
     uploadForm: any = {
@@ -530,18 +543,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return Math.ceil(raw / 10) * 10;
     }
 
-    /** Follow-up Status: distribución de action items por status. */
+    /** Follow-up Status: breakdown del recurso activo (sesiones o tareas).
+     *  Devuelve los 4 segmentos del donut con count + pct + color. */
     get followupBreakdown(): FollowupBreakdown[] {
+        return this.followupSource === 'sessions'
+            ? this._sessionsBreakdown()
+            : this._tasksBreakdown();
+    }
+
+    /** Distribución de SESIONES por status del pipeline. Es la fuente
+     *  default porque siempre tiene datos reales (las sesiones se crean
+     *  con un status y transicionan a completed/archived). */
+    private _sessionsBreakdown(): FollowupBreakdown[] {
+        const sessions = this.sessions || [];
+        const total = Math.max(1, sessions.length);
+        const c = (s: string) => sessions.filter((it) => (it?.status || '').toLowerCase() === s).length;
+        const completed = c('completed');
+        // "En procesamiento": sesiones subidas que están en cola/transcribiendo.
+        const processing = c('processing') + c('transcribing') + c('analyzing');
+        const pending = c('pending');
+        // "Cerradas / archivadas / con error" agrupadas como el cuarto bucket —
+        // el resultado del pipeline que requiere atención manual.
+        const archived = c('archived') + c('failed') + c('error');
+        const pct = (n: number) => Math.round((n / total) * 100);
+        return [
+            { label: 'Completadas',     count: completed,  pct: pct(completed),  color: 'var(--color-success)' },
+            { label: 'En procesamiento', count: processing, pct: pct(processing), color: 'var(--color-info)' },
+            { label: 'Pendientes',      count: pending,    pct: pct(pending),    color: 'var(--color-warning)' },
+            { label: 'Archivadas',      count: archived,   pct: pct(archived),   color: 'var(--color-fg-soft)' },
+        ];
+    }
+
+    /** Distribución de ACTION ITEMS por status. Útil para workspaces que
+     *  ya viven el flujo de cierre de tareas (no sólo procesamiento de
+     *  sesiones). Suele estar más "pending" hasta que el equipo trabaja. */
+    private _tasksBreakdown(): FollowupBreakdown[] {
         const items = this.allActionItems || [];
         const total = Math.max(1, items.length);
         const c = (s: string) => items.filter((it) => (it?.status || '').toLowerCase() === s).length;
-        const completed = c('done') || c('completed');
-        const inProgress = c('in_progress') || c('blocked');
+        const completed = c('done') + c('completed');
+        const inProgress = c('in_progress') + c('blocked');
         const pending = c('pending');
         const overdue = items.filter((it) => {
             if (!it?.due_date) return false;
             const d = this._toDate(it.due_date);
-            return d ? d.getTime() < Date.now() && (it.status || 'pending') !== 'done' : false;
+            const status = (it.status || 'pending').toLowerCase();
+            return d ? d.getTime() < Date.now() && status !== 'done' && status !== 'completed' : false;
         }).length;
         const pct = (n: number) => Math.round((n / total) * 100);
         return [
@@ -552,9 +599,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ];
     }
 
+    /** Total del recurso activo. Llena el centro del donut. */
     get followupTotal(): number {
-        return (this.allActionItems || []).length;
+        return this.followupSource === 'sessions'
+            ? (this.sessions || []).length
+            : (this.allActionItems || []).length;
     }
+
+    /** Sustantivo que va abajo del número en el centro (Total siempre,
+     *  pero usamos esto en el banner para variar el copy). */
+    get followupUnitPlural(): string {
+        return this.followupSource === 'sessions' ? 'sesiones' : 'tareas';
+    }
+
+    /** Cambia la fuente del donut. */
+    setFollowupSource(src: 'sessions' | 'tasks'): void {
+        if (this.followupSource === src) return;
+        this.followupSource = src;
+        // Reset hover state cuando cambia el dataset.
+        this.hoveredSegmentIdx = -1;
+    }
+
+    /** Hover de segmento del donut (sincronizado con leyenda). */
+    onSegmentHover(idx: number): void { this.hoveredSegmentIdx = idx; }
+    clearSegmentHover(): void { this.hoveredSegmentIdx = -1; }
 
     // ----- Donut Estado de seguimiento ----------------------------------
 
@@ -603,29 +671,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return c?.pct || 0;
     }
 
-    /** Copy adaptativo del banner de ánimo. Sin total, mostramos algo
-     *  neutro para no felicitar a un workspace vacío. */
+    /** Copy adaptativo del banner de ánimo. Cambia con la fuente activa
+     *  (sesiones vs tareas) para que el mensaje siempre sea preciso. */
     get encouragementMessage(): { title: string; sub: string; tone: 'success' | 'info' | 'neutral' } {
+        const noun = this.followupUnitPlural;            // "sesiones" | "tareas"
+        const nounSing = noun.slice(0, -1);              // "sesione" / "tarea" → ajustamos abajo
+        const unitFem = this.followupSource === 'sessions' ? 'sesión' : 'tarea';
+
         if (this.followupTotal === 0) {
-            return {
-                title: 'Aún no hay tareas registradas.',
-                sub: 'Sube tu primera reunión y la IA generará las acciones automáticamente.',
-                tone: 'neutral',
-            };
+            return this.followupSource === 'sessions'
+                ? {
+                    title: 'Aún no hay sesiones registradas.',
+                    sub: 'Sube tu primera reunión y la IA generará las acciones automáticamente.',
+                    tone: 'neutral',
+                  }
+                : {
+                    title: 'Aún no hay tareas registradas.',
+                    sub: 'Las tareas se generan al analizar una sesión.',
+                    tone: 'neutral',
+                  };
         }
         const pct = this.completedPercent;
         if (pct >= 70) {
-            return { title: `¡Excelente! ${pct}% de las tareas completadas.`, sub: 'Mantén el ritmo del equipo.', tone: 'success' };
+            return { title: `¡Excelente! ${pct}% de las ${noun} completadas.`, sub: 'Mantén el ritmo del equipo.', tone: 'success' };
         }
         if (pct >= 40) {
-            return { title: `¡Buen trabajo! ${pct}% de las tareas completadas.`, sub: 'Mantén el momentum.', tone: 'success' };
+            return { title: `¡Buen trabajo! ${pct}% de las ${noun} completadas.`, sub: 'Mantén el momentum.', tone: 'success' };
         }
         if (pct >= 15) {
-            return { title: `Vas avanzando: ${pct}% completadas.`, sub: 'Revisa las pendientes para acelerar el cierre.', tone: 'info' };
+            return { title: `Vas avanzando: ${pct}% de las ${noun} completadas.`, sub: 'Revisa las pendientes para acelerar el cierre.', tone: 'info' };
         }
+        // Sub-frase específica por fuente.
+        const sub = this.followupSource === 'sessions'
+            ? 'Procesa las sesiones pendientes o archiva las que ya no necesitas.'
+            : 'Empieza con las vencidas o asignadas a tu equipo.';
         return {
-            title: 'Hay tareas que necesitan atención.',
-            sub: 'Empieza con las vencidas o asignadas a tu equipo.',
+            title: `Hay ${noun} que necesitan atención.`,
+            sub,
             tone: 'info',
         };
     }

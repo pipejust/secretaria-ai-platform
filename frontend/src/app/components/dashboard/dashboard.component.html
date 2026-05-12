@@ -208,41 +208,79 @@
         <!-- Right column: Follow-up + Sync Health -->
         <div class="ov-side-stack">
             <article class="ov-card ov-followup-card">
-                <header class="ov-card-head">
+                <header class="ov-card-head followup-head">
                     <h2 class="ov-card-title">Estado de seguimiento</h2>
+                    <!-- Segmented control: alterna entre breakdown de
+                         sesiones (estado del pipeline) o tareas (estado
+                         de cierre del equipo). -->
+                    <div class="followup-source-toggle" role="tablist"
+                         aria-label="Fuente del breakdown">
+                        <button type="button" role="tab"
+                                [class.active]="followupSource === 'sessions'"
+                                [attr.aria-selected]="followupSource === 'sessions'"
+                                (click)="setFollowupSource('sessions')">
+                            Sesiones
+                        </button>
+                        <button type="button" role="tab"
+                                [class.active]="followupSource === 'tasks'"
+                                [attr.aria-selected]="followupSource === 'tasks'"
+                                (click)="setFollowupSource('tasks')">
+                            Tareas
+                        </button>
+                    </div>
                 </header>
 
-                <!-- Donut + leyenda. Si no hay tareas, mostramos un ring
-                     placeholder gris para no romper el layout. -->
+                <!-- Donut + leyenda interactiva. Hover en segmento ↔ leyenda. -->
                 <div class="followup-body">
                     <div class="followup-donut-wrap" role="img"
-                         [attr.aria-label]="followupTotal + ' tareas totales'">
+                         [attr.aria-label]="followupTotal + ' ' + followupUnitPlural + ' totales'"
+                         (mouseleave)="clearSegmentHover()">
                         <svg class="followup-donut" viewBox="0 0 100 100"
                              aria-hidden="true">
-                            <!-- Track gris de fondo (siempre visible) -->
+                            <!-- Track gris de fondo -->
                             <circle class="donut-track"
                                     cx="50" cy="50" [attr.r]="donutRadius"
                                     fill="none" stroke-width="14"/>
-                            <!-- Segmentos de cada status -->
-                            <circle *ngFor="let s of donutSegments"
+                            <!-- Segmentos: cada uno responde a hover. Cuando
+                                 otro segmento está activo, los inactivos se
+                                 atenúan para guiar la vista. -->
+                            <circle *ngFor="let s of donutSegments; let i = index"
                                     cx="50" cy="50" [attr.r]="donutRadius"
                                     fill="none"
                                     [attr.stroke]="s.color"
-                                    stroke-width="14"
+                                    [attr.stroke-width]="hoveredSegmentIdx === i ? 17 : 14"
                                     stroke-linecap="butt"
                                     [attr.stroke-dasharray]="s.dashArray"
                                     [attr.stroke-dashoffset]="s.dashOffset"
                                     transform="rotate(-90 50 50)"
-                                    class="donut-seg"/>
+                                    class="donut-seg"
+                                    [class.is-active]="hoveredSegmentIdx === i"
+                                    [class.is-dimmed]="hoveredSegmentIdx !== -1 && hoveredSegmentIdx !== i"
+                                    (mouseenter)="onSegmentHover(i)"/>
                         </svg>
+
+                        <!-- Centro: cuando hay hover, muestra el segmento activo;
+                             sino, el total y el sustantivo. -->
                         <div class="followup-donut-center">
-                            <span class="donut-total">{{ followupTotal }}</span>
-                            <span class="donut-total-label">Total</span>
+                            <ng-container *ngIf="hoveredSegmentIdx === -1; else hoveredCenter">
+                                <span class="donut-total">{{ followupTotal }}</span>
+                                <span class="donut-total-label">Total</span>
+                            </ng-container>
+                            <ng-template #hoveredCenter>
+                                <span class="donut-total">{{ followupBreakdown[hoveredSegmentIdx].count }}</span>
+                                <span class="donut-total-label">{{ followupBreakdown[hoveredSegmentIdx].label }}</span>
+                                <span class="donut-total-pct">{{ followupBreakdown[hoveredSegmentIdx].pct }}%</span>
+                            </ng-template>
                         </div>
                     </div>
 
-                    <ul class="followup-legend">
-                        <li *ngFor="let f of followupBreakdown">
+                    <!-- Leyenda interactiva: cada item también responde a
+                         hover y dispara el mismo destacado en el donut. -->
+                    <ul class="followup-legend" (mouseleave)="clearSegmentHover()">
+                        <li *ngFor="let f of followupBreakdown; let i = index"
+                            [class.is-active]="hoveredSegmentIdx === i"
+                            [class.is-dimmed]="hoveredSegmentIdx !== -1 && hoveredSegmentIdx !== i"
+                            (mouseenter)="onSegmentHover(i)">
                             <span class="legend-swatch" [style.background]="f.color"></span>
                             <span class="legend-label">{{ f.label }}</span>
                             <span class="legend-count">{{ f.count }}</span>
