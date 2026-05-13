@@ -734,41 +734,40 @@
     border-radius: var(--radius-md);
 }
 
-/* ====== Vista previa (iframe Office Online Viewer) ======
-   El frame se EXTIENDE a los bordes del panel rompiendo el padding
-   horizontal con margin negativo. Así el documento gana ~40px más de
-   ancho y se ve más generoso en la columna estrecha del detalle.
+/* ====== Vista previa (iframe Office Online Viewer) — full page ======
+   Objetivo: que la PÁGINA COMPLETA del documento se vea siempre,
+   ocupando todo el ancho disponible de la columna, sin scroll y sin
+   el toolbar inferior ("PAGE X OF Y · 75%") del viewer.
 
-   Trick: el iframe se renderiza al 167% de tamaño y se escala 0.6 con
-   CSS transform. Office Viewer al recibir un canvas más grande aplica
-   un zoom interno mayor que muestra la página completa, y el scale CSS
-   lo devuelve al footprint visible. */
+   Estrategia:
+   1. Break-out lateral: el frame rompe el padding horizontal del panel
+      con margin negativo, ganando ~40px extra de ancho.
+   2. Aspect ratio carta (8.5 / 11) → la altura del wrapper sigue las
+      proporciones reales del documento. Office Viewer auto-ajusta a
+      ancho y la página entra perfecto en alto.
+   3. El iframe es ~60px MÁS ALTO que el wrapper. Como `overflow: hidden`
+      lo recorta abajo, el toolbar/chrome del viewer queda fuera del
+      área visible — sólo se ve la página. */
 .tpl-preview-frame {
     position: relative;
-    /* Break-out: usa todo el ancho de la card .tpl-detail (que tiene
-       padding-x = space-20). Se compensa con un margin negativo igual. */
     width: calc(100% + (var(--space-20) * 2));
     margin-left: calc(-1 * var(--space-20));
     margin-right: calc(-1 * var(--space-20));
     aspect-ratio: 8.5 / 11;
-    max-height: 580px;
-    background: var(--brand-cream-50);
+    max-height: 620px;
+    background: #fff;
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
-    /* sin radius para que llegue limpio a los bordes de la card */
     overflow: hidden;
 }
 .tpl-preview-frame iframe {
     position: absolute;
     top: 0;
     left: 0;
-    /* 1 / 0.6 = 1.6667 → el iframe ocupa 166.7% del contenedor, luego
-       se escala 0.6 para volver a caber. El contenido se renderiza con
-       más espacio así que Office Viewer muestra la página completa. */
-    width: 166.667%;
-    height: 166.667%;
-    transform: scale(0.6);
-    transform-origin: top left;
+    width: 100%;
+    /* +56px = altura del chrome inferior del Office Viewer. Lo dejamos
+       fuera del área visible para que sólo se vea la página. */
+    height: calc(100% + 56px);
     border: 0;
     background: #fff;
 }
