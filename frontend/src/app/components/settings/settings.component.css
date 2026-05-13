@@ -186,9 +186,13 @@
 }
 .st-field-label small { font-weight: 500; color: var(--st-text-soft); }
 
-/* Wrapper con icono + select/input */
+/* ─────────────────────────────────────────────────────────────────────────
+ * Wrapper con icono — RESET COMPLETO del browser para evitar doble borde.
+ * El wrapper es el ÚNICO elemento con borde/focus visible. El input/select
+ * interno se ve como continuación del wrapper, sin su propio chrome.
+ * ───────────────────────────────────────────────────────────────────────── */
 .st-field-input {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 8px;
     height: 40px;
@@ -197,33 +201,60 @@
     border-radius: 10px;
     background: #FFFFFF;
     transition: border-color 120ms ease, box-shadow 120ms ease;
+    /* En selects, el chevron lo dibujamos en el wrapper para no chocar
+       con el wrapper-focus-ring. */
+    position: relative;
 }
 .st-field-input:focus-within {
     border-color: var(--st-blue);
     box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
 }
-.st-field-input svg { color: var(--st-text-muted); flex-shrink: 0; }
+.st-field-input > svg { color: var(--st-text-muted); flex-shrink: 0; }
 .st-field-input input,
 .st-field-input select {
     flex: 1;
-    border: 0;
-    outline: none;
+    min-width: 0;
+    width: 100%;
+    /* RESET TOTAL del estilo nativo del browser. */
+    margin: 0;
+    padding: 0;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
     background: transparent;
     font-family: inherit;
     font-size: 13px;
+    line-height: 1.4;
     color: var(--st-text);
-    width: 100%;
-    min-width: 0;
-}
-.st-field-input select {
+    height: 100%;
     appearance: none;
     -webkit-appearance: none;
+    -moz-appearance: none;
+}
+/* El select se ve como un input normal: sin borde, sin chrome propio.
+   Le reservamos espacio a la derecha para el chevron del wrapper. */
+.st-field-input:has(select) { padding-right: 30px; }
+.st-field-input select {
     cursor: pointer;
-    padding-right: 16px;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    /* Quita el outline azul de Chrome al hacer focus. */
+    outline: none !important;
+}
+.st-field-input select::-ms-expand { display: none; } /* IE/Edge */
+
+/* Chevron único dibujado en el wrapper (no en el select) — así el focus
+   ring del wrapper no envuelve a un chevron interno. */
+.st-field-input:has(select)::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    transform: translateY(-50%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right center;
-    background-size: 10px;
+    background-position: center;
+    pointer-events: none;
 }
 
 /* Input "plano" sin icono */
@@ -242,8 +273,8 @@
     appearance: none;
     -webkit-appearance: none;
 }
-/* Si es <select> usado con clase st-input, le agregamos chevron como
-   los selects de meetings/projects para que se vea bonito y consistente. */
+/* Si es <select> usado con clase st-input, lo tratamos como un input
+   con chevron a la derecha. Sin doble borde, sin chrome del browser. */
 select.st-input {
     cursor: pointer;
     padding-right: 32px;
@@ -251,7 +282,9 @@ select.st-input {
     background-repeat: no-repeat;
     background-position: right 12px center;
     background-size: 12px;
+    -moz-appearance: none;
 }
+select.st-input::-ms-expand { display: none; }
 .st-input:focus {
     outline: none;
     border-color: var(--st-blue);
