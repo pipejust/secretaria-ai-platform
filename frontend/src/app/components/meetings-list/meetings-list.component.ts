@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
+import { AvatarTooltipDirective } from '../../directives/avatar-tooltip.directive';
 
 /** Sub-tab de la card del header (filtro rápido por status). */
 type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
@@ -36,7 +37,7 @@ interface Attendee {
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, MdRenderPipe],
+    imports: [CommonModule, FormsModule, MdRenderPipe, AvatarTooltipDirective],
     templateUrl: './meetings-list.component.html',
     styleUrls: ['./meetings-list.component.css']
 })
@@ -68,13 +69,21 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     searchText: string = '';
     statusFilter: string = '';
     filterProjectId: string = '';
-    /** Filtros visuales adicionales que el mockup pide. Por ahora son
-     *  placeholders client-side: el backend no expone aún team/source/
-     *  date-range. Se mantienen para que la UI quede igual al mockup
-     *  y se cableen cuando los endpoints estén. */
+    /** Filtros visuales adicionales que el mockup pide. Algunos son aún
+     *  placeholders client-side; otros (filterDate, filterDateFrom,
+     *  filterDateTo) ya filtran sobre el lote cargado. */
     filterTeam = '';
+    /** Preset de fecha — 'today' | 'week' | 'month' | '' (cualquiera). */
     filterDate = '';
+    /** Rango custom de fechas (yyyy-MM-dd). Si ambos están seteados,
+     *  override del preset. Botón "Limpiar fechas" los vacía. */
+    filterDateFrom = '';
+    filterDateTo = '';
     filterSource = '';
+
+    /** Modal "Ver participantes" — abre la lista completa del session
+     *  seleccionado en el panel lateral. */
+    showParticipantsModal = false;
 
     /** Visibilidad del bloque de filtros (Status / Equipo / Fecha / Origen).
      *  El botón "Filtros" lo hace toggle. Por defecto OCULTO para que la
@@ -298,9 +307,10 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         this.showFilters = !this.showFilters;
         if (!this.showFilters) {
             // Cuando cerrás los filtros, los reseteamos para evitar el caso
-            // "filtros aplicados pero no visibles". Si los querés mantener,
-            // dejá el panel abierto.
+            // "filtros aplicados pero no visibles".
             this.filterDate = '';
+            this.filterDateFrom = '';
+            this.filterDateTo = '';
             this.filterSource = '';
         }
     }
@@ -309,7 +319,65 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
      *  en el botón "Filtros (N)" para que el user sepa que hay filtros
      *  aplicados aunque el panel esté cerrado. */
     get activeFiltersCount(): number {
-        return [this.filterDate, this.filterSource].filter(Boolean).length;
+        const dateActive = !!this.filterDate || !!this.filterDateFrom || !!this.filterDateTo;
+        return [dateActive ? 'date' : '', this.filterSource].filter(Boolean).length;
+    }
+
+    /** Limpia el rango custom (botón "Restablecer" del filtro de fecha). */
+    clearDateRange(): void {
+        this.filterDateFrom = '';
+        this.filterDateTo = '';
+    }
+
+    /** Util: pasa la fecha de la sesión a Date object. Maneja los 3
+     *  formatos: epoch ms (number), epoch ms (string numérica), ISO. */
+    private _parseSessionDate(s: any): Date | null {
+        let v = s?.date;
+        if (v == null) return null;
+        if (typeof v === 'string' && !isNaN(Number(v))) v = Number(v);
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    /** True si la sesión cae en el rango activo (preset O custom). */
+    private _matchesDateFilter(s: any): boolean {
+        // Sin filtros de fecha → pasa todo.
+        if (!this.filterDate && !this.filterDateFrom && !this.filterDateTo) return true;
+
+        const d = this._parseSessionDate(s);
+        if (!d) return false;
+
+        // 1) Rango custom — toma precedencia sobre el preset.
+        if (this.filterDateFrom || this.filterDateTo) {
+            if (this.filterDateFrom) {
+                const from = new Date(this.filterDateFrom + 'T00:00:00');
+                if (d < from) return false;
+            }
+            if (this.filterDateTo) {
+                const to = new Date(this.filterDateTo + 'T23:59:59');
+                if (d > to) return false;
+            }
+            return true;
+        }
+
+        // 2) Preset 'today' / 'week' / 'month'.
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (this.filterDate === 'today') {
+            return d >= todayStart;
+        }
+        if (this.filterDate === 'week') {
+            // Última semana corrida (no la ISO-week — más intuitivo).
+            const weekAgo = new Date(todayStart);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return d >= weekAgo;
+        }
+        if (this.filterDate === 'month') {
+            const monthAgo = new Date(todayStart);
+            monthAgo.setDate(monthAgo.getDate() - 30);
+            return d >= monthAgo;
+        }
+        return true;
     }
 
     /** Resultado final de la tabla: aplica filtros y sub-tab del header. */
@@ -329,6 +397,13 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         // fireflies_id en sessionSource().
         if (this.filterSource) {
             filtered = filtered.filter((s) => this.sessionSource(s).key === this.filterSource);
+        }
+
+        // Filtro de fecha (preset o rango custom). Aplicado client-side
+        // sobre el lote ya cargado — cuando el backend exponga ?from=&to=
+        // pasamos a filtrar server-side.
+        if (this.filterDate || this.filterDateFrom || this.filterDateTo) {
+            filtered = filtered.filter((s) => this._matchesDateFilter(s));
         }
 
         // Buscador local (encima de filtros server-side).
@@ -391,6 +466,14 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     }
 
     setDetailTab(tab: DetailTab) { this.detailTab = tab; }
+
+    /** Abre el modal con la lista completa de participantes de la sesión
+     *  seleccionada. Usado por el botón "Ver participantes". */
+    openParticipantsModal(): void {
+        if (!this.selectedSession) return;
+        this.showParticipantsModal = true;
+    }
+    closeParticipantsModal(): void { this.showParticipantsModal = false; }
 
     /** Resumen ejecutivo del panel (usa raw_summary si existe). */
     get selectedExecutiveSummary(): string {

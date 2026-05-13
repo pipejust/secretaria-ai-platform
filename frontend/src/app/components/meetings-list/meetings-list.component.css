@@ -1228,3 +1228,151 @@
     /* Truncamos textos largos para evitar overflow horizontal */
     .row-title, .row-subtitle, .cell-date-main { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* ============================================================
+ *  Filtro de fecha — rango custom con calendario nativo
+ * ============================================================ */
+.filter-date-range {
+    /* Ocupa 2 columnas del grid de filtros para acomodar 2 inputs. */
+    grid-column: span 2;
+    height: auto;
+    padding: 4px 12px;
+}
+.filter-date-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+.filter-date-inputs input[type="date"] {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: var(--text-13);
+    color: var(--color-fg-default);
+    padding: 0;
+    cursor: pointer;
+    color-scheme: light;
+}
+.filter-date-sep {
+    color: var(--color-fg-soft);
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.filter-date-clear {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-fg-muted);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.filter-date-clear:hover { background: var(--brand-cream-100); color: var(--color-fg-default); }
+
+/* En layouts <980px volvemos al 1-col de los filtros normales. */
+@media (max-width: 980px) {
+    .filter-date-range { grid-column: span 1; }
+}
+
+/* ============================================================
+ *  Botón "Ver participantes" — counter inline
+ * ============================================================ */
+.dt-view-participants-count {
+    margin-left: 4px;
+    color: var(--color-fg-muted);
+    font-weight: var(--fw-regular);
+}
+
+/* ============================================================
+ *  Modal "Ver participantes"
+ * ============================================================ */
+.participants-modal {
+    width: 480px;
+    max-width: 92vw;
+    max-height: 80vh;
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.participants-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--color-border);
+}
+.participants-modal-head h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: var(--fw-bold);
+    color: var(--color-fg-default);
+}
+.participants-modal-head p {
+    margin: 4px 0 0 0;
+    font-size: var(--text-12);
+    color: var(--color-fg-muted);
+}
+.participants-modal-close {
+    background: transparent;
+    border: 0;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.participants-modal-close:hover { background: var(--brand-cream-100); color: var(--color-fg-default); }
+
+.participants-modal-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+    overflow-y: auto;
+    flex: 1;
+}
+.participants-modal-list li {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--color-border-soft, #EEF1F6);
+}
+.participants-modal-list li:last-child { border-bottom: 0; }
+.pm-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pm-name {
+    font-size: var(--text-14);
+    color: var(--color-fg-default);
+    font-weight: var(--fw-semibold);
+}
+.pm-meta {
+    font-size: var(--text-12);
+    color: var(--color-fg-muted);
+}
+
+.participants-modal-empty {
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--color-fg-muted);
+    font-size: var(--text-13);
+}

@@ -163,13 +163,36 @@
             </div>
 
             <div class="filter-group">
-                <label>Fecha</label>
+                <label>Fecha (preset)</label>
                 <select [(ngModel)]="filterDate">
                     <option value="">Cualquier momento</option>
                     <option value="today">Hoy</option>
-                    <option value="week">Esta semana</option>
-                    <option value="month">Este mes</option>
+                    <option value="week">Última semana</option>
+                    <option value="month">Último mes</option>
                 </select>
+            </div>
+
+            <!-- Rango custom: si ambos están seteados, override del preset.
+                 Botón "Restablecer" los limpia. El input nativo type="date"
+                 ya muestra el calendario al click. -->
+            <div class="filter-group filter-date-range">
+                <label>Rango de fechas</label>
+                <div class="filter-date-inputs">
+                    <input type="date"
+                           [(ngModel)]="filterDateFrom"
+                           [max]="filterDateTo || null"
+                           aria-label="Desde" />
+                    <span class="filter-date-sep" aria-hidden="true">→</span>
+                    <input type="date"
+                           [(ngModel)]="filterDateTo"
+                           [min]="filterDateFrom || null"
+                           aria-label="Hasta" />
+                    <button type="button"
+                            class="filter-date-clear"
+                            *ngIf="filterDateFrom || filterDateTo"
+                            (click)="clearDateRange()"
+                            title="Limpiar rango de fechas">×</button>
+                </div>
             </div>
 
             <div class="filter-group">
@@ -467,8 +490,13 @@
                     +{{ selectedAttendees.length - 4 }}
                 </span>
             </div>
-            <button class="dt-view-participants" type="button" title="Ver lista completa de participantes">
+            <button class="dt-view-participants" type="button"
+                    (click)="openParticipantsModal()"
+                    title="Ver lista completa de participantes">
                 Ver participantes
+                <span class="dt-view-participants-count" *ngIf="selectedAttendees.length">
+                    ({{ selectedAttendees.length }})
+                </span>
             </button>
         </div>
 
@@ -712,6 +740,44 @@
                     <span *ngIf="isDeleting">Borrando…</span>
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ MODAL: ver participantes ============ -->
+<div class="modal-backdrop fade-in" *ngIf="showParticipantsModal"
+     (click)="closeParticipantsModal()"
+     style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:999;">
+    <div class="participants-modal" (click)="$event.stopPropagation()">
+        <header class="participants-modal-head">
+            <div>
+                <h3>Participantes</h3>
+                <p>{{ selectedSession?.title }} &nbsp;·&nbsp; {{ selectedAttendees.length }} {{ selectedAttendees.length === 1 ? 'persona' : 'personas' }}</p>
+            </div>
+            <button class="participants-modal-close" type="button" (click)="closeParticipantsModal()" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+
+        <ul class="participants-modal-list" *ngIf="selectedAttendees.length">
+            <li *ngFor="let a of selectedAttendees">
+                <span class="avatar avatar-lg" [style.background]="initialsColor(a.name)">
+                    <span class="avatar-text">{{ initials(a.name) }}</span>
+                </span>
+                <div class="pm-text">
+                    <strong class="pm-name">{{ a.name }}</strong>
+                    <span class="pm-meta" *ngIf="a.role">{{ a.role }}</span>
+                    <span class="pm-meta" *ngIf="a.company">{{ a.company }}</span>
+                </div>
+            </li>
+        </ul>
+
+        <div class="participants-modal-empty" *ngIf="!selectedAttendees.length">
+            <p>No se detectaron participantes en esta sesión.</p>
         </div>
     </div>
 </div>

@@ -6,11 +6,12 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { SettingsService } from '../../services/settings.service';
 import { environment } from '../../../environments/environment';
+import { AvatarTooltipDirective } from '../../directives/avatar-tooltip.directive';
 
 @Component({
     selector: 'app-projects',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, AvatarTooltipDirective],
     templateUrl: './projects.component.html',
     styleUrls: ['./projects.component.css']
 })
