@@ -734,27 +734,25 @@
     border-radius: var(--radius-md);
 }
 
-/* ====== Vista previa (iframe Office Online Viewer) — full page ======
-   Objetivo: que la PÁGINA COMPLETA del documento se vea siempre,
-   ocupando todo el ancho disponible de la columna, sin scroll y sin
-   el toolbar inferior ("PAGE X OF Y · 75%") del viewer.
+/* ====== Vista previa (iframe Office Online Viewer) ======
+   Objetivo: PÁGINA COMPLETA visible, SIN scroll vertical ni horizontal,
+   ocupando todo el ancho de la columna. Combinamos 2 técnicas:
 
-   Estrategia:
-   1. Break-out lateral: el frame rompe el padding horizontal del panel
-      con margin negativo, ganando ~40px extra de ancho.
-   2. Aspect ratio carta (8.5 / 11) → la altura del wrapper sigue las
-      proporciones reales del documento. Office Viewer auto-ajusta a
-      ancho y la página entra perfecto en alto.
-   3. El iframe es ~60px MÁS ALTO que el wrapper. Como `overflow: hidden`
-      lo recorta abajo, el toolbar/chrome del viewer queda fuera del
-      área visible — sólo se ve la página. */
+   1. Scale trick: el iframe se renderiza al 167% del wrapper y se escala
+      a 0.6 con CSS transform. Office Viewer recibe un canvas con más
+      espacio → la página renderea más nítida y a mejor proporción.
+
+   2. Chrome clip: agregamos altura extra al iframe (+100px internos =
+      +60px visibles después del scale). El chrome inferior del viewer
+      ("PAGE 1 OF 1 · 75% · ⛶") queda DEBAJO del área visible y
+      overflow:hidden del wrapper lo recorta — sólo se ve la página. */
 .tpl-preview-frame {
     position: relative;
     width: calc(100% + (var(--space-20) * 2));
     margin-left: calc(-1 * var(--space-20));
     margin-right: calc(-1 * var(--space-20));
     aspect-ratio: 8.5 / 11;
-    max-height: 620px;
+    max-height: 600px;
     background: #fff;
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
@@ -764,10 +762,14 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    /* +56px = altura del chrome inferior del Office Viewer. Lo dejamos
-       fuera del área visible para que sólo se vea la página. */
-    height: calc(100% + 56px);
+    /* Scale 0.6 → iframe en internal-space ocupa 1/0.6 = 166.667% del
+       wrapper. Le sumamos +100px de alto para sacar el chrome inferior
+       del Office Viewer fuera del área visible (queda recortado por el
+       overflow:hidden del wrapper). */
+    width: 166.667%;
+    height: calc(166.667% + 100px);
+    transform: scale(0.6);
+    transform-origin: top left;
     border: 0;
     background: #fff;
 }
