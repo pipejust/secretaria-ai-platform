@@ -30,6 +30,36 @@
                 </svg>
                 Nueva pregunta
             </button>
+
+            <!-- Historial de la sesión actual: dropdown con las preguntas
+                 hechas; click en una hace scroll al turn correspondiente. -->
+            <div class="aa-history-wrap" #historyPanel>
+                <button type="button" class="aa-btn aa-btn-secondary"
+                        [class.is-active]="showHistory"
+                        (click)="toggleHistory(); $event.stopPropagation()"
+                        [disabled]="!history.length"
+                        [title]="history.length ? 'Ver preguntas recientes' : 'Aún no hay preguntas en esta sesión'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Historial
+                    <span class="aa-history-count" *ngIf="history.length">{{ history.length }}</span>
+                </button>
+                <div class="aa-history-pop" *ngIf="showHistory && history.length"
+                     (click)="$event.stopPropagation()">
+                    <p class="aa-history-title">Preguntas recientes</p>
+                    <ul class="aa-history-list">
+                        <li *ngFor="let t of history; trackBy: trackByTurn">
+                            <button type="button" class="aa-history-item" (click)="jumpToTurn(t)">
+                                <span class="aa-history-time">{{ formatTurnTime(t.timestamp) }}</span>
+                                <span class="aa-history-q">{{ t.question }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -115,7 +145,9 @@
 
             <!-- Lista de turns: pregunta usuario + respuesta Acten -->
             <div class="aa-chat-list">
-                <article class="aa-turn" *ngFor="let turn of history; trackBy: trackByTurn">
+                <article class="aa-turn"
+                         *ngFor="let turn of history; trackBy: trackByTurn"
+                         [attr.data-turn-id]="turn.timestamp">
 
                     <!-- Pregunta del usuario (alineada a la derecha) -->
                     <div class="aa-q-row">
@@ -188,7 +220,17 @@
                                                     <polyline points="20 6 9 17 4 12"></polyline>
                                                 </svg>
                                             </span>
-                                            <span class="aa-decision-text">{{ d }}</span>
+                                            <div class="aa-decision-body">
+                                                <span class="aa-decision-text">{{ decisionText(d) }}</span>
+                                                <div class="aa-source-chips" *ngIf="decisionSources(d).length">
+                                                    <a *ngFor="let sid of decisionSources(d); trackBy: trackBySid"
+                                                       class="aa-source-chip"
+                                                       [routerLink]="['/admin/curation', sid]"
+                                                       [title]="sessionLabel(sid)">
+                                                        Sesión #{{ sid }}
+                                                    </a>
+                                                </div>
+                                            </div>
                                         </li>
                                     </ul>
                                 </div>
@@ -213,6 +255,7 @@
                                                     <th class="th-owner">Responsable</th>
                                                     <th class="th-due">Fecha límite</th>
                                                     <th class="th-status">Estado</th>
+                                                    <th class="th-src">Fuente</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -236,6 +279,17 @@
                                                               [attr.data-tone]="statusTone(it.status)">
                                                             {{ statusLabel(it.status) }}
                                                         </span>
+                                                    </td>
+                                                    <td class="td-src">
+                                                        <div class="aa-source-chips" *ngIf="(it.source_sessions || []).length; else noSrc">
+                                                            <a *ngFor="let sid of it.source_sessions; trackBy: trackBySid"
+                                                               class="aa-source-chip aa-source-chip--sm"
+                                                               [routerLink]="['/admin/curation', sid]"
+                                                               [title]="sessionLabel(sid)">
+                                                                #{{ sid }}
+                                                            </a>
+                                                        </div>
+                                                        <ng-template #noSrc><span class="aa-due-empty">—</span></ng-template>
                                                     </td>
                                                 </tr>
                                             </tbody>

@@ -24,11 +24,19 @@ interface ActionItem {
     owner: string;
     due_date: string;
     status: string;
+    source_sessions?: number[];
+}
+
+interface Decision {
+    text: string;
+    source_sessions?: number[];
 }
 
 interface StructuredAnswer {
     intro: string;
-    decisions: string[];
+    /** El backend nuevo manda `Decision[]` con fuentes; toleramos string[]
+     *  (formato viejo) por backward-compat con respuestas cacheadas. */
+    decisions: Array<Decision | string>;
     action_items: ActionItem[];
 }
 
@@ -93,8 +101,13 @@ export class AskComponent implements OnInit, OnDestroy {
     showAdvanced = false;
     topK: number = 8;
 
+    /** Dropdown de Historial — abre/cierra el panel con las preguntas
+     *  recientes de la sesión actual (in-memory). */
+    showHistory = false;
+
     @ViewChild('attachInput') attachInput?: ElementRef<HTMLInputElement>;
     @ViewChild('advancedPanel') advancedPanel?: ElementRef<HTMLDivElement>;
+    @ViewChild('historyPanel') historyPanel?: ElementRef<HTMLDivElement>;
 
     constructor(
         private http: HttpClient,
@@ -264,24 +277,71 @@ export class AskComponent implements OnInit, OnDestroy {
         return this.modelOptions.find(m => m.id === this.selectedModel);
     }
 
-    /** Cerrar popover al click fuera. */
+    /** Cerrar popovers al click fuera. */
     @HostListener('document:click', ['$event'])
     onDocumentClick(ev: MouseEvent): void {
-        if (!this.showAdvanced) return;
-        const panel = this.advancedPanel?.nativeElement;
         const target = ev.target as Node | null;
-        if (panel && target && !panel.contains(target)) {
-            // El click fue fuera del panel → cerrar.
-            this.showAdvanced = false;
-            this.cdr.detectChanges();
+        if (this.showAdvanced) {
+            const panel = this.advancedPanel?.nativeElement;
+            if (panel && target && !panel.contains(target)) {
+                this.showAdvanced = false;
+            }
         }
+        if (this.showHistory) {
+            const panel = this.historyPanel?.nativeElement;
+            if (panel && target && !panel.contains(target)) {
+                this.showHistory = false;
+            }
+        }
+        this.cdr.detectChanges();
+    }
+
+    // ============================================================
+    // Historial — dropdown con las preguntas de la sesión actual
+    // ============================================================
+
+    toggleHistory(): void {
+        this.showHistory = !this.showHistory;
+        this.cdr.detectChanges();
+    }
+
+    /** Click en una pregunta del historial: hace scroll al turn correspondiente. */
+    jumpToTurn(turn: ChatTurn): void {
+        this.showHistory = false;
+        this.cdr.detectChanges();
+        // Se difiere al siguiente tick para que Angular pinte y exista el DOM.
+        setTimeout(() => {
+            const el = document.querySelector(`[data-turn-id="${turn.timestamp}"]`) as HTMLElement | null;
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                el.classList.add('aa-turn-flash');
+                setTimeout(() => el.classList.remove('aa-turn-flash'), 1400);
+            }
+        }, 30);
     }
 
     trackByTurn(_i: number, t: ChatTurn): number { return t.timestamp; }
     trackByCitation(_i: number, c: Citation): string { return `${c.session_id}-${c.kind}`; }
     trackBySource(_i: number, s: { session_id: number }): number { return s.session_id; }
-    trackByDecision(i: number, _d: string): number { return i; }
+    trackByDecision(i: number, _d: Decision | string): number { return i; }
     trackByActionItem(i: number, _it: ActionItem): number { return i; }
+    trackBySid(_i: number, sid: number): number { return sid; }
+
+    /** Normaliza una Decisión para que el template tenga siempre la misma forma. */
+    decisionText(d: Decision | string): string {
+        return typeof d === 'string' ? d : (d?.text || '');
+    }
+    decisionSources(d: Decision | string): number[] {
+        return typeof d === 'string' ? [] : (d?.source_sessions || []);
+    }
+
+    /** Devuelve el título (o "Sesión #N") de una sesión por su id, usando
+     *  la metadata cargada en `loadSessionsMeta`. Si no la tenemos cargada,
+     *  cae al placeholder. Útil para mostrar chips legibles. */
+    sessionLabel(sid: number): string {
+        const m = this.sessionMeta.get(sid);
+        return m?.title || `Sesión #${sid}`;
+    }
 
     // ============================================================
     // Helpers de presentación
