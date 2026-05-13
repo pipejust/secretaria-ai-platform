@@ -239,6 +239,18 @@
     color: var(--st-text);
     box-sizing: border-box;
     transition: border-color 120ms ease, box-shadow 120ms ease;
+    appearance: none;
+    -webkit-appearance: none;
+}
+/* Si es <select> usado con clase st-input, le agregamos chevron como
+   los selects de meetings/projects para que se vea bonito y consistente. */
+select.st-input {
+    cursor: pointer;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
 }
 .st-input:focus {
     outline: none;
@@ -246,6 +258,43 @@
     box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
 }
 .st-input[readonly] { background: var(--st-grey-soft); color: var(--st-text-muted); }
+.st-input::placeholder { color: var(--st-text-soft); }
+
+/* ===================== Password con toggle ===================== */
+.st-pw-wrap {
+    position: relative;
+    display: block;
+}
+.st-pw-wrap .st-input {
+    padding-right: 40px;
+    /* Tipografía monoespaciada para que los puntos del password se vean
+       parejos. Cuando el usuario activa el ojito, el navegador cambia
+       a font normal automáticamente. */
+    letter-spacing: 0.06em;
+}
+.st-pw-toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 8px;
+    background: transparent;
+    border: 0;
+    color: var(--st-text-soft);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms ease, color 120ms ease;
+}
+.st-pw-toggle:hover { background: var(--st-grey-soft); color: var(--st-text); }
+.st-pw-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(21, 94, 239, 0.30);
+}
 
 /* Input con acción a la derecha (Copy / Usar default) */
 .st-input-with-action {
@@ -452,6 +501,14 @@
     line-height: 1.45;
 }
 .st-callout a { color: var(--st-blue); font-weight: 600; }
+
+/* Link inline dentro del subtítulo del card head. */
+.st-inline-link {
+    color: var(--st-blue);
+    font-weight: 600;
+    text-decoration: none;
+}
+.st-inline-link:hover { text-decoration: underline; }
 
 /* ===================== Responsive ===================== */
 @media (max-width: 1100px) {

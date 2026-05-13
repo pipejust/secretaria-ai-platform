@@ -60,9 +60,12 @@ const DEFAULT_PREFS: UiPrefs = {
   defaultDocEditor: 'google-docs',
 };
 
+/** Las secciones Documents / Security / Audit se removieron por
+ *  petición del cliente — la marca/logo vive en /admin/branding,
+ *  los usuarios y roles tienen sus propias vistas, y la auditoría
+ *  detallada llegará después. */
 type SectionKey =
-  | 'general' | 'integrations' | 'email' | 'task-sync'
-  | 'documents' | 'security' | 'api' | 'audit';
+  | 'general' | 'integrations' | 'email' | 'task-sync' | 'api';
 
 @Component({
   selector: 'app-settings',
@@ -164,15 +167,20 @@ export class SettingsComponent implements OnInit {
 
   /** Secciones del menú lateral del settings. */
   readonly sections: { key: SectionKey; label: string; icon: string }[] = [
-    { key: 'general',      label: 'General',           icon: 'general' },
-    { key: 'integrations', label: 'Integraciones',     icon: 'plug' },
-    { key: 'email',        label: 'Correo electrónico',icon: 'mail' },
+    { key: 'general',      label: 'General',                  icon: 'general' },
+    { key: 'integrations', label: 'Integraciones',            icon: 'plug' },
+    { key: 'email',        label: 'Correo electrónico',       icon: 'mail' },
     { key: 'task-sync',    label: 'Sincronización de tareas', icon: 'sync' },
-    { key: 'documents',    label: 'Documentos',        icon: 'doc' },
-    { key: 'security',     label: 'Seguridad',         icon: 'shield' },
-    { key: 'api',          label: 'API y Webhooks',    icon: 'code' },
-    { key: 'audit',        label: 'Auditoría',         icon: 'clipboard' },
+    { key: 'api',          label: 'API y Webhooks',           icon: 'code' },
   ];
+
+  /** Estado de visibilidad por campo password — clave libre, valor bool. */
+  passwordVisible: Record<string, boolean> = {};
+  togglePassword(key: string): void {
+    this.passwordVisible[key] = !this.passwordVisible[key];
+    this.cdr.detectChanges();
+  }
+  isPwVisible(key: string): boolean { return !!this.passwordVisible[key]; }
 
   constructor(
     private settingsService: SettingsService,

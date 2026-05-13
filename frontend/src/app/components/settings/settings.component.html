@@ -1,8 +1,13 @@
 <!-- ============================================================================
      Configuración — vista enterprise SaaS con menú lateral de secciones y
-     cards de preferencias. Todo en español. Preserva las settings reales
-     del backend (SMTP, Fireflies, Trello, Jira, Azure, ClickUp, OAuth) y
-     añade preferencias UX persistidas en localStorage.
+     cards de preferencias. Todo en español.
+
+     Secciones activas:
+       · General (preferencias UX + workspace básico)
+       · Integraciones (calendarios + plataformas)
+       · Correo electrónico (SMTP / Resend)
+       · Sincronización de tareas (curación automática)
+       · API y Webhooks (Fireflies)
      ============================================================================ -->
 <div class="acten-settings">
 
@@ -47,10 +52,7 @@
                                 <svg *ngSwitchCase="'plug'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"></path></svg>
                                 <svg *ngSwitchCase="'mail'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                                 <svg *ngSwitchCase="'sync'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                                <svg *ngSwitchCase="'doc'"     width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                <svg *ngSwitchCase="'shield'"  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                                 <svg *ngSwitchCase="'code'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                                <svg *ngSwitchCase="'clipboard'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
                             </ng-container>
                         </span>
                         <span class="st-nav-label">{{ s.label }}</span>
@@ -65,6 +67,7 @@
             <!-- ============= GENERAL ============= -->
             <ng-container *ngIf="activeSection === 'general'">
 
+                <!-- Preferencias generales -->
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
@@ -73,7 +76,7 @@
                         </div>
                     </header>
                     <div class="st-card-body">
-                        <div class="st-grid st-grid-3">
+                        <div class="st-grid st-grid-2">
                             <label class="st-field">
                                 <span class="st-field-label">Formato de fecha</span>
                                 <div class="st-field-input">
@@ -101,20 +104,6 @@
                                     </svg>
                                     <select [(ngModel)]="prefs.timeZone" (change)="savePrefs()">
                                         <option *ngFor="let t of timeZones" [value]="t.value">{{ t.label }}</option>
-                                    </select>
-                                </div>
-                            </label>
-
-                            <label class="st-field">
-                                <span class="st-field-label">Idioma</span>
-                                <div class="st-field-input">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"></path>
-                                    </svg>
-                                    <select [(ngModel)]="prefs.language" (change)="savePrefs()">
-                                        <option *ngFor="let l of languages" [value]="l.value">{{ l.label }}</option>
                                     </select>
                                 </div>
                             </label>
@@ -148,55 +137,19 @@
                     </div>
                 </article>
 
-                <!-- Card: Workspace -->
+                <!-- Workspace (reducido) -->
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
                             <h2 class="st-card-title">Ajustes del workspace</h2>
-                            <p class="st-card-sub">Identidad y comportamientos por defecto del workspace.</p>
+                            <p class="st-card-sub">
+                                La marca, logo y nombre de la empresa se configuran en
+                                <a routerLink="/admin/branding" class="st-inline-link">Marca</a>.
+                            </p>
                         </div>
-                        <button type="button" class="st-toggle-pill"
-                                [class.is-on]="workspaceActive"
-                                (click)="workspaceActive = !workspaceActive">
-                            <span class="st-switch" [class.is-on]="workspaceActive" aria-hidden="true">
-                                <span class="st-switch-thumb"></span>
-                            </span>
-                            <span>Workspace activo</span>
-                        </button>
                     </header>
                     <div class="st-card-body">
-                        <div class="st-grid st-grid-3-with-logo">
-                            <div class="st-field st-field-logo">
-                                <span class="st-field-label">Logo del workspace</span>
-                                <div class="st-logo-row">
-                                    <div class="st-logo-box">
-                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#155EEF"
-                                             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M3 21h18"></path>
-                                            <path d="M5 21V8l7-5 7 5v13"></path>
-                                        </svg>
-                                    </div>
-                                    <div class="st-logo-actions">
-                                        <a routerLink="/admin/branding" class="st-btn st-btn-secondary">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                                <polyline points="17 8 12 3 7 8"></polyline>
-                                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                                            </svg>
-                                            Cambiar logo
-                                        </a>
-                                        <small class="st-help">PNG, JPG o SVG. Máx 2MB.</small>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <label class="st-field">
-                                <span class="st-field-label">Nombre del workspace</span>
-                                <input type="text" class="st-input" [(ngModel)]="prefs.workspaceName"
-                                       placeholder="Acten" (change)="savePrefs()" />
-                            </label>
-
+                        <div class="st-grid st-grid-2">
                             <label class="st-field">
                                 <span class="st-field-label">La semana inicia el</span>
                                 <div class="st-field-input">
@@ -209,51 +162,6 @@
                                     <select [(ngModel)]="prefs.weekStartsOn" (change)="savePrefs()">
                                         <option value="monday">Lunes</option>
                                         <option value="sunday">Domingo</option>
-                                    </select>
-                                </div>
-                            </label>
-                        </div>
-
-                        <div class="st-grid st-grid-2 st-mt-16">
-                            <label class="st-field">
-                                <span class="st-field-label">Duración por defecto de reuniones</span>
-                                <div class="st-field-input">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12 6 12 12 16 14"></polyline>
-                                    </svg>
-                                    <select [(ngModel)]="prefs.defaultMeetingDuration" (change)="savePrefs()">
-                                        <option *ngFor="let d of meetingDurations" [ngValue]="d.value">{{ d.label }}</option>
-                                    </select>
-                                </div>
-                            </label>
-
-                            <label class="st-field">
-                                <span class="st-field-label">Responsable por defecto de tareas</span>
-                                <div class="st-field-input">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                        <circle cx="9" cy="7" r="4"></circle>
-                                    </svg>
-                                    <input type="text" [(ngModel)]="prefs.defaultTaskAssignee"
-                                           placeholder="Sin asignar" (change)="savePrefs()" />
-                                </div>
-                            </label>
-                        </div>
-
-                        <div class="st-grid st-grid-2 st-mt-16">
-                            <label class="st-field">
-                                <span class="st-field-label">Privacidad por defecto de proyectos nuevos</span>
-                                <div class="st-field-input">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                                    </svg>
-                                    <select [(ngModel)]="prefs.defaultProjectPrivacy" (change)="savePrefs()">
-                                        <option *ngFor="let p of privacyOptions" [value]="p.value">{{ p.label }}</option>
                                     </select>
                                 </div>
                             </label>
@@ -273,6 +181,11 @@
                                 </div>
                             </label>
                         </div>
+                        <p class="st-help st-mt-16">
+                            Los proyectos completados se ocultarán de los listados automáticamente
+                            cuando hayan pasado el tiempo seleccionado desde su cierre.
+                            Se mantienen accesibles desde el filtro "Archivados".
+                        </p>
                     </div>
                 </article>
             </ng-container>
@@ -289,6 +202,7 @@
                     </header>
                     <div class="st-card-body st-stack">
 
+                        <!-- Google Calendar -->
                         <div class="st-integration">
                             <div class="st-integration-head">
                                 <div class="st-integration-name">
@@ -311,10 +225,32 @@
                                 <label class="st-field"><span class="st-field-label">Client ID</span>
                                     <input type="text" class="st-input" [(ngModel)]="googleCalendarSettings.client_id"
                                            placeholder="xxx.apps.googleusercontent.com" /></label>
-                                <label class="st-field"><span class="st-field-label">Client Secret</span>
-                                    <input type="password" class="st-input"
-                                           [(ngModel)]="googleCalendarSettings.client_secret" placeholder="••••••••" /></label>
-                                <label class="st-field st-field-wide"><span class="st-field-label">Redirect URI</span>
+
+                                <label class="st-field">
+                                    <span class="st-field-label">Client Secret</span>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('google_secret') ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="googleCalendarSettings.client_secret"
+                                               placeholder="••••••••" />
+                                        <button type="button" class="st-pw-toggle"
+                                                (click)="togglePassword('google_secret')"
+                                                [attr.aria-label]="isPwVisible('google_secret') ? 'Ocultar' : 'Mostrar'">
+                                            <svg *ngIf="!isPwVisible('google_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                            <svg *ngIf="isPwVisible('google_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </label>
+
+                                <label class="st-field st-field-wide">
+                                    <span class="st-field-label">Redirect URI</span>
                                     <div class="st-input-with-action">
                                         <input type="text" class="st-input"
                                                [(ngModel)]="googleCalendarSettings.redirect_uri"
@@ -325,6 +261,7 @@
                             </div>
                         </div>
 
+                        <!-- Microsoft 365 -->
                         <div class="st-integration">
                             <div class="st-integration-head">
                                 <div class="st-integration-name">
@@ -346,9 +283,29 @@
                             <div class="st-grid st-grid-2">
                                 <label class="st-field"><span class="st-field-label">Client ID</span>
                                     <input type="text" class="st-input" [(ngModel)]="microsoftCalendarSettings.client_id" /></label>
-                                <label class="st-field"><span class="st-field-label">Client Secret</span>
-                                    <input type="password" class="st-input"
-                                           [(ngModel)]="microsoftCalendarSettings.client_secret" /></label>
+
+                                <label class="st-field">
+                                    <span class="st-field-label">Client Secret</span>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('ms_secret') ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="microsoftCalendarSettings.client_secret" placeholder="••••••••" />
+                                        <button type="button" class="st-pw-toggle"
+                                                (click)="togglePassword('ms_secret')"
+                                                [attr.aria-label]="isPwVisible('ms_secret') ? 'Ocultar' : 'Mostrar'">
+                                            <svg *ngIf="!isPwVisible('ms_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                            <svg *ngIf="isPwVisible('ms_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </label>
+
                                 <label class="st-field"><span class="st-field-label">Tenant</span>
                                     <input type="text" class="st-input" [(ngModel)]="microsoftCalendarSettings.tenant"
                                            placeholder="common" /></label>
@@ -375,6 +332,7 @@
                     </header>
                     <div class="st-card-body st-stack">
 
+                        <!-- Trello -->
                         <div class="st-integration">
                             <div class="st-integration-head">
                                 <div class="st-integration-name">
@@ -391,14 +349,31 @@
                             </div>
                             <div class="st-grid st-grid-3">
                                 <label class="st-field"><span class="st-field-label">API Key</span>
-                                    <input type="text" class="st-input" [(ngModel)]="trelloSettings.apiKey" /></label>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('trello_key') ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="trelloSettings.apiKey" />
+                                        <button type="button" class="st-pw-toggle" (click)="togglePassword('trello_key')">
+                                            <svg *ngIf="!isPwVisible('trello_key')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            <svg *ngIf="isPwVisible('trello_key')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                        </button>
+                                    </div>
+                                </label>
                                 <label class="st-field"><span class="st-field-label">API Token</span>
-                                    <input type="password" class="st-input" [(ngModel)]="trelloSettings.apiToken" /></label>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('trello_token') ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="trelloSettings.apiToken" />
+                                        <button type="button" class="st-pw-toggle" (click)="togglePassword('trello_token')">
+                                            <svg *ngIf="!isPwVisible('trello_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            <svg *ngIf="isPwVisible('trello_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                        </button>
+                                    </div>
+                                </label>
                                 <label class="st-field"><span class="st-field-label">Board ID</span>
                                     <input type="text" class="st-input" [(ngModel)]="trelloSettings.boardId" /></label>
                             </div>
                         </div>
 
+                        <!-- Jira -->
                         <div class="st-integration">
                             <div class="st-integration-head">
                                 <div class="st-integration-name">
@@ -417,13 +392,22 @@
                                 <label class="st-field"><span class="st-field-label">Email</span>
                                     <input type="email" class="st-input" [(ngModel)]="jiraSettings.email" /></label>
                                 <label class="st-field"><span class="st-field-label">API Token</span>
-                                    <input type="password" class="st-input" [(ngModel)]="jiraSettings.apiToken" /></label>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('jira_token') ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="jiraSettings.apiToken" />
+                                        <button type="button" class="st-pw-toggle" (click)="togglePassword('jira_token')">
+                                            <svg *ngIf="!isPwVisible('jira_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            <svg *ngIf="isPwVisible('jira_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                        </button>
+                                    </div>
+                                </label>
                                 <label class="st-field"><span class="st-field-label">Dominio</span>
                                     <input type="text" class="st-input" [(ngModel)]="jiraSettings.domain"
                                            placeholder="empresa.atlassian.net" /></label>
                             </div>
                         </div>
 
+                        <!-- Azure DevOps -->
                         <div class="st-integration">
                             <div class="st-integration-head">
                                 <div class="st-integration-name">
@@ -444,10 +428,19 @@
                                 <label class="st-field"><span class="st-field-label">Proyecto</span>
                                     <input type="text" class="st-input" [(ngModel)]="azureSettings.project" /></label>
                                 <label class="st-field"><span class="st-field-label">Personal Access Token</span>
-                                    <input type="password" class="st-input" [(ngModel)]="azureSettings.pat" /></label>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('azure_pat') ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="azureSettings.pat" />
+                                        <button type="button" class="st-pw-toggle" (click)="togglePassword('azure_pat')">
+                                            <svg *ngIf="!isPwVisible('azure_pat')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            <svg *ngIf="isPwVisible('azure_pat')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                        </button>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 
+                        <!-- ClickUp -->
                         <div class="st-integration">
                             <div class="st-integration-head">
                                 <div class="st-integration-name">
@@ -464,7 +457,15 @@
                             </div>
                             <div class="st-grid st-grid-2">
                                 <label class="st-field"><span class="st-field-label">API Token</span>
-                                    <input type="password" class="st-input" [(ngModel)]="clickupSettings.apiToken" /></label>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('clickup_token') ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="clickupSettings.apiToken" />
+                                        <button type="button" class="st-pw-toggle" (click)="togglePassword('clickup_token')">
+                                            <svg *ngIf="!isPwVisible('clickup_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            <svg *ngIf="isPwVisible('clickup_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                        </button>
+                                    </div>
+                                </label>
                                 <label class="st-field"><span class="st-field-label">Team ID</span>
                                     <input type="text" class="st-input" [(ngModel)]="clickupSettings.teamId" /></label>
                             </div>
@@ -501,8 +502,15 @@
                             </label>
                             <label class="st-field">
                                 <span class="st-field-label">API Key</span>
-                                <input type="password" class="st-input" [(ngModel)]="smtpSettings.apiKey"
-                                       placeholder="re_xxx..." />
+                                <div class="st-pw-wrap">
+                                    <input [type]="isPwVisible('smtp_key') ? 'text' : 'password'"
+                                           class="st-input" [(ngModel)]="smtpSettings.apiKey"
+                                           placeholder="re_xxx..." />
+                                    <button type="button" class="st-pw-toggle" (click)="togglePassword('smtp_key')">
+                                        <svg *ngIf="!isPwVisible('smtp_key')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg *ngIf="isPwVisible('smtp_key')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
                             </label>
                             <label class="st-field">
                                 <span class="st-field-label">Email remitente</span>
@@ -552,106 +560,6 @@
                 </article>
             </ng-container>
 
-            <!-- ============= DOCUMENTS ============= -->
-            <ng-container *ngIf="activeSection === 'documents'">
-                <article class="st-card">
-                    <header class="st-card-head">
-                        <div>
-                            <h2 class="st-card-title">Documentos</h2>
-                            <p class="st-card-sub">Plantillas y herramientas predeterminadas para generar actas.</p>
-                        </div>
-                    </header>
-                    <div class="st-card-body">
-                        <div class="st-grid st-grid-2">
-                            <label class="st-field">
-                                <span class="st-field-label">Almacenamiento de archivos</span>
-                                <div class="st-field-input">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                                    </svg>
-                                    <select [(ngModel)]="prefs.defaultFileStorage" (change)="savePrefs()">
-                                        <option value="google-drive">Google Drive</option>
-                                        <option value="onedrive">OneDrive</option>
-                                        <option value="dropbox">Dropbox</option>
-                                        <option value="local">Almacenamiento local</option>
-                                    </select>
-                                </div>
-                            </label>
-                            <label class="st-field">
-                                <span class="st-field-label">Editor de documentos</span>
-                                <div class="st-field-input">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                    </svg>
-                                    <select [(ngModel)]="prefs.defaultDocEditor" (change)="savePrefs()">
-                                        <option value="google-docs">Google Docs</option>
-                                        <option value="word">Microsoft Word</option>
-                                        <option value="notion">Notion</option>
-                                        <option value="markdown">Markdown</option>
-                                    </select>
-                                </div>
-                            </label>
-                        </div>
-                        <p class="st-callout">
-                            Para personalizar plantillas DOCX/PDF visita
-                            <a routerLink="/admin/templates">Plantillas</a>.
-                        </p>
-                    </div>
-                </article>
-            </ng-container>
-
-            <!-- ============= SECURITY ============= -->
-            <ng-container *ngIf="activeSection === 'security'">
-                <article class="st-card">
-                    <header class="st-card-head">
-                        <div>
-                            <h2 class="st-card-title">Seguridad</h2>
-                            <p class="st-card-sub">Aislamiento por tenant, gestión de usuarios y políticas de acceso.</p>
-                        </div>
-                    </header>
-                    <div class="st-card-body">
-                        <ul class="st-link-list">
-                            <li>
-                                <a routerLink="/admin/users">
-                                    <span class="st-link-icon">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="9" cy="7" r="4"></circle>
-                                        </svg>
-                                    </span>
-                                    <div>
-                                        <strong>Usuarios</strong>
-                                        <small>Administra usuarios y sus roles en el workspace.</small>
-                                    </div>
-                                </a>
-                            </li>
-                            <li>
-                                <a routerLink="/admin/roles">
-                                    <span class="st-link-icon">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                        </svg>
-                                    </span>
-                                    <div>
-                                        <strong>Roles y permisos</strong>
-                                        <small>Define qué puede hacer cada rol en la plataforma.</small>
-                                    </div>
-                                </a>
-                            </li>
-                        </ul>
-                        <p class="st-callout">
-                            Los datos de tu workspace están totalmente aislados a nivel de base de datos. Ningún
-                            usuario de otro tenant puede ver tus sesiones, proyectos o integraciones.
-                        </p>
-                    </div>
-                </article>
-            </ng-container>
-
             <!-- ============= API & WEBHOOKS ============= -->
             <ng-container *ngIf="activeSection === 'api'">
                 <article class="st-card">
@@ -665,12 +573,26 @@
                         <div class="st-grid st-grid-2">
                             <label class="st-field">
                                 <span class="st-field-label">API Key</span>
-                                <input type="password" class="st-input" [(ngModel)]="firefliesSettings.apiKey" />
+                                <div class="st-pw-wrap">
+                                    <input [type]="isPwVisible('ff_key') ? 'text' : 'password'"
+                                           class="st-input" [(ngModel)]="firefliesSettings.apiKey" />
+                                    <button type="button" class="st-pw-toggle" (click)="togglePassword('ff_key')">
+                                        <svg *ngIf="!isPwVisible('ff_key')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg *ngIf="isPwVisible('ff_key')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
                             </label>
                             <label class="st-field">
                                 <span class="st-field-label">Webhook token</span>
-                                <input type="text" class="st-input" [(ngModel)]="firefliesSettings.webhook_token"
-                                       placeholder="Token secreto opcional" />
+                                <div class="st-pw-wrap">
+                                    <input [type]="isPwVisible('ff_token') ? 'text' : 'password'"
+                                           class="st-input" [(ngModel)]="firefliesSettings.webhook_token"
+                                           placeholder="Token secreto opcional" />
+                                    <button type="button" class="st-pw-toggle" (click)="togglePassword('ff_token')">
+                                        <svg *ngIf="!isPwVisible('ff_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg *ngIf="isPwVisible('ff_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
                             </label>
                             <label class="st-field st-field-wide">
                                 <span class="st-field-label">Webhook URL</span>
@@ -682,24 +604,6 @@
                         </div>
                         <p class="st-callout">
                             Pega esta URL en la sección "Webhooks" de tu dashboard de Fireflies.
-                        </p>
-                    </div>
-                </article>
-            </ng-container>
-
-            <!-- ============= AUDITORÍA ============= -->
-            <ng-container *ngIf="activeSection === 'audit'">
-                <article class="st-card">
-                    <header class="st-card-head">
-                        <div>
-                            <h2 class="st-card-title">Auditoría</h2>
-                            <p class="st-card-sub">Registro de eventos y cambios sensibles del workspace.</p>
-                        </div>
-                    </header>
-                    <div class="st-card-body">
-                        <p class="st-callout">
-                            La auditoría detallada estará disponible próximamente. Mientras tanto, los eventos
-                            críticos (login, cambios de rol, despachos a integraciones) se registran en el backend.
                         </p>
                     </div>
                 </article>
