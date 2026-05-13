@@ -125,8 +125,12 @@ services:
     # Si recreás la app en Coolify, copia el nuevo UUID a estas labels.
     labels:
       - "traefik.enable=true"
+      # Solo UNA label de service. Si declaramos dos, Traefik se confunde:
+      # "Router ...-backend cannot be linked automatically with multiple
+      # Services" → descarta el router → 503.
+      # El router HTTP igual funciona: aplica el middleware `redirect-to-https`
+      # ANTES de tocar el upstream, así que no necesita un service real.
       - "traefik.http.services.https-0-z4tjwakbk1yna94gt3isc2hf-backend.loadbalancer.server.port=8000"
-      - "traefik.http.services.http-0-z4tjwakbk1yna94gt3isc2hf-backend.loadbalancer.server.port=8000"
     networks:
       - acten
 

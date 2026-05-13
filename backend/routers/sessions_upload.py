@@ -280,8 +280,11 @@ async def fetch_summary(
             raise HTTPException(status_code=400, detail="El ID de Fireflies es inválido o no existe, y no hay transcripción local para analizar con IA.")
         return True
 
-    from services.fireflies_service import FirefliesService
-    svc = FirefliesService()
+    from services.fireflies_service import FirefliesService, get_fireflies_api_key
+    # Multi-tenant: la API key sale del IntegrationSetting del tenant (UI admin).
+    # Fallback a env var para dev/scripts. Si no hay key, la request fallará
+    # con 401 y caemos al `_fallback_to_groq()` de abajo.
+    svc = FirefliesService(api_key=get_fireflies_api_key(db, session_obj.tenant_id))
     force_groq = False
     
     if session_obj.fireflies_id and session_obj.fireflies_id.startswith("MANUAL-"):

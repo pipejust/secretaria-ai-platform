@@ -343,7 +343,17 @@ async def process_transcript_background(
             raw_summary = ""
 
             # ---------- 1. Pull native data from Fireflies ----------
-            fireflies = FirefliesService()
+            # API key viene del IntegrationSetting del tenant (lo que configura
+            # el admin por la UI). Fallback a env var para dev.
+            from services.fireflies_service import get_fireflies_api_key
+            ff_api_key = get_fireflies_api_key(db, new_session.tenant_id)
+            if not ff_api_key:
+                logger.error(
+                    "No hay Fireflies API key para tenant_id=%s (ni en UI ni en env). "
+                    "El transcript %s se procesará solo con lo que ya esté en DB.",
+                    new_session.tenant_id, transcript_id,
+                )
+            fireflies = FirefliesService(api_key=ff_api_key)
             try:
                 ff_data = await fireflies.get_transcript_data(transcript_id)
             except Exception:
