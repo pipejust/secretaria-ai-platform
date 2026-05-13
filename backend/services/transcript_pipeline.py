@@ -168,6 +168,38 @@ async def process_session_with_ai(
         )
     db.commit()
 
+    # ---------- 5b. Notificar al owner si tiene cuenta en el workspace ----
+    # Releemos las tareas recién creadas y disparamos una notif por cada
+    # owner_email que matchee con un User. Si el owner es externo (no
+    # tiene cuenta), simplemente se ignora — no rompe el pipeline.
+    try:
+        from services.notification_service import (
+            notify_owner_email,
+            KIND_TASK_ASSIGNED,
+        )
+        new_items = db.exec(
+            select(ActionItem)
+            .where(ActionItem.session_id == session_id)
+            .where(ActionItem.tenant_id == session_obj.tenant_id)
+        ).all()
+        for it in new_items:
+            notify_owner_email(
+                db,
+                tenant_id=session_obj.tenant_id,
+                owner_email=it.owner_email,
+                kind=KIND_TASK_ASSIGNED,
+                title=f"Te asignaron una tarea: {it.title[:120]}",
+                body=(it.description or "")[:300],
+                link_to=f"/admin/curation/{session_id}",
+                entity_type="action_item",
+                entity_id=it.id,
+            )
+    except Exception:
+        logger.exception(
+            "No se pudieron emitir notificaciones de tareas para sesión %s",
+            session_id,
+        )
+
     # ---------- 6. Embeddings (Sprint 00 — RAG foundation) ----------
     try:
         from services.embedding_service import embed_session
@@ -183,6 +215,30 @@ async def process_session_with_ai(
         session_obj.status = "pending"
         db.add(session_obj)
         db.commit()
+
+    # ---------- 7. Notificar a los admins: "Nueva sesión analizada" ----
+    try:
+        from services.notification_service import (
+            notify_admins,
+            KIND_SESSION_PROCESSED,
+        )
+        notify_admins(
+            db,
+            tenant_id=session_obj.tenant_id,
+            kind=KIND_SESSION_PROCESSED,
+            title=f"Sesión analizada: {session_obj.title[:120]}",
+            body=(
+                f"La IA terminó de procesar la sesión. "
+                f"{len(insights.get('attendees', []) or [])} asistentes detectados."
+            ),
+            link_to=f"/admin/curation/{session_id}",
+            entity_type="session",
+            entity_id=session_id,
+        )
+    except Exception:
+        logger.exception(
+            "No se pudo emitir notif de session_processed para %s", session_id,
+        )
 
     logger.info(
         "Pipeline IA completado para sesión %s (proyecto=%s).",

@@ -136,6 +136,10 @@ app.include_router(branding.router)
 from routers import tenants  # Multi-tenant CRUD (super-admin)
 app.include_router(tenants.router)
 app.include_router(tenants.public_router)
+from routers import notifications  # Notifications in-app (bell del topbar)
+app.include_router(notifications.router)
+from routers import search  # Búsqueda global (search del topbar)
+app.include_router(search.router)
 
 
 @app.get("/")

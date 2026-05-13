@@ -405,3 +405,50 @@ class ActionItem(SQLModel, table=True):
     )
 
     session: Optional[MeetingSession] = Relationship(back_populates="action_items")
+
+
+# ============================================================================
+# Notifications — feed in-app por usuario, con deep-link al recurso.
+# Multi-tenant: tenant_id denormalizado para filtrar sin join al user.
+# ============================================================================
+class Notification(SQLModel, table=True):
+    """Notificación in-app dirigida a un usuario específico.
+
+    Diseño:
+    - Cada notif pertenece a un (tenant_id, user_id) — el bell del topbar
+      sólo muestra las del usuario logueado y de su tenant activo.
+    - `kind` clasifica el origen (session_processed | session_received |
+      task_assigned | routing_failed | comment_mention | etc) para filtrar
+      por tipo y para elegir el icono en el frontend.
+    - `link_to` es la ruta interna a la que el frontend navega al hacer
+      click — ej. '/admin/curation/123' o '/admin/projects/4'. La validación
+      de la ruta es cosmética; el navegador la resuelve al click.
+    - `entity_type` + `entity_id` son metadata útil para deduplicar y para
+      evitar emitir N notificaciones idénticas a la misma persona.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    # Destinatario. None = broadcast a todo el tenant (no usado hoy, pero
+    # dejamos la puerta abierta).
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+
+    kind: str = Field(
+        index=True,
+        description=(
+            "Categoría del evento: 'session_processed' | 'session_received' | "
+            "'task_assigned' | 'routing_failed' | 'comment_mention' | 'system'."
+        ),
+    )
+    title: str = Field(max_length=240, description="Una línea — qué pasó.")
+    body: str = Field(default="", max_length=600, description="Detalle opcional.")
+
+    # Deep-link interno. Cuando el user hace click, el frontend navega aquí.
+    link_to: Optional[str] = Field(default=None, max_length=240)
+    # Metadata para futura deduplicación / agrupación.
+    entity_type: Optional[str] = Field(default=None, max_length=32, index=True)
+    entity_id: Optional[int] = Field(default=None, index=True)
+
+    is_read: bool = Field(default=False, index=True)
+    read_at: Optional[str] = Field(default=None)
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), index=True)

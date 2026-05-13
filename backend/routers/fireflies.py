@@ -147,7 +147,10 @@ async def _dispatch_routing(
             logger.exception("CRM routing %s falló", dest_type)
         return
 
-    # Resto: tareas por action_item (Trello/Jira/ClickUp/Azure)
+    # Resto: tareas por action_item (Trello/Jira/ClickUp/Azure). Si falla
+    # algún despacho, emitimos UNA sola notif al tenant (no una por tarea
+    # — se vuelve ruido) usando el routing como entity para deduplicar.
+    routing_failures = 0
     for act in action_items:
         try:
             if "trello" in dest_type:
@@ -187,6 +190,30 @@ async def _dispatch_routing(
                 routing.destination_type,
                 act.id,
             )
+            routing_failures += 1
+
+    if routing_failures > 0 and action_items:
+        try:
+            from services.notification_service import (
+                notify_admins,
+                KIND_ROUTING_FAILED,
+            )
+            tenant_id_local = action_items[0].tenant_id
+            notify_admins(
+                db,
+                tenant_id=tenant_id_local,
+                kind=KIND_ROUTING_FAILED,
+                title=f"Falló el envío a {routing.destination_type}",
+                body=(
+                    f"{routing_failures} de {len(action_items)} tareas no pudieron "
+                    f"sincronizarse. Revisa la configuración de la integración."
+                ),
+                link_to="/admin/settings",
+                entity_type="routing",
+                entity_id=routing.id,
+            )
+        except Exception:
+            logger.exception("No se pudo emitir notif routing_failed")
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +398,26 @@ async def receive_fireflies_webhook(
     db.add(new_session)
     db.commit()
     db.refresh(new_session)
+
+    # Notificación inmediata: "Nueva sesión recibida". Después, cuando
+    # el background_task complete, dispara session_processed (otra notif).
+    try:
+        from services.notification_service import (
+            notify_admins,
+            KIND_SESSION_RECEIVED,
+        )
+        notify_admins(
+            db,
+            tenant_id=tenant_id,
+            kind=KIND_SESSION_RECEIVED,
+            title=f"Nueva sesión recibida: {title[:120]}",
+            body="La IA está procesando la transcripción. Te avisaremos cuando termine.",
+            link_to=f"/admin/curation/{new_session.id}",
+            entity_type="session",
+            entity_id=new_session.id,
+        )
+    except Exception:
+        logger.exception("No se pudo emitir notif de session_received para %s", new_session.id)
 
     background_tasks.add_task(
         process_transcript_background, new_session.id, transcript_id, payload

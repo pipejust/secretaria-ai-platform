@@ -96,6 +96,12 @@ def _apply_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS idx_auditlog_user_action     ON auditlog(user_id, action)",
             "CREATE INDEX IF NOT EXISTS idx_auditlog_created_at      ON auditlog(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_apikey_hash              ON apikey(hashed_key)",
+            # Notifications — feed in-app por usuario. La tabla la crea
+            # SQLModel.metadata.create_all (modelo Notification); aquí solo
+            # los índices compuestos para queries típicas (bell + filtro).
+            "CREATE INDEX IF NOT EXISTS idx_notif_user_unread        ON notification(user_id, is_read, created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_notif_tenant_user        ON notification(tenant_id, user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_notif_entity             ON notification(entity_type, entity_id)",
             # ================================================================
             # Multi-tenancy — añadir tenant_id a todas las tablas raíz
             # ================================================================
