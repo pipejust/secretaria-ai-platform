@@ -1063,6 +1063,18 @@
     .acn-table-row > *:not(.acn-table-title):not(.t-right) { display: none; }
 }
 
+/* Mobile real (<= 540px): los KPIs y quick-actions a 2 columnas con padding
+   20px se desbordaban (cada KPI tiene contenido tipo "TAREAS 293 +2% vs
+   últimos 7 días" que necesita ~220px mínimos). En 375px las cards salían
+   100+ px del viewport, generando el scroll horizontal reportado. A 1
+   columna cada card respira y todo entra dentro del ancho disponible. */
+@media (max-width: 540px) {
+    .acten-dashboard { padding: 16px; }
+    .acn-kpis { grid-template-columns: 1fr; }
+    .acn-quick-grid { grid-template-columns: 1fr; }
+    .acn-greeting { font-size: 22px; }
+}
+
 /* Override del padding global del content-area cuando se renderiza el
    dashboard nuevo, para que el patrón de puntos no se note dentro del
    layout y los cards lleguen al borde con el padding interno propio. */

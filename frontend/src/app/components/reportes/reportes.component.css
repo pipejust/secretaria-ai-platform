@@ -115,10 +115,30 @@
     flex-direction: column;
     gap: 2px;
     animation: rp-pop 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    /* Tope de altura + scroll interno: si el menú es más alto que la
+       pantalla (modo custom con date inputs grandes), el body de la
+       página no scrollea (atrapado en overflow:hidden del padre).
+       Mejor que el menú scrollee internamente. */
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
 }
 @keyframes rp-pop {
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile: el menú ocupa el ancho útil de la pantalla, no float a la
+   derecha (donde se cortaba con el padre overflow:hidden). */
+@media (max-width: 720px) {
+    .rp-period-menu {
+        position: fixed;
+        top: calc(var(--aa-topbar-h, 64px) + 56px);
+        left: 12px;
+        right: 12px;
+        min-width: 0;
+        max-width: none;
+        max-height: calc(100vh - var(--aa-topbar-h, 64px) - 80px);
+    }
 }
 .rp-period-menu > button {
     text-align: left;

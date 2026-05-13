@@ -20,7 +20,14 @@
             </a>
         </div>
 
-        <nav class="sidebar-nav">
+        <!--
+          (click)="closeMobileMenu()" en el <nav> usa event delegation: cualquier
+          click en un descendiente (incluidos los routerLink) cierra el sidebar
+          mobile inmediatamente. Sin esto el user veía "no redirige" porque el
+          NavigationEnd que cierra el sidebar es async — daba la sensación de
+          que el click no había hecho nada. Cerrar primero feedback rápido.
+        -->
+        <nav class="sidebar-nav" (click)="closeMobileMenu()">
             <ul>
                 <li class="nav-category" *ngIf="!isCollapsed && user && canSee('resumen')">Gestión Operativa</li>
                 <li *ngIf="user && canSee('resumen')">

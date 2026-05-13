@@ -518,6 +518,31 @@
     z-index: 100;
     overflow: hidden;
     animation: slideDown 0.18s ease forwards;
+    /* Para que el contenido largo (lista de notifs) sea scrolleable
+       dentro del panel sin que tape la pantalla entera en mobile. */
+    max-height: min(540px, calc(100vh - 80px));
+    display: flex;
+    flex-direction: column;
+}
+.notif-panel > .notif-list,
+.notif-panel > div:not(header) {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Mobile: notif panel ocupa todo el ancho disponible (no se sale por
+   los bordes). Anclado al topbar como un drawer top. */
+@media (max-width: 720px) {
+    .notif-panel {
+        position: fixed;
+        top: calc(var(--aa-topbar-h, 64px) + 8px);
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-width: none;
+        max-height: calc(100vh - var(--aa-topbar-h, 64px) - 24px);
+    }
 }
 .notif-panel > header {
     padding: var(--space-12) var(--space-16);
@@ -720,7 +745,10 @@
 
     /* 1. Reset Sidebar layout to absolute sliding model.
           z-index muy alto para que tape tooltips de la página (avatar-tooltip
-          usa z-index: 50 y se colaba encima cuando estaban iguales). */
+          usa z-index: 50 y se colaba encima cuando estaban iguales).
+          Background OPACO (no rgba con alpha): el sidebar transparente con
+          backdrop-filter dejaba ver headers sticky de tabla (ej: "Acciones")
+          a través del menú — visualmente sucio. Sólido + shadow es más limpio. */
     .sidebar {
         position: fixed;
         left: -100%;
@@ -728,9 +756,8 @@
         bottom: 0;
         width: 260px !important;
         z-index: 9999;
-        background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+        background: #0F172A;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
         transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
