@@ -294,81 +294,138 @@
 .acn-chart-legend .legend-analyzed { background: var(--acn-green); }
 
 /* ====== Date range picker en la card Actividad de Reuniones ======
-   Dos inputs date estilizados como un chip con separador. Visible
-   sólo en desktop / tablet ancho — en mobile colapsa abajo. */
+   Cada input "date" se renderiza como un chip independiente: pequeño,
+   con label inline a la izquierda + valor a la derecha + chevron del
+   browser. La regla global `input { height:44px }` del styles.css raíz
+   se neutraliza con specificity alta + !important defensivos. */
 .acn-range {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    /* SIN border ni background propios: cada input es su propio chip. */
+    background: transparent;
+    border: none;
+    padding: 0;
+    height: auto;
+    flex-wrap: nowrap;
+}
+
+/* Cada label envuelve un input. Es el "chip" visual. */
+.acn-range-input {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     background: #FFFFFF;
     border: 1px solid var(--acn-border);
-    border-radius: 10px;
-    padding: 2px 6px 2px 8px;
+    border-radius: 8px;
     height: 32px;
+    padding: 0 10px;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    cursor: pointer;
 }
-.acn-range:focus-within {
+.acn-range-input:hover { border-color: var(--acn-text-soft); }
+.acn-range-input:focus-within {
     border-color: var(--acn-blue);
     box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.10);
 }
-.acn-range-input {
-    display: inline-flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0;
-    line-height: 1;
-}
+
 .acn-range-label {
     font-family: inherit;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--acn-text-soft);
-    margin-bottom: 1px;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
 }
-.acn-range-input input[type="date"] {
+
+/* IMPORTANTE: triple selector + !important para vencer al global
+   `input { height: 44px, padding: 0 16px, border-radius: md }`.
+   Sin esto el input se desborda del chip y el placeholder se ve pesado. */
+.acn-range-input input[type="date"],
+.acten-dashboard .acn-range-input input[type="date"],
+.acn-card-activity .acn-range-input input[type="date"] {
     appearance: none;
     -webkit-appearance: none;
-    background: transparent;
-    border: none;
-    outline: none;
-    padding: 0;
-    margin: 0;
-    font-family: inherit;
-    font-size: 12px;
+    -moz-appearance: none;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
     font-weight: 600;
     color: var(--acn-text);
-    width: 110px;
+    line-height: 1;
+    width: 100px;
     cursor: pointer;
-    line-height: 1.1;
+    box-shadow: none !important;
+    border-radius: 0 !important;
 }
+/* Atenúa el placeholder "dd/mm/aaaa" cuando el input está vacío.
+   Selectores WebKit/Edge específicos para los tokens internos del
+   campo date. Sin esto se ven en negro fuerte y pesados. */
+.acn-range-input input[type="date"]:not(:focus):invalid::-webkit-datetime-edit {
+    color: var(--acn-text-soft);
+    opacity: 0.7;
+}
+.acn-range-input input[type="date"]::-webkit-datetime-edit-text,
+.acn-range-input input[type="date"]::-webkit-datetime-edit-month-field,
+.acn-range-input input[type="date"]::-webkit-datetime-edit-day-field,
+.acn-range-input input[type="date"]::-webkit-datetime-edit-year-field {
+    padding: 0 1px;
+}
+.acn-range-input input[type="date"]:not(:focus):invalid::-webkit-datetime-edit-text,
+.acn-range-input input[type="date"]:not(:focus):invalid::-webkit-datetime-edit-month-field,
+.acn-range-input input[type="date"]:not(:focus):invalid::-webkit-datetime-edit-day-field,
+.acn-range-input input[type="date"]:not(:focus):invalid::-webkit-datetime-edit-year-field {
+    color: var(--acn-text-soft);
+    opacity: 0.75;
+}
+/* Chevron / icono de calendar nativo: más discreto */
 .acn-range-input input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.55;
     transition: opacity 120ms ease;
-    margin-left: 2px;
+    padding: 0;
+    margin-left: 4px;
+    filter: grayscale(1) brightness(0.7);
 }
+.acn-range-input:hover input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.85; }
 .acn-range-input input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
 .acn-range-sep {
     color: var(--acn-text-soft);
-    font-size: 11px;
+    font-size: 14px;
+    line-height: 1;
     user-select: none;
+    margin: 0 2px;
 }
+
 .acn-range-clear {
     appearance: none;
     background: transparent;
-    border: none;
+    border: 1px solid var(--acn-border);
     color: var(--acn-text-soft);
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
-.acn-range-clear:hover { background: var(--acn-border-soft); color: var(--acn-text); }
+.acn-range-clear:hover {
+    background: var(--acn-border-soft);
+    color: var(--acn-text);
+    border-color: var(--acn-text-soft);
+}
 
 /* Estado disabled del preset cuando el rango custom está activo */
 .acn-select:disabled {
