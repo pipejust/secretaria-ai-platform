@@ -492,9 +492,13 @@
                     <header class="dt-card-head">
                         <h3>Resumen ejecutivo</h3>
                     </header>
-                    <p class="dt-card-text" *ngIf="selectedExecutiveSummary">
-                        {{ selectedExecutiveSummary }}
-                    </p>
+                    <!-- Resumen ejecutivo con markdown rendereado: el LLM
+                         entrega texto con ### headers, listas y **bold**.
+                         Lo pasamos por el pipe mdRender para que se vea
+                         bonito en el panel lateral. -->
+                    <div class="dt-card-text md-block"
+                         *ngIf="selectedExecutiveSummary"
+                         [innerHTML]="selectedExecutiveSummary | mdRender"></div>
                     <p class="dt-card-empty" *ngIf="!selectedExecutiveSummary && !isLoadingDetail">
                         Esta sesión aún no tiene resumen ejecutivo generado.
                     </p>
@@ -518,7 +522,7 @@
                                     <polyline points="9 12 11 14 15 10"></polyline>
                                 </svg>
                             </span>
-                            <span class="dt-list-text">{{ d }}</span>
+                            <span class="dt-list-text md-inline" [innerHTML]="d | mdRender"></span>
                         </li>
                     </ul>
                     <p class="dt-card-empty" *ngIf="!selectedKeyDecisions.length && !isLoadingDetail">
@@ -541,7 +545,10 @@
                             [class.is-done]="isActionDone(a)">
                             <input type="checkbox" [checked]="isActionDone(a)" disabled />
                             <div class="task-body">
-                                <span class="task-title">{{ a.title }}</span>
+                                <!-- Title de la tarea: a veces trae **bold** o
+                                     saltos literales del LLM. Render markdown
+                                     para que se lea bien. -->
+                                <span class="task-title md-inline" [innerHTML]="a.title | mdRender"></span>
                                 <span class="task-meta">
                                     {{ a.owner_name || 'Sin asignar' }}
                                     <span *ngIf="a.due_date" class="task-due">· {{ formatDueDate(a.due_date) }}</span>
@@ -597,9 +604,12 @@
                         <h3 *ngIf="detailTab === 'notes'">Notas</h3>
                         <h3 *ngIf="detailTab === 'files'">Archivos</h3>
                     </header>
-                    <p class="dt-card-text" *ngIf="detailTab === 'transcript' && selectedSession.raw_transcript">
-                        {{ (selectedSession.raw_transcript || '') | slice:0:480 }}{{ (selectedSession.raw_transcript || '').length > 480 ? '…' : '' }}
-                    </p>
+                    <!-- Transcripción truncada, preservando saltos de línea
+                         (no es markdown, pero los \n son significativos para
+                         distinguir intervenciones de cada speaker). -->
+                    <div class="dt-card-text md-block"
+                         *ngIf="detailTab === 'transcript' && selectedSession.raw_transcript"
+                         [innerHTML]="((selectedSession.raw_transcript || '') | slice:0:480) + ((selectedSession.raw_transcript || '').length > 480 ? '…' : '') | mdRender"></div>
                     <p class="dt-card-empty" *ngIf="detailTab === 'transcript' && !selectedSession.raw_transcript">
                         Esta sesión no tiene transcripción cargada.
                     </p>

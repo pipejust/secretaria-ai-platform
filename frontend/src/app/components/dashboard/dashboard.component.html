@@ -320,8 +320,23 @@
                     <span class="acn-table-cell muted">{{ r.date }}</span>
                     <span class="acn-table-cell">
                         <span class="avatar-stack">
-                            <span class="avatar-mini" *ngFor="let p of r.participants" [attr.data-tone]="p.tone">{{ p.initials }}</span>
-                            <span class="avatar-extra" *ngIf="r.extra > 0">+{{ r.extra }}</span>
+                            <span class="avatar-mini avatar-tip-host"
+                                  *ngFor="let p of r.participants"
+                                  [attr.data-tone]="p.tone"
+                                  tabindex="0">
+                                {{ p.initials }}
+                                <span class="avatar-tip" role="tooltip">
+                                    <strong class="avatar-tip-name">{{ p.name }}</strong>
+                                    <span class="avatar-tip-meta" *ngIf="p.role">{{ p.role }}</span>
+                                    <span class="avatar-tip-meta" *ngIf="p.company">{{ p.company }}</span>
+                                </span>
+                            </span>
+                            <span class="avatar-extra avatar-tip-host" *ngIf="r.extra > 0" tabindex="0">
+                                +{{ r.extra }}
+                                <span class="avatar-tip" role="tooltip" *ngIf="r.extraNames">
+                                    <span class="avatar-tip-meta">{{ r.extraNames }}</span>
+                                </span>
+                            </span>
                         </span>
                     </span>
                     <span class="acn-table-cell muted">{{ r.duration }}</span>
@@ -360,7 +375,9 @@
                         </svg>
                     </span>
                     <div class="risk-body">
-                        <p class="risk-text">{{ r.text }}</p>
+                        <!-- Render markdown del texto (los riesgos vienen
+                             con **bold** y a veces saltos de línea). -->
+                        <div class="risk-text md-inline" [innerHTML]="r.text | mdRender"></div>
                         <p class="risk-meta">{{ r.sessionTitle }} &nbsp;·&nbsp; {{ r.sessionDate }}</p>
                     </div>
                     <span class="impact-badge"
@@ -391,10 +408,21 @@
                         </svg>
                     </span>
                     <div class="task-body">
-                        <p class="task-title">{{ t.title }}</p>
+                        <!-- Render markdown del título (también puede traer
+                             **bold** o saltos literales del LLM). -->
+                        <div class="task-title md-inline" [innerHTML]="t.title | mdRender"></div>
                         <p class="task-meta">{{ t.sessionTitle }} &nbsp;·&nbsp; {{ t.sessionDate }}</p>
                     </div>
-                    <span class="task-owner" [attr.data-tone]="t.owner.tone">{{ t.owner.initials }}</span>
+                    <span class="task-owner avatar-tip-host tip-right"
+                          [attr.data-tone]="t.owner.tone"
+                          tabindex="0">
+                        {{ t.owner.initials }}
+                        <span class="avatar-tip" role="tooltip">
+                            <strong class="avatar-tip-name">{{ t.owner.name }}</strong>
+                            <span class="avatar-tip-meta" *ngIf="t.owner.role">{{ t.owner.role }}</span>
+                            <span class="avatar-tip-meta" *ngIf="t.owner.company">{{ t.owner.company }}</span>
+                        </span>
+                    </span>
                     <span class="task-due muted">{{ t.dueLabel }}</span>
                 </li>
                 <li *ngIf="!topActionItemsRich.length" class="acn-empty-li">No hay tareas abiertas.</li>

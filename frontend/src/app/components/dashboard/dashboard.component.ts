@@ -8,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
+import { MdRenderPipe } from '../../pipes/md-render.pipe';
 
 interface ChartPoint { date: Date; label: string; value: number; }
 interface KpiTile {
@@ -42,7 +43,7 @@ interface ChartHover { x: number; index: number; label: string; meetings: number
 @Component({
     selector: 'app-dashboard',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe],
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.css']
 })
@@ -915,13 +916,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // RECENTLY ANALYZED MEETINGS — shape para la tabla.
     // ========================================================================
 
-    /** 5 sesiones más recientes con shape listo para la tabla del mockup. */
+    /** 5 sesiones más recientes con shape listo para la tabla del mockup.
+     *  Cada participante incluye name/role/company para el tooltip rico. */
     get recentMeetingsRows(): {
         id: number;
         title: string;
         date: string;
-        participants: { initials: string; tone: number }[];
+        participants: { initials: string; tone: number; name: string; role: string; company: string }[];
         extra: number;
+        extraNames: string;
         duration: string;
         confidence: 'High' | 'Medium' | 'Low';
     }[] {
@@ -935,11 +938,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     return [];
                 }
             })();
-            const visible = attendees.slice(0, 3).map((a: any, i: number) => ({
-                initials: this.initials(a?.name || a?.full_name || 'NN'),
-                tone: palette[(idx + i) % palette.length],
-            }));
+            const visible = attendees.slice(0, 3).map((a: any, i: number) => {
+                const name = String(a?.name || a?.full_name || a?.email || 'Sin nombre').trim();
+                return {
+                    initials: this.initials(name),
+                    tone: palette[(idx + i) % palette.length],
+                    name,
+                    role: String(a?.role || a?.position || a?.job_title || '').trim(),
+                    company: String(a?.entity || a?.company || a?.organization || a?.org || '').trim(),
+                };
+            });
             const extra = Math.max(0, attendees.length - 3);
+            // Lista de nombres extras para el tooltip del "+N" badge.
+            const extraNames = attendees.slice(3, 13)
+                .map((a: any) => String(a?.name || a?.full_name || a?.email || '').trim())
+                .filter(Boolean)
+                .join(', ');
             const dur = this._avgMinutesPerSession;
             const duration = dur >= 60 ? `${Math.floor(dur / 60)}h ${(dur % 60).toString().padStart(2, '0')}m` : `${dur}m`;
 
@@ -954,6 +968,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 date: this.formatTableDate(m.date),
                 participants: visible,
                 extra,
+                extraNames,
                 duration,
                 confidence,
             };
@@ -1013,27 +1028,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return out;
     }
 
-    /** Top 3 action items abiertos, enriquecidos con avatar + due date. */
+    /** Top 3 action items abiertos, enriquecidos con avatar + due date.
+     *  Owner incluye name/role/company para el tooltip rico. */
     get topActionItemsRich(): {
         id: number;
         title: string;
         sessionTitle: string;
         sessionDate: string;
-        owner: { initials: string; tone: number };
+        owner: { initials: string; tone: number; name: string; role: string; company: string };
         dueLabel: string;
         accent: 'success' | 'info' | 'warning';
     }[] {
         const items = (this.allActionItems || []).filter((it) => (it?.status || 'pending') !== 'done').slice(0, 3);
         return items.map((it, idx) => {
             const accents: Array<'success' | 'info' | 'warning'> = ['success', 'info', 'warning'];
+            const ownerName = String(it?.owner_name || it?.owner_email || 'Sin asignar').trim();
             return {
                 id: it.id,
                 title: it.title || 'Tarea sin título',
                 sessionTitle: it?.session_title || it?.session?.title || 'Reunión sin título',
                 sessionDate: this.formatTableDate(it?.session_date || it?.session?.date),
                 owner: {
-                    initials: this.initials(it.owner_name || 'NN'),
+                    initials: this.initials(ownerName),
                     tone: idx % 5,
+                    name: ownerName,
+                    role: String(it?.owner_role || it?.role || '').trim(),
+                    company: String(it?.owner_company || it?.owner_entity || '').trim(),
                 },
                 dueLabel: this.formatTableDate(it.due_date) || 'Sin fecha',
                 accent: accents[idx % 3],

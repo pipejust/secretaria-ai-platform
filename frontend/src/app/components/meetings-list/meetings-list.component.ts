@@ -8,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
+import { MdRenderPipe } from '../../pipes/md-render.pipe';
 
 /** Sub-tab de la card del header (filtro rápido por status). */
 type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
@@ -35,7 +36,7 @@ interface Attendee {
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, MdRenderPipe],
     templateUrl: './meetings-list.component.html',
     styleUrls: ['./meetings-list.component.css']
 })
