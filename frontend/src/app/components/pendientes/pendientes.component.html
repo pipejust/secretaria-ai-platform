@@ -170,13 +170,6 @@
                     <table class="tk-table">
                         <thead>
                             <tr>
-                                <th class="th-check">
-                                    <label class="tk-checkbox">
-                                        <input type="checkbox" [checked]="allOnPageSelected"
-                                               (change)="toggleAllOnPage()" />
-                                        <span></span>
-                                    </label>
-                                </th>
                                 <th class="th-task">Tarea</th>
                                 <th class="th-project">Proyecto</th>
                                 <th class="th-owner">Responsable</th>
@@ -195,13 +188,6 @@
                         </thead>
                         <tbody>
                             <tr *ngFor="let it of pagedItems; trackBy: trackById">
-                                <td class="td-check">
-                                    <label class="tk-checkbox">
-                                        <input type="checkbox" [checked]="isSelected(it.id)"
-                                               (change)="toggleSelected(it.id)" />
-                                        <span></span>
-                                    </label>
-                                </td>
                                 <td class="td-task">
                                     <div class="tk-task-title" [title]="it.title">{{ it.title }}</div>
                                     <div class="tk-task-code">{{ taskCode(it) }}</div>
@@ -215,7 +201,7 @@
                                     </span>
                                 </td>
                                 <td class="td-owner">
-                                    <div class="tk-owner-cell" [attr.data-tip]="it.owner_name || 'Sin asignar'">
+                                    <div class="tk-owner-cell" [attr.data-tip]="ownerTooltip(it)">
                                         <span class="tk-avatar"
                                               [style.background]="ownerColor(it.owner_name)">
                                             {{ ownerInitials(it.owner_name) }}
@@ -315,12 +301,12 @@
                                 </td>
                             </tr>
                             <tr *ngIf="!pagedItems.length && !isLoading">
-                                <td colspan="9" class="tk-empty">
+                                <td colspan="8" class="tk-empty">
                                     No hay tareas que coincidan con los filtros aplicados.
                                 </td>
                             </tr>
                             <tr *ngIf="isLoading">
-                                <td colspan="9" class="tk-empty">Cargando tareas…</td>
+                                <td colspan="8" class="tk-empty">Cargando tareas…</td>
                             </tr>
                         </tbody>
                     </table>
@@ -386,24 +372,42 @@
                     </select>
                 </div>
 
-                <div class="tk-donut">
+                <div class="tk-donut" (mouseleave)="setHoveredSlice(-1)">
                     <svg viewBox="0 0 140 140" width="140" height="140">
                         <circle cx="70" cy="70" r="56" fill="none" stroke="#E2E8F0" stroke-width="16"/>
+                        <!-- Cada slice escucha hover y crece ligeramente cuando
+                             está activo (stroke-width: 16 → 20). El cursor
+                             pointer indica interactividad. -->
                         <circle *ngFor="let s of workloadSlices; let i = index; trackBy: trackByIdx"
-                                cx="70" cy="70" r="56" fill="none" stroke-width="16"
+                                cx="70" cy="70" r="56" fill="none"
+                                class="tk-donut-slice"
+                                [class.is-hovered]="hoveredSliceIndex === i"
                                 [attr.stroke]="s.color"
+                                [attr.stroke-width]="hoveredSliceIndex === i ? 20 : 16"
                                 [attr.stroke-dasharray]="donutDasharray(s.pct)"
                                 [attr.stroke-dashoffset]="donutDashoffset(workloadSlicesPcts, i)"
-                                transform="rotate(-90 70 70)" />
+                                transform="rotate(-90 70 70)"
+                                (mouseenter)="setHoveredSlice(i)" />
                     </svg>
                     <div class="tk-donut-center">
-                        <div class="tk-donut-num">{{ workloadTotal }}</div>
-                        <div class="tk-donut-lbl">Tareas totales</div>
+                        <ng-container *ngIf="hoveredSliceIndex < 0; else hoverInfo">
+                            <div class="tk-donut-num">{{ workloadTotal }}</div>
+                            <div class="tk-donut-lbl">Tareas totales</div>
+                        </ng-container>
+                        <ng-template #hoverInfo>
+                            <div class="tk-donut-num">{{ workloadSlices[hoveredSliceIndex]?.count }}</div>
+                            <div class="tk-donut-lbl">{{ workloadSlices[hoveredSliceIndex]?.pct }}%</div>
+                            <div class="tk-donut-owner">{{ workloadSlices[hoveredSliceIndex]?.owner }}</div>
+                        </ng-template>
                     </div>
                 </div>
 
                 <ul class="tk-legend">
-                    <li *ngFor="let s of workloadSlices; trackBy: trackByIdx">
+                    <li *ngFor="let s of workloadSlices; let i = index; trackBy: trackByIdx"
+                        class="tk-legend-row"
+                        [class.is-hovered]="hoveredSliceIndex === i"
+                        (mouseenter)="setHoveredSlice(i)"
+                        (mouseleave)="setHoveredSlice(-1)">
                         <span class="tk-legend-dot" [style.background]="s.color"></span>
                         <span class="tk-legend-name" [title]="s.owner">{{ s.owner }}</span>
                         <span class="tk-legend-num">{{ s.count }} ({{ s.pct }}%)</span>
@@ -429,7 +433,7 @@
                             <span class="tk-overdue-date">{{ formatDateLong(it.due_date) }}</span>
                         </div>
                         <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)"
-                              [attr.data-tip]="it.owner_name || 'Sin asignar'">
+                              [attr.data-tip]="ownerTooltip(it)">
                             {{ ownerInitials(it.owner_name) }}
                         </span>
                     </li>
@@ -525,7 +529,7 @@
                             <span class="tk-upcoming-meta">{{ it.project_name }}</span>
                         </div>
                         <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)"
-                              [attr.data-tip]="it.owner_name || 'Sin asignar'">
+                              [attr.data-tip]="ownerTooltip(it)">
                             {{ ownerInitials(it.owner_name) }}
                         </span>
                     </li>

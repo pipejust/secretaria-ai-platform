@@ -16,10 +16,14 @@ interface PendingItem {
     description: string;
     owner_name: string;
     owner_email: string;
+    /** Datos extra del owner (vienen enriquecidos del backend cuando el
+     *  email matchea con un usuario del workspace). Vacíos si es contacto
+     *  externo. Se usan en el tooltip de hover sobre el responsable. */
+    owner_role?: string;
+    owner_department?: string;
+    owner_company?: string;
     due_date: string | null;
-    /** Hora HH:MM (24h) opcional. */
     due_time?: string | null;
-    /** Prioridad real (alta|media|baja) — viene del backend. */
     priority?: 'alta' | 'media' | 'baja';
     status: 'pending' | 'done' | 'blocked' | 'cancelled';
     completed_at: string | null;
@@ -106,6 +110,12 @@ export class PendientesComponent implements OnInit, OnDestroy {
      *  del donut; no afecta la tabla principal. */
     workloadProjectFilter = '';
     workloadRangeFilter: 'all' | 'week' | 'month' = 'all';
+
+    /** Índice del slice del donut sobre el que está el cursor. Cuando es
+     *  >=0, el centro del donut muestra el detalle de ese slice en vez
+     *  del total. También se usa para escalar el slice activo. */
+    hoveredSliceIndex: number = -1;
+    setHoveredSlice(i: number): void { this.hoveredSliceIndex = i; }
 
     /** Paginación local (12 por página, como el mockup). */
     pageSize = 12;
@@ -383,6 +393,26 @@ export class PendientesComponent implements OnInit, OnDestroy {
         if (item.bucket === 'vencido') return 'red';
         if (item.bucket === 'proximo') return 'amber';
         return 'blue';
+    }
+
+    /** Construye el texto del tooltip del responsable: nombre + rol + empresa.
+     *  Cada línea separada por `\n` (CSS lo respeta con `white-space: pre-line`). */
+    ownerTooltip(item: PendingItem | { owner_name: string; owner_email?: string; owner_role?: string; owner_department?: string; owner_company?: string }): string {
+        const lines: string[] = [];
+        lines.push(item.owner_name || 'Sin asignar');
+        if (item.owner_role && item.owner_department) {
+            lines.push(`${item.owner_role} · ${item.owner_department}`);
+        } else if (item.owner_role) {
+            lines.push(item.owner_role);
+        } else if (item.owner_department) {
+            lines.push(item.owner_department);
+        }
+        if (item.owner_company) {
+            lines.push(item.owner_company);
+        } else if (item.owner_email) {
+            lines.push(item.owner_email);
+        }
+        return lines.join('\n');
     }
 
     /** Iniciales del owner para avatar circular. */

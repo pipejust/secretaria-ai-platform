@@ -472,8 +472,9 @@
     table-layout: fixed;
 }
 /* Anchos de columna explícitos para evitar overflow horizontal. */
-.tk-table .th-check, .tk-table .td-check       { width: 32px; padding-right: 0; }
-.tk-table .th-task,   .tk-table .td-task       { width: 22%; }
+/* Columna checkbox removida — no soportamos acciones masivas todavía. */
+.tk-table .th-check, .tk-table .td-check       { display: none; }
+.tk-table .th-task,   .tk-table .td-task       { width: 24%; }
 .tk-table .th-project, .tk-table .td-project   { width: 12%; }
 .tk-table .th-owner,   .tk-table .td-owner     { width: 14%; }
 .tk-table .th-priority, .tk-table .td-priority { width: 8%; }
@@ -481,10 +482,10 @@
 .tk-table .th-status,   .tk-table .td-status   { width: 10%; }
 .tk-table .th-progress, .tk-table .td-progress { width: 13%; }
 .tk-table .th-actions,  .tk-table .td-actions  { width: 36px; padding-left: 0; }
-.tk-table td, .tk-table th {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+/* El truncado se aplica a los SPANS internos, NO a `td/th`, para que
+   los tooltips (que viven absolute dentro del cell) no queden clipeados.
+   El cell mantiene overflow visible para que el tooltip pueda salir. */
+.tk-table td, .tk-table th { overflow: visible; }
 .tk-task-title, .tk-owner-name, .tk-project-badge {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -492,6 +493,14 @@
     display: inline-block;
     max-width: 100%;
 }
+/* El wrapper de la tabla también necesita overflow visible para que el
+   tooltip pueda salir verticalmente. Solo lo permitimos en desktop. */
+.tk-table-wrap { overflow: visible; }
+/* Subir el tr al z-index al hacer hover para que su tooltip aparezca
+   por encima de las filas siguientes. */
+.tk-table tbody tr { position: relative; }
+.tk-table tbody tr:hover { z-index: 5; }
+.tk-table tbody tr:has(.tk-owner-cell:hover) { z-index: 20; }
 .tk-table thead th {
     text-align: left;
     padding: 10px 14px;
@@ -554,17 +563,26 @@
     transform: translateX(-50%) translateY(-4px);
     background: #0F172A;
     color: #FFFFFF;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 5px 10px;
-    border-radius: 6px;
-    white-space: nowrap;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.45;
+    padding: 8px 12px;
+    border-radius: 8px;
+    /* Multilínea: respetamos los \n del data-tip. */
+    white-space: pre-line;
+    text-align: left;
+    min-width: 160px;
+    max-width: 260px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 120ms ease, transform 120ms ease;
-    z-index: 20;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    transition: opacity 140ms ease, transform 140ms ease;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.20);
 }
+/* La PRIMERA línea (el nombre completo) debe verse en bold dentro del
+   tooltip — pero como es un pseudo-elemento `attr(data-tip)`, no hay
+   forma de estilar sub-cadenas. La line-height + padding lo hace
+   suficientemente legible. */
 .tk-owner-cell[data-tip]::after {
     content: "";
     position: absolute;
@@ -595,23 +613,28 @@
     content: attr(data-tip);
     position: absolute;
     bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%) translateY(4px);
+    right: 0;
+    transform: translateY(4px);
     background: #0F172A;
     color: #FFFFFF;
-    font-size: 10.5px;
-    font-weight: 600;
-    padding: 4px 8px;
-    border-radius: 5px;
-    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.45;
+    padding: 7px 10px;
+    border-radius: 8px;
+    white-space: pre-line;
+    text-align: left;
+    min-width: 140px;
+    max-width: 240px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 120ms ease, transform 120ms ease;
-    z-index: 5;
+    transition: opacity 140ms ease, transform 140ms ease;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.20);
 }
 .tk-avatar-sm[data-tip]:hover::before {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
 }
 
 .tk-avatar {
@@ -906,7 +929,7 @@
     cursor: pointer;
 }
 
-/* ── Donut workload ── */
+/* ── Donut workload (interactivo) ── */
 .tk-donut {
     position: relative;
     width: 140px;
@@ -929,8 +952,32 @@
     font-weight: 700;
     color: var(--tk-text);
     line-height: 1;
+    transition: color 120ms ease;
 }
 .tk-donut-lbl { font-size: 10px; color: var(--tk-text-muted); margin-top: 3px; }
+/* Cuando el cursor está sobre un slice, mostramos el owner debajo. */
+.tk-donut-owner {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--tk-text);
+    margin-top: 4px;
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* Slices del donut: cursor pointer + transición al ancho del trazo. */
+.tk-donut-slice {
+    cursor: pointer;
+    transition: stroke-width 160ms ease;
+}
+.tk-donut-slice.is-hovered {
+    /* el width ya viene del [attr.stroke-width], aquí solo damos el filtro
+       glow para reforzar la afordancia. */
+    filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.2));
+}
 
 .tk-legend {
     list-style: none;
@@ -946,7 +993,15 @@
     gap: 8px;
     font-size: 12px;
     color: var(--tk-text);
+    padding: 3px 6px;
+    border-radius: 6px;
+    cursor: default;
+    transition: background 120ms ease;
 }
+/* Sincronización con el donut: hover en una fila destaca su slice. */
+.tk-legend-row { cursor: pointer; }
+.tk-legend-row:hover,
+.tk-legend-row.is-hovered { background: var(--tk-grey-soft); }
 .tk-legend-dot {
     width: 9px;
     height: 9px;

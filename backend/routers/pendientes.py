@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
-from models import ActionItem, MeetingSession, Project, Tenant, User
+from models import ActionItem, MeetingSession, Project, Role, Tenant, User
 from routers.auth import get_current_tenant, get_current_user
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,23 @@ def _classify(item: ActionItem, now: datetime) -> str:
     return "pendiente"
 
 
-def _serialize(item: ActionItem, project_name: str, now: datetime) -> Dict[str, Any]:
+def _serialize(
+    item: ActionItem,
+    project_name: str,
+    now: datetime,
+    user_meta: Optional[Dict[str, Dict[str, str]]] = None,
+    tenant_name: str = "",
+) -> Dict[str, Any]:
+    """Serializa un ActionItem para respuesta API.
+
+    `user_meta` es un dict opcional `{email_lower: {role, department}}`
+    para enriquecer cada item con los datos del usuario interno cuando
+    matchea por email. Si el owner no es un usuario del workspace, se
+    devuelven cadenas vacías.
+    """
+    meta: Dict[str, str] = {}
+    if user_meta and item.owner_email:
+        meta = user_meta.get((item.owner_email or "").strip().lower(), {})
     return {
         "id": item.id,
         "session_id": item.session_id,
@@ -73,9 +89,12 @@ def _serialize(item: ActionItem, project_name: str, now: datetime) -> Dict[str, 
         "description": item.description,
         "owner_name": item.owner_name,
         "owner_email": item.owner_email,
+        # Datos extra del usuario (si está en el tenant) — para el tooltip
+        # de hover en la UI: rol y departamento. Vacío si es contacto externo.
+        "owner_role": meta.get("role", ""),
+        "owner_department": meta.get("department", ""),
+        "owner_company": tenant_name,
         "due_date": item.due_date,
-        # Nuevos campos: prioridad y hora límite. Si la columna no existe
-        # aún (modelo viejo), getattr devuelve los defaults seguros.
         "due_time": getattr(item, "due_time", None),
         "priority": (getattr(item, "priority", None) or "media").lower(),
         "status": item.status,
@@ -129,11 +148,25 @@ def list_pendientes(
         if s.id is not None
     }
 
+    # Carga de usuarios del tenant (para enriquecer owner con rol/depto).
+    user_meta: Dict[str, Dict[str, str]] = {}
+    user_rows = db.exec(
+        select(User, Role).join(Role, Role.id == User.role_id, isouter=True)
+        .where(User.tenant_id == tenant.id)
+    ).all()
+    for u, r in user_rows:
+        if u.email:
+            user_meta[u.email.strip().lower()] = {
+                "role": (r.name if r else "") or "",
+                "department": (getattr(u, "department", "") or ""),
+            }
+    tenant_name = tenant.name or ""
+
     out: List[Dict[str, Any]] = []
     for item in items:
         proj_id = session_to_project.get(item.session_id)
         proj_name = project_names.get(proj_id, "General") if proj_id else "General"
-        record = _serialize(item, proj_name, now)
+        record = _serialize(item, proj_name, now, user_meta=user_meta, tenant_name=tenant_name)
 
         if bucket:
             wanted = bucket.lower()
