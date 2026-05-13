@@ -40,14 +40,62 @@ router = APIRouter(prefix="/api/ask", tags=["Ask Notiva (RAG)"])
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
-# Umbral de distancia coseno (`<=>` de pgvector → 1 - cosine_similarity).
-# - 0.0  = chunk idéntico a la pregunta
-# - 0.6  = relacionado pero no muy similar
-# - 1.0  = ortogonal (no relacionado)
-# Empíricamente con text-embedding-3-small, 0.65 deja pasar resultados
-# claramente relevantes y descarta ruido. Si una pregunta no tiene
-# CHUNK alguno bajo este umbral, devolvemos "no encontré información".
-RELEVANCE_THRESHOLD = 0.65
+# ──────────────────────────────────────────────────────────────────────────
+# Estrategia de filtrado de relevancia (evita contaminación de contexto).
+#
+# Distancia coseno de pgvector (`<=>`) → 1 - cosine_similarity:
+#   - 0.0  = chunk idéntico a la pregunta
+#   - 0.6  = relacionado pero no muy similar
+#   - 1.0  = ortogonal (no relacionado)
+#
+# Filtrado dinámico (mejor que un cutoff fijo):
+#   1. Anclamos al mejor chunk: aceptamos cualquier chunk cuya distancia
+#      esté dentro de RELEVANCE_DELTA del mejor. Así, una pregunta muy
+#      específica (best=0.20) sólo trae chunks ≤0.35 (muy estricto), y
+#      una pregunta abstracta (best=0.70) trae chunks ≤0.85 (más laxo).
+#   2. Cap absoluto en HARD_CUTOFF: nada por encima de 0.95 entra (sería
+#      ruido puro).
+#   3. Garantizamos un mínimo de MIN_CHUNKS para no dejar al LLM sin
+#      contexto cuando la pregunta es legítima pero abstracta. Si el
+#      mejor chunk supera HARD_CUTOFF, igual devolvemos respuesta vacía.
+#
+# El frontend puede override-ar el umbral pasando `min_relevance` como
+# cutoff absoluto (modo experto).
+# ──────────────────────────────────────────────────────────────────────────
+RELEVANCE_DELTA = 0.18   # cuán lejos del mejor chunk permitimos
+HARD_CUTOFF     = 0.95   # nada por encima entra, sin importar el mejor
+MIN_CHUNKS      = 3      # mínimo para no quedarse sin contexto
+
+
+def _filter_relevant(raw_chunks: list[dict], override: Optional[float] = None) -> list[dict]:
+    """Aplica la estrategia de filtrado descrita arriba.
+
+    Devuelve la sub-lista de chunks que pasan el filtro, ya ordenada por
+    distancia ascendente (search_similar ya viene así).
+    """
+    if not raw_chunks:
+        return []
+
+    # Modo experto: override absoluto desde el frontend.
+    if override is not None:
+        return [c for c in raw_chunks if c["distance"] <= float(override)]
+
+    best = raw_chunks[0]["distance"]
+    # Si ni el mejor chunk se acerca, no hay nada útil.
+    if best > HARD_CUTOFF:
+        return []
+
+    cutoff = min(best + RELEVANCE_DELTA, HARD_CUTOFF)
+    filtered = [c for c in raw_chunks if c["distance"] <= cutoff]
+
+    # Garantizar mínimo: si quedamos cortos, usamos los top-MIN_CHUNKS
+    # disponibles (siempre que estén bajo HARD_CUTOFF).
+    if len(filtered) < MIN_CHUNKS:
+        backup = [c for c in raw_chunks if c["distance"] <= HARD_CUTOFF][:MIN_CHUNKS]
+        if len(backup) > len(filtered):
+            filtered = backup
+
+    return filtered
 
 
 class AskRequest(BaseModel):
@@ -142,26 +190,29 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
         db, q, top_k=max(min(payload.top_k, 20), 1), project_id=payload.project_id
     )
 
-    # Filtro por relevancia: descartamos chunks demasiado lejanos para
-    # evitar que el LLM mezcle decisiones de reuniones no relacionadas.
-    threshold = float(payload.min_relevance) if payload.min_relevance is not None else RELEVANCE_THRESHOLD
-    chunks = [c for c in raw_chunks if c["distance"] <= threshold]
+    # Filtro de relevancia DINÁMICO (ver `_filter_relevant`).
+    chunks = _filter_relevant(raw_chunks, override=payload.min_relevance)
+
+    # Métrica de calidad: distancia del mejor chunk (0 = perfecto).
+    best_distance = raw_chunks[0]["distance"] if raw_chunks else None
+    low_quality = best_distance is not None and best_distance > 0.55  # señal para el prompt
 
     logger.info(
-        "ask: project_id=%s top_k=%s chunks_raw=%s chunks_relevant=%s threshold=%.2f",
-        payload.project_id, payload.top_k, len(raw_chunks), len(chunks), threshold,
+        "ask: project=%s top_k=%s raw=%s relevant=%s best_d=%.3f low_quality=%s",
+        payload.project_id, payload.top_k, len(raw_chunks), len(chunks),
+        best_distance if best_distance is not None else -1, low_quality,
     )
 
     if not chunks:
-        # Mensaje específico según si hubo CERO resultados o si todos
-        # quedaron filtrados por baja relevancia (ayuda al usuario a
-        # saber si reformular o si la base de actas no contiene el tema).
+        # Sin candidatos válidos. Solo llegamos aquí si:
+        #  - no había NINGÚN chunk en la BD (raw=0), o
+        #  - el mejor chunk supera HARD_CUTOFF (0.95) → realmente nada relacionado.
         msg = (
-            "No encontré actas suficientemente relevantes para responder con precisión "
-            "a esa pregunta. Intenta usar términos más específicos del contexto "
-            "(nombre del proyecto, cliente, fecha aproximada)."
-            if raw_chunks
-            else "No encontré actas en el histórico relacionadas con esa pregunta."
+            "No encontré actas en el histórico que se relacionen con esa pregunta. "
+            "Intenta reformular usando nombres del proyecto, cliente o fecha."
+            if not raw_chunks
+            else "Las actas indexadas no parecen relacionarse con esa pregunta. "
+                 "Intenta usar términos más específicos."
         )
         return AskResponse(
             answer=msg, citations=[], model=GROQ_MODEL, chunks_used=0,
@@ -211,11 +262,24 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
         "10. NO reescribas el contenido textual de la decisión cambiando su "
         "significado; cíñete a lo que dice el contexto."
     )
+    quality_note = ""
+    if low_quality:
+        quality_note = (
+            "\n\nNOTA DE CALIDAD: el sistema filtró los fragmentos pero la similitud "
+            "semántica con la pregunta no es alta. Es posible que la respuesta no "
+            "esté EXPLÍCITAMENTE en el contexto. Si ese es el caso:\n"
+            "  - En `intro` di honestamente que no encontraste información directa y "
+            "menciona qué reuniones del contexto tocan temas RELACIONADOS.\n"
+            "  - Devuelve `decisions: []` y `action_items: []` antes que inventar.\n"
+            "  - NO afirmes hechos que no estén textualmente en el contexto."
+        )
+
     user = (
         f"Pregunta del usuario: {q}\n\n"
         f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
         f"filtrados de {len(raw_chunks)} candidatos por umbral de relevancia):\n"
-        f"{context}\n\n"
+        f"{context}"
+        f"{quality_note}\n\n"
         f"Devuelve la respuesta como JSON estricto siguiendo el esquema y RESPETANDO "
         f"las 10 reglas. Recuerda: cada decisión y tarea DEBE traer su `source_sessions`."
     )
