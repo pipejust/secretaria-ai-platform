@@ -752,19 +752,28 @@ export class ProjectsComponent implements OnInit {
 
     /** Lista de avatares del equipo (heurística sobre usuarios; los
      *  contactos del proyecto vendrían de /contacts pero no los tenemos
-     *  cargados acá). Devuelve hasta 3 + extra count. */
-    teamAvatars(p: any): { initials: string; tone: number }[] {
-        // Tomamos el responsable + algunos usuarios del workspace para llenar
-        // el stack visual. Determinístico por id de proyecto.
+     *  cargados acá). Devuelve hasta 3 + extra count. Cada avatar incluye
+     *  name/role/company para el tooltip rico. */
+    teamAvatars(p: any): { initials: string; tone: number; name: string; role: string; company: string }[] {
         const seed = p?.id ?? 1;
         const pool = (this.users || []).slice(0, 6);
         if (!pool.length) return [];
-        const out: { initials: string; tone: number }[] = [];
+        const tenantName = (this.authService.currentUserValue?.tenant?.name) || '';
+        const roleMap: Record<string, string> = {
+            admin: 'Administrador',
+            validator: 'Validador',
+            user: 'Usuario',
+        };
+        const out: { initials: string; tone: number; name: string; role: string; company: string }[] = [];
         for (let i = 0; i < Math.min(3, pool.length); i++) {
             const u = pool[(seed + i) % pool.length];
+            const name = String(u.full_name || u.email || 'Sin nombre').trim();
             out.push({
-                initials: this._initialsFromName(u.full_name || u.email),
+                initials: this._initialsFromName(name),
                 tone: (seed + i) % 5,
+                name,
+                role: roleMap[(u.role || '').toLowerCase()] || (u.role || ''),
+                company: tenantName,
             });
         }
         return out;
@@ -772,6 +781,32 @@ export class ProjectsComponent implements OnInit {
     teamExtra(p: any): number {
         // Determinístico, mockup-like: +1, +2, +3, +4 según id.
         return ((p?.id ?? 0) % 4) + 1;
+    }
+    /** Nombres extra para el tooltip del badge "+N" (concatenados). */
+    teamExtraNames(p: any): string {
+        const seed = p?.id ?? 1;
+        const pool = (this.users || []);
+        if (pool.length <= 3) return '';
+        const start = (seed + 3) % pool.length;
+        const count = this.teamExtra(p);
+        const out: string[] = [];
+        for (let i = 0; i < count && i < pool.length; i++) {
+            const u = pool[(start + i) % pool.length];
+            const name = String(u.full_name || u.email || '').trim();
+            if (name && !out.includes(name)) out.push(name);
+        }
+        return out.join(', ');
+    }
+
+    /** Datos completos del responsable del proyecto para el tooltip. */
+    ownerInfo(p: any): { name: string; role: string; company: string } {
+        const name = this.ownerNameFor(p);
+        const tenantName = (this.authService.currentUserValue?.tenant?.name) || '';
+        return {
+            name: name === '—' ? 'Sin asignar' : name,
+            role: this.ownerRoleFor(p),
+            company: tenantName,
+        };
     }
 
     private _initialsFromName(name: string): string {

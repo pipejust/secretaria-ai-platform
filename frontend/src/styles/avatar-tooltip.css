@@ -1,0 +1,113 @@
+/* ============================================================================
+ * Tooltip enriquecido para avatares de participantes (CSS-only).
+ * Patrón compartido entre vistas — Reuniones, Dashboard, Proyectos,
+ * Pendientes, Curación, etc. Cualquier avatar que tenga `.avatar-tip-host`
+ * + un `.avatar-tip` adentro mostrará el tooltip al hover/focus.
+ *
+ * Estructura HTML esperada:
+ *   <span class="… avatar-tip-host">
+ *     {{ inicialesOAvatar }}
+ *     <span class="avatar-tip" role="tooltip">
+ *       <strong class="avatar-tip-name">Nombre Completo</strong>
+ *       <span class="avatar-tip-meta">Rol</span>
+ *       <span class="avatar-tip-meta">Empresa</span>
+ *     </span>
+ *   </span>
+ *
+ * El host DEBE tener `position: relative` (typical avatar wrappers ya
+ * lo tienen, pero por si acaso lo forzamos abajo).
+ * ============================================================================ */
+
+.avatar-tip-host {
+    position: relative;
+}
+
+.avatar-tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translate(-50%, 4px);
+    min-width: 160px;
+    max-width: 240px;
+    padding: 8px 10px;
+    background: var(--color-fg-default, #0F172A);
+    color: #FFFFFF;
+    border-radius: var(--radius-md, 10px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+    font-size: var(--text-12, 12px);
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 140ms var(--ease-out, ease-out),
+                transform 140ms var(--ease-out, ease-out);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: normal;
+}
+
+.avatar-tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--color-fg-default, #0F172A);
+}
+
+.avatar-tip-name {
+    font-weight: var(--fw-bold, 700);
+    color: #FFFFFF;
+    font-size: var(--text-13, 13px);
+}
+
+.avatar-tip-meta {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: var(--text-11, 11px);
+}
+
+/* Trigger del tooltip: hover o focus visible. */
+.avatar-tip-host:hover .avatar-tip,
+.avatar-tip-host:focus-visible .avatar-tip,
+.avatar-tip-host:focus-within .avatar-tip {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* Cuando el host está en el borde derecho del viewport, el tooltip se
+   reposiciona alineado al borde derecho del host para no salirse. */
+.avatar-tip-host.tip-right .avatar-tip {
+    left: auto;
+    right: 0;
+    transform: translate(0, 4px);
+}
+.avatar-tip-host.tip-right .avatar-tip::after {
+    left: auto;
+    right: 12px;
+    transform: none;
+}
+.avatar-tip-host.tip-right:hover .avatar-tip,
+.avatar-tip-host.tip-right:focus-visible .avatar-tip,
+.avatar-tip-host.tip-right:focus-within .avatar-tip {
+    transform: translate(0, 0);
+}
+
+/* Variante alineada a la izquierda (cuando el host está al inicio). */
+.avatar-tip-host.tip-left .avatar-tip {
+    left: 0;
+    right: auto;
+    transform: translate(0, 4px);
+}
+.avatar-tip-host.tip-left .avatar-tip::after {
+    left: 12px;
+    transform: none;
+}
+.avatar-tip-host.tip-left:hover .avatar-tip,
+.avatar-tip-host.tip-left:focus-visible .avatar-tip,
+.avatar-tip-host.tip-left:focus-within .avatar-tip {
+    transform: translate(0, 0);
+}

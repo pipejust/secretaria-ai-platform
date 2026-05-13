@@ -302,7 +302,10 @@
 /* ====== Table ====== */
 .ap-table-wrap {
     width: 100%;
-    overflow-x: auto;
+    /* overflow visible permite que el tooltip de los avatares salga
+       de la fila (mismo truco que /admin/meetings). En mobile el grid
+       de la tabla pasa a single-column así que no necesita scroll. */
+    overflow: visible;
 }
 .ap-table {
     width: 100%;

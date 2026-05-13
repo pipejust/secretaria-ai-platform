@@ -4,6 +4,10 @@
    `node scripts/tokens-build.mjs`. */
 @import url('./styles/tokens.css');
 
+/* Tooltip enriquecido global para avatares de participantes. Cualquier
+   componente que use `.avatar-tip-host` + `.avatar-tip` lo aprovecha. */
+@import url('./styles/avatar-tooltip.css');
+
 /* Tipografía: Playfair Display (serif display) + Sora (sans body).
    Cargadas via Google Fonts; fallback a system fonts si offline. */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');

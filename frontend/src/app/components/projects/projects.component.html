@@ -420,7 +420,16 @@
                                 <!-- Responsable: avatar + nombre + rol -->
                                 <td>
                                     <div class="ap-owner-cell">
-                                        <span class="ap-owner-avatar" [attr.data-tone]="projectTone(p)">{{ ownerInitials(p) }}</span>
+                                        <span class="ap-owner-avatar avatar-tip-host"
+                                              [attr.data-tone]="projectTone(p)"
+                                              tabindex="0">
+                                            {{ ownerInitials(p) }}
+                                            <span class="avatar-tip" role="tooltip">
+                                                <strong class="avatar-tip-name">{{ ownerInfo(p).name }}</strong>
+                                                <span class="avatar-tip-meta" *ngIf="ownerInfo(p).role">{{ ownerInfo(p).role }}</span>
+                                                <span class="avatar-tip-meta" *ngIf="ownerInfo(p).company">{{ ownerInfo(p).company }}</span>
+                                            </span>
+                                        </span>
                                         <span class="ap-owner-text">
                                             <span class="ap-owner-name">{{ ownerNameFor(p) }}</span>
                                             <span class="ap-owner-role">{{ ownerRoleFor(p) }}</span>
@@ -454,11 +463,28 @@
                                     </div>
                                 </td>
 
-                                <!-- Equipo: avatares + extra -->
+                                <!-- Equipo: avatares + extra (con tooltip rico) -->
                                 <td>
                                     <span class="ap-team-stack">
-                                        <span class="ap-team-av" *ngFor="let a of teamAvatars(p)" [attr.data-tone]="a.tone">{{ a.initials }}</span>
-                                        <span class="ap-team-extra" *ngIf="teamExtra(p) > 0">+{{ teamExtra(p) }}</span>
+                                        <span class="ap-team-av avatar-tip-host"
+                                              *ngFor="let a of teamAvatars(p)"
+                                              [attr.data-tone]="a.tone"
+                                              tabindex="0">
+                                            {{ a.initials }}
+                                            <span class="avatar-tip" role="tooltip">
+                                                <strong class="avatar-tip-name">{{ a.name }}</strong>
+                                                <span class="avatar-tip-meta" *ngIf="a.role">{{ a.role }}</span>
+                                                <span class="avatar-tip-meta" *ngIf="a.company">{{ a.company }}</span>
+                                            </span>
+                                        </span>
+                                        <span class="ap-team-extra avatar-tip-host"
+                                              *ngIf="teamExtra(p) > 0"
+                                              tabindex="0">
+                                            +{{ teamExtra(p) }}
+                                            <span class="avatar-tip" role="tooltip" *ngIf="teamExtraNames(p)">
+                                                <span class="avatar-tip-meta">{{ teamExtraNames(p) }}</span>
+                                            </span>
+                                        </span>
                                     </span>
                                 </td>
 
