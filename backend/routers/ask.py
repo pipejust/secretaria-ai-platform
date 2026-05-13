@@ -134,14 +134,19 @@ class ActionItemDTO(BaseModel):
 class StructuredAnswer(BaseModel):
     """Respuesta estructurada que Groq devuelve cuando le pedimos JSON.
 
-    `intro` es el primer párrafo introductorio.
-    `decisions` es la lista de decisiones clave (cada una con sus fuentes).
-    `action_items` es la tabla de tareas pendientes que extrajo del
-    contexto. Si el modelo no encuentra alguna sección, devuelve [] o "".
+    Secciones:
+      · `intro` — párrafo introductorio (1-2 frases).
+      · `decisions` — decisiones clave con sus fuentes.
+      · `action_items` — tareas pendientes con responsable / fecha límite.
+      · `risks` — riesgos identificados con sus fuentes.
+      · `agreements` — acuerdos con sus fuentes.
+    Si el modelo no encuentra alguna sección, devuelve [] o "".
     """
     intro: str = ""
     decisions: list[Decision] = []
     action_items: list[ActionItemDTO] = []
+    risks: list[Decision] = []
+    agreements: list[Decision] = []
 
 
 class AskResponse(BaseModel):
@@ -366,6 +371,12 @@ async def ask(
         '"due_date": "<fecha YYYY-MM-DD o vacío>", '
         '"status": "<in_progress|pending|not_started|done>", '
         '"source_sessions": [<id_int>, ...]}\n'
+        "  ],\n"
+        '  "risks": [\n'
+        '    {"text": "<riesgo identificado>", "source_sessions": [<id_int>, ...]}\n'
+        "  ],\n"
+        '  "agreements": [\n'
+        '    {"text": "<acuerdo establecido>", "source_sessions": [<id_int>, ...]}\n'
         "  ]\n"
         "}\n\n"
         "REGLAS ESTRICTAS — su violación produce respuestas inutilizables:\n"
@@ -446,19 +457,22 @@ async def ask(
         import json as _json
         parsed = _json.loads(raw_answer)
         if isinstance(parsed, dict):
-            # Decisiones: aceptamos formato nuevo {text, source_sessions}
-            # o el viejo (string suelto) por si Groq se confunde.
-            decisions: list[Decision] = []
-            for d in (parsed.get("decisions") or []):
-                if isinstance(d, dict) and d.get("text"):
-                    sids = _coerce_int_list(d.get("source_sessions"))
-                    # Sanidad: descartamos IDs que no estén en el set
-                    # filtrado para evitar que el LLM cite sesiones que
-                    # nunca le mostramos.
-                    sids = [s for s in sids if s in relevant_session_ids]
-                    decisions.append(Decision(text=str(d["text"]).strip(), source_sessions=sids))
-                elif isinstance(d, str) and d.strip():
-                    decisions.append(Decision(text=d.strip(), source_sessions=[]))
+            def _parse_decision_list(raw_list) -> list[Decision]:
+                """Acepta formato nuevo {text, source_sessions} o string suelto.
+                Sanitiza source_sessions contra el set de chunks relevantes."""
+                out: list[Decision] = []
+                for d in (raw_list or []):
+                    if isinstance(d, dict) and d.get("text"):
+                        sids = _coerce_int_list(d.get("source_sessions"))
+                        sids = [s for s in sids if s in relevant_session_ids]
+                        out.append(Decision(text=str(d["text"]).strip(), source_sessions=sids))
+                    elif isinstance(d, str) and d.strip():
+                        out.append(Decision(text=d.strip(), source_sessions=[]))
+                return out
+
+            decisions = _parse_decision_list(parsed.get("decisions"))
+            risks = _parse_decision_list(parsed.get("risks"))
+            agreements = _parse_decision_list(parsed.get("agreements"))
 
             action_items: list[ActionItemDTO] = []
             for it in (parsed.get("action_items") or []):
@@ -486,17 +500,27 @@ async def ask(
                 intro=str(parsed.get("intro") or ""),
                 decisions=decisions,
                 action_items=action_items,
+                risks=risks,
+                agreements=agreements,
             )
 
             # Re-componemos un markdown legible como fallback para el
             # campo `answer` (que es lo que ven los integradores que NO
             # consumen `structured`).
-            answer_md = structured.intro
-            if structured.decisions:
-                answer_md += "\n\n### Decisiones clave\n" + "\n".join(
-                    f"- {d.text}" + (f" _(sesión #{', #'.join(map(str, d.source_sessions))})_" if d.source_sessions else "")
-                    for d in structured.decisions
+            def _md_decisions(title: str, items: list[Decision]) -> str:
+                if not items:
+                    return ""
+                lines = "\n".join(
+                    f"- {d.text}" + (
+                        f" _(sesión #{', #'.join(map(str, d.source_sessions))})_"
+                        if d.source_sessions else ""
+                    )
+                    for d in items
                 )
+                return f"\n\n### {title}\n{lines}"
+
+            answer_md = structured.intro
+            answer_md += _md_decisions("Decisiones clave", structured.decisions)
             if structured.action_items:
                 answer_md += "\n\n### Tareas pendientes\n" + "\n".join(
                     f"- **{it.title}** — {it.owner or 'Sin asignar'}"
@@ -504,6 +528,8 @@ async def ask(
                     + (f" _(sesión #{', #'.join(map(str, it.source_sessions))})_" if it.source_sessions else "")
                     for it in structured.action_items
                 )
+            answer_md += _md_decisions("Riesgos identificados", structured.risks)
+            answer_md += _md_decisions("Acuerdos", structured.agreements)
     except (ValueError, TypeError) as exc:
         # Groq devolvió texto libre (no JSON). Lo dejamos como markdown
         # plano y `structured` queda en None.

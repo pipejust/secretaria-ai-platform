@@ -1026,3 +1026,26 @@
     .cp-tasks-toolbar { width: 100%; }
     .cp-tasks-toolbar .cp-btn { flex: 1; justify-content: center; min-width: 0; }
 }
+
+/* ============================================================================
+ * Highlight de focus: aplicado cuando llegamos vía link desde "Pregunta a
+ * Acten" con `?focus=...&text=...`. El componente añade `cp-card-focused`
+ * a la card o `cp-task-focused` al <li> de la tarea por 2.5s, después se
+ * autoremueven. La animación es un anillo azul pulsante que dirige el ojo.
+ * ============================================================================ */
+@keyframes cp-focus-pulse {
+    0%   { box-shadow: 0 0 0 0    rgba(37, 99, 235, 0.0);  background-color: rgba(37, 99, 235, 0.00); }
+    20%  { box-shadow: 0 0 0 6px  rgba(37, 99, 235, 0.18); background-color: rgba(37, 99, 235, 0.06); }
+    100% { box-shadow: 0 0 0 0    rgba(37, 99, 235, 0.0);  background-color: rgba(37, 99, 235, 0.00); }
+}
+.cp-card-focused {
+    animation: cp-focus-pulse 2.5s ease-out;
+    border-color: rgba(37, 99, 235, 0.5) !important;
+}
+.cp-task-focused {
+    animation: cp-focus-pulse 2.5s ease-out;
+    outline: 2px solid rgba(37, 99, 235, 0.55);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+

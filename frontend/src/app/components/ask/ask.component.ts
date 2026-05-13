@@ -38,6 +38,9 @@ interface StructuredAnswer {
      *  (formato viejo) por backward-compat con respuestas cacheadas. */
     decisions: Array<Decision | string>;
     action_items: ActionItem[];
+    /** Riesgos y acuerdos siguen el mismo shape que decisions. */
+    risks?: Array<Decision | string>;
+    agreements?: Array<Decision | string>;
 }
 
 interface AskResponse {
@@ -626,7 +629,18 @@ export class AskComponent implements OnInit, OnDestroy {
     hasStructured(turn: ChatTurn): boolean {
         const s = turn?.structured;
         if (!s) return false;
-        return !!(s.intro || s.decisions?.length || s.action_items?.length);
+        return !!(s.intro || s.decisions?.length || s.action_items?.length
+                  || s.risks?.length || s.agreements?.length);
+    }
+
+    /** Genera los queryParams para focus en una sección del curation
+     *  cuando se hace click en un chip. La página destino los lee y hace
+     *  scroll + highlight al item correspondiente. */
+    focusParams(focus: 'decisions' | 'risks' | 'agreements' | 'task' | 'summary',
+                text: string = ''): {[k: string]: string} {
+        const out: {[k: string]: string} = { focus };
+        if (text) out['text'] = text;
+        return out;
     }
 
     /** Iniciales del owner para el avatar circular (mismo helper que

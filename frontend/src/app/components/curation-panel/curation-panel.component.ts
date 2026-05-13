@@ -104,6 +104,16 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
    *  defecto las tareas muestran un resumen corto; el user puede expandir. */
   expandedTaskId: number | null = null;
 
+  /** Foco diferido: cuando llegamos vía link desde "Pregunta a Acten"
+   *  con `?focus=...&text=...`, guardamos los valores y aplicamos el
+   *  scroll/highlight tras cargar la sesión. */
+  private pendingFocus: { focus: string; text: string } | null = null;
+  /** Card actualmente highlighted (decisions|risks|agreements|summary).
+   *  Se usa en el template via [class.cp-card-focused]. */
+  focusedCard: string | null = null;
+  /** ID de la tarea highlighted (cuando focus=task). */
+  focusedTaskId: number | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
@@ -140,6 +150,96 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
           this.loadSessionDetails();
         }
       });
+
+    // Capturamos los queryParams `?focus=...&text=...` que vienen desde
+    // "Pregunta a Acten" para hacer scroll + highlight a la sección
+    // o tarea referenciada después de que cargue la data.
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(qp => {
+        const focus = qp.get('focus');
+        if (focus) {
+          this.pendingFocus = { focus, text: qp.get('text') || '' };
+          // Si la data ya cargó, aplica de inmediato.
+          if (!this.isLoading && this.meetingData?.id) {
+            this._applyPendingFocus();
+          }
+        }
+      });
+  }
+
+  /** Aplica el focus diferido tras cargar la sesión. Hace scroll suave
+   *  + clase visual `cp-card-focused` durante 2.5s. Para tasks, busca
+   *  por similitud de título (Jaccard simple) y resalta la fila. */
+  private _applyPendingFocus(): void {
+    const f = this.pendingFocus;
+    if (!f) return;
+    this.pendingFocus = null;
+
+    // Diferido: el DOM puede no estar pintado todavía.
+    setTimeout(() => {
+      if (f.focus === 'task') {
+        const taskId = this._findTaskIdByTitle(f.text);
+        if (taskId != null) {
+          this.focusedTaskId = taskId;
+          const el = document.getElementById('cp-task-' + taskId);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          this.cdr.detectChanges();
+          setTimeout(() => { this.focusedTaskId = null; this.cdr.detectChanges(); }, 2500);
+          return;
+        }
+        // Si no encontramos match, hacemos focus en la card de tareas.
+        this._focusCardById('cp-card-tasks');
+        return;
+      }
+      // Cards de markdown: scroll a la card por id.
+      const cardMap: { [k: string]: string } = {
+        decisions:  'cp-card-decisions',
+        risks:      'cp-card-risks',
+        agreements: 'cp-card-agreements',
+        summary:    'cp-card-summary',
+      };
+      const cardId = cardMap[f.focus];
+      if (cardId) this._focusCardById(cardId);
+    }, 200);
+  }
+
+  private _focusCardById(cardId: string): void {
+    const el = document.getElementById(cardId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.focusedCard = cardId;
+    this.cdr.detectChanges();
+    setTimeout(() => { this.focusedCard = null; this.cdr.detectChanges(); }, 2500);
+  }
+
+  /** Busca un ActionItem por similitud de título (palabras significativas).
+   *  Devuelve el id o null si no hay match razonable. */
+  private _findTaskIdByTitle(needle: string): number | null {
+    const norm = (s: string) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^\w\s]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const stem = (w: string) => {
+      if (w.length >= 6 && w.endsWith('es')) return w.slice(0, -2);
+      if (w.length >= 5 && w.endsWith('s')) return w.slice(0, -1);
+      return w;
+    };
+    const words = (s: string) => new Set(norm(s).split(' ')
+      .filter(w => w.length >= 4).map(stem));
+
+    const q = words(needle);
+    if (!q.size) return null;
+    let bestId: number | null = null, bestScore = 0;
+    for (const t of (this.meetingData?.action_items || [])) {
+      if (t.id == null) continue;
+      const tw = words(t.title || '');
+      if (!tw.size) continue;
+      const inter = new Set([...q].filter(x => tw.has(x)));
+      const union = new Set([...q, ...tw]);
+      const s = inter.size / Math.max(union.size, 1);
+      if (s > bestScore) { bestScore = s; bestId = t.id; }
+    }
+    return bestScore >= 0.25 ? bestId : null;
   }
 
   loadProjects() {
@@ -187,6 +287,11 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
               };
               this.isLoading = false;
               this.cdr.detectChanges();
+              // Si llegamos vía link con ?focus=..., aplicamos el scroll
+              // y highlight ahora que la data y el DOM están listos.
+              if (this.pendingFocus) {
+                this._applyPendingFocus();
+              }
           } catch (e) {
               this.toast.error('Error procesando los datos de la sesión.');
               this.isLoading = false;
