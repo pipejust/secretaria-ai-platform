@@ -1,0 +1,110 @@
+# =============================================================================
+# Acten — docker-compose.SUPABASE.yml
+# =============================================================================
+# Variante para usar SUPABASE como DB (no Postgres local).
+# Útil cuando:
+#   · Ya tienes data en Supabase y no quieres migrar
+#   · Quieres backups managed sin operarlos tú
+#   · Quieres aprovechar el free tier de Supabase (hasta 500MB)
+#
+# Diferencias vs docker-compose.prod.yml:
+#   · NO incluye servicio postgres (Supabase lo provee)
+#   · NO incluye volumen acten_pgdata
+#   · backend.DATABASE_URL viene de env var (Supabase URL completa)
+#   · backend ya no tiene depends_on postgres
+#
+# IMPORTANTE: Verifica que tu proyecto de Supabase tenga la extensión
+#             `vector` habilitada. Dashboard → Database → Extensions →
+#             busca `vector` y enciéndela. Sin esto el RAG no funciona.
+# =============================================================================
+
+services:
+
+  # --------------------------------------------------------------------------
+  # Backend FastAPI — apunta a Supabase via DATABASE_URL.
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: acten-backend
+    restart: unless-stopped
+    environment:
+      # ── Persistencia: Supabase ─────────────────────────────────────
+      # DATABASE_URL completo viene de Coolify env vars. Ej:
+      #   postgresql+psycopg2://postgres:PASS@db.PROJECT.supabase.co:5432/postgres
+      # Si llega como `postgresql://...` (formato Supabase), normalize.py
+      # del backend lo convierte a `postgresql+psycopg2://...` automáticamente.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL requerida (Supabase Postgres)}
+
+      # ── Modo prod ───────────────────────────────────────────────────
+      ENVIRONMENT: production
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      # ── Seguridad ───────────────────────────────────────────────────
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY requerida (>=64 chars)}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+      BCRYPT_ROUNDS: "12"
+
+      # ── URLs públicas (deben coincidir con los dominios en Coolify) ─
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set la URL pública del backend}
+      FRONTEND_URL: ${FRONTEND_URL:?Set la URL pública del frontend}
+
+      # ── Servicios internos ──────────────────────────────────────────
+      GOTENBERG_URL: http://gotenberg:3000
+
+      # ── LLMs / integraciones ───────────────────────────────────────
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      FIREFLIES_API_KEY: ${FIREFLIES_API_KEY:-}
+
+      # ── Supabase opcional (si el código lo lee como cliente nativo) ─
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_KEY: ${SUPABASE_KEY:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/openapi.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    expose:
+      - "8000"
+    networks:
+      - acten
+
+  # --------------------------------------------------------------------------
+  # Frontend Angular servido por nginx.
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        # Coolify resuelve esta var a la URL pública del backend.
+        NG_APP_API_URL: ${PUBLIC_BASE_URL:?Same as backend}
+    container_name: acten-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "80"
+    networks:
+      - acten
+
+  # --------------------------------------------------------------------------
+  # Gotenberg — conversor DOCX → PDF (interno, no expuesto).
+  # --------------------------------------------------------------------------
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: acten-gotenberg
+    restart: unless-stopped
+    expose:
+      - "3000"
+    networks:
+      - acten
+
+networks:
+  acten:
+    name: acten
+    driver: bridge
