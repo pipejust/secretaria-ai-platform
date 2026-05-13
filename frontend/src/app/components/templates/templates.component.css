@@ -735,19 +735,27 @@
 }
 
 /* ====== Vista previa (iframe Office Online Viewer) ======
+   El frame se EXTIENDE a los bordes del panel rompiendo el padding
+   horizontal con margin negativo. Así el documento gana ~40px más de
+   ancho y se ve más generoso en la columna estrecha del detalle.
+
    Trick: el iframe se renderiza al 167% de tamaño y se escala 0.6 con
    CSS transform. Office Viewer al recibir un canvas más grande aplica
    un zoom interno mayor que muestra la página completa, y el scale CSS
-   lo devuelve al footprint visible. Resultado: el documento entero
-   visible sin scroll y sin chrome cortado. */
+   lo devuelve al footprint visible. */
 .tpl-preview-frame {
     position: relative;
-    width: 100%;
-    aspect-ratio: 8.5 / 11;        /* tamaño tipo hoja carta */
-    max-height: 540px;
+    /* Break-out: usa todo el ancho de la card .tpl-detail (que tiene
+       padding-x = space-20). Se compensa con un margin negativo igual. */
+    width: calc(100% + (var(--space-20) * 2));
+    margin-left: calc(-1 * var(--space-20));
+    margin-right: calc(-1 * var(--space-20));
+    aspect-ratio: 8.5 / 11;
+    max-height: 580px;
     background: var(--brand-cream-50);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    /* sin radius para que llegue limpio a los bordes de la card */
     overflow: hidden;
 }
 .tpl-preview-frame iframe {
