@@ -153,6 +153,12 @@ services:
       - backend
     expose:
       - "80"
+    # Mismo motivo que el backend: tras restart limpio del proxy de Coolify,
+    # Traefik a veces no infiere el puerto del upstream cuando hay >1 container
+    # en la app. Forzamos la label explícita.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.https-0-z4tjwakbk1yna94gt3isc2hf-frontend.loadbalancer.server.port=80"
     networks:
       - acten
 
