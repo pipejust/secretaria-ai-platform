@@ -25,9 +25,12 @@ import json as _json_lib
 import logging
 from typing import Optional
 
+import base64
+
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
+from sqlalchemy import bindparam as sa_bindparam, text as sa_text
 from sqlmodel import Session, select
 
 from config import settings
@@ -107,6 +110,11 @@ class AskRequest(BaseModel):
     top_k: int = 8
     # Permitimos override del umbral desde el frontend para experimentación.
     min_relevance: Optional[float] = None
+    # Si llega, restringimos la búsqueda RAG a esas sesiones únicamente.
+    # Útil cuando el usuario "pinnea" una reunión específica desde el
+    # menú de adjuntar para no mezclar con otras actas. La validación
+    # de pertenencia al tenant ocurre dentro del endpoint.
+    session_ids: Optional[list[int]] = None
 
 
 class Citation(BaseModel):
@@ -316,8 +324,24 @@ async def ask(
     if len(q) < 3:
         raise HTTPException(400, "La pregunta debe tener al menos 3 caracteres.")
 
+    # Si el usuario pinneó sesiones específicas, validamos pertenencia al
+    # tenant antes de pasarlas al search (un usuario no puede consultar
+    # actas de otra empresa).
+    sids_filter: Optional[list[int]] = None
+    if payload.session_ids:
+        valid = db.exec(
+            sa_text(
+                "SELECT id FROM meetingsession WHERE tenant_id = :t AND id IN :sids"
+            ).bindparams(sa_bindparam("sids", expanding=True))
+            .bindparams(t=tenant.id, sids=tuple(payload.session_ids))
+        ).all()
+        sids_filter = [r[0] for r in valid] or None
+
     raw_chunks = await search_similar(
-        db, q, top_k=max(min(payload.top_k, 20), 1), project_id=payload.project_id
+        db, q,
+        top_k=max(min(payload.top_k, 20), 1),
+        project_id=payload.project_id,
+        session_ids=sids_filter,
     )
 
     # Filtro de relevancia DINÁMICO (ver `_filter_relevant`).
@@ -674,6 +698,90 @@ def delete_history_entry(
     db.delete(row)
     db.commit()
     return None
+
+
+class ExtractImageResponse(BaseModel):
+    text: str
+    chars: int
+
+
+@router.post("/extract-image", response_model=ExtractImageResponse)
+async def extract_image(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """OCR ligero vía Groq vision (llama-3.2-90b-vision). El usuario
+    sube una imagen (captura de pantalla, foto de pizarra, screenshot
+    de email, etc.) y devolvemos el texto extraído para que se inyecte
+    como contexto en su próxima pregunta a Acten.
+
+    Límites:
+      · Tipos: image/jpeg, image/png, image/webp
+      · Tamaño máx: 4 MB
+      · El texto devuelto se trunca a 4000 chars (antes de inyectar al
+        prompt) — suficiente para el caso de uso, evita explotar tokens.
+    """
+    if not settings.groq_api_key:
+        raise HTTPException(503, "GROQ_API_KEY no configurada (necesaria para OCR).")
+
+    allowed_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            400, f"Tipo no soportado ({file.content_type}). Usa JPEG, PNG o WebP."
+        )
+
+    raw = await file.read()
+    if len(raw) > 4 * 1024 * 1024:
+        raise HTTPException(413, "Imagen muy grande (máx 4 MB).")
+    if not raw:
+        raise HTTPException(400, "Archivo vacío.")
+
+    b64 = base64.b64encode(raw).decode("ascii")
+    data_url = f"data:{file.content_type};base64,{b64}"
+
+    payload_llm = {
+        # Modelo de visión multimodal de Groq.
+        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Extrae todo el texto visible en esta imagen. "
+                            "Si es una captura de chat, email o documento, "
+                            "preserva el orden y separa por líneas. "
+                            "Devuelve SOLO el texto plano, sin comentarios "
+                            "ni explicaciones tuyas."
+                        ),
+                    },
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                ],
+            }
+        ],
+        "temperature": 0.1,
+        "max_tokens": 1500,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Content-Type": "application/json",
+    }
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        try:
+            r = await client.post(GROQ_URL, json=payload_llm, headers=headers)
+            r.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            logger.warning("ask/extract-image: Groq vision falló: %s — %s",
+                           exc.response.status_code, exc.response.text[:300])
+            raise HTTPException(502, "El modelo de visión no pudo procesar la imagen.") from exc
+
+        body = r.json()
+        text = (body.get("choices") or [{}])[0].get("message", {}).get("content", "") or ""
+        text = text.strip()
+
+    return ExtractImageResponse(text=text, chars=len(text))
 
 
 @router.delete("/history", status_code=204)

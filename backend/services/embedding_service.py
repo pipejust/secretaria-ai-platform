@@ -22,7 +22,7 @@ import re
 from typing import Iterable, List, Optional
 
 import httpx
-from sqlalchemy import text as sa_text
+from sqlalchemy import bindparam as sa_bindparam, text as sa_text
 from sqlmodel import Session, select
 
 from config import settings
@@ -201,48 +201,54 @@ async def search_similar(
     query: str,
     top_k: int = 8,
     project_id: Optional[int] = None,
+    session_ids: Optional[List[int]] = None,
 ) -> List[dict]:
-    """Búsqueda híbrida (vector + título).
+    """Búsqueda híbrida (vector + título) con filtros opcionales.
 
     1. Vector search: top_k chunks por similitud coseno con la pregunta.
-    2. Title match: identifica sesiones cuyo TÍTULO contiene alguna
-       palabra-clave de la pregunta (ILIKE). Para cada una que NO esté
-       ya en los resultados vectoriales, añade su mejor chunk con un
-       bonus de distancia (lo acerca un 30% para que rankee mejor).
+    2. Title match: sesiones cuyo TÍTULO contiene alguna palabra-clave
+       (ILIKE). Para cada match no presente en vector results, añade su
+       mejor chunk con bonus de distancia (×0.70 = 30% más cerca).
     3. Re-ordena por distancia ascendente y trunca a top_k.
 
-    Esto resuelve el caso "que es kyndryl?" donde el contenido de la
-    reunión "Colpensiones - Kyndryl" nunca menciona la palabra Kyndryl
-    pero sí está en su título.
+    Filtros opcionales:
+      · `project_id` — restringe a una sola sub-base de actas.
+      · `session_ids` — restringe la búsqueda a sesiones específicas.
+        Útil cuando el usuario "enfoca" la consulta en una reunión
+        concreta desde el menú de adjuntar (evita contaminación).
     """
     qvec = await embed_text(query)
     if qvec is None:
         return []
     qlit = _vector_literal(qvec)
 
-    # ─────── 1. Vector search ───────
+    # Filtros adicionales — los inyectamos como cláusulas WHERE.
+    extra_where = ""
+    extra_params: dict = {}
     if project_id is not None:
-        sql = sa_text(
-            """
-            SELECT ec.session_id, ec.kind, ec.chunk_index, ec.content,
-                   ec.embedding_vector <=> CAST(:qvec AS vector) AS distance
-            FROM embeddingchunk ec
-            JOIN meetingsession ms ON ms.id = ec.session_id
-            WHERE ms.project_id = :pid
-            ORDER BY ec.embedding_vector <=> CAST(:qvec AS vector) ASC
-            LIMIT :k
-            """
-        ).bindparams(qvec=qlit, pid=project_id, k=top_k)
-    else:
-        sql = sa_text(
-            """
-            SELECT session_id, kind, chunk_index, content,
-                   embedding_vector <=> CAST(:qvec AS vector) AS distance
-            FROM embeddingchunk
-            ORDER BY embedding_vector <=> CAST(:qvec AS vector) ASC
-            LIMIT :k
-            """
-        ).bindparams(qvec=qlit, k=top_k)
+        extra_where += " AND ms.project_id = :pid"
+        extra_params["pid"] = project_id
+    if session_ids:
+        # Lista de IDs como tupla para IN; SQLAlchemy `expanding` para
+        # parametrizar listas de longitud variable.
+        extra_where += " AND ms.id IN :sids"
+        extra_params["sids"] = tuple(session_ids)
+
+    # ─────── 1. Vector search ───────
+    sql = sa_text(
+        f"""
+        SELECT ec.session_id, ec.kind, ec.chunk_index, ec.content,
+               ec.embedding_vector <=> CAST(:qvec AS vector) AS distance
+        FROM embeddingchunk ec
+        JOIN meetingsession ms ON ms.id = ec.session_id
+        WHERE 1=1{extra_where}
+        ORDER BY ec.embedding_vector <=> CAST(:qvec AS vector) ASC
+        LIMIT :k
+        """
+    )
+    if session_ids:
+        sql = sql.bindparams(sa_bindparam("sids", expanding=True))
+    sql = sql.bindparams(qvec=qlit, k=top_k, **extra_params)
 
     vector_rows = list(db.exec(sql).all())
     vector_session_ids = {r[0] for r in vector_rows}
@@ -251,22 +257,21 @@ async def search_similar(
     keywords = _extract_keywords(query)
     extra_rows: list = []
     if keywords:
-        # Construimos OR dinámico de ILIKEs sobre el título
         ilike_clauses = " OR ".join([f"LOWER(ms.title) LIKE :kw{i}" for i in range(len(keywords))])
         params = {f"kw{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
-        project_filter = " AND ms.project_id = :pid" if project_id is not None else ""
-        if project_id is not None:
-            params["pid"] = project_id
+        params.update(extra_params)
 
         title_sql = sa_text(
             f"""
             SELECT id FROM meetingsession ms
-            WHERE ({ilike_clauses}){project_filter}
+            WHERE ({ilike_clauses}){extra_where}
             """
-        ).bindparams(**params)
+        )
+        if session_ids:
+            title_sql = title_sql.bindparams(sa_bindparam("sids", expanding=True))
+        title_sql = title_sql.bindparams(**params)
         title_session_ids = {r[0] for r in db.exec(title_sql).all()}
 
-        # Sesiones matched por título pero NO presentes en vector results
         missing = title_session_ids - vector_session_ids
         for sid in missing:
             extra_sql = sa_text(
@@ -281,8 +286,6 @@ async def search_similar(
             ).bindparams(qvec=qlit, sid=sid)
             row = db.exec(extra_sql).first()
             if row:
-                # Aplicamos bonus por title-match: bajamos la distancia
-                # para que rankee mejor en la mezcla.
                 boosted_distance = float(row[4]) * _TITLE_MATCH_BONUS
                 extra_rows.append((row[0], row[1], row[2], row[3], boosted_distance))
 

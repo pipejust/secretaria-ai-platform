@@ -129,9 +129,21 @@ export class AskComponent implements OnInit, OnDestroy {
      *  recientes de la sesión actual (in-memory). */
     showHistory = false;
 
-    @ViewChild('attachInput') attachInput?: ElementRef<HTMLInputElement>;
+    /** Menú del botón Adjuntar (texto/imagen/sesión). */
+    showAttachMenu = false;
+    /** Modal selector de sesión a pinear. */
+    showSessionPicker = false;
+    sessionPickerQuery = '';
+    /** Sesión actualmente pinneada como filtro de búsqueda RAG. */
+    pinnedSession: { id: number; title: string; date?: string } | null = null;
+    /** Loading state mientras OCR procesa la imagen. */
+    isOcr = false;
+
+    @ViewChild('attachInput')   attachInput?:   ElementRef<HTMLInputElement>;
+    @ViewChild('imageInput')    imageInput?:    ElementRef<HTMLInputElement>;
     @ViewChild('advancedPanel') advancedPanel?: ElementRef<HTMLDivElement>;
-    @ViewChild('historyPanel') historyPanel?: ElementRef<HTMLDivElement>;
+    @ViewChild('historyPanel')  historyPanel?:  ElementRef<HTMLDivElement>;
+    @ViewChild('attachMenu')    attachMenu?:    ElementRef<HTMLDivElement>;
 
     constructor(
         private http: HttpClient,
@@ -250,6 +262,9 @@ export class AskComponent implements OnInit, OnDestroy {
         const topK = Math.max(3, Math.min(20, Math.round(this.topK || 8)));
         const body: any = { question: q, top_k: topK };
         if (this.projectId) body.project_id = this.projectId;
+        // Si el usuario pinneó una sesión específica, restringimos la
+        // búsqueda RAG a ella (evita contaminación de otras reuniones).
+        if (this.pinnedSession) body.session_ids = [this.pinnedSession.id];
 
         this.http.post<AskResponse>(`${environment.apiUrl}/api/ask`, body, { headers })
             .pipe(takeUntil(this.destroy$))
@@ -377,10 +392,123 @@ export class AskComponent implements OnInit, OnDestroy {
     // Tool buttons (paperclip + sliders) del input chat
     // ============================================================
 
-    /** Abre el file picker. Acepta texto plano para inyectarlo como
-     *  contexto adicional dentro de la pregunta. */
-    triggerAttach(): void {
+    // ============================================================
+    // Menú "Adjuntar" (texto / imagen / sesión)
+    // ============================================================
+
+    toggleAttachMenu(): void {
+        this.showAttachMenu = !this.showAttachMenu;
+        this.cdr.detectChanges();
+    }
+
+    /** Click en "Adjuntar texto" — abre el file picker de texto plano. */
+    pickTextFile(): void {
+        this.showAttachMenu = false;
         this.attachInput?.nativeElement?.click();
+    }
+
+    /** Click en "Adjuntar imagen" — abre el file picker de imágenes,
+     *  el archivo se sube al backend para OCR y el texto resultado se
+     *  inyecta en el input de pregunta. */
+    pickImage(): void {
+        this.showAttachMenu = false;
+        this.imageInput?.nativeElement?.click();
+    }
+
+    /** Click en "Enfocar en una reunión" — abre el modal selector de
+     *  sesión. Una vez elegida, se "pinea" como filtro RAG. */
+    openSessionPicker(): void {
+        this.showAttachMenu = false;
+        this.sessionPickerQuery = '';
+        this.showSessionPicker = true;
+        this.cdr.detectChanges();
+    }
+
+    closeSessionPicker(): void {
+        this.showSessionPicker = false;
+        this.cdr.detectChanges();
+    }
+
+    /** Aplica el pin sobre la sesión elegida. Las próximas preguntas
+     *  irán con `session_ids: [sid]` para no mezclar otras actas. */
+    pinSession(sid: number): void {
+        const meta = this.sessionMeta.get(sid);
+        this.pinnedSession = {
+            id: sid,
+            title: meta?.title || `Sesión #${sid}`,
+            date: meta?.date,
+        };
+        this.showSessionPicker = false;
+        this.toast.success(`Búsqueda enfocada en: ${this.pinnedSession.title}`);
+        this.cdr.detectChanges();
+    }
+
+    /** Quita el pin (vuelve a buscar en todas las sesiones). */
+    unpinSession(): void {
+        this.pinnedSession = null;
+        this.cdr.detectChanges();
+    }
+
+    /** Lista de sesiones filtrada por el query del picker. */
+    get filteredSessions(): Array<{ id: number; title: string; date: string }> {
+        const q = this.sessionPickerQuery.trim().toLowerCase();
+        const all: Array<{ id: number; title: string; date: string }> = [];
+        this.sessionMeta.forEach((meta, id) => {
+            all.push({ id, title: meta.title, date: meta.date });
+        });
+        all.sort((a, b) => b.id - a.id); // más reciente primero
+        if (!q) return all.slice(0, 50);
+        return all.filter(s =>
+            s.title.toLowerCase().includes(q) || String(s.id).includes(q)
+        ).slice(0, 50);
+    }
+
+    onImageSelected(ev: Event): void {
+        const input = ev.target as HTMLInputElement;
+        const file = input?.files?.[0];
+        if (!file) return;
+        const okTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!okTypes.includes(file.type)) {
+            this.toast.warning('Solo se admiten imágenes JPEG, PNG o WebP.');
+            input.value = '';
+            return;
+        }
+        if (file.size > 4 * 1024 * 1024) {
+            this.toast.warning('La imagen es muy grande (máx 4 MB).');
+            input.value = '';
+            return;
+        }
+
+        this.isOcr = true;
+        this.cdr.detectChanges();
+        const headers = this.authService.getAuthHeaders();
+        const form = new FormData();
+        form.append('file', file);
+        this.http.post<{ text: string; chars: number }>(
+            `${environment.apiUrl}/api/ask/extract-image`, form, { headers }
+        ).pipe(takeUntil(this.destroy$)).subscribe({
+            next: (res) => {
+                this.isOcr = false;
+                input.value = '';
+                const txt = (res.text || '').slice(0, 4000);
+                if (!txt.trim()) {
+                    this.toast.warning('No se detectó texto en la imagen.');
+                    this.cdr.detectChanges();
+                    return;
+                }
+                const prefix = this.question ? this.question + '\n\n' : '';
+                this.question = `${prefix}--- Texto extraído de imagen (${file.name}) ---\n${txt}`;
+                this.toast.success(`Imagen procesada: ${res.chars} caracteres extraídos.`);
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                this.isOcr = false;
+                input.value = '';
+                const msg = err?.error?.detail || 'No se pudo procesar la imagen.';
+                this.toast.error(msg);
+                this.cdr.detectChanges();
+            },
+        });
     }
 
     onAttachFile(ev: Event): void {
@@ -440,6 +568,12 @@ export class AskComponent implements OnInit, OnDestroy {
             const panel = this.historyPanel?.nativeElement;
             if (panel && target && !panel.contains(target)) {
                 this.showHistory = false;
+            }
+        }
+        if (this.showAttachMenu) {
+            const panel = this.attachMenu?.nativeElement;
+            if (panel && target && !panel.contains(target)) {
+                this.showAttachMenu = false;
             }
         }
         this.cdr.detectChanges();
