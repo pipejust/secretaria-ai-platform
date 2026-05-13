@@ -1,369 +1,734 @@
-<!-- Modal para Cargar/Editar Plantilla -->
-<div class="modal-overlay" *ngIf="showUploadModal && !showConfigurator">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>{{ editingTemplateId ? 'Editar Plantilla' : 'Cargar Plantilla' }}</h3>
-            <button class="btn-close" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+<!-- ===================================================================
+     Plantillas — réplica del mockup adjunto.
+     Layout 3-col: Categorías (izq) · Lista central · Panel de detalle (der).
+     =================================================================== -->
+<div class="tpl-page" (click)="closeRowMenu()">
+
+    <!-- ============ HEADER ============ -->
+    <header class="tpl-header">
+        <div class="tpl-header-text">
+            <h1 class="tpl-title">Plantillas</h1>
+            <p class="tpl-sub">Gestiona y reutiliza plantillas documentales para reuniones, proyectos y reportes.</p>
+        </div>
+        <div class="tpl-header-actions">
+            <button class="tpl-btn tpl-btn-outline" type="button" title="Filtros">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                Filtros
+            </button>
+            <button class="tpl-btn tpl-btn-primary" type="button" (click)="openCreateModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nueva plantilla
             </button>
         </div>
-        <div class="modal-body">
-            <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
-            <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
+    </header>
 
-            <form (ngSubmit)="uploadFile()" #uploadForm="ngForm">
-                <div class="form-group mb-4">
-                    <label>Nombre de la Plantilla <span class="text-danger">*</span></label>
-                    <input type="text" name="templateName" [(ngModel)]="templateName" required class="form-control glass-input" placeholder="Ej. Acta General">
+    <!-- Mensajes globales -->
+    <div class="tpl-alert tpl-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
+    <div class="tpl-alert tpl-alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+    <!-- ============ GRID 3-COL ============ -->
+    <div class="tpl-grid" [class.has-detail]="selectedTemplate">
+
+        <!-- ====== Categorías ====== -->
+        <aside class="tpl-categories" aria-label="Categorías de plantillas">
+            <header class="tpl-cat-head">Categorías</header>
+            <ul class="tpl-cat-list">
+                <li *ngFor="let cat of categories"
+                    [class.active]="activeCategory === cat.id"
+                    (click)="activeCategory = cat.id">
+                    <span class="tpl-cat-icon" [attr.data-cat]="cat.icon">
+                        <!-- All -->
+                        <svg *ngIf="cat.icon === 'all'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <svg *ngIf="cat.icon === 'meeting'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <svg *ngIf="cat.icon === 'project'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                        <svg *ngIf="cat.icon === 'reports'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
+                        <svg *ngIf="cat.icon === 'finance'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        <svg *ngIf="cat.icon === 'comms'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        <svg *ngIf="cat.icon === 'strategy'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="6"></circle>
+                            <circle cx="12" cy="12" r="2"></circle>
+                        </svg>
+                    </span>
+                    <span class="tpl-cat-label">{{ cat.label }}</span>
+                    <span class="tpl-cat-count">{{ countByCategory(cat.id) }}</span>
+                </li>
+            </ul>
+            <button class="tpl-cat-new" type="button" disabled title="Disponible próximamente">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nueva categoría
+            </button>
+        </aside>
+
+        <!-- ====== Lista central ====== -->
+        <section class="tpl-list-wrap" aria-label="Listado de plantillas">
+
+            <!-- Buscador + total -->
+            <div class="tpl-list-toolbar">
+                <div class="tpl-search">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" placeholder="Buscar plantillas…" [(ngModel)]="searchText" />
+                </div>
+            </div>
+
+            <!-- Tabla con cards -->
+            <div class="tpl-table">
+                <div class="tpl-tr tpl-th">
+                    <span>Plantilla</span>
+                    <span>Tipo</span>
+                    <span>Versión</span>
+                    <span>Estado</span>
+                    <span>Actualizado</span>
+                    <span class="t-right">Acciones</span>
                 </div>
 
-                <div class="form-group mb-4">
-                    <label>Proyecto Destino <span class="text-danger">*</span></label>
-                    <select name="project_id" [(ngModel)]="selectedProjectId" required class="form-select glass-select">
-                        <option value="" disabled selected>Asignar a un Proyecto</option>
+                <div *ngIf="isLoading" class="tpl-empty">Cargando…</div>
+
+                <div *ngFor="let t of filteredTemplates"
+                     class="tpl-tr tpl-row"
+                     [class.is-selected]="selectedTemplate?.id === t.id"
+                     (click)="selectTemplate(t)"
+                     role="button"
+                     tabindex="0">
+
+                    <!-- Plantilla: icono + nombre + descripción -->
+                    <div class="tpl-cell-title">
+                        <span class="tpl-row-icon" [attr.data-cat]="typeOf(t).icon">
+                            <svg *ngIf="typeOf(t).icon === 'meeting'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <svg *ngIf="typeOf(t).icon === 'project'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                            </svg>
+                            <svg *ngIf="typeOf(t).icon === 'reports'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                            </svg>
+                            <svg *ngIf="typeOf(t).icon === 'finance'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <svg *ngIf="typeOf(t).icon === 'comms'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            <svg *ngIf="typeOf(t).icon === 'strategy'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <circle cx="12" cy="12" r="6"></circle>
+                                <circle cx="12" cy="12" r="2"></circle>
+                            </svg>
+                        </span>
+                        <div class="tpl-cell-title-text">
+                            <span class="tpl-row-title">{{ t.name }}</span>
+                            <span class="tpl-row-desc">{{ descriptionOf(t) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Tipo -->
+                    <div class="tpl-cell-type">
+                        <span class="tpl-type-chip" [attr.data-cat]="typeOf(t).icon">{{ typeOf(t).label }}</span>
+                    </div>
+
+                    <!-- Versión -->
+                    <div class="tpl-cell-version">{{ versionOf(t) }}</div>
+
+                    <!-- Estado -->
+                    <div class="tpl-cell-status">
+                        <span class="tpl-status-badge" [attr.data-status]="statusOf(t).key">
+                            <span class="tpl-status-dot"></span>
+                            {{ statusOf(t).label }}
+                        </span>
+                    </div>
+
+                    <!-- Actualizado -->
+                    <div class="tpl-cell-updated">
+                        <span class="tpl-updated-main">{{ updatedOf(t) }}</span>
+                        <span class="tpl-updated-ago">{{ updatedAgo(t) }}</span>
+                    </div>
+
+                    <!-- Acciones (kebab) -->
+                    <div class="tpl-cell-actions t-right">
+                        <button class="tpl-kebab" (click)="toggleRowMenu(t.id, $event)" title="Más opciones">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="1"></circle>
+                                <circle cx="12" cy="5" r="1"></circle>
+                                <circle cx="12" cy="19" r="1"></circle>
+                            </svg>
+                        </button>
+                        <div class="tpl-kebab-menu" *ngIf="openRowMenuId === t.id" (click)="$event.stopPropagation()">
+                            <button type="button" (click)="openConfigurator(t); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                </svg>
+                                Configurar bloques
+                            </button>
+                            <button type="button" (click)="editTemplate(t); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Editar
+                            </button>
+                            <div class="tpl-kebab-divider"></div>
+                            <button type="button" class="tpl-kebab-danger" (click)="deleteTemplate(t.id); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                </svg>
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div *ngIf="!isLoading && !filteredTemplates.length" class="tpl-empty">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <h4>Aún no hay plantillas</h4>
+                    <p>Sube tu primer documento .docx para empezar.</p>
+                </div>
+            </div>
+
+            <!-- Paginación -->
+            <div class="tpl-pagination" *ngIf="filteredTemplates.length">
+                <span class="tpl-page-info">
+                    1–{{ filteredTemplates.length }} de {{ templates.length }} plantillas
+                </span>
+                <div class="tpl-page-center">
+                    <button class="tpl-page-arrow" disabled>‹</button>
+                    <button class="tpl-page-num active">1</button>
+                    <button class="tpl-page-arrow" disabled>›</button>
+                </div>
+                <div class="tpl-page-right">
+                    <select>
+                        <option>Mostrar 10</option>
+                        <option>Mostrar 20</option>
+                        <option>Mostrar 50</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====== Panel de detalle ====== -->
+        <aside class="tpl-detail" *ngIf="selectedTemplate" aria-label="Detalle de la plantilla">
+            <header class="tpl-detail-head">
+                <div class="tpl-detail-head-text">
+                    <span class="tpl-detail-icon" [attr.data-cat]="typeOf(selectedTemplate).icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                    </span>
+                    <div>
+                        <h2 class="tpl-detail-title">{{ selectedTemplate.name }}</h2>
+                        <div class="tpl-detail-meta">
+                            <span>{{ versionOf(selectedTemplate) }}</span>
+                            <span class="tpl-meta-dot">·</span>
+                            <span class="tpl-status-badge" [attr.data-status]="statusOf(selectedTemplate).key">
+                                <span class="tpl-status-dot"></span>
+                                {{ statusOf(selectedTemplate).label }}
+                            </span>
+                            <span class="tpl-meta-dot">·</span>
+                            <span>{{ updatedOf(selectedTemplate) }}</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="tpl-detail-close" (click)="closeDetailPanel()" title="Cerrar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </header>
+
+            <!-- Tabs -->
+            <nav class="tpl-detail-tabs">
+                <button [class.active]="detailTab === 'preview'" (click)="setDetailTab('preview')">Vista previa</button>
+                <button [class.active]="detailTab === 'details'" (click)="setDetailTab('details')">Detalles</button>
+                <button [class.active]="detailTab === 'history'" (click)="setDetailTab('history')">Historial</button>
+            </nav>
+
+            <!-- Vista previa: mock visual del documento -->
+            <div *ngIf="detailTab === 'preview'" class="tpl-detail-body">
+                <article class="tpl-doc-preview">
+                    <header class="tpl-doc-head">
+                        <span class="tpl-doc-brand">A · Acten</span>
+                        <h3 class="tpl-doc-title">{{ selectedTemplate.name }}</h3>
+                    </header>
+                    <div class="tpl-doc-line tpl-doc-line-row">
+                        <span>Título de la reunión</span><span>Fecha</span>
+                    </div>
+                    <div class="tpl-doc-line tpl-doc-line-row">
+                        <span>Hora</span><span>Ubicación / enlace</span>
+                    </div>
+                    <div class="tpl-doc-line">
+                        <span>Asistentes</span>
+                    </div>
+                    <div class="tpl-doc-section">
+                        <span class="tpl-doc-label">Agenda</span>
+                        <div class="tpl-doc-skel" style="width: 92%"></div>
+                        <div class="tpl-doc-skel" style="width: 78%"></div>
+                    </div>
+                    <div class="tpl-doc-section">
+                        <span class="tpl-doc-label">Puntos clave</span>
+                        <div class="tpl-doc-skel" style="width: 84%"></div>
+                    </div>
+                    <div class="tpl-doc-section">
+                        <span class="tpl-doc-label">Decisiones tomadas</span>
+                        <div class="tpl-doc-skel" style="width: 70%"></div>
+                    </div>
+                    <table class="tpl-doc-table">
+                        <thead>
+                            <tr><th>Acción</th><th>Responsable</th><th>Vence</th><th>Estado</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td></td><td></td><td></td><td></td></tr>
+                            <tr><td></td><td></td><td></td><td></td></tr>
+                        </tbody>
+                    </table>
+                </article>
+
+                <!-- Casos de uso -->
+                <section class="tpl-detail-section">
+                    <h4>Casos de uso</h4>
+                    <div class="tpl-chip-list">
+                        <span class="tpl-chip" *ngFor="let u of useCasesOf(selectedTemplate)">{{ u }}</span>
+                    </div>
+                </section>
+
+                <!-- Descripción -->
+                <section class="tpl-detail-section">
+                    <h4>Descripción</h4>
+                    <p class="tpl-detail-text">{{ descriptionOf(selectedTemplate) }}</p>
+                </section>
+
+                <!-- Acciones -->
+                <section class="tpl-detail-section">
+                    <h4>Acciones</h4>
+                    <div class="tpl-detail-actions">
+                        <button class="tpl-btn tpl-btn-primary tpl-btn-block" (click)="openConfigurator(selectedTemplate)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            Usar plantilla
+                        </button>
+                        <button class="tpl-btn tpl-btn-outline tpl-btn-block">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            Vista previa
+                        </button>
+                        <button class="tpl-btn tpl-btn-outline tpl-btn-block">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Duplicar
+                        </button>
+                        <button class="tpl-btn tpl-btn-outline tpl-btn-block" (click)="editTemplate(selectedTemplate)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Editar
+                        </button>
+                        <button class="tpl-btn tpl-btn-danger-outline tpl-btn-block" (click)="deleteTemplate(selectedTemplate.id)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"></path>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                            Archivar
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab Detalles -->
+            <div *ngIf="detailTab === 'details'" class="tpl-detail-body">
+                <section class="tpl-detail-section">
+                    <h4>Información</h4>
+                    <dl class="tpl-detail-info">
+                        <dt>ID</dt><dd>#{{ selectedTemplate.id }}</dd>
+                        <dt>Tipo</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>
+                        <dt>Versión</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
+                        <dt>Estado</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
+                        <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small>({{ updatedAgo(selectedTemplate) }})</small></dd>
+                        <dt>Proyecto</dt><dd>{{ selectedTemplate.project_id || '—' }}</dd>
+                    </dl>
+                </section>
+            </div>
+
+            <div *ngIf="detailTab === 'history'" class="tpl-detail-body">
+                <p class="tpl-detail-empty">El historial de versiones estará disponible próximamente.</p>
+            </div>
+        </aside>
+
+    </div>
+</div>
+
+<!-- ===================================================================
+     Modal: Subir/Editar Plantilla
+     =================================================================== -->
+<div class="tpl-modal-overlay" *ngIf="showUploadModal && !showConfigurator" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
+    <div class="tpl-modal tpl-modal-sm" (click)="$event.stopPropagation()">
+        <header class="tpl-modal-head">
+            <div>
+                <h2 class="tpl-modal-title">{{ editingTemplateId ? 'Editar plantilla' : 'Nueva plantilla' }}</h2>
+                <p class="tpl-modal-sub">Sube un archivo Word (.docx) para usarlo como base.</p>
+            </div>
+            <button class="tpl-modal-close" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+        <div class="tpl-modal-body">
+            <div class="tpl-alert tpl-alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+            <div class="tpl-alert tpl-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
+
+            <form (ngSubmit)="uploadFile()" #uploadForm="ngForm" class="tpl-form">
+                <div class="tpl-field">
+                    <label>Nombre de la plantilla <span class="req">*</span></label>
+                    <input type="text" [(ngModel)]="templateName" name="templateName" required
+                           placeholder="Ej. Acta de reunión" />
+                </div>
+                <div class="tpl-field">
+                    <label>Proyecto destino <span class="req">*</span></label>
+                    <select [(ngModel)]="selectedProjectId" name="project_id" required>
+                        <option value="" disabled>Selecciona un proyecto</option>
                         <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                     </select>
                 </div>
-
-                <div class="form-group mb-4">
-                    <label>Subir Documento (Solo .docx)</label>
-                    <div class="file-drop-area" style="padding: 1rem;">
-                        <input type="file" class="file-input" (change)="onFileSelected($event)" accept=".docx" />
-                        <div class="file-text" *ngIf="!selectedFile">
-                            Haz clic aquí para seleccionar tu Word.<br>
-                            <span *ngIf="editingTemplateId" style="font-size: 0.8rem; color: #6b7280;">(Opcional. Deja vacío si solo cambias nombre)</span>
-                        </div>
-                        <div class="file-text" *ngIf="selectedFile" style="color:var(--accent-color); font-weight:600;">
-                            {{ selectedFile.name }}
-                        </div>
-                    </div>
+                <div class="tpl-field">
+                    <label>Documento Word (.docx)</label>
+                    <label class="tpl-file-drop">
+                        <input type="file" (change)="onFileSelected($event)" accept=".docx" hidden />
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span *ngIf="!selectedFile">Click para subir un archivo .docx</span>
+                        <strong *ngIf="selectedFile">{{ selectedFile.name }}</strong>
+                    </label>
                 </div>
-
-                <button type="submit" class="btn btn-primary w-full" [disabled]="!templateName.trim() || !selectedProjectId || (!selectedFile && !editingTemplateId) || isUploading">
-                    <span *ngIf="!isUploading">{{ editingTemplateId ? 'Actualizar Plantilla' : 'Subir Plantilla' }}</span>
-                    <span *ngIf="isUploading">Guardando...</span>
-                </button>
             </form>
         </div>
+        <footer class="tpl-modal-foot">
+            <button type="button" class="tpl-btn tpl-btn-outline"
+                    (click)="showUploadModal = false; errorMsg = ''; successMsg = ''"
+                    [disabled]="isUploading">Cancelar</button>
+            <button type="button" class="tpl-btn tpl-btn-primary"
+                    (click)="uploadFile()"
+                    [disabled]="!templateName.trim() || !selectedProjectId || (!selectedFile && !editingTemplateId) || isUploading">
+                <span *ngIf="!isUploading">{{ editingTemplateId ? 'Actualizar plantilla' : 'Subir plantilla' }}</span>
+                <span *ngIf="isUploading">Guardando…</span>
+            </button>
+        </footer>
     </div>
 </div>
 
-<!-- Modal para Constructor Visual (Drag & Drop) -->
-<div class="modal-overlay" *ngIf="showConfigurator">
-    <div class="modal-content" style="max-width: 1200px; width: 95vw;">
-        <div class="modal-header" style="background: var(--accent-color); color: white; border-bottom: none;">
+<!-- ===================================================================
+     Modal: Constructor Visual de Documento
+     =================================================================== -->
+<div class="tpl-modal-overlay" *ngIf="showConfigurator" (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''">
+    <div class="tpl-modal tpl-modal-lg" (click)="$event.stopPropagation()">
+
+        <header class="tpl-modal-head">
             <div>
-                <h3 style="margin: 0; color: white;">Constructor Visual de Documento</h3>
-                <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.85rem; font-weight: normal;">
-                    Tu archivo Word se usará para preservar la Cabecera, Logos y Pie de Página. Arrastra los bloques a la derecha en el orden que desees que aparezcan en el cuerpo del documento.
+                <h2 class="tpl-modal-title">Constructor Visual de Documento</h2>
+                <p class="tpl-modal-sub">
+                    Tu archivo Word se usará para preservar la cabecera, logos y pie de página.<br>
+                    Arrastra los bloques a la derecha en el orden que desees que aparezcan en el cuerpo del documento.
                 </p>
             </div>
-            <button class="btn-close" (click)="showConfigurator = false; showUploadModal = false; successMsg=''" style="background: rgba(255,255,255,0.2); color: white;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>
-        
-        <div class="modal-body p-4" style="background: #f8fafc;" *ngIf="!isTraditionalConfigurator">
-            <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px; font-weight: 500;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; margin-bottom:-3px;">
-                    <polyline points="20 6 9 17 4 12"></polyline>
+            <button class="tpl-modal-close" (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
-                {{ successMsg }}
-            </div>
-            <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px; font-weight: 500;">{{ errorMsg }}</div>
+            </button>
+        </header>
 
-            <div cdkDropListGroup style="display: flex; gap: 2rem; min-height: 400px;">
-                <!-- Left: Available -->
-                <div style="flex: 1; display:flex; flex-direction:column;">
-                    <h4 style="color:#475569; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:1rem;">Bloques Disponibles</h4>
-                    
+        <div class="tpl-modal-body tpl-builder-body" *ngIf="!isTraditionalConfigurator">
+            <div class="tpl-alert tpl-alert-success" *ngIf="saveMappingSuccessMsg">{{ saveMappingSuccessMsg }}</div>
+            <div class="tpl-alert tpl-alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+            <div class="tpl-builder-grid" cdkDropListGroup>
+
+                <!-- Col 1: Bloques disponibles -->
+                <section class="tpl-builder-col">
+                    <header class="tpl-builder-col-head">BLOQUES DISPONIBLES</header>
                     <div cdkDropList
                          [cdkDropListData]="availableTokens"
-                         class="drag-list-container"
-                         (cdkDropListDropped)="drop($event)"
-                         style="flex:1; background:#e2e8f0; border-radius:12px; padding:1rem; border: 2px dashed #cbd5e1; overflow-y:auto;">
-                         @for (item of availableTokens; track item.id) {
-                            <div class="drag-box" cdkDrag [cdkDragData]="item"
-                                 style="background:white; border:1px solid #cbd5e1; border-radius:8px; padding:0.8rem; margin-bottom:0.5rem; cursor:grab; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; align-items:center; gap:0.5rem;">
-                                <!-- Drag Handle Icon -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
-                                <span style="font-weight: 500; font-size:0.9rem; color:#1e293b;">{{ item.label }}</span>
-                            </div>
-                         }
-                    </div>
-                </div>
-
-                <!-- Right: Active (Structure) -->
-                <div style="flex: 1; display:flex; flex-direction:column;">
-                    <h4 style="color:#0f172a; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:1rem;">Estructura del Documento</h4>
-                    
-                    <div cdkDropList
-                         [cdkDropListData]="activeTokens"
-                         class="drag-list-container"
-                         (cdkDropListDropped)="drop($event)"
-                         style="flex:1; background:white; border-radius:12px; padding:1rem; border: 2px solid var(--accent-color); overflow-y:auto; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);">
-                         
-                        @if (activeTokens.length === 0) {
-                            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; text-align:center;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom:1rem; opacity:0.5;">
+                         class="tpl-block-list"
+                         (cdkDropListDropped)="drop($event)">
+                        <div class="tpl-block-card"
+                             *ngFor="let item of availableTokens; track item.id"
+                             cdkDrag [cdkDragData]="item">
+                            <span class="tpl-block-grip">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle>
+                                    <circle cx="15" cy="6" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="18" r="1"></circle>
+                                </svg>
+                            </span>
+                            <span class="tpl-block-icon" [attr.data-block]="item.id">
+                                <svg *ngIf="item.id === 'attendees'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                </svg>
+                                <svg *ngIf="item.id === 'summary'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                     <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    <polyline points="10 9 9 9 8 9"></polyline>
                                 </svg>
-                                <p>Arrastra bloques aquí para<br>construir la plantilla</p>
+                                <svg *ngIf="item.id === 'decisions'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <svg *ngIf="item.id === 'risks'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                </svg>
+                                <svg *ngIf="item.id === 'agreements'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 9l-2.6 2.6a2.5 2.5 0 0 1-3.5 0L7 11l2.5-2.5a3 3 0 0 1 4 0L17 11"></path>
+                                </svg>
+                                <svg *ngIf="item.id === 'action_items'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
+                                <svg *ngIf="item.id === 'meta'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </span>
+                            <div class="tpl-block-text">
+                                <strong>{{ item.label }}</strong>
+                                <small>{{ tokenDescriptions[item.id] }}</small>
                             </div>
-                        }
-
-                        @for (item of activeTokens; track item.id) {
-                            <div class="drag-box" cdkDrag [cdkDragData]="item"
-                                 style="background:#f8fafc; border:1px solid #94a3b8; border-left:4px solid var(--accent-color); border-radius:8px; padding:0.8rem; margin-bottom:0.5rem; cursor:grab; box-shadow:0 2px 5px rgba(0,0,0,0.05); display:flex; align-items:center; gap:0.5rem;">
-                                <!-- Drag Handle Icon -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
-                                <span style="font-weight: 600; font-size:0.9rem; color:#0f172a;">{{ item.label }}</span>
-                            </div>
-                        }
+                        </div>
+                        <p class="tpl-block-empty" *ngIf="!availableTokens.length">
+                            Todos los bloques están en la estructura.
+                        </p>
                     </div>
-                </div>
+                    <p class="tpl-builder-hint">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        Arrastra un bloque para agregarlo a la estructura del documento.
+                    </p>
+                </section>
 
-                <!-- Right: Estilos Generales (Style Configurator) -->
-                <div style="flex: 1; display:flex; flex-direction:column;">
-                    <h4 style="color:#0f172a; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:1rem;">Estilos Estéticos</h4>
-                    
-                    <div style="flex:1; background:white; border-radius:12px; padding:1.5rem; border: 1px solid #cbd5e1; overflow-y:auto; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-                        <div class="form-group mb-3">
-                            <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Familia Tipográfica</label>
-                            <select class="form-control" [(ngModel)]="styleConfig.fontFamily">
-                                <option value="Arial">Arial</option>
-                                <option value="Calibri">Calibri</option>
-                                <option value="Times New Roman">Times New Roman</option>
-                                <option value="Roboto">Roboto</option>
-                                <option value="Segoe UI">Segoe UI</option>
-                                <option value="Verdana">Verdana</option>
+                <!-- Col 2: Estructura del documento -->
+                <section class="tpl-builder-col">
+                    <header class="tpl-builder-col-head">ESTRUCTURA DEL DOCUMENTO</header>
+                    <p class="tpl-builder-col-sub">Ordena los bloques que formarán el cuerpo del documento.</p>
+                    <div cdkDropList
+                         [cdkDropListData]="activeTokens"
+                         class="tpl-structure-list"
+                         (cdkDropListDropped)="drop($event)">
+                        <div class="tpl-structure-row"
+                             *ngFor="let item of activeTokens; let i = index; track item.id"
+                             cdkDrag [cdkDragData]="item">
+                            <span class="tpl-structure-num">{{ i + 1 }}</span>
+                            <span class="tpl-block-grip">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle>
+                                    <circle cx="15" cy="6" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="18" r="1"></circle>
+                                </svg>
+                            </span>
+                            <span class="tpl-structure-label">{{ item.label }}</span>
+                            <button class="tpl-structure-action" type="button" title="Editar bloque">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </button>
+                            <button class="tpl-structure-action tpl-structure-action-danger"
+                                    type="button" title="Quitar"
+                                    *ngIf="item.id !== 'meta'"
+                                    (click)="removeFromStructure(item)">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="tpl-structure-drop" *ngIf="!activeTokens.length || availableTokens.length">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>Suelta aquí para agregar un bloque</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Col 3: Estilos estéticos -->
+                <section class="tpl-builder-col">
+                    <header class="tpl-builder-col-head">ESTILOS ESTÉTICOS</header>
+                    <p class="tpl-builder-col-sub">Personaliza la apariencia de las cabeceras y tablas.</p>
+                    <div class="tpl-style-form">
+                        <div class="tpl-field">
+                            <label>Familia tipográfica</label>
+                            <select [(ngModel)]="styleConfig.fontFamily">
+                                <option>Arial</option>
+                                <option>Calibri</option>
+                                <option>Times New Roman</option>
+                                <option>Roboto</option>
+                                <option>Segoe UI</option>
+                                <option>Verdana</option>
                             </select>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Tamaño de Fuente (pt)</label>
-                            <input type="number" class="form-control" [(ngModel)]="styleConfig.fontSize" min="8" max="24">
+                        <div class="tpl-field">
+                            <label>Tamaño de fuente (pt)</label>
+                            <input type="number" min="8" max="24" [(ngModel)]="styleConfig.fontSize" />
                         </div>
-
-                        <div class="grid-layout cols-2 gap-3 mb-3">
-                            <div class="form-group">
-                                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;" title="Aplica a: Identificación General, Lista de Asistentes, etc.">Fondo Cabeceras (Identificación, Resumen, etc)</label>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <input type="color" [(ngModel)]="styleConfig.headingColor" style="height: 38px; width: 40px; padding: 2px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">
-                                    <input type="text" class="form-control" [(ngModel)]="styleConfig.headingColor" style="font-family: monospace;">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;" title="Aplica a: Identificación General, Lista de Asistentes, etc.">Texto Cabeceras (Identificación, Resumen, etc)</label>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <input type="color" [(ngModel)]="styleConfig.headingTextColor" style="height: 38px; width: 40px; padding: 2px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">
-                                    <input type="text" class="form-control" [(ngModel)]="styleConfig.headingTextColor" style="font-family: monospace;">
-                                </div>
+                        <div class="tpl-field">
+                            <label>Fondo cabeceras (Identificación, Resumen, etc.)</label>
+                            <div class="tpl-color-input">
+                                <input type="color" [(ngModel)]="styleConfig.headingColor" />
+                                <input type="text" [(ngModel)]="styleConfig.headingColor" />
                             </div>
                         </div>
-
-                        <div class="grid-layout cols-2 gap-3 mb-3">
-                            <div class="form-group">
-                                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Color Texto General</label>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <input type="color" [(ngModel)]="styleConfig.textColor" style="height: 38px; width: 40px; padding: 2px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">
-                                    <input type="text" class="form-control" [(ngModel)]="styleConfig.textColor" style="font-family: monospace;">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Espaciado Cabeceras (pt)</label>
-                                <input type="number" class="form-control" [(ngModel)]="styleConfig.headingMargin" min="0" max="50">
+                        <div class="tpl-field">
+                            <label>Texto cabeceras (Identificación, Resumen, etc.)</label>
+                            <div class="tpl-color-input">
+                                <input type="color" [(ngModel)]="styleConfig.headingTextColor" />
+                                <input type="text" [(ngModel)]="styleConfig.headingTextColor" />
                             </div>
                         </div>
-
-                        <div class="grid-layout cols-2 gap-3 mb-3">
-                            <div class="form-group">
-                                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Fondo Cabecera Tabla</label>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <input type="color" [(ngModel)]="styleConfig.tableHeaderBg" style="height: 38px; width: 40px; padding: 2px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">
-                                    <input type="text" class="form-control" [(ngModel)]="styleConfig.tableHeaderBg" style="font-family: monospace;">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Texto Cabecera Tabla</label>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <input type="color" [(ngModel)]="styleConfig.tableHeaderTextColor" style="height: 38px; width: 40px; padding: 2px; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">
-                                    <input type="text" class="form-control" [(ngModel)]="styleConfig.tableHeaderTextColor" style="font-family: monospace;">
-                                </div>
+                        <div class="tpl-field">
+                            <label>Color texto general</label>
+                            <div class="tpl-color-input">
+                                <input type="color" [(ngModel)]="styleConfig.textColor" />
+                                <input type="text" [(ngModel)]="styleConfig.textColor" />
                             </div>
                         </div>
-                        
+                        <div class="tpl-field">
+                            <label>Espaciado cabeceras (pt)</label>
+                            <input type="number" min="0" max="50" [(ngModel)]="styleConfig.headingMargin" />
+                        </div>
+                        <div class="tpl-field">
+                            <label>Fondo cabecera tabla</label>
+                            <div class="tpl-color-input">
+                                <input type="color" [(ngModel)]="styleConfig.tableHeaderBg" />
+                                <input type="text" [(ngModel)]="styleConfig.tableHeaderBg" />
+                            </div>
+                        </div>
+                        <div class="tpl-field">
+                            <label>Texto cabecera tabla</label>
+                            <div class="tpl-color-input">
+                                <input type="color" [(ngModel)]="styleConfig.tableHeaderTextColor" />
+                                <input type="text" [(ngModel)]="styleConfig.tableHeaderTextColor" />
+                            </div>
+                        </div>
                     </div>
-                </div>
-
+                </section>
             </div>
+        </div>
 
-            <div class="mt-4" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; border-top: 1px solid #e2e8f0; padding-top:1rem;">
-                <button class="btn btn-sm" style="background:#f1f5f9; color:#64748b; border:none;" (click)="isTraditionalConfigurator = true">Cambiar a Inyección Manual {{ '{' }}{{ '{' }} {{ '}' }}{{ '}' }}</button>
-                <div style="display:flex; gap:0.5rem; align-items:center;">
-                    <div *ngIf="saveMappingSuccessMsg" style="color:#10b981; font-size:0.9rem; font-weight:500; margin-right: 1rem;">
-                        <i class="feather icon-check-circle"></i> {{ saveMappingSuccessMsg }}
-                    </div>
-                    <button class="btn btn-secondary" (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg=''" [disabled]="isSavingMapping">Cancelar</button>
-                    <button class="btn btn-primary" (click)="confirmMapping()" [disabled]="isSavingMapping">
-                        <span *ngIf="isSavingMapping" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                        {{ isSavingMapping ? 'Guardando...' : 'Guardar Estructura' }}
-                    </button>
+        <!-- Modo manual (escape hatch) — sin tocar funcionalidad -->
+        <div class="tpl-modal-body" *ngIf="isTraditionalConfigurator">
+            <div class="tpl-alert tpl-alert-info">
+                <strong>Modo manual:</strong> el sistema buscará estas llaves exactas en tu documento Word.
+            </div>
+            <div class="tpl-manual-grid">
+                <div class="tpl-manual-card" *ngFor="let tag of ['{{ title }}','{{ date }}','{{ summary }}','{{ decisions }}','{{ risks }}','{{ agreements }}']"
+                     (click)="copyTag(tag)">
+                    <span class="tpl-manual-label">{{ tag }}</span>
+                    <small>Click para copiar</small>
                 </div>
             </div>
         </div>
-        
-        <!-- Vista Clásica de Variables Copiables (Backup) -->
-        <div class="modal-body p-4" style="background: #f8fafc;" *ngIf="isTraditionalConfigurator">
-            <div class="alert alert-info" style="margin-bottom: 1.5rem;">
-                <strong>Modo Manual:</strong> El sistema ignorará la estructura de bloques y buscará estas llaves exactas dentro de tu documento de Word para inyectar la información.
+
+        <footer class="tpl-modal-foot">
+            <button type="button" class="tpl-btn tpl-btn-link"
+                    (click)="isTraditionalConfigurator = !isTraditionalConfigurator">
+                {{ isTraditionalConfigurator ? 'Volver al constructor visual' : 'Modo manual {{ }}' }}
+            </button>
+            <div class="tpl-modal-foot-right">
+                <button type="button" class="tpl-btn tpl-btn-outline"
+                        (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''"
+                        [disabled]="isSavingMapping">Cancelar</button>
+                <button type="button" class="tpl-btn tpl-btn-primary"
+                        (click)="confirmMapping()"
+                        [disabled]="isSavingMapping">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    {{ isSavingMapping ? 'Guardando…' : 'Guardar cambios' }}
+                </button>
             </div>
-            
-            <h4 class="mb-3" style="font-size:1rem; color: #1e293b;">Datos Generales</h4>
-            <div class="grid-layout cols-2 gap-3 mb-4">
-                <div class="drag-box" style="cursor: pointer; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;" (click)="copyTag('{{ title }}')">
-                    <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Título</span>
-                    <code class="token-tag" title="Clic para copiar" style="width:100%; text-align:center;">{{ '{{ title }}' }}</code>
-                </div>
-                <div class="drag-box" style="cursor: pointer; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;" (click)="copyTag('{{ date }}')">
-                    <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Fecha Legible</span>
-                    <code class="token-tag" title="Clic para copiar" style="width:100%; text-align:center;">{{ '{{ date }}' }}</code>
-                </div>
-                <div class="drag-box" style="cursor: pointer; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;" (click)="copyTag('{{ summary }}')">
-                    <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Resumen Ejecutivo</span>
-                    <code class="token-tag" title="Clic para copiar" style="width:100%; text-align:center;">{{ '{{ summary }}' }}</code>
-                </div>
-                <div class="drag-box" style="cursor: pointer; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;" (click)="copyTag('{{ decisions }}')">
-                    <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Decisiones Clave</span>
-                    <code class="token-tag" title="Clic para copiar" style="width:100%; text-align:center;">{{ '{{ decisions }}' }}</code>
-                </div>
-                <div class="drag-box" style="cursor: pointer; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;" (click)="copyTag('{{ risks }}')">
-                    <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Riesgos Identificados</span>
-                    <code class="token-tag" title="Clic para copiar" style="width:100%; text-align:center;">{{ '{{ risks }}' }}</code>
-                </div>
-                <div class="drag-box" style="cursor: pointer; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white;" (click)="copyTag('{{ agreements }}')">
-                    <span class="token-label" style="display:block; font-size:0.85rem; font-weight:500; margin-bottom:4px;">Acuerdos</span>
-                    <code class="token-tag" title="Clic para copiar" style="width:100%; text-align:center;">{{ '{{ agreements }}' }}</code>
-                </div>
-            </div>
-
-            <div class="mt-4 flex justify-between align-center" style="gap:1rem; border-top: 1px solid #e2e8f0; padding-top:1rem;">
-                <button class="btn btn-sm" style="background:#f1f5f9; color:#64748b; border:none;" (click)="isTraditionalConfigurator = false; activeTokens=[]">Volver al Constructor Visual</button>
-                <div style="display:flex; gap:0.5rem;">
-                    <button class="btn btn-secondary" (click)="showConfigurator = false; showUploadModal = false; successMsg=''">Cerrar</button>
-                    <!-- Guardar vacío para forzar fallback a docxtpl en backend -->
-                    <button class="btn btn-primary" (click)="activeTokens=[]; confirmMapping()">Guardar e Ignorar Bloques</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="fade-in">
-
-    <!-- Header identical to dashboard -->
-    <div class="header-actions">
-        <div>
-            <h2 class="section-title">Plantillas de Sesiones (Word Document)</h2>
-            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Sube y edita las plantillas con el formato de tu empresa.</p>
-        </div>
-        <button class="btn btn-primary" (click)="openCreateModal()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0.5rem;">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            Subir Plantilla
-        </button>
-    </div>
-
-    <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
-        <input type="text" class="modern-search" placeholder="🔍 Buscar por nombre o proyecto..." [(ngModel)]="searchText" style="flex:1;">
-    </div>
-
-    <!-- Tabla Full-Width -->
-    <div class="card glass-panel w-full">
-        <div class="card-body p-0">
-            <div class="table-container" *ngIf="isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th><div class="skeleton skeleton-text" style="width: 40px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 180px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 100px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 60px;"></div></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let i of [1,2,3]">
-                            <td><div class="skeleton skeleton-text" style="width: 30px;"></div></td>
-                            <td><div class="skeleton skeleton-title" style="margin-bottom: 0;"></div></td>
-                            <td><div class="skeleton skeleton-text" style="width: 80px;"></div></td>
-                            <td><div class="skeleton skeleton-text" style="width: 60px; height: 32px"></div></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="table-container" *ngIf="!isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre del Documento</th>
-                            <th>Proyecto / Ruta</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let t of filteredTemplates">
-                            <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{ t.id }}</span></td>
-                            <td>
-                                <span style="display: flex; align-items: center; gap: 0.5rem; font-weight:600; color:var(--text-main);">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                                        <polyline points="10 9 9 9 8 9"></polyline>
-                                    </svg>
-                                    {{ t.name }}
-                                </span>
-                            </td>
-                            <td><span class="badge badge-primary">{{ t.project_id || 'Global' }}</span></td>
-                            <td>
-                                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                                    <button class="btn btn-sm" style="background:#fefce8; color:#ca8a04; border:1px solid #fef08a;" (click)="openConfigurator(t)" title="Ver Llaves Word">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                        Variables
-                                    </button>
-                                    <button class="btn btn-sm" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;" (click)="editTemplate(t)" title="Editar Nombre / Re-subir .docx">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        Editar
-                                    </button>
-                                    <button class="btn btn-sm" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;" (click)="deleteTemplate(t.id)" [disabled]="isDeleting">
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr *ngIf="templates.length === 0">
-                            <td colspan="4" class="p-0">
-                                <div class="empty-state">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    </svg>
-                                    <h4>Aún no hay plantillas (.docx) en la base de datos</h4>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </footer>
     </div>
 </div>

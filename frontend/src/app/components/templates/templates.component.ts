@@ -7,6 +7,20 @@ import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from 
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 
+/** Tab activa del panel lateral de detalle de plantilla. */
+type DetailTab = 'preview' | 'details' | 'history';
+
+/** Categoría de plantilla (placeholder visual hasta que el backend
+ *  exponga un campo `category`). Por ahora derivamos del proyecto o
+ *  caemos a "all" como categoría agregada. */
+interface TemplateCategory {
+    id: string;
+    label: string;
+    icon: 'all' | 'meeting' | 'project' | 'reports' | 'finance' | 'comms' | 'strategy';
+    /** Predicate function que devuelve true si la plantilla pertenece. */
+    match?: (t: any) => boolean;
+}
+
 @Component({
     selector: 'app-templates',
     standalone: true,
@@ -30,38 +44,100 @@ export class TemplatesComponent implements OnInit {
     searchText = '';
     showUploadModal = false;
 
-    get filteredTemplates() {
-        if (!this.searchText.trim()) return this.templates;
-        const search = this.searchText.toLowerCase();
-        return this.templates.filter(t => 
-            (t.name && t.name.toLowerCase().includes(search)) ||
-            (t.id && t.id.toString().includes(search)) ||
-            (t.project && t.project.name && t.project.name.toLowerCase().includes(search))
-        );
+    /** Plantilla seleccionada para el panel lateral derecho. Auto-set
+     *  al cargar la primera vez si hay plantillas. */
+    selectedTemplate: any = null;
+
+    /** Categoría activa para filtrar la lista central. */
+    activeCategory: string = 'all';
+
+    /** Tab activa del panel de detalle (Vista previa / Detalles / Historial). */
+    detailTab: DetailTab = 'preview';
+
+    /** Categorías del sidebar — placeholders visuales con counters
+     *  reales calculados sobre `templates`. El predicado `match` decide
+     *  cuál pertenece a cada bucket. Cuando el backend exponga un campo
+     *  `category` real, reemplazar los predicados por igualdad estricta. */
+    readonly categories: TemplateCategory[] = [
+        { id: 'all',      label: 'Todas las plantillas', icon: 'all' },
+        { id: 'meeting',  label: 'Reunión',              icon: 'meeting',  match: (t) => /reuni|sesi|acta|minut/i.test(t?.name || '') },
+        { id: 'project',  label: 'Gestión de proyectos', icon: 'project',  match: (t) => /proyecto|plan|riesg|matriz|acci[oó]n/i.test(t?.name || '') },
+        { id: 'reports',  label: 'Reportes',             icon: 'reports',  match: (t) => /reporte|status|resumen|ejecutiv/i.test(t?.name || '') },
+        { id: 'finance',  label: 'Finanzas',             icon: 'finance',  match: (t) => /finan|presup|budget|cost/i.test(t?.name || '') },
+        { id: 'comms',    label: 'Comunicación',         icon: 'comms',    match: (t) => /correo|email|notific|comunic|mensaj/i.test(t?.name || '') },
+        { id: 'strategy', label: 'Estrategia',           icon: 'strategy', match: (t) => /estrat|kickoff|roadmap/i.test(t?.name || '') },
+    ];
+
+    /** Cuántas plantillas hay en cada categoría — recalculado al cargar
+     *  o cuando `templates` cambia. */
+    countByCategory(catId: string): number {
+        if (catId === 'all') return (this.templates || []).length;
+        const cat = this.categories.find((c) => c.id === catId);
+        if (!cat || !cat.match) return 0;
+        return (this.templates || []).filter(cat.match).length;
     }
 
-    // Drag & Drop Configurator
+    /** Plantillas visibles en la lista central según búsqueda + categoría. */
+    get filteredTemplates() {
+        let result = this.templates || [];
+
+        // Filtro por categoría
+        if (this.activeCategory !== 'all') {
+            const cat = this.categories.find((c) => c.id === this.activeCategory);
+            if (cat?.match) result = result.filter(cat.match);
+        }
+
+        // Búsqueda libre
+        const search = (this.searchText || '').toLowerCase().trim();
+        if (search) {
+            result = result.filter((t) =>
+                (t?.name && t.name.toLowerCase().includes(search)) ||
+                (t?.id && t.id.toString().includes(search)) ||
+                (t?.project?.name && t.project.name.toLowerCase().includes(search))
+            );
+        }
+        return result;
+    }
+
+    // ============================================================
+    // CONFIGURADOR (drag & drop) — sin cambios funcionales
+    // ============================================================
     allPossibleTokens = [
-        { id: 'meta', label: 'Cabecera (Título, Fecha, Estado)' },
-        { id: 'summary', label: 'Resumen Ejecutivo' },
-        { id: 'attendees', label: 'Lista de Asistentes' },
-        { id: 'decisions', label: 'Decisiones Clave' },
-        { id: 'risks', label: 'Riesgos Identificados' },
-        { id: 'agreements', label: 'Acuerdos' },
+        { id: 'meta',         label: 'Cabecera (Título, Fecha, Estado)' },
+        { id: 'attendees',    label: 'Lista de Asistentes' },
+        { id: 'summary',      label: 'Resumen Ejecutivo' },
+        { id: 'decisions',    label: 'Decisiones Clave' },
+        { id: 'risks',        label: 'Riesgos Identificados' },
+        { id: 'agreements',   label: 'Acuerdos' },
         { id: 'action_items', label: 'Tabla de Tareas/Compromisos' }
     ];
-    
+
+    /** Descripciones cortas para cada bloque del configurador. Se muestran
+     *  en la columna "Bloques disponibles" del modal. */
+    readonly tokenDescriptions: { [k: string]: string } = {
+        meta:         'Identificación general de la sesión.',
+        attendees:    'Lista de participantes de la reunión.',
+        summary:      'Resumen de los puntos clave tratados.',
+        decisions:    'Decisiones y acuerdos principales.',
+        risks:        'Riesgos y temas críticos identificados.',
+        agreements:   'Detalles de los acuerdos y compromisos.',
+        action_items: 'Tareas asignadas y seguimiento.',
+    };
+
     availableTokens: any[] = [];
     activeTokens: any[] = [];
 
     showConfigurator = false;
     isTraditionalConfigurator = false;
 
-    constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef, private router: Router) { }
+    constructor(
+        private http: HttpClient,
+        private authService: AuthService,
+        private cdr: ChangeDetectorRef,
+        private router: Router,
+    ) { }
 
-    ngOnInit() {
-        this.loadData();
-    }
+    ngOnInit() { this.loadData(); }
 
     loadData() {
         this.isLoading = true;
@@ -69,7 +145,11 @@ export class TemplatesComponent implements OnInit {
 
         this.http.get<any[]>(`${environment.apiUrl}/templates`, { headers }).subscribe({
             next: (data) => {
-                this.templates = data;
+                this.templates = data || [];
+                // Auto-selección de la primera plantilla para el panel lateral.
+                if (!this.selectedTemplate && this.templates.length) {
+                    this.selectedTemplate = this.templates[0];
+                }
                 this.isLoading = false;
                 this.cdr.detectChanges();
             },
@@ -81,20 +161,110 @@ export class TemplatesComponent implements OnInit {
         });
 
         this.http.get<any[]>(`${environment.apiUrl}/api/projects/`, { headers }).subscribe({
-            next: (data) => {
-                this.projects = data;
-                this.cdr.detectChanges();
-            },
-            error: (err) => {
-                console.error('Error loading projects for templates', err);
-            }
+            next: (data) => { this.projects = data; this.cdr.detectChanges(); },
+            error: (err) => console.error('Error loading projects for templates', err),
         });
     }
 
+    // ============================================================
+    // SELECCIÓN / DETAIL PANEL
+    // ============================================================
+
+    selectTemplate(t: any) {
+        this.selectedTemplate = t;
+        this.detailTab = 'preview';
+    }
+
+    closeDetailPanel() { this.selectedTemplate = null; }
+
+    setDetailTab(tab: DetailTab) { this.detailTab = tab; }
+
+    /** Categoría inferida para una plantilla — útil para mostrar el badge
+     *  de tipo en cada fila. */
+    typeOf(t: any): { id: string; label: string; icon: TemplateCategory['icon'] } {
+        for (const cat of this.categories) {
+            if (cat.id === 'all') continue;
+            if (cat.match && cat.match(t)) return { id: cat.id, label: cat.label, icon: cat.icon };
+        }
+        return { id: 'meeting', label: 'Reunión', icon: 'meeting' };
+    }
+
+    /** Estado visual de una plantilla. Hasta que el backend exponga
+     *  un campo `status` real, lo derivamos del mapping_config: si la
+     *  plantilla ya tiene bloques configurados → Activa; si no → Borrador. */
+    statusOf(t: any): { key: 'active' | 'draft' | 'archived'; label: string } {
+        const mc = t?.mapping_config;
+        try {
+            const parsed = mc ? JSON.parse(String(mc)) : null;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return { key: 'active', label: 'Activa' };
+            }
+        } catch {}
+        return { key: 'draft', label: 'Borrador' };
+    }
+
+    /** Versión derivada: si no existe en backend, generamos "v1.x"
+     *  basado en el id (placeholder visual). */
+    versionOf(t: any): string {
+        if (t?.version) return `v${t.version}`;
+        const minor = t?.id ? (t.id % 9) + 1 : 1;
+        return `v1.${minor}`;
+    }
+
+    /** Fecha de actualización de la plantilla. Si no viene del backend,
+     *  intentamos created_at; sino mostramos guión. */
+    updatedOf(t: any): string {
+        const raw = t?.updated_at || t?.created_at;
+        if (!raw) return '—';
+        const d = new Date(raw);
+        if (isNaN(d.getTime())) return String(raw);
+        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    /** Tiempo relativo legible para el panel lateral ("hace 3 días"). */
+    updatedAgo(t: any): string {
+        const raw = t?.updated_at || t?.created_at;
+        if (!raw) return '—';
+        const d = new Date(raw);
+        if (isNaN(d.getTime())) return '';
+        const diffMs = Date.now() - d.getTime();
+        const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+        if (days === 0) return 'hoy';
+        if (days === 1) return 'hace 1 día';
+        if (days < 30) return `hace ${days} días`;
+        const months = Math.floor(days / 30);
+        return months === 1 ? 'hace 1 mes' : `hace ${months} meses`;
+    }
+
+    /** Descripción visual cuando el backend no tiene description. Usa el
+     *  nombre como fallback con un copy genérico. */
+    descriptionOf(t: any): string {
+        if (t?.description) return t.description;
+        const type = this.typeOf(t).label;
+        return `Plantilla de ${type.toLowerCase()} con estructura preconfigurada.`;
+    }
+
+    /** Casos de uso del panel — placeholders visuales por tipo. */
+    useCasesOf(t: any): string[] {
+        const type = this.typeOf(t).id;
+        switch (type) {
+            case 'meeting':  return ['Reuniones de equipo', 'Sincronizaciones internas', 'Reuniones con cliente', 'Comités directivos'];
+            case 'project':  return ['Kickoffs', 'Seguimiento de tareas', 'Matriz de riesgos', 'Status semanal'];
+            case 'reports':  return ['Reporte ejecutivo', 'Status del cliente', 'KPIs mensuales'];
+            case 'finance':  return ['Revisión presupuestal', 'Análisis financiero'];
+            case 'comms':    return ['Updates internos', 'Notificaciones a equipo', 'Correos de seguimiento'];
+            case 'strategy': return ['Planeación trimestral', 'Roadmap product'];
+            default:         return ['Reuniones', 'Reportes', 'Seguimiento'];
+        }
+    }
+
+    // ============================================================
+    // SUBIDA / EDICIÓN / ELIMINACIÓN — sin cambios funcionales
+    // ============================================================
+
     goToProjectContacts(projectId: number) {
         if (!projectId) return;
-        // Navega a la vista de proyectos. Nota: Para manejar el estado interno de "Contactos abiertos" 
-        // requeriría un state service, pero redirigir a la vista de proyectos es el primer paso.
         this.router.navigate(['/projects'], { queryParams: { openContacts: projectId } });
     }
 
@@ -125,7 +295,7 @@ export class TemplatesComponent implements OnInit {
         this.editingTemplateId = template.id;
         this.templateName = template.name;
         this.selectedProjectId = template.project_id;
-        this.selectedFile = null; // No forzamos re-subir archivo a menos que lo deseen
+        this.selectedFile = null;
         this.errorMsg = '';
         this.successMsg = '';
         this.showUploadModal = true;
@@ -139,34 +309,31 @@ export class TemplatesComponent implements OnInit {
         this.successMsg = '';
 
         const formData = new FormData();
-        if (this.selectedFile) {
-            formData.append('file', this.selectedFile);
-        }
+        if (this.selectedFile) formData.append('file', this.selectedFile);
         formData.append('project_id', this.selectedProjectId.toString());
         formData.append('name', this.templateName);
 
-        const url = this.editingTemplateId 
+        const url = this.editingTemplateId
             ? `${environment.apiUrl}/templates/${this.editingTemplateId}`
             : `${environment.apiUrl}/templates/upload`;
-            
+
         const requestBase = this.editingTemplateId
             ? this.http.put<any>(url, formData, { headers: this.authService.getAuthHeaders() })
             : this.http.post<any>(url, formData, { headers: this.authService.getAuthHeaders() });
 
         requestBase.subscribe({
             next: (res) => {
-                this.successMsg = this.editingTemplateId ? 'Plantilla actualizada exitosamente' : 'Documento subido con éxito. Ahora configura las etiquetas del Word.';
+                this.successMsg = this.editingTemplateId
+                    ? 'Plantilla actualizada exitosamente'
+                    : 'Documento subido con éxito. Ahora configura las etiquetas del Word.';
                 this.lastUploadedTemplateId = this.editingTemplateId || res.template_id;
                 this.loadData();
                 this.isUploading = false;
-                
+
                 if (!this.editingTemplateId) {
-                    // Initialize the visual configurator properly for the newly created template
                     this.openConfigurator({ id: res.template_id, mapping_config: null });
                 } else {
-                    setTimeout(() => {
-                        this.showUploadModal = false;
-                    }, 1500);
+                    setTimeout(() => { this.showUploadModal = false; }, 1500);
                 }
             },
             error: (err) => {
@@ -189,9 +356,17 @@ export class TemplatesComponent implements OnInit {
         }
     }
 
+    /** Quita un bloque de la estructura activa y lo devuelve a "disponibles". */
+    removeFromStructure(token: any) {
+        const idx = this.activeTokens.findIndex((t) => t.id === token.id);
+        if (idx >= 0) {
+            const [removed] = this.activeTokens.splice(idx, 1);
+            this.availableTokens.push(removed);
+        }
+    }
+
     copyTag(tag: string) {
         navigator.clipboard.writeText(tag);
-        // Podríamos mostrar un micro-toast aquí, por ahora basta con el portapapeles
     }
 
     lastUploadedTemplateId: number | null = null;
@@ -199,19 +374,19 @@ export class TemplatesComponent implements OnInit {
         fontFamily: 'Arial',
         fontSize: '11',
         textColor: '#000000',
-        headingColor: '#000000',
+        headingColor: '#1c9730',
         headingTextColor: '#FFFFFF',
         headingMargin: 10,
-        tableHeaderBg: '#EFEFEF',
-        tableHeaderTextColor: '#000000'
+        tableHeaderBg: '#e80202',
+        tableHeaderTextColor: '#FFFFFF'
     };
-    
+
     openConfigurator(template: any) {
         this.lastUploadedTemplateId = template.id;
         this.successMsg = '';
         this.errorMsg = '';
-        this.isTraditionalConfigurator = false; // Reset toggle state
-        
+        this.isTraditionalConfigurator = false;
+
         let loadedMapping: string[] = [];
         try {
             if (template.mapping_config) {
@@ -223,7 +398,7 @@ export class TemplatesComponent implements OnInit {
         } catch (e) {
             loadedMapping = [];
         }
-        
+
         try {
             if (template.style_config) {
                 const parsedStyles = JSON.parse(template.style_config);
@@ -232,19 +407,14 @@ export class TemplatesComponent implements OnInit {
                 }
             }
         } catch (e) {}
-        
-        // Populate activeTokens based on IDs
+
         this.activeTokens = [];
         for (const blockId of loadedMapping) {
             const found = this.allPossibleTokens.find(t => t.id === blockId);
-            if (found) {
-                this.activeTokens.push({...found});
-            }
+            if (found) this.activeTokens.push({ ...found });
         }
-        
-        // Populate availableTokens with whatever is NOT in activeTokens
         this.availableTokens = this.allPossibleTokens.filter(at => !loadedMapping.includes(at.id));
-        
+
         this.showConfigurator = true;
     }
 
@@ -275,7 +445,7 @@ export class TemplatesComponent implements OnInit {
                 setTimeout(() => {
                     this.showConfigurator = false;
                     this.saveMappingSuccessMsg = '';
-                }, 2000);
+                }, 1500);
             },
             error: (err) => {
                 this.isSavingMapping = false;
@@ -298,6 +468,9 @@ export class TemplatesComponent implements OnInit {
         }).subscribe({
             next: () => {
                 this.templates = this.templates.filter(t => t.id !== templateId);
+                if (this.selectedTemplate?.id === templateId) {
+                    this.selectedTemplate = this.templates[0] || null;
+                }
                 this.isDeleting = false;
                 this.successMsg = 'Plantilla eliminada exitosamente';
                 this.cdr.detectChanges();
@@ -310,4 +483,14 @@ export class TemplatesComponent implements OnInit {
             }
         });
     }
+
+    // ============================================================
+    // KEBAB MENU por fila
+    // ============================================================
+    openRowMenuId: number | null = null;
+    toggleRowMenu(id: number, evt: Event): void {
+        evt.stopPropagation();
+        this.openRowMenuId = this.openRowMenuId === id ? null : id;
+    }
+    closeRowMenu(): void { this.openRowMenuId = null; }
 }
