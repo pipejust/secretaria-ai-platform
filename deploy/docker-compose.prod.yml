@@ -114,6 +114,16 @@ services:
     # Coolify enrutará el dominio `api.<tu-dominio>` a este puerto.
     expose:
       - "8000"
+    # IMPORTANTE: Coolify genera labels traefik para el routing (Host + TLS)
+    # pero NO emite `loadbalancer.server.port`. Traefik entonces cae al
+    # puerto 80 por defecto y como uvicorn escucha en 8000 → timeout.
+    # Forzamos la label explícita aquí. El nombre del service usa el UUID
+    # del recurso de Coolify (env var inyectada por Coolify en build),
+    # de modo que coincide con los routers que Coolify autogenera
+    # (`https-0-${UUID}-backend`).
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.https-0-${COOLIFY_RESOURCE_UUID}-backend.loadbalancer.server.port=8000"
     networks:
       - acten
 
