@@ -95,13 +95,16 @@
 .aside-powered {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-8);
-    margin-top: var(--space-24);
-    padding: var(--space-6) var(--space-10);
-    margin-left: calc(var(--space-10) * -1);  /* alinea visualmente con el texto */
+    gap: var(--space-10);
+    margin-top: var(--space-28);
+    padding: var(--space-8) var(--space-12);
+    margin-left: calc(var(--space-12) * -1);  /* alinea visualmente con el texto */
     font-family: var(--font-sans);
-    font-size: var(--text-12);
-    color: rgba(255, 255, 255, 0.65);
+    /* Bump 12px → 14-15px para que sea legible como link real (un 12px
+       sin subrayado se confundía con texto decorativo). */
+    font-size: clamp(0.875rem, 0.95vw, 0.95rem);
+    font-weight: var(--fw-medium);
+    color: rgba(255, 255, 255, 0.7);
     letter-spacing: var(--tracking-wide);
     text-decoration: none;
     border-radius: var(--radius-sm, 6px);
@@ -121,35 +124,37 @@
 }
 
 .aside-powered img {
-    width: 22px;
-    height: 22px;
+    /* Bump 22→26px para que el imagologo Acten quede proporcional al
+       nuevo tamaño del texto "Powered by". */
+    width: 26px;
+    height: 26px;
     object-fit: contain;
     /* Sin caja: el imagologo ya tiene su propio tratamiento visual
        (contorno blanco + acentos). Cualquier fondo competiría con eso. */
 }
 
-/* Eyebrow — copy contextual encima del nombre de la empresa.
-   Tipografía de cuerpo (no display), tamaño chico, opaco — cumple su
-   función de "etiqueta" sin competir con el hero. */
+/* Eyebrow — copy contextual encima del hero. Sans, medium weight,
+   tamaño aumentado para que tenga presencia real (antes ~15px se
+   leía como un footnote, ahora ~19-22px tiene peso de "etiqueta"). */
 .aside-eyebrow {
     font-family: var(--font-sans);
-    font-size: clamp(0.95rem, 1.05vw, 1.05rem);
+    font-size: clamp(1.15rem, 1.4vw, 1.35rem);
     font-weight: var(--fw-medium);
     line-height: 1.4;
-    letter-spacing: 0.02em;
-    color: rgba(255, 255, 255, 0.72);
-    margin: 0 0 var(--space-12) 0;
+    letter-spacing: 0.01em;
+    color: rgba(255, 255, 255, 0.78);
+    margin: 0 0 var(--space-16) 0;
     text-wrap: balance;
 }
 
 .aside-hero {
     font-family: var(--font-display);
-    font-size: clamp(2.25rem, 2.9vw, 2.6rem);
+    font-size: clamp(2.8rem, 4vw, 3.6rem);
     font-weight: var(--fw-semibold);
-    line-height: 1.12;
-    letter-spacing: -0.018em;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
     color: #FFFFFF;
-    margin: 0 0 var(--space-24) 0;
+    margin: 0 0 var(--space-28) 0;
     text-wrap: balance;
 }
 
@@ -176,15 +181,15 @@
 }
 
 /* Hero CLIENTE — "A tu espacio / de trabajo." en 2 líneas con paralelismo
-   tipo Acten. Tamaño un poco más grande que el hero plataforma porque
-   el copy es más corto y cabe sin riesgo de overflow.
+   tipo Acten. Tamaño aumentado para darle protagonismo real al saludo
+   (clamp 3 → 4rem). El copy es corto, cabe sin riesgo de overflow.
    Decisión: NO renderizar el nombre de la empresa porque YA está en el
    logo (arriba) — repetirlo era redundante. */
 .aside-hero-client {
-    font-size: clamp(2.5rem, 3.4vw, 3.25rem);
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    margin-bottom: var(--space-20);
+    font-size: clamp(3rem, 4.4vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.022em;
+    margin-bottom: var(--space-24);
 }
 
 .aside-hero-client .hero-line {
@@ -205,11 +210,13 @@
 
 .aside-sub {
     font-family: var(--font-sans);
-    font-size: var(--text-15);
+    /* Aumentado de 15px → clamp(1.05 → 1.2rem) para que el sub-text
+       sea legible cómodamente y no se vea como "letra chica". */
+    font-size: clamp(1.05rem, 1.15vw, 1.2rem);
     line-height: 1.6;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.75);
     margin: 0;
-    max-width: 44ch;
+    max-width: 50ch;
     text-wrap: pretty;
 }
 
@@ -235,8 +242,10 @@
     align-items: center;
     gap: var(--space-12);
     font-family: var(--font-sans);
-    font-size: var(--text-13);
-    color: rgba(247, 244, 238, 0.65);
+    /* Bump 13px → ~15-16px para que "Seguro. Privado. Listo para empresas."
+       sea legible cómodamente como microcopy de confianza. */
+    font-size: clamp(0.95rem, 1vw, 1rem);
+    color: rgba(247, 244, 238, 0.7);
 }
 
 .aside-footer > svg {
