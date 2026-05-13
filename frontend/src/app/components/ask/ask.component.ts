@@ -258,6 +258,12 @@ export class AskComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
+    /** Resuelve el ModelOption activo a partir del id. Lo usamos en el
+     *  template para mostrar el label corto en la pill y el tooltip largo. */
+    selectedModelObj(): ModelOption | undefined {
+        return this.modelOptions.find(m => m.id === this.selectedModel);
+    }
+
     /** Cerrar popover al click fuera. */
     @HostListener('document:click', ['$event'])
     onDocumentClick(ev: MouseEvent): void {

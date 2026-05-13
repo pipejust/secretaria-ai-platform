@@ -365,13 +365,15 @@
                         </div>
 
                         <div class="aa-chat-input-right">
-                            <!-- Select real para cambiar modelo -->
-                            <label class="aa-model-select" title="Modelo de IA">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <!-- Select real para cambiar modelo (pill compacta) -->
+                            <label class="aa-model-select"
+                                   [title]="'Modelo: ' + (selectedModelObj()?.label || '') + ' · ' + (selectedModelObj()?.sublabel || '')">
+                                <svg class="aa-model-icon" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path>
                                 </svg>
-                                <select [(ngModel)]="selectedModel" [disabled]="isAsking">
+                                <span class="aa-model-label">{{ selectedModelObj()?.label || 'Modelo' }}</span>
+                                <select [(ngModel)]="selectedModel" [disabled]="isAsking" aria-label="Modelo de IA">
                                     <option *ngFor="let m of modelOptions"
                                             [value]="m.id"
                                             [disabled]="m.disabled">

@@ -935,6 +935,11 @@
 .content-area:has(.acten-projects),
 .content-area:has(.acten-ask) { padding: 0; background: #F7F9FC; }
 
+/* Para el chat de Acten queremos que la página entera entre en el viewport
+   sin scroll: la lista de turns scrollea por dentro, no la página. Por eso
+   apagamos el overflow-y de .content-area específicamente para esta vista. */
+.content-area:has(.acten-ask) { overflow: hidden; }
+
 @media (max-width: 720px) {
     .app-footer { grid-template-columns: 1fr; height: auto; padding: 12px 16px; gap: 6px; text-align: center; }
     .app-footer-left, .app-footer-right { justify-content: center; }
