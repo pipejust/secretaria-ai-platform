@@ -59,13 +59,13 @@
 
             <!--
               "Powered by Acten" — solo cuando el tenant NO es Acten.
-              Es un link a la web pública de Acten (https://acten.app/admin
-              por ahora, pendiente de página de marketing). Abre en nueva
-              pestaña con rel=noopener para no perder la sesión iniciando.
+              Link a la home pública de la plataforma (https://acten.app/).
+              Abre en nueva pestaña con rel=noopener para no perder la
+              sesión que el usuario iba a iniciar.
             -->
             <a class="aside-powered"
                *ngIf="!branding.isActenTenant()"
-               href="https://acten.app/admin"
+               href="https://acten.app/"
                target="_blank"
                rel="noopener noreferrer"
                [attr.aria-label]="'Conoce más sobre ' + branding.platformName()">
