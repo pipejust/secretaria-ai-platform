@@ -975,10 +975,16 @@
 .content-area:has(.tn-page),
 .content-area:has(.br-page) { padding: 0; background: var(--color-bg-base); }
 
-/* Para el chat de Acten queremos que la página entera entre en el viewport
-   sin scroll: la lista de turns scrollea por dentro, no la página. Por eso
-   apagamos el overflow-y de .content-area específicamente para esta vista. */
-.content-area:has(.acten-ask) { overflow: hidden; }
+/* Para el chat de Acten en DESKTOP queremos que la página entera entre en
+   el viewport sin scroll: la lista de turns scrollea por dentro, no la
+   página. Por eso apagamos el overflow-y de .content-area aquí.
+   En MOBILE (<=1100px) NO aplica — el ask.css cambia el layout a 1
+   columna con flujo vertical y el page-scroll es necesario para llegar
+   al chat/input. Sin esta condición, las sugerencias tapaban la pantalla
+   y el textarea era inalcanzable. */
+@media (min-width: 1101px) {
+    .content-area:has(.acten-ask) { overflow: hidden; }
+}
 
 @media (max-width: 720px) {
     .app-footer { grid-template-columns: 1fr; height: auto; padding: 12px 16px; gap: 6px; text-align: center; }

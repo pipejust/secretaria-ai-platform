@@ -1217,6 +1217,7 @@
 .aa-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ====== Responsive ====== */
+/* Tablet / mobile-wide: el grid pasa a 1 columna y el page scrollea. */
 @media (max-width: 1100px) {
     .acten-ask {
         height: auto;
@@ -1227,16 +1228,23 @@
         grid-template-columns: 1fr;
     }
     .aa-suggested {
-        max-height: 380px;
+        /* Sugerencias arriba con scroll INTERNO propio para que no
+           empujen el chat fuera del viewport. */
+        max-height: 320px;
         order: -1;
+        overflow-y: auto;
     }
     .aa-chat {
-        min-height: 600px;
+        min-height: 480px;
         height: auto;
     }
 }
+
+/* Mobile real: ajustes de tipografía + input STICKY al bottom para que
+   esté siempre alcanzable sin importar dónde haya hecho scroll el user.
+   Antes el textarea caía debajo del .app-footer y era invisible. */
 @media (max-width: 720px) {
-    .acten-ask { padding: 16px; gap: 12px; }
+    .acten-ask { padding: 12px; gap: 12px; }
     .aa-hero { flex-direction: column; align-items: stretch; gap: 10px; }
     .aa-hero-actions { width: 100%; }
     .aa-btn { flex: 1; justify-content: center; }
@@ -1244,8 +1252,29 @@
     .aa-q-bubble { max-width: 85%; }
     .aa-source-link { grid-template-columns: 26px 1fr; }
     .aa-source-date, .aa-source-kinds { grid-column: 1 / -1; padding-left: 36px; }
-    .aa-chat-list { padding: 14px 16px; }
-    .aa-chat-input-wrap { padding: 12px 16px 16px; }
+    .aa-chat-list {
+        padding: 14px 16px;
+        /* Espacio para que la última burbuja no quede tapada por el
+           input sticky de abajo. */
+        padding-bottom: 24px;
+    }
+    .aa-chat-input-wrap {
+        /* Sticky al bottom del chat panel: el textarea queda siempre
+           visible mientras el user scrollea las sugerencias o turnos. */
+        position: sticky;
+        bottom: 0;
+        padding: 10px 14px 14px;
+        background: var(--color-bg-panel);
+        z-index: 5;
+        /* Sombra sutil que separa el input del contenido scrollado
+           detrás — refuerza la jerarquía visual. */
+        box-shadow: 0 -8px 16px -8px rgba(15, 23, 42, 0.08);
+    }
+    /* Si el input se desborda visualmente sobre el footer del layout,
+       safe-area-inset-bottom protege en iOS con notch/home-indicator. */
+    .aa-chat-input-wrap {
+        padding-bottom: max(14px, env(safe-area-inset-bottom));
+    }
     .aa-task-table { font-size: 11.5px; }
     .aa-task-table thead th, .aa-task-table tbody td { padding: 8px 10px; }
 }

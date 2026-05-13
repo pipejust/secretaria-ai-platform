@@ -1328,11 +1328,21 @@
     .cal-body.with-panel { grid-template-columns: minmax(0, 1fr) 340px; }
 }
 @media (max-width: 1024px) {
-    .cal-page { padding: var(--space-20) var(--space-20); }
+    /* En tablet/mobile, NO confinar el calendario al viewport: la página
+       puede exceder 100vh y debe scrollear normalmente. Sin esto, el
+       overflow: hidden del :host cortaba contenido inalcanzable cuando
+       sumábamos topbar (64px) + footer (56px) + grid. */
+    :host {
+        height: auto;
+        min-height: calc(100vh - var(--aa-topbar-h, 64px));
+        overflow: visible;
+    }
+    .cal-page { padding: var(--space-20) var(--space-20); height: auto; }
     .cal-body.with-panel { grid-template-columns: 1fr; }
     .cal-panel { max-height: none; }
 }
 @media (max-width: 720px) {
+    .cal-page { padding: var(--space-12); }
     .cal-toolbar { flex-direction: column; align-items: stretch; }
     .cal-toolbar-left, .cal-toolbar-right { width: 100%; justify-content: space-between; }
     .cal-period { min-width: 0; }
