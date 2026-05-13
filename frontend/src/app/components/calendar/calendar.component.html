@@ -1,52 +1,610 @@
-<div class="cal-container">
-  <header class="header">
-    <h1>Calendario</h1>
-    <p class="subtitle">Conecta tu Google o Microsoft Calendar para que Notiva pueda
-       enlazar las próximas reuniones con sus actas automáticamente.</p>
-  </header>
+<div class="cal-page">
+  <!-- ============================================================
+       Toolbar (la grilla y el panel viven dentro de la card principal)
+       ============================================================ -->
+  <section class="cal-toolbar">
+    <div class="cal-toolbar-left">
+      <div class="cal-nav-group">
+        <button class="cal-icon-btn" (click)="prevMonth()" aria-label="Mes anterior">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button class="cal-icon-btn" (click)="nextMonth()" aria-label="Mes siguiente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <h2 class="cal-period">{{ monthYearLabel }}</h2>
+      <button class="cal-btn cal-btn--ghost" (click)="goToday()">Hoy</button>
+    </div>
 
-  <section class="connect-row">
-    <button class="btn btn-google" (click)="connect('google')">📅 Conectar Google</button>
-    <button class="btn btn-ms" (click)="connect('microsoft')">📅 Conectar Microsoft 365</button>
-    <button class="btn btn-sync" [disabled]="isSyncing || !accounts.length" (click)="syncNow()">
-      <span *ngIf="!isSyncing">🔄 Sincronizar ahora</span>
-      <span *ngIf="isSyncing">⌛ Sincronizando…</span>
+    <div class="cal-toolbar-right">
+      <div class="cal-view-switch" role="tablist">
+        <button class="cal-view-tab"
+                [class.is-active]="viewMode === 'month'"
+                (click)="setViewMode('month')">Mes</button>
+        <button class="cal-view-tab"
+                [class.is-active]="viewMode === 'week'"
+                (click)="setViewMode('week')">Semana</button>
+        <button class="cal-view-tab"
+                [class.is-active]="viewMode === 'agenda'"
+                (click)="setViewMode('agenda')">Agenda</button>
+      </div>
+
+      <button class="cal-btn cal-btn--ghost"
+              [class.is-active]="showFilters"
+              (click)="toggleFilters()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" class="cal-btn-ico">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+        </svg>
+        Filtros
+      </button>
+
+      <!-- Único trigger del lado derecho: dropdown con Conectar Google /
+           Conectar Microsoft 365 / Sincronizar ahora. -->
+      <div class="cal-sources" (click)="$event.stopPropagation()">
+        <button class="cal-btn cal-btn--ghost cal-sources-trigger"
+                [class.is-active]="showSourcesMenu"
+                (click)="toggleSourcesMenu()"
+                aria-haspopup="true"
+                aria-label="Cuentas y sincronización">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" class="cal-btn-ico">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Calendarios
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" class="cal-btn-chev">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+          <span class="cal-icon-btn-pulse" *ngIf="accounts.length"></span>
+        </button>
+
+        <div class="cal-sources-menu" *ngIf="showSourcesMenu">
+          <div class="cal-sources-section">
+            <div class="cal-sources-title">Conectadas</div>
+            <p class="cal-sources-empty" *ngIf="!accounts.length">
+              Aún no has conectado ningún calendario.
+            </p>
+            <ul class="cal-sources-list" *ngIf="accounts.length">
+              <li *ngFor="let a of accounts; trackBy: trackById" class="cal-source-row">
+                <span class="cal-source-badge cal-source-badge--{{a.provider}}">
+                  {{ a.provider === 'google' ? 'G' : 'M' }}
+                </span>
+                <div class="cal-source-meta">
+                  <span class="cal-source-email">{{ a.account_email }}</span>
+                  <span class="cal-source-status"
+                        [class.is-off]="!a.is_active">
+                    {{ a.is_active ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </div>
+                <button class="cal-source-disconnect" (click)="disconnect(a)" title="Desconectar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div class="cal-sources-divider"></div>
+
+          <div class="cal-sources-section">
+            <div class="cal-sources-title">Conectar nueva cuenta</div>
+            <button class="cal-source-cta cal-source-cta--google" (click)="connect('google')">
+              <span class="cal-source-badge cal-source-badge--google">G</span>
+              <span>Conectar Google Calendar</span>
+            </button>
+            <button class="cal-source-cta cal-source-cta--ms" (click)="connect('microsoft')">
+              <span class="cal-source-badge cal-source-badge--microsoft">M</span>
+              <span>Conectar Microsoft 365</span>
+            </button>
+          </div>
+
+          <div class="cal-sources-divider"></div>
+
+          <div class="cal-sources-section">
+            <button class="cal-source-cta cal-source-cta--sync"
+                    [disabled]="isSyncing || !accounts.length"
+                    (click)="syncNow()">
+              <span class="cal-source-badge cal-source-badge--sync">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     [class.is-spin]="isSyncing">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/>
+                  <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/>
+                </svg>
+              </span>
+              <span>{{ isSyncing ? 'Sincronizando…' : 'Sincronizar ahora' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Filters bar (collapsible)
+       ============================================================ -->
+  <section class="cal-filters" *ngIf="showFilters">
+    <div class="cal-filter-field">
+      <span class="cal-filter-label">Buscar</span>
+      <input type="text" class="cal-filter-input"
+             placeholder="Título, asistente, responsable…"
+             [(ngModel)]="filterSearch"/>
+    </div>
+    <div class="cal-filter-field">
+      <span class="cal-filter-label">Estado reuniones</span>
+      <div class="cal-segmented">
+        <button [class.is-active]="filterStatus==='all'"     (click)="filterStatus='all'">Todas</button>
+        <button [class.is-active]="filterStatus==='linked'"  (click)="filterStatus='linked'">Con acta</button>
+        <button [class.is-active]="filterStatus==='pending'" (click)="filterStatus='pending'">Pendientes</button>
+      </div>
+    </div>
+    <div class="cal-filter-field">
+      <span class="cal-filter-label">Capas</span>
+      <div class="cal-toggles">
+        <label class="cal-toggle">
+          <input type="checkbox" [(ngModel)]="showMeetings"/>
+          <span class="cal-toggle-dot cal-toggle-dot--indigo"></span>
+          Reuniones
+        </label>
+        <label class="cal-toggle">
+          <input type="checkbox" [(ngModel)]="showTasks"/>
+          <span class="cal-toggle-dot cal-toggle-dot--amber"></span>
+          Tareas
+        </label>
+        <label class="cal-toggle">
+          <input type="checkbox" [(ngModel)]="showCompletedTasks"/>
+          <span class="cal-toggle-dot cal-toggle-dot--emerald"></span>
+          Incluir completadas
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       Body: grid + detail panel
+       ============================================================ -->
+  <section class="cal-body" [class.with-panel]="showDetailPanel">
+
+    <!-- Calendar surface -->
+    <div class="cal-surface">
+      <!-- MONTH GRID -->
+      <ng-container *ngIf="viewMode === 'month'">
+        <div class="cal-weekdays">
+          <span *ngFor="let d of DAY_LABELS">{{ d }}</span>
+        </div>
+        <div class="cal-month-grid">
+          <ng-container *ngFor="let row of weekRows">
+            <div class="cal-cell"
+                 *ngFor="let cell of row; trackBy: trackByIso"
+                 [class.is-out]="!cell.inMonth"
+                 [class.is-today]="cell.isToday"
+                 [class.is-selected]="cell.isSelected"
+                 (click)="selectDay(cell)">
+              <div class="cal-cell-head">
+                <span class="cal-cell-num">{{ cell.day }}</span>
+              </div>
+              <ul class="cal-cell-events">
+                <li *ngFor="let ev of cell.events.slice(0, 3); trackBy: trackByEv"
+                    class="cal-pill cal-pill--{{eventColor(ev)}}"
+                    [title]="eventTime(ev) + ' · ' + ev.title">
+                  <span class="cal-pill-dot"></span>
+                  <span class="cal-pill-time">{{ eventTime(ev) }}</span>
+                  <span class="cal-pill-title">{{ ev.title }}</span>
+                </li>
+                <li *ngFor="let t of visibleTasks(cell); trackBy: trackById"
+                    class="cal-pill cal-pill--task cal-pill--{{taskColor(t)}}"
+                    [class.is-focused]="focusedTaskId === t.id"
+                    [title]="taskOwnerLabel(t) + ' · ' + t.title + (t.project_name ? ' · ' + t.project_name : '')"
+                    (click)="focusTask(t, $event)">
+                  <span class="cal-pill-avatar cal-avatar--{{ownerColor(t)}}">{{ ownerInitials(t) }}</span>
+                  <span class="cal-pill-title">{{ t.title }}</span>
+                </li>
+              </ul>
+              <span class="cal-cell-more" *ngIf="hiddenCount(cell) > 0">
+                +{{ hiddenCount(cell) }} más
+              </span>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+
+      <!-- WEEK GRID -->
+      <ng-container *ngIf="viewMode === 'week'">
+        <div class="cal-weekdays">
+          <span *ngFor="let d of DAY_LABELS">{{ d }}</span>
+        </div>
+        <div class="cal-week-grid">
+          <div class="cal-cell cal-cell--week"
+               *ngFor="let cell of currentWeek; trackBy: trackByIso"
+               [class.is-today]="cell.isToday"
+               [class.is-selected]="cell.isSelected"
+               (click)="selectDay(cell)">
+            <div class="cal-cell-head">
+              <span class="cal-cell-num">{{ cell.day }}</span>
+            </div>
+            <ul class="cal-cell-events cal-cell-events--week">
+              <li *ngFor="let ev of cell.events; trackBy: trackByEv"
+                  class="cal-pill cal-pill--{{eventColor(ev)}}"
+                  [title]="eventTime(ev) + ' · ' + ev.title">
+                <span class="cal-pill-dot"></span>
+                <span class="cal-pill-time">{{ eventTime(ev) }}</span>
+                <span class="cal-pill-title">{{ ev.title }}</span>
+              </li>
+              <li *ngFor="let t of cell.tasks; trackBy: trackById"
+                  class="cal-pill cal-pill--task cal-pill--{{taskColor(t)}}"
+                  [class.is-focused]="focusedTaskId === t.id"
+                  [title]="taskOwnerLabel(t) + ' · ' + t.title + (t.project_name ? ' · ' + t.project_name : '')"
+                  (click)="focusTask(t, $event)">
+                <span class="cal-pill-avatar cal-avatar--{{ownerColor(t)}}">{{ ownerInitials(t) }}</span>
+                <span class="cal-pill-title">{{ t.title }}</span>
+              </li>
+              <li class="cal-cell-empty"
+                  *ngIf="!cell.events.length && !cell.tasks.length">Sin actividad</li>
+            </ul>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- AGENDA LIST -->
+      <ng-container *ngIf="viewMode === 'agenda'">
+        <div class="cal-agenda">
+          <p class="cal-agenda-empty" *ngIf="!agendaGroups.length">
+            No hay reuniones en este rango. Sincroniza tu calendario externo para verlas aquí.
+          </p>
+          <div class="cal-agenda-day" *ngFor="let g of agendaGroups">
+            <h3 class="cal-agenda-date">{{ g.label }}</h3>
+            <ul class="cal-agenda-list">
+              <li *ngFor="let ev of g.events; trackBy: trackByEv"
+                  class="cal-agenda-item cal-agenda-item--{{eventColor(ev)}}">
+                <span class="cal-agenda-bar"></span>
+                <div class="cal-agenda-body">
+                  <div class="cal-agenda-time">{{ eventTimeRange(ev) }}</div>
+                  <div class="cal-agenda-title">{{ ev.title }}</div>
+                  <div class="cal-agenda-meta">
+                    <span>{{ eventLocation(ev) }}</span>
+                    <span class="cal-status cal-status--{{eventStatusKind(ev)}}">
+                      {{ eventStatusLabel(ev) }}
+                    </span>
+                  </div>
+                </div>
+              </li>
+              <li *ngFor="let t of g.tasks; trackBy: trackById"
+                  class="cal-agenda-item cal-agenda-item--task cal-agenda-item--task-{{taskKind(t)}}"
+                  (click)="openTask(t, $event)">
+                <span class="cal-agenda-bar"></span>
+                <div class="cal-agenda-body">
+                  <div class="cal-agenda-time">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" class="cal-meeting-ico">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Tarea
+                  </div>
+                  <div class="cal-agenda-title">{{ t.title }}</div>
+                  <div class="cal-agenda-meta">
+                    <span *ngIf="t.owner_name">{{ t.owner_name }}</span>
+                    <span *ngIf="t.project_name">· {{ t.project_name }}</span>
+                    <span class="cal-status cal-status--task-{{taskKind(t)}}">
+                      {{ taskKindLabel(t) }}
+                    </span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Loading overlay -->
+      <div class="cal-loading" *ngIf="isLoading">
+        <span class="cal-spinner"></span>
+        <span>Cargando reuniones…</span>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         Right detail panel
+         ============================================================ -->
+    <aside class="cal-panel" *ngIf="showDetailPanel">
+      <header class="cal-panel-head">
+        <div>
+          <h3 class="cal-panel-title">{{ selectedDayLabel }}</h3>
+          <p class="cal-panel-sub">{{ selectedDayCountLabel }}</p>
+        </div>
+        <div class="cal-panel-actions">
+          <button class="cal-btn cal-btn--primary cal-btn--sm"
+                  type="button"
+                  (click)="openNewTaskForSelectedDay()"
+                  title="Crear una nueva tarea para este día">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nueva tarea
+          </button>
+          <button class="cal-icon-btn cal-icon-btn--soft"
+                  (click)="closeDetailPanel()" aria-label="Cerrar panel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Meetings of selected day (ocultada por solicitud — la data sigue disponible) -->
+      <div class="cal-panel-section" *ngIf="showMeetingsInPanel">
+        <header class="cal-section-head">
+          <h4>Reuniones</h4>
+          <span class="cal-section-tag">{{ selectedDayEvents.length }}</span>
+        </header>
+        <p class="cal-panel-empty" *ngIf="!selectedDayEvents.length">
+          No hay reuniones programadas para este día.
+        </p>
+        <ul class="cal-meeting-list" *ngIf="selectedDayEvents.length">
+          <li *ngFor="let ev of selectedDayEvents; trackBy: trackByEv"
+              class="cal-meeting cal-meeting--{{eventColor(ev)}}">
+            <span class="cal-meeting-bar"></span>
+            <div class="cal-meeting-body">
+              <div class="cal-meeting-top">
+                <div class="cal-meeting-time">{{ eventTimeRange(ev) }}</div>
+                <span class="cal-status cal-status--{{eventStatusKind(ev)}}">
+                  {{ badgeLabel(ev) }}
+                </span>
+              </div>
+              <h4 class="cal-meeting-title">{{ ev.title }}</h4>
+              <div class="cal-meeting-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" class="cal-meeting-ico">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span>{{ eventLocation(ev) }}</span>
+              </div>
+              <div class="cal-meeting-footer" *ngIf="ev.attendees && ev.attendees.length">
+                <div class="cal-avatars">
+                  <span class="cal-avatar"
+                        *ngFor="let p of (ev.attendees || []).slice(0, 3)"
+                        [title]="p">{{ eventInitials(p) }}</span>
+                  <span class="cal-avatar cal-avatar--more"
+                        *ngIf="(ev.attendees && ev.attendees.length || 0) > 3">
+                    +{{ ev.attendees.length - 3 }}
+                  </span>
+                </div>
+                <div class="cal-meeting-actions">
+                  <a *ngIf="ev.session_id"
+                     [routerLink]="['/admin/curation', ev.session_id]"
+                     class="cal-link-soft">Ver acta →</a>
+                  <button *ngIf="ev.meeting_url"
+                          class="cal-link-soft"
+                          (click)="openMeetingLink(ev, $event)">Unirse →</button>
+                </div>
+              </div>
+              <div class="cal-meeting-actions cal-meeting-actions--solo"
+                   *ngIf="!(ev.attendees && ev.attendees.length) && (ev.session_id || ev.meeting_url)">
+                <a *ngIf="ev.session_id"
+                   [routerLink]="['/admin/curation', ev.session_id]"
+                   class="cal-link-soft">Ver acta →</a>
+                <button *ngIf="ev.meeting_url"
+                        class="cal-link-soft"
+                        (click)="openMeetingLink(ev, $event)">Unirse →</button>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Tasks of selected day -->
+      <div class="cal-panel-section">
+        <header class="cal-section-head">
+          <h4>Tareas</h4>
+          <span class="cal-section-tag">{{ selectedDayTasks.length }}</span>
+        </header>
+        <p class="cal-panel-empty" *ngIf="!selectedDayTasks.length">
+          No hay tareas con fecha en este día.
+        </p>
+        <ul class="cal-task-list" *ngIf="selectedDayTasks.length">
+          <li *ngFor="let t of selectedDayTasks; trackBy: trackById"
+              [id]="'cal-task-' + t.id"
+              class="cal-task cal-task--{{taskKind(t)}}"
+              [class.is-focused]="focusedTaskId === t.id"
+              (click)="openTask(t, $event)">
+            <div class="cal-task-body">
+              <div class="cal-task-top">
+                <div class="cal-task-title">{{ t.title }}</div>
+                <span class="cal-status cal-status--task-{{taskKind(t)}}">
+                  {{ taskKindLabel(t) }}
+                </span>
+              </div>
+              <div class="cal-task-foot">
+                <div class="cal-avatars" *ngIf="t.owner_name || t.owner_email">
+                  <span class="cal-avatar cal-avatar--{{ownerColor(t)}}"
+                        [title]="t.owner_name || t.owner_email">
+                    {{ ownerInitials(t) }}
+                  </span>
+                  <span class="cal-task-owner-name">{{ taskOwnerLabel(t) }}</span>
+                </div>
+                <span *ngIf="t.project_name" class="cal-task-project">{{ t.project_name }}</span>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Deadlines -->
+      <div class="cal-panel-section cal-panel-section--deadlines">
+        <header class="cal-section-head">
+          <h4>Vencimientos</h4>
+          <a class="cal-section-link" [routerLink]="['/admin/pendientes']">Ver todo</a>
+        </header>
+        <p class="cal-panel-empty" *ngIf="!deadlines.length">
+          No hay actas ni tareas pendientes en los próximos días.
+        </p>
+        <ul class="cal-deadline-list" *ngIf="deadlines.length">
+          <li *ngFor="let d of deadlines; trackBy: trackById"
+              class="cal-deadline" [class.is-urgent]="d.urgent">
+            <span class="cal-deadline-ico" [class.is-urgent]="d.urgent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </span>
+            <div class="cal-deadline-body">
+              <div class="cal-deadline-title">{{ d.title }}</div>
+              <div class="cal-deadline-meta">
+                <span class="cal-deadline-when">{{ d.when }}</span>
+              </div>
+            </div>
+            <span class="cal-deadline-badge" *ngIf="d.urgent">Vence hoy</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Notes -->
+      <div class="cal-panel-section cal-panel-section--notes">
+        <header class="cal-section-head">
+          <h4>Notas</h4>
+          <button class="cal-section-link cal-section-link--btn" (click)="openNoteEditor()">
+            + Agregar nota
+          </button>
+        </header>
+        <div class="cal-note-form" *ngIf="showNoteEditor">
+          <textarea class="cal-note-input"
+                    rows="3"
+                    placeholder="Escribe una nota para este día…"
+                    [(ngModel)]="newNoteText"
+                    (keydown.enter)="$event.preventDefault(); addNote()"></textarea>
+          <div class="cal-note-form-actions">
+            <button class="cal-link-soft" (click)="cancelNoteEditor()">Cancelar</button>
+            <button class="cal-btn cal-btn--soft" (click)="addNote()">Guardar nota</button>
+          </div>
+        </div>
+        <p class="cal-panel-empty" *ngIf="!notes.length && !showNoteEditor">
+          Aún no hay notas. Toca "Agregar nota" para registrar una idea.
+        </p>
+        <ul class="cal-note-list" *ngIf="notes.length">
+          <li *ngFor="let n of notes; trackBy: trackById" class="cal-note">
+            <p class="cal-note-text">{{ n.text }}</p>
+            <div class="cal-note-foot">
+              <span class="cal-note-meta">Actualizado por ti · {{ noteDate(n) }}</span>
+              <button class="cal-note-del" (click)="removeNote(n.id)" aria-label="Eliminar nota">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Reopen panel handle when closed -->
+    <button class="cal-panel-reopen" *ngIf="!showDetailPanel"
+            (click)="openDetailPanel()" aria-label="Abrir panel del día">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
     </button>
   </section>
 
-  <section class="accounts" *ngIf="accounts.length">
-    <h2>Cuentas conectadas</h2>
-    <ul>
-      <li *ngFor="let a of accounts; trackBy: trackById" class="acc-row">
-        <span class="provider provider--{{a.provider}}">{{ a.provider }}</span>
-        <span class="email">{{ a.account_email }}</span>
-        <span class="status" [class.inactive]="!a.is_active">{{ a.is_active ? '✓ Activa' : '✗ Inactiva' }}</span>
-        <button class="btn-link" (click)="disconnect(a)">Desconectar</button>
-      </li>
-    </ul>
-  </section>
+  <!-- ============= MODAL: Nueva tarea desde el calendario ============= -->
+  <div class="cal-modal-backdrop" *ngIf="showNewTaskModal" (click)="closeNewTaskModal()">
+    <div class="cal-modal" (click)="$event.stopPropagation()">
+      <header class="cal-modal-head">
+        <div>
+          <h3 class="cal-modal-title">Nueva tarea</h3>
+          <p class="cal-modal-sub">
+            Asocia la tarea a una reunión del workspace.
+            <ng-container *ngIf="newTask.due_date"> · {{ newTask.due_date }}</ng-container>
+          </p>
+        </div>
+        <button type="button" class="cal-icon-btn cal-icon-btn--soft" (click)="closeNewTaskModal()" title="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </header>
 
-  <section class="events">
-    <h2>Próximos 7 días</h2>
-    <p *ngIf="isLoading" class="hint">Cargando…</p>
-    <p *ngIf="!isLoading && !events.length" class="hint">
-      Sin eventos próximos. Conecta una cuenta y presiona "Sincronizar ahora".
-    </p>
-    <ul *ngIf="!isLoading && events.length" class="event-list">
-      <li *ngFor="let ev of events; trackBy: trackById" class="event-row">
-        <div class="ev-time">{{ formatDate(ev.start_at) }}</div>
-        <div class="ev-body">
-          <strong>{{ ev.title }}</strong>
-          <div class="ev-meta">
-            <span *ngIf="ev.attendees?.length">{{ ev.attendees.length }} asistentes</span>
-            <a *ngIf="ev.meeting_url" [href]="ev.meeting_url" target="_blank" rel="noopener">📞 unirse</a>
-            <a *ngIf="ev.session_id" [routerLink]="['/admin/curation', ev.session_id]" class="link-session">
-              ✓ acta #{{ ev.session_id }}
-            </a>
-            <span *ngIf="!ev.session_id" class="badge-missing">⚠ Sin acta aún</span>
+      <div class="cal-modal-body">
+        <div class="cal-form-row">
+          <label class="cal-form-label">Reunión</label>
+          <select class="cal-input" [(ngModel)]="newTask.session_id">
+            <option [ngValue]="null">— Selecciona una reunión —</option>
+            <option *ngFor="let s of newTaskSessions" [ngValue]="s.id">{{ s.title }}</option>
+          </select>
+        </div>
+
+        <div class="cal-form-row">
+          <label class="cal-form-label">Título</label>
+          <input type="text" class="cal-input" [(ngModel)]="newTask.title"
+                 placeholder="Ej: Revisar pruebas funcionales en QA" />
+        </div>
+
+        <div class="cal-form-grid">
+          <div class="cal-form-row">
+            <label class="cal-form-label">Responsable</label>
+            <input type="text" class="cal-input" [(ngModel)]="newTask.owner_name" placeholder="Nombre" />
+          </div>
+          <div class="cal-form-row">
+            <label class="cal-form-label">Email</label>
+            <input type="email" class="cal-input" [(ngModel)]="newTask.owner_email" placeholder="correo@empresa.com" />
+          </div>
+          <div class="cal-form-row">
+            <label class="cal-form-label">Prioridad</label>
+            <select class="cal-input" [(ngModel)]="newTask.priority">
+              <option value="alta">Alta</option>
+              <option value="media">Media</option>
+              <option value="baja">Baja</option>
+            </select>
           </div>
         </div>
-      </li>
-    </ul>
-  </section>
+
+        <div class="cal-form-grid">
+          <div class="cal-form-row">
+            <label class="cal-form-label">Fecha</label>
+            <input type="date" class="cal-input" [(ngModel)]="newTask.due_date" />
+          </div>
+          <div class="cal-form-row">
+            <label class="cal-form-label">Hora <small>(opcional)</small></label>
+            <input type="time" class="cal-input" [(ngModel)]="newTask.due_time" />
+          </div>
+        </div>
+
+        <div class="cal-form-row">
+          <label class="cal-form-label">Descripción <small>(opcional)</small></label>
+          <textarea class="cal-input cal-textarea" rows="3" [(ngModel)]="newTask.description"
+                    placeholder="Detalle, contexto, criterios de aceptación..."></textarea>
+        </div>
+      </div>
+
+      <footer class="cal-modal-foot">
+        <button type="button" class="cal-btn cal-btn--ghost" (click)="closeNewTaskModal()">Cancelar</button>
+        <button type="button" class="cal-btn cal-btn--primary"
+                (click)="submitNewTask()"
+                [disabled]="isCreatingTask || !newTask.session_id || !newTask.title.trim()">
+          {{ isCreatingTask ? 'Creando…' : 'Crear tarea' }}
+        </button>
+      </footer>
+    </div>
+  </div>
 </div>

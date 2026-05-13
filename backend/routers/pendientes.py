@@ -74,6 +74,10 @@ def _serialize(item: ActionItem, project_name: str, now: datetime) -> Dict[str, 
         "owner_name": item.owner_name,
         "owner_email": item.owner_email,
         "due_date": item.due_date,
+        # Nuevos campos: prioridad y hora límite. Si la columna no existe
+        # aún (modelo viejo), getattr devuelve los defaults seguros.
+        "due_time": getattr(item, "due_time", None),
+        "priority": (getattr(item, "priority", None) or "media").lower(),
         "status": item.status,
         "completed_at": item.completed_at,
         "is_approved": item.is_approved,
@@ -93,6 +97,7 @@ def list_pendientes(
     ),
     project_id: Optional[int] = Query(None),
     owner: Optional[str] = Query(None, description="Texto a buscar en owner_name/email"),
+    priority: Optional[str] = Query(None, description="alta | media | baja"),
     limit: int = Query(500, ge=1, le=2000),
 ):
     """Lista action_items del TENANT actual con su clasificación temporal.
@@ -140,6 +145,10 @@ def list_pendientes(
         if owner:
             o = owner.lower()
             if o not in (record["owner_name"] or "").lower() and o not in (record["owner_email"] or "").lower():
+                continue
+        if priority:
+            p = priority.lower().strip()
+            if p and (record.get("priority") or "media").lower() != p:
                 continue
         out.append(record)
         if len(out) >= limit:

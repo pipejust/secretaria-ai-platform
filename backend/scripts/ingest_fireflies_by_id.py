@@ -67,12 +67,16 @@ async def ingest_one(
             db.commit()
 
         # Mismo shape que el webhook: status='processing' al inicio, los
-        # campos reales se llenan en background.
+        # campos reales se llenan en background. La fecha real llega cuando
+        # process_transcript_background lea `dateString` de la API de Fireflies;
+        # mientras tanto guardamos un ISO válido (ahora) — nunca un timestamp
+        # crudo en ms, para que el frontend pueda parsearlo sin sorpresas.
+        from datetime import datetime as _dt, timezone as _tz
         new_session = MeetingSession(
             tenant_id=tenant_id,
             fireflies_id=fireflies_id,
             title="Reunión Procesando…",
-            date=str(int(time.time() * 1000)),
+            date=_dt.now(_tz.utc).isoformat(),
             raw_transcript="",
             raw_summary="",
             status="processing",

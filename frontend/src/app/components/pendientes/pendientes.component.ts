@@ -17,12 +17,18 @@ interface PendingItem {
     owner_name: string;
     owner_email: string;
     due_date: string | null;
+    /** Hora HH:MM (24h) opcional. */
+    due_time?: string | null;
+    /** Prioridad real (alta|media|baja) — viene del backend. */
+    priority?: 'alta' | 'media' | 'baja';
     status: 'pending' | 'done' | 'blocked' | 'cancelled';
     completed_at: string | null;
     is_approved: boolean;
     project_name: string;
     bucket: 'vencido' | 'proximo' | 'pendiente' | 'sin_fecha' | 'completado' | 'cancelado' | 'bloqueado';
 }
+
+interface ProjectLite { id: number; name: string; }
 
 interface StatsResponse {
     counts: Record<string, number>;
@@ -74,13 +80,32 @@ export class PendientesComponent implements OnInit, OnDestroy {
     /** Filtros locales (en frontend) sobre la lista ya cargada. */
     searchQuery = '';
     ownerFilter = '';
-    projectFilter = '';
-    priorityFilter = '';
+    projectFilter = '';        // matches contra project_name (string)
+    priorityFilter = '';       // alta | media | baja
     statusFilter = '';
     dueFilter = '';
 
     /** Tab visual de segmentación. */
     activeTab: TabKey = 'todas';
+
+    /** Toggle del panel de filtros (mismo patrón que /admin/meetings). */
+    showFilters = false;
+
+    /** Lista de proyectos del tenant (para selects). */
+    projects: ProjectLite[] = [];
+
+    /** Email del usuario logueado — usado por la pestaña "Mis tareas". */
+    private get currentUserEmail(): string {
+        return (this.authService.currentUserValue?.email || '').toLowerCase();
+    }
+    private get currentUserName(): string {
+        return this.authService.currentUserValue?.full_name || '';
+    }
+
+    /** Filtro mini del workload (proyecto / fecha). Solo cambia la vista
+     *  del donut; no afecta la tabla principal. */
+    workloadProjectFilter = '';
+    workloadRangeFilter: 'all' | 'week' | 'month' = 'all';
 
     /** Paginación local (12 por página, como el mockup). */
     pageSize = 12;
@@ -105,6 +130,8 @@ export class PendientesComponent implements OnInit, OnDestroy {
         owner_name: '',
         owner_email: '',
         due_date: '',
+        due_time: '',
+        priority: 'media' as 'alta' | 'media' | 'baja',
         description: '',
     };
 
@@ -124,6 +151,21 @@ export class PendientesComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.loadStats();
         this.load();
+        this.loadProjects();
+    }
+
+    /** Carga la lista de proyectos del tenant para el select de filtros y modal. */
+    loadProjects(): void {
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<any[]>(`${environment.apiUrl}/api/projects/`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (data) => {
+                    this.projects = (data || []).map(p => ({ id: p.id, name: p.name }));
+                    this.cdr.detectChanges();
+                },
+                error: () => { /* silencio */ }
+            });
     }
 
     ngOnDestroy(): void {
@@ -212,12 +254,26 @@ export class PendientesComponent implements OnInit, OnDestroy {
     setTab(tab: TabKey): void {
         this.activeTab = tab;
         this.currentPage = 1;
-        // "Mis tareas" filtra por owner = usuario logueado.
-        if (tab === 'mias') {
-            const me = this.authService.currentUserValue?.full_name || '';
-            this.ownerFilter = me;
-        } else if (this.activeTab !== 'mias') {
-            // Si salimos de Mis tareas, conservamos el filtro escrito.
+
+        // Cada tab ajusta los filtros de forma DETERMINÍSTICA:
+        if (tab === 'todas') {
+            // Limpiamos filtros derivados (preservamos la búsqueda manual).
+            this.ownerFilter = '';
+            this.priorityFilter = '';
+            this.bucket = 'activos';
+            this.load();
+        } else if (tab === 'mias') {
+            // Filtra por correo del usuario logueado (más confiable que nombre).
+            const email = this.currentUserEmail;
+            const name  = this.currentUserName;
+            this.ownerFilter = email || name;
+            this.load();
+        } else if (tab === 'proyecto') {
+            // Vista agrupada por proyecto: la tabla se ordena por proyecto.
+            // No imponemos filtro adicional. El usuario puede picar "Filtros"
+            // y elegir un proyecto específico si quiere.
+        } else if (tab === 'prioridad') {
+            // Vista agrupada por prioridad: ordenamos alta → media → baja.
         }
         this.cdr.detectChanges();
     }
@@ -235,6 +291,22 @@ export class PendientesComponent implements OnInit, OnDestroy {
         this.load();
     }
 
+    toggleFilters(): void {
+        this.showFilters = !this.showFilters;
+        this.cdr.detectChanges();
+    }
+
+    /** Conteo de filtros activos para el badge del botón Filtros. */
+    get activeFiltersCount(): number {
+        let n = 0;
+        if (this.ownerFilter.trim())    n++;
+        if (this.projectFilter.trim())  n++;
+        if (this.priorityFilter.trim()) n++;
+        if (this.statusFilter.trim())   n++;
+        if (this.bucket && this.bucket !== 'activos') n++;
+        return n;
+    }
+
     // ============================================================
     // Derivados visuales (priority, status, progress, code)
     // ============================================================
@@ -245,8 +317,11 @@ export class PendientesComponent implements OnInit, OnDestroy {
         return `TAS-${String(item.id).padStart(4, '0')}`;
     }
 
-    /** Prioridad derivada del bucket. ActionItem no almacena priority. */
+    /** Prioridad: usa la real del backend (`item.priority`) si existe;
+     *  cae al derivado por bucket como fallback para entradas viejas. */
     priority(item: PendingItem): 'alta' | 'media' | 'baja' {
+        const real = (item.priority || '').toLowerCase();
+        if (real === 'alta' || real === 'media' || real === 'baja') return real;
         if (item.bucket === 'vencido' || item.bucket === 'proximo') return 'alta';
         if (item.bucket === 'pendiente' || item.bucket === 'bloqueado') return 'media';
         return 'baja';
@@ -435,14 +510,14 @@ export class PendientesComponent implements OnInit, OnDestroy {
     // Listas filtradas (para tabla, pagina, panel)
     // ============================================================
 
-    /** Lista filtrada (tabla principal) según los filtros del header. */
+    /** Lista filtrada (tabla principal) según los filtros del header + tab. */
     get filteredItems(): PendingItem[] {
-        const q = this.searchQuery.trim().toLowerCase();
+        const q    = this.searchQuery.trim().toLowerCase();
         const proj = this.projectFilter.trim().toLowerCase();
-        const pri = this.priorityFilter.trim().toLowerCase();
-        const st = this.statusFilter.trim().toLowerCase();
+        const pri  = this.priorityFilter.trim().toLowerCase();
+        const st   = this.statusFilter.trim().toLowerCase();
 
-        return this.items.filter(it => {
+        let out = this.items.filter(it => {
             if (q) {
                 const hay = (it.title || '').toLowerCase() + ' ' + (it.description || '').toLowerCase();
                 if (!hay.includes(q)) return false;
@@ -455,6 +530,23 @@ export class PendientesComponent implements OnInit, OnDestroy {
             }
             return true;
         });
+
+        // Ordenamiento según la pestaña activa.
+        if (this.activeTab === 'proyecto') {
+            out = [...out].sort((a, b) =>
+                (a.project_name || '').localeCompare(b.project_name || '')
+                || (a.due_date || '9999').localeCompare(b.due_date || '9999')
+            );
+        } else if (this.activeTab === 'prioridad') {
+            const rank: Record<string, number> = { alta: 0, media: 1, baja: 2 };
+            out = [...out].sort((a, b) => {
+                const ra = rank[this.priority(a)] ?? 99;
+                const rb = rank[this.priority(b)] ?? 99;
+                if (ra !== rb) return ra - rb;
+                return (a.due_date || '9999').localeCompare(b.due_date || '9999');
+            });
+        }
+        return out;
     }
 
     get totalFiltered(): number { return this.filteredItems.length; }
@@ -523,34 +615,71 @@ export class PendientesComponent implements OnInit, OnDestroy {
         return this.items.filter(it => it.bucket === 'proximo').slice(0, 5);
     }
 
-    /** Slices del donut "Carga de trabajo" + porcentajes. */
+    /** Slices del donut. Si NO hay filtros del workload, usamos el agregado
+     *  oficial del backend (`stats.top_owners_active`). Si el usuario aplica
+     *  un filtro de proyecto o rango, recomputamos sobre `this.items`. */
     get workloadSlices(): DonutSlice[] {
-        const top = (this.stats?.top_owners_active || []).slice(0, 5);
-        const total = top.reduce((acc, x) => acc + x.count, 0);
-        const tot = this.stats?.active_total || total;
-        const out: DonutSlice[] = top.map((o, i) => ({
-            owner: o.owner || 'Sin asignar',
-            count: o.count,
-            pct: tot > 0 ? Math.round((o.count / tot) * 100) : 0,
-            color: this.donutPalette[i] || this.donutPalette[5],
-            initials: this.ownerInitials(o.owner || ''),
-        }));
-        // "Otros" = active_total − suma de top 5
-        const restCount = (this.stats?.active_total || 0) - total;
-        if (restCount > 0) {
-            out.push({
-                owner: 'Otros',
-                count: restCount,
-                pct: tot > 0 ? Math.round((restCount / tot) * 100) : 0,
-                color: this.donutPalette[5],
-                initials: '··',
-            });
+        const hasFilter = !!this.workloadProjectFilter || this.workloadRangeFilter !== 'all';
+        if (!hasFilter) {
+            const top = (this.stats?.top_owners_active || []).slice(0, 5);
+            const total = top.reduce((acc, x) => acc + x.count, 0);
+            const tot = this.stats?.active_total || total;
+            const out: DonutSlice[] = top.map((o, i) => ({
+                owner: o.owner || 'Sin asignar',
+                count: o.count,
+                pct: tot > 0 ? Math.round((o.count / tot) * 100) : 0,
+                color: this.donutPalette[i] || this.donutPalette[5],
+                initials: this.ownerInitials(o.owner || ''),
+            }));
+            const restCount = (this.stats?.active_total || 0) - total;
+            if (restCount > 0) {
+                out.push({
+                    owner: 'Otros', count: restCount,
+                    pct: tot > 0 ? Math.round((restCount / tot) * 100) : 0,
+                    color: this.donutPalette[5], initials: '··',
+                });
+            }
+            return out;
         }
-        return out;
+
+        // Recalcular en frontend con los filtros activos.
+        const filtered = this.items.filter(it => {
+            if (this.workloadProjectFilter &&
+                it.project_name !== this.workloadProjectFilter) return false;
+            if (this.workloadRangeFilter === 'week' || this.workloadRangeFilter === 'month') {
+                const d = it.due_date ? new Date(it.due_date) : null;
+                if (!d || isNaN(d.getTime())) return false;
+                const now = new Date();
+                const diffDays = (d.getTime() - now.getTime()) / 86_400_000;
+                if (this.workloadRangeFilter === 'week'  && diffDays > 7)  return false;
+                if (this.workloadRangeFilter === 'month' && diffDays > 31) return false;
+                if (diffDays < -1) return false; // ya muy vencidas no cuentan en el rango futuro
+            }
+            return it.bucket !== 'completado' && it.bucket !== 'cancelado';
+        });
+
+        // Agrupar por owner_name.
+        const byOwner: Record<string, number> = {};
+        for (const it of filtered) {
+            const k = it.owner_name || 'Sin asignar';
+            byOwner[k] = (byOwner[k] || 0) + 1;
+        }
+        const sorted = Object.entries(byOwner)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        const total = filtered.length;
+        return sorted.map(([owner, count], i) => ({
+            owner, count,
+            pct: total > 0 ? Math.round((count / total) * 100) : 0,
+            color: this.donutPalette[i] || this.donutPalette[5],
+            initials: this.ownerInitials(owner),
+        }));
     }
 
     get workloadTotal(): number {
-        return this.stats?.active_total || 0;
+        const hasFilter = !!this.workloadProjectFilter || this.workloadRangeFilter !== 'all';
+        if (!hasFilter) return this.stats?.active_total || 0;
+        return this.workloadSlices.reduce((s, x) => s + x.count, 0);
     }
 
     /** Lista plana de pcts para que el template calcule el offset de cada
@@ -634,6 +763,8 @@ export class PendientesComponent implements OnInit, OnDestroy {
             owner_name: '',
             owner_email: '',
             due_date: '',
+            due_time: '',
+            priority: 'media',
             description: '',
         };
         this.sessionSearch = '';
@@ -684,7 +815,9 @@ export class PendientesComponent implements OnInit, OnDestroy {
 
     chooseMeeting(): void { this.createMode = 'meeting'; this.cdr.detectChanges(); }
 
-    /** Click en "Tarea de calendario" — redirige a /admin/calendar. */
+    /** Click en "Tarea de calendario" — redirige a /admin/calendar con
+     *  un flag `new=task` que el componente del calendario lee al
+     *  cargar para abrir directamente el popover de creación. */
     chooseCalendar(): void {
         this.closeCreateModal();
         this.router.navigate(['/admin/calendar'], { queryParams: { new: 'task' } });
@@ -712,6 +845,8 @@ export class PendientesComponent implements OnInit, OnDestroy {
         form.append('owner_name', this.newTask.owner_name.trim());
         form.append('owner_email', this.newTask.owner_email.trim());
         form.append('due_date', this.newTask.due_date);
+        form.append('due_time', this.newTask.due_time);
+        form.append('priority', this.newTask.priority || 'media');
         form.append('description', this.newTask.description.trim());
 
         this.http.post<any>(

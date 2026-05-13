@@ -1,353 +1,709 @@
-<div class="fade-in">
-    <div class="settings-header mb-4" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-        <div>
-            <h2 style="font-size: 1.5rem; font-weight: 700; color: #1f2937; margin-bottom: 0.25rem;">Integraciones y
-                Configuración Global</h2>
-            <p class="text-muted" style="font-size: 0.95rem; margin-bottom: 0;">Conecta las plataformas externas donde
-                se enviarán las tareas y actas extraídas.</p>
+<!-- ============================================================================
+     Configuración — vista enterprise SaaS con menú lateral de secciones y
+     cards de preferencias. Todo en español. Preserva las settings reales
+     del backend (SMTP, Fireflies, Trello, Jira, Azure, ClickUp, OAuth) y
+     añade preferencias UX persistidas en localStorage.
+     ============================================================================ -->
+<div class="acten-settings">
+
+    <!-- ============= HEADER ============= -->
+    <header class="st-hero">
+        <div class="st-hero-text">
+            <h1 class="st-title">Configuración</h1>
+            <p class="st-sub">Gestiona tus preferencias, ajustes del workspace e integraciones.</p>
         </div>
-        <button class="btn btn-primary" (click)="saveSettings()" [disabled]="isSaving"
-            style="padding: 0.75rem 1.75rem; border-radius: 8px;">
-            <span *ngIf="!isSaving">Guardar Todos los Cambios</span>
-            <span *ngIf="isSaving">Guardando...</span>
-        </button>
-    </div>
+        <div class="st-hero-actions">
+            <button type="button" class="st-btn st-btn-secondary" (click)="ngOnInit()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                Recargar
+            </button>
+            <button type="button" class="st-btn st-btn-primary" (click)="saveSettings()" [disabled]="isSaving">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+        </div>
+    </header>
 
-    <div *ngIf="successMessage" class="alert alert-success mb-4">
-        {{ successMessage }}
-    </div>
+    <!-- ============= LAYOUT (sidebar + content) ============= -->
+    <div class="st-layout">
 
-    <!-- Integraciones Core -->
-    <h3 class="mb-4 section-title mt-4" style="font-size: 1.1rem; font-weight: 700; color: #111827;">Servicios Core de
-        la Plataforma</h3>
-    <div class="grid-layout cols-2 gap-4">
-        <!-- Fireflies.ai -->
-        <div class="card flex-1">
-            <div class="card-header flex justify-between align-items-center">
-                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="1" x2="12" y2="23"></line>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
-                    Fireflies AI (Transcripciones)
-                    <span
-                        style="font-size: 0.75rem; font-weight: 700; color: #4b5563; margin-left: 0.25rem;">Core</span>
-                </h4>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <strong>¿Cómo obtener estos datos?</strong>
-                    <ol class="mb-0 mt-1 pl-3" style="margin-left: 1rem;">
-                        <li>Inicia sesión en <a href="https://app.fireflies.ai/" target="_blank">Fireflies.ai</a>.</li>
-                        <li>Ve a <strong>Settings > Integrations > API</strong>.</li>
-                        <li>Copia tu <strong>Personal Access Token</strong> y pégalo aquí como API Key.</li>
-                        <li>Para el Webhook, copia la URL de abajo y pégala en Fireflies marcando el evento <strong>Meeting Completed</strong>.</li>
-                    </ol>
-                </div>
-                <form>
-                    <div class="form-group mb-3">
-                        <label>API Key de Integración</label>
-                        <input type="password" [(ngModel)]="firefliesSettings.apiKey" name="ff_api"
-                            placeholder="ff_xxx_...">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Webhook URL (Para recibir el Post de Fireflies)</label>
-                        <div style="display: flex; gap: .5rem; align-items: stretch;">
-                            <input type="text" [value]="firefliesSettings.webhookUrl || 'Guarda primero la API Key para generar la URL.'"
-                                name="ff_web" readonly
-                                style="flex: 1; font-family: monospace; font-size: .85rem;">
-                            <button type="button" class="btn"
-                                (click)="copyWebhookUrl()"
-                                [disabled]="!firefliesSettings.webhookUrl">
-                                Copiar
-                            </button>
+        <!-- ===== Menú lateral ===== -->
+        <aside class="st-side">
+            <ul class="st-nav">
+                <li *ngFor="let s of sections; trackBy: trackBySection">
+                    <button type="button" class="st-nav-item"
+                            [class.is-active]="activeSection === s.key"
+                            (click)="setSection(s.key)">
+                        <span class="st-nav-icon">
+                            <ng-container [ngSwitch]="s.icon">
+                                <svg *ngSwitchCase="'general'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                <svg *ngSwitchCase="'plug'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"></path></svg>
+                                <svg *ngSwitchCase="'mail'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                <svg *ngSwitchCase="'sync'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                <svg *ngSwitchCase="'doc'"     width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                <svg *ngSwitchCase="'shield'"  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                <svg *ngSwitchCase="'code'"    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                                <svg *ngSwitchCase="'clipboard'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                            </ng-container>
+                        </span>
+                        <span class="st-nav-label">{{ s.label }}</span>
+                    </button>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- ===== Contenido ===== -->
+        <section class="st-content">
+
+            <!-- ============= GENERAL ============= -->
+            <ng-container *ngIf="activeSection === 'general'">
+
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Preferencias generales</h2>
+                            <p class="st-card-sub">Configura cómo se comporta Acten para ti y tu equipo.</p>
                         </div>
-                        <small style="display: block; margin-top: .35rem; color: #6b7280;">
-                            Esta URL ya incluye el token de seguridad. Pégala tal cual en
-                            Fireflies → Settings → Integrations → Webhook (evento Meeting Completed).
-                        </small>
-                        <div style="margin-top: .6rem; padding: .55rem .7rem; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: .78rem; color: #78350f;">
-                            <strong>⚠️ Esta URL es exclusiva de tu empresa.</strong>
-                            Cualquier reunión que llegue por ella se asocia
-                            automáticamente a tu espacio. NO la compartas con
-                            terceros ni la pegues en cuentas de Fireflies que no
-                            sean tuyas — los webhooks que entren se registrarán
-                            como sesiones de tu empresa.
+                    </header>
+                    <div class="st-card-body">
+                        <div class="st-grid st-grid-3">
+                            <label class="st-field">
+                                <span class="st-field-label">Formato de fecha</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.dateFormat" (change)="savePrefs()">
+                                        <option *ngFor="let f of dateFormats" [value]="f.value">{{ f.label }}</option>
+                                    </select>
+                                </div>
+                            </label>
+
+                            <label class="st-field">
+                                <span class="st-field-label">Zona horaria</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.timeZone" (change)="savePrefs()">
+                                        <option *ngFor="let t of timeZones" [value]="t.value">{{ t.label }}</option>
+                                    </select>
+                                </div>
+                            </label>
+
+                            <label class="st-field">
+                                <span class="st-field-label">Idioma</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"></path>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.language" (change)="savePrefs()">
+                                        <option *ngFor="let l of languages" [value]="l.value">{{ l.label }}</option>
+                                    </select>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="st-grid st-grid-2 st-mt-16">
+                            <label class="st-field">
+                                <span class="st-field-label">Página de inicio por defecto</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.landingPage" (change)="savePrefs()">
+                                        <option *ngFor="let p of landingPages" [value]="p.value">{{ p.label }}</option>
+                                    </select>
+                                </div>
+                            </label>
+
+                            <div class="st-field">
+                                <span class="st-field-label">Modo oscuro</span>
+                                <button type="button" class="st-toggle-row" (click)="toggleDarkMode()">
+                                    <span class="st-switch" [class.is-on]="prefs.darkMode" aria-hidden="true">
+                                        <span class="st-switch-thumb"></span>
+                                    </span>
+                                    <span class="st-toggle-text">Activar modo oscuro en toda la plataforma</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </form>
-            </div>
-        </div>
+                </article>
 
-        <!-- Resend API -->
-        <div class="card flex-1">
-            <div class="card-header flex justify-between align-items-center">
-                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                        <polyline points="22,6 12,13 2,6"></polyline>
-                    </svg>
-                    Distribución Email (Resend API)
-                    <span
-                        style="font-size: 0.75rem; font-weight: 700; color: #4b5563; margin-left: 0.25rem;">Core</span>
-                </h4>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <strong>¿Cómo obtener la API Key?</strong>
-                    <ol class="mb-0 mt-1 pl-3" style="margin-left: 1rem;">
-                        <li>Inicia sesión en <a href="https://resend.com/" target="_blank">Resend.com</a>.</li>
-                        <li>Ve a <strong>API Keys</strong> en el menú lateral.</li>
-                        <li>Haz clic en <strong>Create API Key</strong>, dale permisos "Full Access" y copia el código generado (empieza con <code>re_</code>).</li>
-                        <li>Asegúrate de tener un dominio verificado en <strong>Domains</strong> para poder enviar correos.</li>
-                    </ol>
-                </div>
-                <form>
-                    <div class="form-group mb-3">
-                        <label>Proveedor Recomendado</label>
-                        <input type="text" [(ngModel)]="smtpSettings.provider" name="smtp_prov" disabled>
+                <!-- Card: Workspace -->
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Ajustes del workspace</h2>
+                            <p class="st-card-sub">Identidad y comportamientos por defecto del workspace.</p>
+                        </div>
+                        <button type="button" class="st-toggle-pill"
+                                [class.is-on]="workspaceActive"
+                                (click)="workspaceActive = !workspaceActive">
+                            <span class="st-switch" [class.is-on]="workspaceActive" aria-hidden="true">
+                                <span class="st-switch-thumb"></span>
+                            </span>
+                            <span>Workspace activo</span>
+                        </button>
+                    </header>
+                    <div class="st-card-body">
+                        <div class="st-grid st-grid-3-with-logo">
+                            <div class="st-field st-field-logo">
+                                <span class="st-field-label">Logo del workspace</span>
+                                <div class="st-logo-row">
+                                    <div class="st-logo-box">
+                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#155EEF"
+                                             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 21h18"></path>
+                                            <path d="M5 21V8l7-5 7 5v13"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="st-logo-actions">
+                                        <a routerLink="/admin/branding" class="st-btn st-btn-secondary">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                <polyline points="17 8 12 3 7 8"></polyline>
+                                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                                            </svg>
+                                            Cambiar logo
+                                        </a>
+                                        <small class="st-help">PNG, JPG o SVG. Máx 2MB.</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <label class="st-field">
+                                <span class="st-field-label">Nombre del workspace</span>
+                                <input type="text" class="st-input" [(ngModel)]="prefs.workspaceName"
+                                       placeholder="Acten" (change)="savePrefs()" />
+                            </label>
+
+                            <label class="st-field">
+                                <span class="st-field-label">La semana inicia el</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.weekStartsOn" (change)="savePrefs()">
+                                        <option value="monday">Lunes</option>
+                                        <option value="sunday">Domingo</option>
+                                    </select>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="st-grid st-grid-2 st-mt-16">
+                            <label class="st-field">
+                                <span class="st-field-label">Duración por defecto de reuniones</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.defaultMeetingDuration" (change)="savePrefs()">
+                                        <option *ngFor="let d of meetingDurations" [ngValue]="d.value">{{ d.label }}</option>
+                                    </select>
+                                </div>
+                            </label>
+
+                            <label class="st-field">
+                                <span class="st-field-label">Responsable por defecto de tareas</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                    </svg>
+                                    <input type="text" [(ngModel)]="prefs.defaultTaskAssignee"
+                                           placeholder="Sin asignar" (change)="savePrefs()" />
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="st-grid st-grid-2 st-mt-16">
+                            <label class="st-field">
+                                <span class="st-field-label">Privacidad por defecto de proyectos nuevos</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.defaultProjectPrivacy" (change)="savePrefs()">
+                                        <option *ngFor="let p of privacyOptions" [value]="p.value">{{ p.label }}</option>
+                                    </select>
+                                </div>
+                            </label>
+
+                            <label class="st-field">
+                                <span class="st-field-label">Archivar proyectos completados después de</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                                        <rect x="1" y="3" width="22" height="5"></rect>
+                                        <line x1="10" y1="12" x2="14" y2="12"></line>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.autoArchiveDays" (change)="savePrefs()">
+                                        <option *ngFor="let d of archiveDays" [ngValue]="d.value">{{ d.label }}</option>
+                                    </select>
+                                </div>
+                            </label>
+                        </div>
                     </div>
-                    <div class="form-group mb-3">
-                        <label>API Key Resend</label>
-                        <input type="password" [(ngModel)]="smtpSettings.apiKey" name="smtp_api"
-                            placeholder="re_xxx_...">
+                </article>
+            </ng-container>
+
+            <!-- ============= INTEGRACIONES ============= -->
+            <ng-container *ngIf="activeSection === 'integrations'">
+
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Integraciones de calendario</h2>
+                            <p class="st-card-sub">Credenciales OAuth para conectar Google Calendar y Microsoft 365.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body st-stack">
+
+                        <div class="st-integration">
+                            <div class="st-integration-head">
+                                <div class="st-integration-name">
+                                    <span class="st-int-icon" data-color="blue">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                                        </svg>
+                                    </span>
+                                    <strong>Google Calendar</strong>
+                                </div>
+                                <span class="st-pill" [attr.data-tone]="oauthStatus.google.ready ? 'green' : 'gray'">
+                                    {{ oauthStatus.google.ready ? 'Configurado' : 'Sin configurar' }}
+                                </span>
+                            </div>
+                            <div class="st-grid st-grid-2">
+                                <label class="st-field"><span class="st-field-label">Client ID</span>
+                                    <input type="text" class="st-input" [(ngModel)]="googleCalendarSettings.client_id"
+                                           placeholder="xxx.apps.googleusercontent.com" /></label>
+                                <label class="st-field"><span class="st-field-label">Client Secret</span>
+                                    <input type="password" class="st-input"
+                                           [(ngModel)]="googleCalendarSettings.client_secret" placeholder="••••••••" /></label>
+                                <label class="st-field st-field-wide"><span class="st-field-label">Redirect URI</span>
+                                    <div class="st-input-with-action">
+                                        <input type="text" class="st-input"
+                                               [(ngModel)]="googleCalendarSettings.redirect_uri"
+                                               [placeholder]="defaultGoogleRedirect" />
+                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('google')">Usar por defecto</button>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="st-integration">
+                            <div class="st-integration-head">
+                                <div class="st-integration-name">
+                                    <span class="st-int-icon" data-color="violet">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="14" width="7" height="7"></rect>
+                                            <rect x="3" y="14" width="7" height="7"></rect>
+                                        </svg>
+                                    </span>
+                                    <strong>Microsoft 365</strong>
+                                </div>
+                                <span class="st-pill" [attr.data-tone]="oauthStatus.microsoft.ready ? 'green' : 'gray'">
+                                    {{ oauthStatus.microsoft.ready ? 'Configurado' : 'Sin configurar' }}
+                                </span>
+                            </div>
+                            <div class="st-grid st-grid-2">
+                                <label class="st-field"><span class="st-field-label">Client ID</span>
+                                    <input type="text" class="st-input" [(ngModel)]="microsoftCalendarSettings.client_id" /></label>
+                                <label class="st-field"><span class="st-field-label">Client Secret</span>
+                                    <input type="password" class="st-input"
+                                           [(ngModel)]="microsoftCalendarSettings.client_secret" /></label>
+                                <label class="st-field"><span class="st-field-label">Tenant</span>
+                                    <input type="text" class="st-input" [(ngModel)]="microsoftCalendarSettings.tenant"
+                                           placeholder="common" /></label>
+                                <label class="st-field"><span class="st-field-label">Redirect URI</span>
+                                    <div class="st-input-with-action">
+                                        <input type="text" class="st-input"
+                                               [(ngModel)]="microsoftCalendarSettings.redirect_uri"
+                                               [placeholder]="defaultMicrosoftRedirect" />
+                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('microsoft')">Usar por defecto</button>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group mb-0">
-                        <label>Correo de Envío (Sender)</label>
-                        <input type="email" [(ngModel)]="smtpSettings.senderEmail" name="smtp_email"
-                            placeholder="notificaciones@midominio.com">
+                </article>
+
+                <!-- Plataformas de gestión -->
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Plataformas de gestión</h2>
+                            <p class="st-card-sub">Conecta Acten con tus herramientas para despachar tareas automáticamente.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body st-stack">
+
+                        <div class="st-integration">
+                            <div class="st-integration-head">
+                                <div class="st-integration-name">
+                                    <span class="st-int-icon" data-color="blue">T</span>
+                                    <strong>Trello</strong>
+                                </div>
+                                <label class="st-toggle-pill" [class.is-on]="trelloSettings.isActive">
+                                    <span class="st-switch" [class.is-on]="trelloSettings.isActive">
+                                        <span class="st-switch-thumb"></span>
+                                    </span>
+                                    <input type="checkbox" hidden [(ngModel)]="trelloSettings.isActive" />
+                                    <span>{{ trelloSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                </label>
+                            </div>
+                            <div class="st-grid st-grid-3">
+                                <label class="st-field"><span class="st-field-label">API Key</span>
+                                    <input type="text" class="st-input" [(ngModel)]="trelloSettings.apiKey" /></label>
+                                <label class="st-field"><span class="st-field-label">API Token</span>
+                                    <input type="password" class="st-input" [(ngModel)]="trelloSettings.apiToken" /></label>
+                                <label class="st-field"><span class="st-field-label">Board ID</span>
+                                    <input type="text" class="st-input" [(ngModel)]="trelloSettings.boardId" /></label>
+                            </div>
+                        </div>
+
+                        <div class="st-integration">
+                            <div class="st-integration-head">
+                                <div class="st-integration-name">
+                                    <span class="st-int-icon" data-color="blue">J</span>
+                                    <strong>Jira</strong>
+                                </div>
+                                <label class="st-toggle-pill" [class.is-on]="jiraSettings.isActive">
+                                    <span class="st-switch" [class.is-on]="jiraSettings.isActive">
+                                        <span class="st-switch-thumb"></span>
+                                    </span>
+                                    <input type="checkbox" hidden [(ngModel)]="jiraSettings.isActive" />
+                                    <span>{{ jiraSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                </label>
+                            </div>
+                            <div class="st-grid st-grid-3">
+                                <label class="st-field"><span class="st-field-label">Email</span>
+                                    <input type="email" class="st-input" [(ngModel)]="jiraSettings.email" /></label>
+                                <label class="st-field"><span class="st-field-label">API Token</span>
+                                    <input type="password" class="st-input" [(ngModel)]="jiraSettings.apiToken" /></label>
+                                <label class="st-field"><span class="st-field-label">Dominio</span>
+                                    <input type="text" class="st-input" [(ngModel)]="jiraSettings.domain"
+                                           placeholder="empresa.atlassian.net" /></label>
+                            </div>
+                        </div>
+
+                        <div class="st-integration">
+                            <div class="st-integration-head">
+                                <div class="st-integration-name">
+                                    <span class="st-int-icon" data-color="blue">A</span>
+                                    <strong>Azure DevOps</strong>
+                                </div>
+                                <label class="st-toggle-pill" [class.is-on]="azureSettings.isActive">
+                                    <span class="st-switch" [class.is-on]="azureSettings.isActive">
+                                        <span class="st-switch-thumb"></span>
+                                    </span>
+                                    <input type="checkbox" hidden [(ngModel)]="azureSettings.isActive" />
+                                    <span>{{ azureSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                </label>
+                            </div>
+                            <div class="st-grid st-grid-3">
+                                <label class="st-field"><span class="st-field-label">Organización</span>
+                                    <input type="text" class="st-input" [(ngModel)]="azureSettings.organization" /></label>
+                                <label class="st-field"><span class="st-field-label">Proyecto</span>
+                                    <input type="text" class="st-input" [(ngModel)]="azureSettings.project" /></label>
+                                <label class="st-field"><span class="st-field-label">Personal Access Token</span>
+                                    <input type="password" class="st-input" [(ngModel)]="azureSettings.pat" /></label>
+                            </div>
+                        </div>
+
+                        <div class="st-integration">
+                            <div class="st-integration-head">
+                                <div class="st-integration-name">
+                                    <span class="st-int-icon" data-color="violet">C</span>
+                                    <strong>ClickUp</strong>
+                                </div>
+                                <label class="st-toggle-pill" [class.is-on]="clickupSettings.isActive">
+                                    <span class="st-switch" [class.is-on]="clickupSettings.isActive">
+                                        <span class="st-switch-thumb"></span>
+                                    </span>
+                                    <input type="checkbox" hidden [(ngModel)]="clickupSettings.isActive" />
+                                    <span>{{ clickupSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                </label>
+                            </div>
+                            <div class="st-grid st-grid-2">
+                                <label class="st-field"><span class="st-field-label">API Token</span>
+                                    <input type="password" class="st-input" [(ngModel)]="clickupSettings.apiToken" /></label>
+                                <label class="st-field"><span class="st-field-label">Team ID</span>
+                                    <input type="text" class="st-input" [(ngModel)]="clickupSettings.teamId" /></label>
+                            </div>
+                        </div>
                     </div>
-                </form>
-            </div>
-        </div>
+                </article>
+            </ng-container>
+
+            <!-- ============= EMAIL ============= -->
+            <ng-container *ngIf="activeSection === 'email'">
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Correo electrónico</h2>
+                            <p class="st-card-sub">Proveedor SMTP para enviar correos transaccionales y notificaciones.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body">
+                        <div class="st-grid st-grid-3">
+                            <label class="st-field">
+                                <span class="st-field-label">Proveedor</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                        <polyline points="22,6 12,13 2,6"></polyline>
+                                    </svg>
+                                    <select [(ngModel)]="smtpSettings.provider">
+                                        <option value="Resend">Resend</option>
+                                        <option value="SendGrid">SendGrid</option>
+                                        <option value="SMTP">SMTP genérico</option>
+                                    </select>
+                                </div>
+                            </label>
+                            <label class="st-field">
+                                <span class="st-field-label">API Key</span>
+                                <input type="password" class="st-input" [(ngModel)]="smtpSettings.apiKey"
+                                       placeholder="re_xxx..." />
+                            </label>
+                            <label class="st-field">
+                                <span class="st-field-label">Email remitente</span>
+                                <input type="email" class="st-input" [(ngModel)]="smtpSettings.senderEmail"
+                                       placeholder="notificaciones@tuempresa.com" />
+                            </label>
+                        </div>
+                    </div>
+                </article>
+            </ng-container>
+
+            <!-- ============= TASK SYNC ============= -->
+            <ng-container *ngIf="activeSection === 'task-sync'">
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Sincronización de tareas</h2>
+                            <p class="st-card-sub">Configura cómo se procesan automáticamente las tareas detectadas por IA.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body">
+                        <div class="st-toggle-card">
+                            <div>
+                                <strong>Curación automática</strong>
+                                <small>Despacha automáticamente las tareas a las plataformas conectadas tras un período sin edición humana.</small>
+                            </div>
+                            <label class="st-toggle-pill" [class.is-on]="autoCurationSettings.isEnabled">
+                                <span class="st-switch" [class.is-on]="autoCurationSettings.isEnabled">
+                                    <span class="st-switch-thumb"></span>
+                                </span>
+                                <input type="checkbox" hidden [(ngModel)]="autoCurationSettings.isEnabled" />
+                                <span>{{ autoCurationSettings.isEnabled ? 'Activa' : 'Inactiva' }}</span>
+                            </label>
+                        </div>
+
+                        <div class="st-grid st-grid-2 st-mt-16" *ngIf="autoCurationSettings.isEnabled">
+                            <label class="st-field">
+                                <span class="st-field-label">Esperar antes de despachar (horas)</span>
+                                <input type="number" min="1" max="168" class="st-input"
+                                       [(ngModel)]="autoCurationSettings.timeoutHours" />
+                                <small class="st-help">
+                                    Tiempo desde que se procesa una sesión hasta que se despachan las tareas. Da margen al humano para curar.
+                                </small>
+                            </label>
+                        </div>
+                    </div>
+                </article>
+            </ng-container>
+
+            <!-- ============= DOCUMENTS ============= -->
+            <ng-container *ngIf="activeSection === 'documents'">
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Documentos</h2>
+                            <p class="st-card-sub">Plantillas y herramientas predeterminadas para generar actas.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body">
+                        <div class="st-grid st-grid-2">
+                            <label class="st-field">
+                                <span class="st-field-label">Almacenamiento de archivos</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.defaultFileStorage" (change)="savePrefs()">
+                                        <option value="google-drive">Google Drive</option>
+                                        <option value="onedrive">OneDrive</option>
+                                        <option value="dropbox">Dropbox</option>
+                                        <option value="local">Almacenamiento local</option>
+                                    </select>
+                                </div>
+                            </label>
+                            <label class="st-field">
+                                <span class="st-field-label">Editor de documentos</span>
+                                <div class="st-field-input">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                    <select [(ngModel)]="prefs.defaultDocEditor" (change)="savePrefs()">
+                                        <option value="google-docs">Google Docs</option>
+                                        <option value="word">Microsoft Word</option>
+                                        <option value="notion">Notion</option>
+                                        <option value="markdown">Markdown</option>
+                                    </select>
+                                </div>
+                            </label>
+                        </div>
+                        <p class="st-callout">
+                            Para personalizar plantillas DOCX/PDF visita
+                            <a routerLink="/admin/templates">Plantillas</a>.
+                        </p>
+                    </div>
+                </article>
+            </ng-container>
+
+            <!-- ============= SECURITY ============= -->
+            <ng-container *ngIf="activeSection === 'security'">
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Seguridad</h2>
+                            <p class="st-card-sub">Aislamiento por tenant, gestión de usuarios y políticas de acceso.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body">
+                        <ul class="st-link-list">
+                            <li>
+                                <a routerLink="/admin/users">
+                                    <span class="st-link-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="9" cy="7" r="4"></circle>
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <strong>Usuarios</strong>
+                                        <small>Administra usuarios y sus roles en el workspace.</small>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
+                                <a routerLink="/admin/roles">
+                                    <span class="st-link-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <strong>Roles y permisos</strong>
+                                        <small>Define qué puede hacer cada rol en la plataforma.</small>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul>
+                        <p class="st-callout">
+                            Los datos de tu workspace están totalmente aislados a nivel de base de datos. Ningún
+                            usuario de otro tenant puede ver tus sesiones, proyectos o integraciones.
+                        </p>
+                    </div>
+                </article>
+            </ng-container>
+
+            <!-- ============= API & WEBHOOKS ============= -->
+            <ng-container *ngIf="activeSection === 'api'">
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Fireflies (transcripciones)</h2>
+                            <p class="st-card-sub">Webhook que recibe las grabaciones procesadas por Fireflies.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body">
+                        <div class="st-grid st-grid-2">
+                            <label class="st-field">
+                                <span class="st-field-label">API Key</span>
+                                <input type="password" class="st-input" [(ngModel)]="firefliesSettings.apiKey" />
+                            </label>
+                            <label class="st-field">
+                                <span class="st-field-label">Webhook token</span>
+                                <input type="text" class="st-input" [(ngModel)]="firefliesSettings.webhook_token"
+                                       placeholder="Token secreto opcional" />
+                            </label>
+                            <label class="st-field st-field-wide">
+                                <span class="st-field-label">Webhook URL</span>
+                                <div class="st-input-with-action">
+                                    <input type="text" class="st-input" [value]="firefliesSettings.webhookUrl" readonly />
+                                    <button type="button" class="st-btn-link" (click)="copyWebhookUrl()">Copiar</button>
+                                </div>
+                            </label>
+                        </div>
+                        <p class="st-callout">
+                            Pega esta URL en la sección "Webhooks" de tu dashboard de Fireflies.
+                        </p>
+                    </div>
+                </article>
+            </ng-container>
+
+            <!-- ============= AUDITORÍA ============= -->
+            <ng-container *ngIf="activeSection === 'audit'">
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Auditoría</h2>
+                            <p class="st-card-sub">Registro de eventos y cambios sensibles del workspace.</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body">
+                        <p class="st-callout">
+                            La auditoría detallada estará disponible próximamente. Mientras tanto, los eventos
+                            críticos (login, cambios de rol, despachos a integraciones) se registran en el backend.
+                        </p>
+                    </div>
+                </article>
+            </ng-container>
+        </section>
     </div>
-
-    <!-- Curación Automática -->
-    <h3 class="mb-4 section-title mt-4" style="font-size: 1.1rem; font-weight: 700; color: #111827;">Automatización de Flujos</h3>
-    <div class="grid-layout cols-1 gap-4 mb-4">
-        <div class="card flex-1">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    Curación Autónoma (Auto-Dispatch)
-                </h4>
-                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="autoCurationActive" [(ngModel)]="autoCurationSettings.isEnabled" name="autoCurationActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
-                    <label class="form-check-label mb-0" for="autoCurationActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': autoCurationSettings.isEnabled ? '#10b981' : '#6b7280'}">
-                        {{ autoCurationSettings.isEnabled ? 'Habilitado' : 'Deshabilitado' }}
-                    </label>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem;">
-                    <strong>Envío automático en segundo plano</strong>
-                    <p class="mb-0 mt-1">Si una sesión entra al sistema y no se aprueba manualmente en la ventana de tiempo definida, la plataforma despachará correos y tareas a las integraciones activas de forma automática.</p>
-                </div>
-                <form>
-                    <div class="form-group mb-0">
-                        <label>Tiempo Límite para Curación Manual (en Horas)</label>
-                        <input type="number" [(ngModel)]="autoCurationSettings.timeoutHours" name="ac_timeout" min="1" max="168" style="max-width: 200px;">
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gestores de Tareas / Proyectos -->
-    <h3 class="mb-4 section-title" style="font-size: 1.1rem; font-weight: 700; color: #111827;">Conexión a Gestores de
-        Tareas Externos</h3>
-    <div class="grid-layout cols-2 gap-4">
-
-        <!-- Azure DevOps -->
-        <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z">
-                        </path>
-                    </svg>
-                    Azure DevOps
-                </h4>
-                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="azureActive" [(ngModel)]="azureSettings.isActive" name="azureActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
-                    <label class="form-check-label mb-0" for="azureActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': azureSettings.isActive ? '#10b981' : '#6b7280'}">
-                        {{ azureSettings.isActive ? 'Activo' : 'Inactivo' }}
-                    </label>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <strong>¿Cómo obtener tu PAT en Azure?</strong>
-                    <ol class="mb-0 mt-1 pl-3" style="margin-left: 1rem;">
-                        <li>Inicia sesión en <a href="https://dev.azure.com/" target="_blank">Azure DevOps</a>.</li>
-                        <li>Haz clic en el icono de <strong>User Settings</strong> (arriba a la derecha) > <strong>Personal access tokens</strong>.</li>
-                        <li><strong>New Token</strong> y dale permisos de escritura <strong>(Read & Write)</strong> en <i>Work Items</i>.</li>
-                        <li>El ID del Proyecto es el nombre de tu proyecto en la URL: <code>dev.azure.com/Organización/<b>NombreProyecto</b></code>.</li>
-                    </ol>
-                </div>
-                <form>
-                    <div class="form-group mb-3">
-                        <label>Organización</label>
-                        <input type="text" [(ngModel)]="azureSettings.organization" name="az_org">
-                    </div>
-                    <div class="form-group mb-3">
-                        <label>Web/Project ID</label>
-                        <input type="text" [(ngModel)]="azureSettings.project" name="az_proj">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Personal Access Token (PAT)</label>
-                        <input type="password" [(ngModel)]="azureSettings.pat" name="az_pat">
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Trello -->
-        <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <rect x="7" y="7" width="3" height="9"></rect>
-                        <rect x="14" y="7" width="3" height="5"></rect>
-                    </svg>
-                    Trello
-                </h4>
-                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="trelloActive" [(ngModel)]="trelloSettings.isActive" name="trelloActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
-                    <label class="form-check-label mb-0" for="trelloActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': trelloSettings.isActive ? '#10b981' : '#6b7280'}">
-                        {{ trelloSettings.isActive ? 'Activo' : 'Inactivo' }}
-                    </label>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <strong>¿Cómo obtener la API Key y Token?</strong>
-                    <ol class="mb-0 mt-1 pl-3" style="margin-left: 1rem;">
-                        <li>Entra a <a href="https://trello.com/app-key" target="_blank">Power-Ups Admin de Trello</a> e inicia sesión.</li>
-                        <li>Crea un Power-Up personalizado si no tienes uno. Copia el valor de <strong>API Key</strong>.</li>
-                        <li>En esa misma página, haz clic en el enlace <strong>"Token"</strong> para generar manualmente tu <strong>API Token</strong> personal.</li>
-                    </ol>
-                </div>
-                <form>
-                    <div class="form-group mb-3">
-                        <label>API Key</label>
-                        <input type="password" [(ngModel)]="trelloSettings.apiKey" name="tr_api"
-                            placeholder="Developer API Key">
-                    </div>
-                    <div class="form-group mb-3">
-                        <label>API Token</label>
-                        <input type="password" [(ngModel)]="trelloSettings.apiToken" name="tr_token"
-                            placeholder="User Auth Token">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Board ID por Defecto (Opcional)</label>
-                        <input type="text" [(ngModel)]="trelloSettings.boardId" name="tr_board">
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Jira -->
-        <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                        </path>
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                    </svg>
-                    Atlassian Jira
-                </h4>
-                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="jiraActive" [(ngModel)]="jiraSettings.isActive" name="jiraActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
-                    <label class="form-check-label mb-0" for="jiraActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': jiraSettings.isActive ? '#10b981' : '#6b7280'}">
-                        {{ jiraSettings.isActive ? 'Activo' : 'Inactivo' }}
-                    </label>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <strong>¿Cómo obtener tu API Token de Jira?</strong>
-                    <ol class="mb-0 mt-1 pl-3" style="margin-left: 1rem;">
-                        <li>Inicia sesión en <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Atlassian Security</a>.</li>
-                        <li>Haz clic en <strong>Crear token de API</strong>. Dale un nombre y copia el valor generado.</li>
-                        <li>Ingresa tu correo asocidado a tu cuenta Atlassian, y el dominio base de tu nube (ej: <code>empresa.atlassian.net</code>).</li>
-                    </ol>
-                </div>
-                <form>
-                    <div class="form-group mb-3">
-                        <label>Dominio Base (ej: midominio.atlassian.net)</label>
-                        <input type="text" [(ngModel)]="jiraSettings.domain" name="jr_domain">
-                    </div>
-                    <div class="form-group mb-3">
-                        <label>Correo Electrónico Autenticado</label>
-                        <input type="text" [(ngModel)]="jiraSettings.email" name="jr_email">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>API Token</label>
-                        <input type="password" [(ngModel)]="jiraSettings.apiToken" name="jr_token">
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- ClickUp -->
-        <div class="card flex-1" style="min-width: 300px;">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h4 class="flex align-items-center gap-2 m-0" style="font-size: 1.1rem; color: #111827;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                        <polyline points="2 17 12 22 22 17"></polyline>
-                        <polyline points="2 12 12 17 22 12"></polyline>
-                    </svg>
-                    ClickUp
-                </h4>
-                <div class="form-check form-switch m-0" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input class="form-check-input mt-0" type="checkbox" role="switch" id="clickupActive" [(ngModel)]="clickupSettings.isActive" name="clickupActive" style="width: 2.2em; height: 1.1em; cursor: pointer;">
-                    <label class="form-check-label mb-0" for="clickupActive" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;" [ngStyle]="{'color': clickupSettings.isActive ? '#10b981' : '#6b7280'}">
-                        {{ clickupSettings.isActive ? 'Activo' : 'Inactivo' }}
-                    </label>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.75rem; word-break: break-word; overflow-wrap: anywhere;">
-                    <strong>¿Cómo obtener tu Token de ClickUp?</strong>
-                    <ol class="mb-0 mt-1 pl-3" style="margin-left: 1rem;">
-                        <li>Inicia sesión en <a href="https://app.clickup.com/" target="_blank">ClickUp</a>.</li>
-                        <li>Ve a <strong>Settings</strong> > <strong>Apps</strong> (en el panel inferior izquierdo).</li>
-                        <li>En la sección <strong>API Token</strong>, haz clic en <i>Generate</i> y copia el valor pk_...</li>
-                        <li>Opcional: Encuentra tu Team ID en la URL de tu espacio de trabajo.</li>
-                    </ol>
-                </div>
-                <form>
-                    <div class="form-group mb-3">
-                        <label>Personal API Token</label>
-                        <input type="password" [(ngModel)]="clickupSettings.apiToken" name="cu_token"
-                            placeholder="pk_xxx_...">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label>Team/Workspace ID (Opcional)</label>
-                        <input type="text" [(ngModel)]="clickupSettings.teamId" name="cu_team">
-                    </div>
-                </form>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Espacio inferior -->
-    <div class="mb-5"></div>
 </div>

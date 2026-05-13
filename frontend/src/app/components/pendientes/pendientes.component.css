@@ -202,7 +202,164 @@
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-/* ───── Filtros (estilo igual al de Reuniones) ───── */
+/* ───── Filtros (mismo patrón EXACTO que /admin/meetings) ───── */
+.tk-filters-wrap {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--tk-border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.mt-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+}
+.filter-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #FFFFFF;
+    border: 1px solid var(--tk-border);
+    border-radius: 10px;
+    height: 42px;
+    padding: 0 14px;
+    gap: 10px;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    min-width: 0;
+}
+.filter-search:hover { border-color: var(--tk-text-soft); }
+.filter-search:focus-within {
+    border-color: var(--tk-blue);
+    box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.10);
+}
+.filter-search > svg { color: var(--tk-text-soft); flex-shrink: 0; }
+.filter-search input {
+    flex: 1; min-width: 0;
+    border: 0; outline: none; background: transparent;
+    padding: 0; line-height: 1;
+    font-family: inherit; font-size: 14px;
+    color: var(--tk-text);
+    height: 100%;
+}
+.filter-search input::placeholder { color: var(--tk-text-soft); opacity: 1; }
+
+.filters-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 14px;
+    background: #FFFFFF;
+    border: 1px solid var(--tk-border);
+    border-radius: 10px;
+    color: var(--tk-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.filters-btn > svg:first-of-type { color: var(--tk-text-muted); flex-shrink: 0; }
+.filters-btn:hover { background: var(--tk-grey-soft); border-color: var(--tk-text-soft); }
+.filters-btn.is-open {
+    background: var(--tk-blue-bg);
+    border-color: var(--tk-blue);
+    color: var(--tk-blue);
+}
+.filters-btn.is-open > svg:first-of-type { color: var(--tk-blue); }
+.filters-btn.has-active { border-color: var(--tk-blue); }
+.filters-btn-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 999px;
+    background: var(--tk-blue);
+    color: #FFFFFF;
+    font-size: 10px; font-weight: 700;
+}
+.filters-btn-chevron { color: var(--tk-text-muted); transition: transform 150ms ease; }
+.filters-btn-chevron.flipped { transform: rotate(180deg); }
+
+.mt-filters {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+    gap: 10px;
+    align-items: stretch;
+    animation: tk-filters-slide 180ms ease-out;
+}
+@keyframes tk-filters-slide {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    background: #FFFFFF;
+    border: 1px solid var(--tk-border);
+    border-radius: 10px;
+    padding: 4px 12px;
+    height: 42px;
+    justify-content: center;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.filter-group:focus-within {
+    border-color: var(--tk-blue);
+    box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.10);
+}
+.filter-group > label {
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--tk-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    line-height: 1;
+}
+.filter-group select,
+.filter-group input {
+    appearance: none; -webkit-appearance: none;
+    background: transparent;
+    border: 0; outline: none;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--tk-text);
+    padding: 0 16px 0 0;
+    margin-top: 2px;
+    cursor: pointer;
+    background-image: none;
+}
+.filter-group input::placeholder { color: var(--tk-text-soft); }
+.filter-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: 12px;
+}
+.filters-clear-link {
+    display: inline-flex;
+    align-items: center;
+    height: 42px;
+    padding: 0 12px;
+    background: transparent;
+    border: 0;
+    color: var(--tk-blue);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+.filters-clear-link:hover { background: var(--tk-blue-bg); }
+
+/* Estilos OBSOLETOS pero conservados por si quedan referencias en otras
+   pantallas; ya no se usan en esta vista. */
 .tk-filters {
     display: flex;
     align-items: center;
@@ -303,12 +460,37 @@
 }
 .tk-clear:hover { background: var(--tk-blue-bg); }
 
-/* ───── Tabla ───── */
-.tk-table-wrap { overflow-x: auto; }
+/* ───── Tabla ─────
+   Sin scroll horizontal en desktop: usamos table-layout: fixed con
+   anchos relativos. Las columnas largas (Tarea, Proyecto) truncan
+   con ellipsis. Sólo en móviles activamos el scroll horizontal. */
+.tk-table-wrap { overflow-x: hidden; }
 .tk-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 12.5px;
+    table-layout: fixed;
+}
+/* Anchos de columna explícitos para evitar overflow horizontal. */
+.tk-table .th-check, .tk-table .td-check       { width: 32px; padding-right: 0; }
+.tk-table .th-task,   .tk-table .td-task       { width: 22%; }
+.tk-table .th-project, .tk-table .td-project   { width: 12%; }
+.tk-table .th-owner,   .tk-table .td-owner     { width: 14%; }
+.tk-table .th-priority, .tk-table .td-priority { width: 8%; }
+.tk-table .th-due,      .tk-table .td-due      { width: 13%; }
+.tk-table .th-status,   .tk-table .td-status   { width: 10%; }
+.tk-table .th-progress, .tk-table .td-progress { width: 13%; }
+.tk-table .th-actions,  .tk-table .td-actions  { width: 36px; padding-left: 0; }
+.tk-table td, .tk-table th {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tk-task-title, .tk-owner-name, .tk-project-badge {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 100%;
 }
 .tk-table thead th {
     text-align: left;
@@ -699,6 +881,31 @@
     list-style: none;
 }
 
+/* Mini filtros del workload */
+.tk-workload-filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.tk-mini-select {
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    border: 1px solid var(--tk-border);
+    border-radius: 7px;
+    background: #FFFFFF
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")
+        no-repeat right 6px center;
+    background-size: 10px;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0 22px 0 8px;
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--tk-text);
+    cursor: pointer;
+}
+
 /* ── Donut workload ── */
 .tk-donut {
     position: relative;
@@ -855,16 +1062,24 @@
     .tk-side { flex-direction: row; flex-wrap: wrap; }
     .tk-side-card { flex: 1; min-width: 280px; }
 }
+@media (max-width: 1100px) {
+    /* En tablet apretado el panel de filtros pasa a 3 columnas. */
+    .mt-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 768px) {
     .acten-tasks { padding: 16px; }
     .tk-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tk-hero { flex-direction: column; align-items: stretch; }
     .tk-hero-actions { justify-content: flex-end; }
     .tk-tabs { overflow-x: auto; }
-    .tk-filters > * { flex: 1; min-width: 140px; }
-    .tk-search { max-width: none; }
+    .mt-search-row { grid-template-columns: minmax(0, 1fr); }
+    .filters-btn { width: 100%; justify-content: center; }
+    .mt-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tk-pagination { flex-direction: column; align-items: stretch; gap: 10px; }
     .tk-pag-controls { justify-content: center; }
+    /* En móvil sí permitimos scroll horizontal de la tabla. */
+    .tk-table-wrap { overflow-x: auto; }
+    .tk-table { table-layout: auto; min-width: 900px; }
 }
 @media (max-width: 520px) {
     .tk-metrics { grid-template-columns: 1fr; }

@@ -43,9 +43,16 @@ MS_SCOPES = "openid email profile offline_access Calendars.Read User.Read"
 # Google
 # ---------------------------------------------------------------------------
 
-def google_oauth_url(state: str) -> str:
-    cid = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
-    redirect = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "")
+def _g(cfg: Optional[dict], key: str, env: str) -> str:
+    """Resuelve un valor del cfg dict (db por tenant) o del env var. Vacío si no hay."""
+    if cfg and cfg.get(key):
+        return str(cfg.get(key)).strip()
+    return os.getenv(env, "").strip()
+
+
+def google_oauth_url(state: str, cfg: Optional[dict] = None) -> str:
+    cid = _g(cfg, "client_id", "GOOGLE_OAUTH_CLIENT_ID")
+    redirect = _g(cfg, "redirect_uri", "GOOGLE_OAUTH_REDIRECT_URI")
     if not cid or not redirect:
         raise RuntimeError("GOOGLE_OAUTH_CLIENT_ID / REDIRECT_URI no configurados.")
     params = {
@@ -57,10 +64,10 @@ def google_oauth_url(state: str) -> str:
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 
-async def google_exchange_code(code: str) -> dict:
-    cid = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
-    cs = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "")
-    redirect = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "")
+async def google_exchange_code(code: str, cfg: Optional[dict] = None) -> dict:
+    cid = _g(cfg, "client_id", "GOOGLE_OAUTH_CLIENT_ID")
+    cs = _g(cfg, "client_secret", "GOOGLE_OAUTH_CLIENT_SECRET")
+    redirect = _g(cfg, "redirect_uri", "GOOGLE_OAUTH_REDIRECT_URI")
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.post(GOOGLE_TOKEN_URL, data={
             "code": code, "client_id": cid, "client_secret": cs,
@@ -81,9 +88,9 @@ async def google_exchange_code(code: str) -> dict:
         }
 
 
-async def google_refresh(refresh_token: str) -> dict:
-    cid = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
-    cs = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "")
+async def google_refresh(refresh_token: str, cfg: Optional[dict] = None) -> dict:
+    cid = _g(cfg, "client_id", "GOOGLE_OAUTH_CLIENT_ID")
+    cs = _g(cfg, "client_secret", "GOOGLE_OAUTH_CLIENT_SECRET")
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.post(GOOGLE_TOKEN_URL, data={
             "refresh_token": refresh_token, "client_id": cid,
@@ -128,9 +135,20 @@ async def google_list_events(access_token: str, days: int = 7) -> list[dict]:
 # Microsoft
 # ---------------------------------------------------------------------------
 
-def microsoft_oauth_url(state: str) -> str:
-    cid = os.getenv("MS_OAUTH_CLIENT_ID", "")
-    redirect = os.getenv("MS_OAUTH_REDIRECT_URI", "")
+def _ms_auth_url(cfg: Optional[dict]) -> str:
+    """Microsoft permite especificar tenant ('common', 'organizations', un GUID, …)."""
+    tenant_seg = (cfg or {}).get("tenant") or os.getenv("MS_OAUTH_TENANT", "common")
+    return f"https://login.microsoftonline.com/{tenant_seg}/oauth2/v2.0/authorize"
+
+
+def _ms_token_url(cfg: Optional[dict]) -> str:
+    tenant_seg = (cfg or {}).get("tenant") or os.getenv("MS_OAUTH_TENANT", "common")
+    return f"https://login.microsoftonline.com/{tenant_seg}/oauth2/v2.0/token"
+
+
+def microsoft_oauth_url(state: str, cfg: Optional[dict] = None) -> str:
+    cid = _g(cfg, "client_id", "MS_OAUTH_CLIENT_ID")
+    redirect = _g(cfg, "redirect_uri", "MS_OAUTH_REDIRECT_URI")
     if not cid or not redirect:
         raise RuntimeError("MS_OAUTH_CLIENT_ID / REDIRECT_URI no configurados.")
     params = {
@@ -138,15 +156,15 @@ def microsoft_oauth_url(state: str) -> str:
         "response_type": "code", "response_mode": "query",
         "scope": MS_SCOPES, "state": state,
     }
-    return f"{MS_AUTH_URL}?{urlencode(params)}"
+    return f"{_ms_auth_url(cfg)}?{urlencode(params)}"
 
 
-async def microsoft_exchange_code(code: str) -> dict:
-    cid = os.getenv("MS_OAUTH_CLIENT_ID", "")
-    cs = os.getenv("MS_OAUTH_CLIENT_SECRET", "")
-    redirect = os.getenv("MS_OAUTH_REDIRECT_URI", "")
+async def microsoft_exchange_code(code: str, cfg: Optional[dict] = None) -> dict:
+    cid = _g(cfg, "client_id", "MS_OAUTH_CLIENT_ID")
+    cs = _g(cfg, "client_secret", "MS_OAUTH_CLIENT_SECRET")
+    redirect = _g(cfg, "redirect_uri", "MS_OAUTH_REDIRECT_URI")
     async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.post(MS_TOKEN_URL, data={
+        r = await client.post(_ms_token_url(cfg), data={
             "code": code, "client_id": cid, "client_secret": cs,
             "redirect_uri": redirect, "grant_type": "authorization_code",
             "scope": MS_SCOPES,
@@ -166,11 +184,11 @@ async def microsoft_exchange_code(code: str) -> dict:
         }
 
 
-async def microsoft_refresh(refresh_token: str) -> dict:
-    cid = os.getenv("MS_OAUTH_CLIENT_ID", "")
-    cs = os.getenv("MS_OAUTH_CLIENT_SECRET", "")
+async def microsoft_refresh(refresh_token: str, cfg: Optional[dict] = None) -> dict:
+    cid = _g(cfg, "client_id", "MS_OAUTH_CLIENT_ID")
+    cs = _g(cfg, "client_secret", "MS_OAUTH_CLIENT_SECRET")
     async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.post(MS_TOKEN_URL, data={
+        r = await client.post(_ms_token_url(cfg), data={
             "refresh_token": refresh_token, "client_id": cid,
             "client_secret": cs, "grant_type": "refresh_token",
             "scope": MS_SCOPES,

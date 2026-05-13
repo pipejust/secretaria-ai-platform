@@ -44,16 +44,19 @@
                         <span class="tk-metric-label">{{ m.label }}</span>
                         <span class="tk-metric-value">{{ m.value }}</span>
                         <span class="tk-metric-delta" [attr.data-tone]="m.deltaTone">
-                            <svg *ngIf="m.deltaDir === 'up'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="6 14 12 8 18 14"></polyline>
+                            <!-- Flecha COMPLETA (cabeza + palito) — antes solo era una "v". -->
+                            <svg *ngIf="m.deltaDir === 'up'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="19" x2="12" y2="5"></line>
+                                <polyline points="5 12 12 5 19 12"></polyline>
                             </svg>
-                            <svg *ngIf="m.deltaDir === 'down'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="6 10 12 16 18 10"></polyline>
+                            <svg *ngIf="m.deltaDir === 'down'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <polyline points="5 12 12 19 19 12"></polyline>
                             </svg>
-                            <svg *ngIf="m.deltaDir === 'flat'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <svg *ngIf="m.deltaDir === 'flat'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                             </svg>
                             <span>{{ m.delta }}</span>
@@ -77,63 +80,90 @@
             <!-- ===== Card de tabla ===== -->
             <article class="tk-card">
 
-                <!-- ── Filtros (estilo igual al de Reuniones) ── -->
-                <header class="tk-filters">
-                    <!-- Buscador -->
-                    <div class="tk-search">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                        <input type="text" [(ngModel)]="searchQuery" placeholder="Buscar tareas..." />
-                    </div>
+                <!-- ── Filtros (mismo patrón EXACTO que /admin/meetings) ── -->
+                <div class="tk-filters-wrap">
+                    <section class="mt-search-row" aria-label="Buscar tareas">
+                        <div class="filter-search">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" placeholder="Buscar por título, descripción o responsable…"
+                                   [(ngModel)]="searchQuery" />
+                        </div>
 
-                    <div class="tk-filter-group">
-                        <label>Responsable</label>
-                        <input type="text" [(ngModel)]="ownerFilter" (keyup.enter)="load()"
-                               placeholder="Todos" />
-                    </div>
+                        <button class="filters-btn" type="button"
+                                [class.is-open]="showFilters"
+                                [class.has-active]="activeFiltersCount > 0"
+                                [attr.aria-expanded]="showFilters"
+                                (click)="toggleFilters()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                            </svg>
+                            Filtros
+                            <span class="filters-btn-count" *ngIf="activeFiltersCount > 0">{{ activeFiltersCount }}</span>
+                            <svg class="filters-btn-chevron" [class.flipped]="showFilters"
+                                 width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                    </section>
 
-                    <div class="tk-filter-group">
-                        <label>Proyecto</label>
-                        <input type="text" [(ngModel)]="projectFilter" placeholder="Todos" />
-                    </div>
+                    <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+                        <div class="filter-group">
+                            <label>Responsable</label>
+                            <input type="text" [(ngModel)]="ownerFilter" (keyup.enter)="load()"
+                                   placeholder="Todos" />
+                        </div>
 
-                    <div class="tk-filter-group">
-                        <label>Prioridad</label>
-                        <select [(ngModel)]="priorityFilter">
-                            <option value="">Todas</option>
-                            <option value="alta">Alta</option>
-                            <option value="media">Media</option>
-                            <option value="baja">Baja</option>
-                        </select>
-                    </div>
+                        <div class="filter-group">
+                            <label>Proyecto</label>
+                            <select [(ngModel)]="projectFilter">
+                                <option value="">Todos los proyectos</option>
+                                <option *ngFor="let p of projects" [value]="p.name">{{ p.name }}</option>
+                            </select>
+                        </div>
 
-                    <div class="tk-filter-group">
-                        <label>Vencimiento</label>
-                        <select [(ngModel)]="bucket" (change)="setBucket(bucket)">
-                            <option value="activos">Todas activas</option>
-                            <option value="vencido">Vencidas</option>
-                            <option value="proximo">Próximas (≤7d)</option>
-                            <option value="sin_fecha">Sin fecha</option>
-                        </select>
-                    </div>
+                        <div class="filter-group">
+                            <label>Prioridad</label>
+                            <select [(ngModel)]="priorityFilter">
+                                <option value="">Todas</option>
+                                <option value="alta">Alta</option>
+                                <option value="media">Media</option>
+                                <option value="baja">Baja</option>
+                            </select>
+                        </div>
 
-                    <div class="tk-filter-group">
-                        <label>Estado</label>
-                        <select [(ngModel)]="statusFilter">
-                            <option value="">Todos</option>
-                            <option value="abierta">Abierta</option>
-                            <option value="en progreso">En progreso</option>
-                            <option value="vencida">Vencida</option>
-                            <option value="completada">Completada</option>
-                            <option value="bloqueada">Bloqueada</option>
-                        </select>
-                    </div>
+                        <div class="filter-group">
+                            <label>Vencimiento</label>
+                            <select [(ngModel)]="bucket" (change)="setBucket(bucket)">
+                                <option value="activos">Todas activas</option>
+                                <option value="vencido">Vencidas</option>
+                                <option value="proximo">Próximas (≤7d)</option>
+                                <option value="sin_fecha">Sin fecha</option>
+                            </select>
+                        </div>
 
-                    <button type="button" class="tk-clear" (click)="clearFilters()">Limpiar filtros</button>
-                </header>
+                        <div class="filter-group">
+                            <label>Estado</label>
+                            <select [(ngModel)]="statusFilter">
+                                <option value="">Todos</option>
+                                <option value="abierta">Abierta</option>
+                                <option value="en progreso">En progreso</option>
+                                <option value="vencida">Vencida</option>
+                                <option value="completada">Completada</option>
+                                <option value="bloqueada">Bloqueada</option>
+                            </select>
+                        </div>
+
+                        <button type="button" class="filters-clear-link" (click)="clearFilters()">
+                            Limpiar filtros
+                        </button>
+                    </section>
+                </div>
 
                 <!-- ── Tabla ── -->
                 <div class="tk-table-wrap">
@@ -335,12 +365,26 @@
         <!-- =================== PANEL DERECHO =================== -->
         <aside class="tk-side">
 
-            <!-- ── Carga de trabajo (donut) ── -->
+            <!-- ── Carga de trabajo (donut + mini filtros) ── -->
             <article class="tk-card tk-side-card">
                 <header class="tk-side-head">
                     <h3>Carga de trabajo</h3>
                     <a routerLink="/admin/reportes" class="tk-side-link">Ver reporte completo</a>
                 </header>
+
+                <!-- Mini filtros del workload (proyecto + rango).
+                     Sólo afectan al donut, no a la tabla principal. -->
+                <div class="tk-workload-filters">
+                    <select class="tk-mini-select" [(ngModel)]="workloadProjectFilter">
+                        <option value="">Todos los proyectos</option>
+                        <option *ngFor="let p of projects" [value]="p.name">{{ p.name }}</option>
+                    </select>
+                    <select class="tk-mini-select" [(ngModel)]="workloadRangeFilter">
+                        <option value="all">Todo el periodo</option>
+                        <option value="week">Esta semana</option>
+                        <option value="month">Este mes</option>
+                    </select>
+                </div>
 
                 <div class="tk-donut">
                     <svg viewBox="0 0 140 140" width="140" height="140">
@@ -626,8 +670,23 @@
                                    placeholder="correo@empresa.com" />
                         </div>
                         <div class="tk-form-row">
+                            <label class="tk-form-label">Prioridad</label>
+                            <select class="tk-input" [(ngModel)]="newTask.priority">
+                                <option value="alta">Alta</option>
+                                <option value="media">Media</option>
+                                <option value="baja">Baja</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="tk-form-grid">
+                        <div class="tk-form-row">
                             <label class="tk-form-label">Fecha límite</label>
                             <input type="date" class="tk-input" [(ngModel)]="newTask.due_date" />
+                        </div>
+                        <div class="tk-form-row">
+                            <label class="tk-form-label">Hora límite <small>(opcional)</small></label>
+                            <input type="time" class="tk-input" [(ngModel)]="newTask.due_time" />
                         </div>
                     </div>
 

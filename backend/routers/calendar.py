@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
 from database import get_session
-from models import CalendarAccount, CalendarEvent, User
+from models import CalendarAccount, CalendarEvent, IntegrationSetting, User
 from routers.auth import get_current_user
 from services.calendar_service import (
     google_exchange_code, google_list_events, google_oauth_url, google_refresh,
@@ -24,22 +24,82 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/calendar", tags=["Calendar"])
 
 
+# Provider keys usados en IntegrationSetting.config_json
+PROVIDER_KEY = {
+    "google":    "google_calendar",
+    "microsoft": "microsoft_calendar",
+}
+
+
+def _load_oauth_cfg(provider: str, tenant_id: int, db: Session) -> Optional[dict]:
+    """Carga las credenciales OAuth almacenadas en IntegrationSetting para el tenant.
+
+    Si no hay credenciales en DB, devuelve None y la capa de servicio cae en env vars.
+    """
+    key = PROVIDER_KEY.get(provider)
+    if not key:
+        return None
+    row = db.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.tenant_id == tenant_id)
+        .where(IntegrationSetting.provider_name == key)
+    ).first()
+    if not row or not row.is_active:
+        return None
+    try:
+        return json.loads(row.config_json or "{}")
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
+@router.get("/oauth_config_status")
+def oauth_config_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    """Indica si las credenciales OAuth de Google/Microsoft están configuradas
+    para este tenant (DB) o globalmente (env vars). NO devuelve secretos.
+    """
+    import os as _os
+    def has(g, m_db_key: str, env_id: str, env_redir: str) -> dict:
+        from_db = bool(g and g.get("client_id") and g.get("redirect_uri"))
+        from_env = bool(_os.getenv(env_id) and _os.getenv(env_redir))
+        return {
+            "ready": from_db or from_env,
+            "source": "tenant" if from_db else ("env" if from_env else None),
+        }
+    g_cfg = _load_oauth_cfg("google", current_user.tenant_id, db)
+    m_cfg = _load_oauth_cfg("microsoft", current_user.tenant_id, db)
+    return {
+        "google":    has(g_cfg,    "google_calendar",    "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_REDIRECT_URI"),
+        "microsoft": has(m_cfg, "microsoft_calendar",    "MS_OAUTH_CLIENT_ID",     "MS_OAUTH_REDIRECT_URI"),
+    }
+
+
 @router.get("/google/auth_url")
-def google_auth_url(current_user: User = Depends(get_current_user)):
+def google_auth_url(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
     """Devuelve la URL para iniciar el OAuth flow de Google."""
     state = secrets.token_urlsafe(16)
+    cfg = _load_oauth_cfg("google", current_user.tenant_id, db)
     try:
-        url = google_oauth_url(state)
+        url = google_oauth_url(state, cfg=cfg)
     except RuntimeError as e:
         raise HTTPException(503, str(e))
     return {"url": url, "state": state}
 
 
 @router.get("/microsoft/auth_url")
-def microsoft_auth_url(current_user: User = Depends(get_current_user)):
+def microsoft_auth_url(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
     state = secrets.token_urlsafe(16)
+    cfg = _load_oauth_cfg("microsoft", current_user.tenant_id, db)
     try:
-        url = microsoft_oauth_url(state)
+        url = microsoft_oauth_url(state, cfg=cfg)
     except RuntimeError as e:
         raise HTTPException(503, str(e))
     return {"url": url, "state": state}
@@ -52,8 +112,9 @@ async def google_callback(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session),
 ):
+    cfg = _load_oauth_cfg("google", current_user.tenant_id, db)
     try:
-        tok = await google_exchange_code(code)
+        tok = await google_exchange_code(code, cfg=cfg)
     except Exception as e:
         logger.exception("google_callback: exchange falló")
         raise HTTPException(400, f"OAuth exchange falló: {e}")
@@ -91,8 +152,9 @@ async def microsoft_callback(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session),
 ):
+    cfg = _load_oauth_cfg("microsoft", current_user.tenant_id, db)
     try:
-        tok = await microsoft_exchange_code(code)
+        tok = await microsoft_exchange_code(code, cfg=cfg)
     except Exception as e:
         logger.exception("microsoft_callback: exchange falló")
         raise HTTPException(400, f"OAuth exchange falló: {e}")
@@ -197,10 +259,11 @@ async def sync_now(
             # Token probablemente expirado; intentar refresh y reportar.
             logger.warning("sync %s falló: %s. Intentando refresh.", acc.provider, e)
             try:
+                cfg_refresh = _load_oauth_cfg(acc.provider, current_user.tenant_id, db)
                 if acc.provider == "google" and acc.refresh_token:
-                    new_tok = await google_refresh(acc.refresh_token)
+                    new_tok = await google_refresh(acc.refresh_token, cfg=cfg_refresh)
                 elif acc.provider == "microsoft" and acc.refresh_token:
-                    new_tok = await microsoft_refresh(acc.refresh_token)
+                    new_tok = await microsoft_refresh(acc.refresh_token, cfg=cfg_refresh)
                 else:
                     raise
                 acc.access_token = new_tok["access_token"]

@@ -936,7 +936,8 @@
 .content-area:has(.acten-dashboard),
 .content-area:has(.acten-projects),
 .content-area:has(.acten-ask),
-.content-area:has(.acten-tasks) { padding: 0; background: #F7F9FC; }
+.content-area:has(.acten-tasks),
+.content-area:has(.acten-settings) { padding: 0; background: #F7F9FC; }
 
 /* Para el chat de Acten queremos que la página entera entre en el viewport
    sin scroll: la lista de turns scrollea por dentro, no la página. Por eso

@@ -169,9 +169,11 @@ class OpenAIService:
                             "owner_email": {"type": "string"},
                             "title": {"type": "string", "description": "Título claro y descriptivo de la tarea específica."},
                             "description": {"type": "string", "description": "Usa ESTRICTAMENTE el siguiente formato separador con saltos de línea y texto para estructurar esta tarea específica:\nObjetivo: [texto]\nDetalle específico: [texto]\nActividades puntuales: [texto]\nEntregable: [texto]\nCriterio de cierre: [texto]"},
-                            "due_date": {"type": "string", "description": "Revisa tu thinking_process para colocar la fecha o día exacto acordado en formato YYYY-MM-DD."}
+                            "due_date": {"type": "string", "description": "Revisa tu thinking_process para colocar la fecha o día exacto acordado en formato YYYY-MM-DD."},
+                            "due_time": {"type": "string", "description": "Hora exacta del compromiso en formato HH:MM (24h). Vacío si la reunión no la fijó."},
+                            "priority": {"type": "string", "enum": ["alta", "media", "baja"], "description": "Prioridad inferida: 'alta' si vence pronto/es bloqueante/se mencionó como urgente, 'baja' si es a futuro o nice-to-have, 'media' por defecto."}
                         },
-                        "required": ["owner_name", "owner_email", "title", "description", "due_date"]
+                        "required": ["owner_name", "owner_email", "title", "description", "due_date", "due_time", "priority"]
                     }
                 }
             },

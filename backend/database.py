@@ -66,6 +66,12 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE actionitem ADD COLUMN completed_at TEXT',
             # Sprint 00 — embeddings (sqlite no soporta pgvector, fallback a TEXT)
             'ALTER TABLE embeddingchunk ADD COLUMN embedding_vector TEXT',
+            # Perfil + tracking en user (vista Control de Accesos).
+            'ALTER TABLE "user" ADD COLUMN phone TEXT',
+            'ALTER TABLE "user" ADD COLUMN department TEXT',
+            'ALTER TABLE "user" ADD COLUMN position TEXT',
+            'ALTER TABLE "user" ADD COLUMN created_at TEXT',
+            'ALTER TABLE "user" ADD COLUMN last_login_at TEXT',
         ]
     else:
         statements = [
@@ -76,6 +82,10 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES "user"(id)',
             'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT \'pending\'',
             'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS completed_at VARCHAR(64)',
+            # Nuevas columnas de Tareas (priority + due_time):
+            'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS priority VARCHAR(10) NOT NULL DEFAULT \'media\'',
+            'ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS due_time VARCHAR(5)',
+            'CREATE INDEX IF NOT EXISTS idx_actionitem_priority ON actionitem(priority)',
             # Sprint 00 — pgvector (extensión + columna VECTOR(1536) reemplaza la "embedding TEXT" genérica)
             'CREATE EXTENSION IF NOT EXISTS vector',
             'ALTER TABLE embeddingchunk ADD COLUMN IF NOT EXISTS embedding_vector vector(1536)',
@@ -109,6 +119,16 @@ def _apply_lightweight_migrations() -> None:
             # Aquí sólo añadimos columnas FK + backfill. Todas son IF NOT EXISTS.
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN NOT NULL DEFAULT FALSE',
+            # Perfil + tracking (vista Control de Accesos).
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS phone VARCHAR(64)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS department VARCHAR(128)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS position VARCHAR(128)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS created_at VARCHAR(64)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS last_login_at VARCHAR(64)',
+            # Role — columnas nuevas que SQLModel mapea pero la DB heredada no tiene.
+            "ALTER TABLE role               ADD COLUMN IF NOT EXISTS is_system  BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE role               ADD COLUMN IF NOT EXISTS created_at VARCHAR(64)",
+            "ALTER TABLE role               ADD COLUMN IF NOT EXISTS updated_at VARCHAR(64)",
             'ALTER TABLE project            ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
             'ALTER TABLE meetingsession     ADD COLUMN IF NOT EXISTS tenant_id INTEGER',
             'ALTER TABLE integrationsetting ADD COLUMN IF NOT EXISTS tenant_id INTEGER',

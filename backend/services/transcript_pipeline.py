@@ -151,12 +151,18 @@ async def process_session_with_ai(
             owner_name = "Unknown"
             owner_email = ""
             due_date = None
+            due_time = None
+            priority = "media"
         elif isinstance(item_data, dict):
             title_v = str(item_data.get("title") or "").strip()
             description = str(item_data.get("description") or "").strip()
             owner_name = str(item_data.get("owner_name") or "Unknown")
             owner_email = str(item_data.get("owner_email") or "")
-            due_date = item_data.get("due_date")
+            due_date = item_data.get("due_date") or None
+            due_time = (item_data.get("due_time") or "").strip() or None
+            priority = (item_data.get("priority") or "media").lower().strip()
+            if priority not in ("alta", "media", "baja"):
+                priority = "media"
         else:
             continue
 
@@ -172,6 +178,8 @@ async def process_session_with_ai(
                 title=title_v or "Tarea sin título",
                 description=description,
                 due_date=due_date,
+                due_time=due_time,
+                priority=priority,
                 is_approved=False,
             )
         )

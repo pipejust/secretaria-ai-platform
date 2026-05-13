@@ -338,19 +338,25 @@ async def regenerate_tasks_from_transcript(
             owner_name = "Unknown"
             owner_email = ""
             due_date = None
+            due_time = None
+            priority = "media"
         elif isinstance(item_data, dict):
             title = str(item_data.get("title") or "").strip()
             description = str(item_data.get("description") or "").strip()
             owner_name = str(item_data.get("owner_name") or "Unknown")
             owner_email = str(item_data.get("owner_email") or "")
-            due_date = item_data.get("due_date")
+            due_date = item_data.get("due_date") or None
+            due_time = (item_data.get("due_time") or "").strip() or None
+            priority = (item_data.get("priority") or "media").lower().strip()
+            if priority not in ("alta", "media", "baja"):
+                priority = "media"
         else:
             continue
-            
+
         # Filtro estricto contra tareas vacías alucinadas
         if not title and not description:
             continue
-            
+
         action_item = ActionItem(
             tenant_id=tenant.id,
             session_id=session_id,
@@ -359,7 +365,9 @@ async def regenerate_tasks_from_transcript(
             title=title or "Tarea sin título",
             description=description,
             due_date=due_date,
-            is_approved=False
+            due_time=due_time,
+            priority=priority,
+            is_approved=False,
         )
         db.add(action_item)
         db.commit()
@@ -528,6 +536,8 @@ def update_action_item_manual(
     owner_name: Optional[str] = Form(None),
     owner_email: Optional[str] = Form(None),
     due_date: Optional[str] = Form(None),
+    due_time: Optional[str] = Form(None),
+    priority: Optional[str] = Form(None),
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
     _writer: User = Depends(require_session_writer),
@@ -537,17 +547,17 @@ def update_action_item_manual(
     item = db.get(ActionItem, item_id)
     if not item or item.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Action Item not found")
-    
-    if title is not None:
-        item.title = title
-    if description is not None:
-        item.description = description
-    if owner_name is not None:
-        item.owner_name = owner_name
-    if owner_email is not None:
-        item.owner_email = owner_email
-    if due_date is not None:
-        item.due_date = due_date
+
+    if title is not None:        item.title = title
+    if description is not None:  item.description = description
+    if owner_name is not None:   item.owner_name = owner_name
+    if owner_email is not None:  item.owner_email = owner_email
+    if due_date is not None:     item.due_date = due_date or None
+    if due_time is not None:     item.due_time = due_time or None
+    if priority is not None:
+        pri = priority.lower().strip()
+        if pri in ("alta", "media", "baja"):
+            item.priority = pri
 
     db.add(item)
     db.commit()
@@ -561,6 +571,8 @@ def create_manual_action_item(
     owner_name: str = Form(""),
     owner_email: str = Form(""),
     due_date: str = Form(""),
+    due_time: str = Form(""),
+    priority: str = Form("media"),
     description: str = Form(""),
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
@@ -568,7 +580,11 @@ def create_manual_action_item(
 ):
     """Crear una nueva tarea manual (admin/validator, tenant-scoped)."""
     from models import ActionItem
-    session_obj = _get_session_or_404(db, session_id, tenant)
+    _get_session_or_404(db, session_id, tenant)
+
+    pri = (priority or "media").lower().strip()
+    if pri not in ("alta", "media", "baja"):
+        pri = "media"
 
     new_item = ActionItem(
         tenant_id=tenant.id,
@@ -576,14 +592,16 @@ def create_manual_action_item(
         title=title,
         owner_name=owner_name,
         owner_email=owner_email,
-        due_date=due_date,
+        due_date=due_date or None,
+        due_time=due_time or None,
+        priority=pri,
         description=description,
-        is_approved=True
+        is_approved=True,
     )
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
-    
+
     return {"status": "success", "message": "Tarea agregada correctamente", "item": new_item}
 
 

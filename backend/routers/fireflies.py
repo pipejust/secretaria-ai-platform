@@ -15,6 +15,8 @@ import json
 import logging
 import time
 import traceback
+from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session, select
@@ -41,6 +43,81 @@ router = APIRouter(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _normalize_meeting_date(value) -> Optional[str]:
+    """Convierte cualquier representación de fecha que mande Fireflies a ISO-8601.
+
+    Inputs aceptados:
+      - int / float / numeric str: epoch en milisegundos o segundos.
+      - ISO string: '2025-05-13T15:30:00Z' o '2025-05-13T15:30:00+00:00'.
+      - Fecha sola: '2025-05-13'.
+      - Cualquier dict raro o None: devuelve None.
+
+    Devuelve siempre ISO-8601 con timezone (UTC si no se proporciona) o None
+    si el valor es inválido. NUNCA cae a "ahora" silenciosamente — eso lo
+    decide el caller para que el caso quede explícito en logs.
+    """
+    # Umbral mínimo para epochs: 2000-01-01 UTC. Cualquier cosa antes son
+    # datos corruptos (ej. -1, 0) y los descartamos para no persistir 1970.
+    _MIN_EPOCH_S = 946684800  # 2000-01-01T00:00:00Z
+
+    def _from_epoch(value_num: float) -> Optional[str]:
+        try:
+            ms = float(value_num)
+            if ms > 1e12:
+                ms = ms / 1000.0
+            if ms < _MIN_EPOCH_S:
+                return None
+            return datetime.fromtimestamp(ms, tz=timezone.utc).isoformat()
+        except (OverflowError, OSError, ValueError):
+            return None
+
+    if value is None:
+        return None
+    # Bool subclass de int → descartar antes de tratar como número.
+    if isinstance(value, bool):
+        return None
+    # Caso int/float directo: epoch.
+    if isinstance(value, (int, float)):
+        return _from_epoch(value)
+    s = str(value).strip()
+    if not s:
+        return None
+    # Epoch numérico empaquetado como string (incluye signo y decimales).
+    if s.lstrip("-").replace(".", "", 1).isdigit():
+        try:
+            return _from_epoch(float(s))
+        except ValueError:
+            return None
+    # ISO con Z final que fromisoformat no entiende en python < 3.11.
+    try:
+        candidate = s.replace("Z", "+00:00") if s.endswith("Z") else s
+        dt = datetime.fromisoformat(candidate)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+    except ValueError:
+        pass
+    # Última oportunidad: fecha en formato YYYY-MM-DD.
+    try:
+        dt = datetime.strptime(s[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+    except ValueError:
+        return None
+
+
+def _pick_first_date(*candidates) -> Optional[str]:
+    """Itera candidatos y devuelve la primera fecha normalizada válida.
+
+    Mantiene el orden de precedencia que defina el caller (ej: dateString de
+    Fireflies API > date del webhook > createdAt del webhook).
+    """
+    for c in candidates:
+        norm = _normalize_meeting_date(c)
+        if norm:
+            return norm
+    return None
 
 
 def _extract_native_summary(summary_obj) -> str:
@@ -245,13 +322,22 @@ async def process_transcript_background(
                 or data_obj.get("title")
                 or "Reunión Sin Título"
             )
-            date_val = (
-                payload_data.get("date")
-                or payload_data.get("createdAt")
-                or data_obj.get("date")
-                or data_obj.get("createdAt")
+
+            # Fecha que ya tenía la sesión (set en el handler inicial). La
+            # respetamos como base — el webhook entrante normalmente la trae,
+            # y solo la PISAMOS si la API de Fireflies devuelve un dateString
+            # válido (más confiable que el payload del webhook).
+            existing_date = new_session.date or ""
+            date_from_payload = _pick_first_date(
+                payload_data.get("dateString"),
+                payload_data.get("date"),
+                payload_data.get("createdAt"),
+                payload_data.get("meeting_date"),
+                data_obj.get("dateString"),
+                data_obj.get("date"),
+                data_obj.get("createdAt"),
+                data_obj.get("meeting_date"),
             )
-            date_str = str(date_val) if date_val else str(int(time.time() * 1000))
 
             raw_transcript = str(payload_data.get("transcript", "")).strip()
             raw_summary = ""
@@ -267,8 +353,28 @@ async def process_transcript_background(
                 ff_data = {}
 
             title = ff_data.get("title") or title
-            if ff_data.get("dateString"):
-                date_str = str(ff_data["dateString"])
+
+            # Precedencia FINAL para la fecha de la reunión:
+            # 1) dateString que devuelve la API de Fireflies (fuente de verdad).
+            # 2) Lo que ya teníamos en DB (set por el handler inicial).
+            # 3) Lo que pueda venir en este payload de fondo.
+            # 4) Como último recurso 'ahora' UTC + log de error explícito.
+            date_str = _pick_first_date(
+                ff_data.get("dateString"),
+                existing_date,
+                date_from_payload,
+            )
+            if not date_str:
+                date_str = datetime.now(timezone.utc).isoformat()
+                logger.error(
+                    "No se pudo determinar fecha real para transcript %s. "
+                    "Fireflies dateString=%r, payload date=%r, existing=%r. "
+                    "Guardando 'ahora' como placeholder.",
+                    transcript_id,
+                    ff_data.get("dateString"),
+                    date_from_payload,
+                    existing_date,
+                )
 
             if not raw_transcript or len(raw_transcript) < 10:
                 sentences = ff_data.get("sentences") or []
@@ -286,8 +392,22 @@ async def process_transcript_background(
             if raw_summary:
                 raw_summary = await groq.clean_native_summary(raw_summary)
 
+            # Doble-check: el valor que estamos a punto de persistir DEBE
+            # poder leerse de vuelta. Si por algún motivo se rompió, lo
+            # forzamos a un ISO válido antes de tocar DB para que el frontend
+            # nunca reciba basura.
+            verified = _normalize_meeting_date(date_str)
+            if not verified:
+                logger.error(
+                    "Fecha final inválida para transcript %s: %r. Persistiendo "
+                    "'ahora' UTC para evitar fila corrupta.",
+                    transcript_id,
+                    date_str,
+                )
+                verified = datetime.now(timezone.utc).isoformat()
+
             new_session.title = title
-            new_session.date = date_str
+            new_session.date = verified
             new_session.raw_transcript = raw_transcript
             new_session.raw_summary = raw_summary
             new_session.status = "pending"
@@ -378,13 +498,27 @@ async def receive_fireflies_webhook(
     title = (
         payload.get("title") or data_obj.get("title") or "Reunión Procesando..."
     )
-    date_val = (
-        payload.get("date")
-        or payload.get("createdAt")
-        or data_obj.get("date")
-        or data_obj.get("createdAt")
+    # Normalizamos a ISO-8601 desde TODOS los lugares posibles donde Fireflies
+    # podría haber puesto la fecha. Solo si NINGÚN candidato es válido caemos
+    # explícitamente a "ahora" y lo dejamos registrado en logs para auditar.
+    date_str = _pick_first_date(
+        payload.get("dateString"),
+        payload.get("date"),
+        payload.get("createdAt"),
+        payload.get("meeting_date"),
+        data_obj.get("dateString"),
+        data_obj.get("date"),
+        data_obj.get("createdAt"),
+        data_obj.get("meeting_date"),
     )
-    date_str = str(date_val) if date_val else str(int(time.time() * 1000))
+    if not date_str:
+        fallback = datetime.now(timezone.utc).isoformat()
+        logger.warning(
+            "Webhook Fireflies SIN fecha legible (transcript_id=%s). Cae a 'ahora' "
+            "como placeholder; el background task intentará reemplazarla con dateString.",
+            transcript_id,
+        )
+        date_str = fallback
 
     new_session = MeetingSession(
         tenant_id=tenant_id,

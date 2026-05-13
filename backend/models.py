@@ -46,8 +46,42 @@ class Role(SQLModel, table=True):
     name: str = Field(index=True, unique=True, description="Nombre del rol, ej. admin, validator, viewer")
     description: str = Field(default="")
     is_active: bool = Field(default=True)
+    is_system: bool = Field(default=False, description="Roles de sistema no se pueden eliminar")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
     users: List["User"] = Relationship(back_populates="role")
+
+
+class RolePermission(SQLModel, table=True):
+    """Permisos granulares por rol — módulo + acción.
+
+    `module_key` es la llave del módulo (ej. 'reuniones', 'proyectos').
+    `action` es la operación: 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'export'.
+    Si una fila existe con `is_granted=True` el rol tiene ese permiso.
+    """
+
+    __table_args__ = (
+        UniqueConstraint("role_id", "module_key", "action", name="uq_role_perm"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    role_id: int = Field(foreign_key="role.id", index=True)
+    module_key: str = Field(index=True)
+    action: str
+    is_granted: bool = Field(default=True)
+
+
+class RoleActivity(SQLModel, table=True):
+    """Bitácora de cambios sobre un rol — para "Actividad reciente" en la UI."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    role_id: int = Field(foreign_key="role.id", index=True)
+    action: str = Field(description="created|updated|deleted|activated|deactivated|permission_updated")
+    actor_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    actor_name: str = Field(default="")
+    note: str = Field(default="")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 class User(SQLModel, table=True):
     # Multi-tenancy: el email ya NO es globalmente único, sólo único dentro
@@ -65,6 +99,14 @@ class User(SQLModel, table=True):
     # a cualquiera). Default False; sólo `admin@notiva.local` lo lleva tras
     # el seed inicial.
     is_superadmin: bool = Field(default=False)
+
+    # Campos de perfil opcionales — usados por la vista de Control de Accesos.
+    phone: Optional[str] = Field(default=None)
+    department: Optional[str] = Field(default=None)
+    position: Optional[str] = Field(default=None)
+    # Tracking de cuándo se creó el usuario y cuándo fue su último login.
+    created_at: Optional[str] = Field(default_factory=lambda: datetime.now().isoformat())
+    last_login_at: Optional[str] = Field(default=None, index=True)
 
     role: Optional[Role] = Relationship(back_populates="users")
 
@@ -386,6 +428,20 @@ class ActionItem(SQLModel, table=True):
     title: str
     description: str = Field(default="")
     due_date: Optional[str] = Field(default=None)
+    # Hora del compromiso (HH:MM 24h) — la separamos del due_date para
+    # que el filtro y el calendario puedan combinar fecha + hora sin
+    # ambigüedad. Opcional: si la reunión no estableció hora, queda null.
+    due_time: Optional[str] = Field(
+        default=None, max_length=5,
+        description="Hora límite en formato 'HH:MM' (24h). Opcional.",
+    )
+
+    # Prioridad explícita. La generación por IA la infiere del contexto;
+    # el usuario puede ajustarla. Default 'media'.
+    priority: str = Field(
+        default="media", max_length=10,
+        description="'alta' | 'media' | 'baja'",
+    )
 
     external_id: Optional[str] = Field(
         default=None,

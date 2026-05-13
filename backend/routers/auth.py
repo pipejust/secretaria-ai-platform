@@ -17,7 +17,8 @@ from auth_utils import (
     verify_password,
 )
 from database import DEFAULT_TENANT_SLUG, get_session
-from models import Role, Tenant, User
+from datetime import datetime
+from models import Role, RoleActivity, RolePermission, Tenant, User
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,15 @@ def login_for_access_token(
         },
         expires_delta=access_token_expires,
     )
+    # Registrar el último acceso real. Si la columna aún no existe (migración
+    # pendiente) o falla, el login no se rompe — solo se queda sin actualizar.
+    try:
+        from datetime import datetime as _dt
+        user.last_login_at = _dt.now().isoformat()
+        db.add(user); db.commit()
+    except Exception:
+        try: db.rollback()
+        except Exception: pass
     try:
         from services import audit as _audit
         _audit.log(db, user, request, action="login_ok",
@@ -266,6 +276,120 @@ def change_password(
 class RoleCreate(BaseModel):
     name: str
     description: str
+    permissions: Optional[list[dict]] = None
+    is_active: Optional[bool] = True
+
+
+class RoleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    permissions: Optional[list[dict]] = None
+
+
+# Catálogo de módulos y acciones que el sistema soporta. Se expone tanto al
+# frontend (para construir el formulario de permisos) como al backend para
+# validar que los permisos guardados son legales.
+ROLE_CATALOG: list[dict] = [
+    {"key": "resumen",        "label": "Resumen",         "actions": ["view"]},
+    {"key": "reuniones",      "label": "Reuniones",       "actions": ["view", "create", "edit", "delete", "export"]},
+    {"key": "proyectos",      "label": "Proyectos",       "actions": ["view", "create", "edit", "delete"]},
+    {"key": "tareas",         "label": "Tareas",          "actions": ["view", "edit"]},
+    {"key": "calendario",     "label": "Calendario",      "actions": ["view", "edit"]},
+    {"key": "reportes",       "label": "Reportes",        "actions": ["view", "export"]},
+    {"key": "plantillas",     "label": "Plantillas",      "actions": ["view", "create", "edit", "delete"]},
+    {"key": "pregunta_acten", "label": "Pregunta a Acten","actions": ["view"]},
+    {"key": "integraciones",  "label": "Integraciones",   "actions": ["view", "manage"]},
+    {"key": "usuarios",       "label": "Usuarios",        "actions": ["view", "create", "edit", "delete"]},
+    {"key": "roles",          "label": "Roles",           "actions": ["view", "create", "edit", "delete"]},
+    {"key": "empresas",       "label": "Empresas",        "actions": ["view", "manage"]},
+    {"key": "marca",          "label": "Marca",           "actions": ["view", "edit"]},
+    {"key": "configuracion",  "label": "Configuración",   "actions": ["view", "edit"]},
+]
+VALID_MODULES = {m["key"]: set(m["actions"]) for m in ROLE_CATALOG}
+SYSTEM_ROLE_NAMES = {"admin", "validator", "viewer"}
+
+
+def _log_role_activity(
+    db: Session,
+    role_id: int,
+    action: str,
+    actor: User,
+    note: str = "",
+) -> None:
+    """Registra una entrada en la bitácora del rol — sin levantar excepciones
+    para no romper el flujo principal si algo va mal."""
+    try:
+        entry = RoleActivity(
+            role_id=role_id,
+            action=action,
+            actor_user_id=actor.id if actor else None,
+            actor_name=(actor.full_name or actor.email) if actor else "",
+            note=note,
+        )
+        db.add(entry)
+        db.commit()
+    except Exception:
+        logger.exception("No se pudo registrar actividad del rol %s", role_id)
+
+
+def _apply_role_permissions(db: Session, role_id: int, permissions: list[dict]) -> int:
+    """Reemplaza las permissions de un rol — borra todo y vuelve a insertar.
+
+    `permissions` es lista de `{ module_key, action, is_granted? }`. Valida
+    contra el catálogo y descarta filas inválidas.
+    """
+    db.exec(
+        # SQLModel no tiene helper para DELETE WHERE, usamos raw via session.
+        # Hacemos un select+delete porque es chiquito y mantiene el código
+        # legible.
+        select(RolePermission).where(RolePermission.role_id == role_id)
+    )
+    existing = db.exec(
+        select(RolePermission).where(RolePermission.role_id == role_id)
+    ).all()
+    for row in existing:
+        db.delete(row)
+
+    saved = 0
+    for p in permissions or []:
+        mod = (p.get("module_key") or "").strip()
+        act = (p.get("action") or "").strip()
+        granted = bool(p.get("is_granted", True))
+        if not granted:
+            continue
+        if mod not in VALID_MODULES:
+            continue
+        if act not in VALID_MODULES[mod]:
+            continue
+        db.add(RolePermission(role_id=role_id, module_key=mod, action=act, is_granted=True))
+        saved += 1
+    db.commit()
+    return saved
+
+
+def _serialize_role(db: Session, role: Role) -> dict:
+    user_count = len(db.exec(select(User).where(User.role_id == role.id)).all())
+    perms = db.exec(select(RolePermission).where(RolePermission.role_id == role.id)).all()
+    modules_set = {p.module_key for p in perms if p.is_granted}
+    return {
+        "id": role.id,
+        "name": role.name,
+        "description": role.description,
+        "is_active": role.is_active,
+        "is_system": role.is_system,
+        "created_at": role.created_at,
+        "updated_at": role.updated_at,
+        "user_count": user_count,
+        "permissions_count": len(perms),
+        "modules_count": len(modules_set),
+    }
+
+
+@router.get("/roles/_catalog")
+def get_role_catalog(admin_user: User = Depends(require_admin)):
+    """Catálogo de módulos + acciones disponibles para construir el formulario."""
+    return {"modules": ROLE_CATALOG}
 
 
 @router.get("/roles")
@@ -277,7 +401,7 @@ def get_roles(
     (compartidos entre tenants); las permissions sí son tenant-scoped.
     """
     roles = db.exec(select(Role)).all()
-    return roles
+    return [_serialize_role(db, r) for r in roles]
 
 
 @router.post("/roles")
@@ -290,11 +414,204 @@ def create_role(
     if existing:
         raise HTTPException(status_code=400, detail="El rol ya existe")
 
-    new_role = Role(name=role_in.name, description=role_in.description)
+    new_role = Role(
+        name=role_in.name.strip(),
+        description=(role_in.description or "").strip(),
+        is_active=role_in.is_active if role_in.is_active is not None else True,
+        is_system=False,
+    )
     db.add(new_role)
     db.commit()
     db.refresh(new_role)
-    return new_role
+
+    if role_in.permissions:
+        _apply_role_permissions(db, new_role.id, role_in.permissions)
+
+    _log_role_activity(db, new_role.id, "created", admin_user, f"Rol creado: {new_role.name}")
+    return _serialize_role(db, new_role)
+
+
+@router.put("/roles/{role_id}")
+def update_role(
+    role_id: int,
+    payload: RoleUpdate,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+):
+    role = db.get(Role, role_id)
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+
+    changes: list[str] = []
+    if payload.name is not None and payload.name.strip() and payload.name != role.name:
+        if role.is_system:
+            raise HTTPException(status_code=400, detail="No puedes renombrar un rol de sistema")
+        clash = db.exec(select(Role).where(Role.name == payload.name, Role.id != role_id)).first()
+        if clash:
+            raise HTTPException(status_code=400, detail="Ya existe un rol con ese nombre")
+        changes.append(f"nombre: {role.name} → {payload.name}")
+        role.name = payload.name.strip()
+    if payload.description is not None and payload.description != role.description:
+        changes.append("descripción actualizada")
+        role.description = payload.description.strip()
+    if payload.is_active is not None and payload.is_active != role.is_active:
+        changes.append("activado" if payload.is_active else "desactivado")
+        role.is_active = bool(payload.is_active)
+
+    role.updated_at = datetime.now().isoformat()
+    db.add(role)
+    db.commit()
+    db.refresh(role)
+
+    if payload.permissions is not None:
+        n = _apply_role_permissions(db, role_id, payload.permissions)
+        changes.append(f"{n} permisos asignados")
+
+    if changes:
+        _log_role_activity(
+            db, role_id, "updated", admin_user, "; ".join(changes)
+        )
+    return _serialize_role(db, role)
+
+
+@router.patch("/roles/{role_id}/toggle")
+def toggle_role(
+    role_id: int,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+):
+    role = db.get(Role, role_id)
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    if role.is_system and role.is_active:
+        raise HTTPException(status_code=400, detail="No puedes desactivar un rol de sistema")
+    role.is_active = not bool(role.is_active)
+    role.updated_at = datetime.now().isoformat()
+    db.add(role)
+    db.commit()
+    _log_role_activity(
+        db, role_id,
+        "activated" if role.is_active else "deactivated",
+        admin_user,
+        f'{"Activado" if role.is_active else "Desactivado"}: {role.name}',
+    )
+    return _serialize_role(db, role)
+
+
+@router.delete("/roles/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_role(
+    role_id: int,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+):
+    role = db.get(Role, role_id)
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    if role.is_system:
+        raise HTTPException(status_code=400, detail="No puedes eliminar un rol de sistema")
+    users_with_role = db.exec(select(User).where(User.role_id == role_id)).all()
+    if users_with_role:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No puedes eliminar este rol — tiene {len(users_with_role)} usuario(s) asignado(s).",
+        )
+    # Borramos permisos primero (no hay ON DELETE CASCADE definido).
+    for p in db.exec(select(RolePermission).where(RolePermission.role_id == role_id)).all():
+        db.delete(p)
+    role_name = role.name
+    db.delete(role)
+    db.commit()
+    # No registramos en activity porque la FK se rompería; lo dejamos en log.
+    logger.info("Rol %s eliminado por user_id=%s", role_name, admin_user.id)
+    return None
+
+
+@router.get("/roles/{role_id}/permissions")
+def get_role_permissions(
+    role_id: int,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+):
+    role = db.get(Role, role_id)
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    perms = db.exec(select(RolePermission).where(RolePermission.role_id == role_id)).all()
+    return {
+        "role_id": role_id,
+        "permissions": [
+            {"module_key": p.module_key, "action": p.action, "is_granted": p.is_granted}
+            for p in perms
+        ],
+    }
+
+
+@router.get("/roles/{role_id}/users")
+def get_role_users(
+    role_id: int,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+):
+    role = db.get(Role, role_id)
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    users = db.exec(select(User).where(User.role_id == role_id)).all()
+    return [
+        {
+            "id": u.id,
+            "email": u.email,
+            "full_name": u.full_name,
+            "is_active": u.is_active,
+        }
+        for u in users
+    ]
+
+
+@router.get("/roles/{role_id}/activity")
+def get_role_activity(
+    role_id: int,
+    limit: int = 10,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+):
+    role = db.get(Role, role_id)
+    if not role:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    rows = db.exec(
+        select(RoleActivity)
+        .where(RoleActivity.role_id == role_id)
+        .order_by(RoleActivity.id.desc())
+    ).all()
+    items = []
+    for r in rows[: max(1, min(50, limit))]:
+        items.append({
+            "id": r.id,
+            "action": r.action,
+            "actor_name": r.actor_name,
+            "note": r.note,
+            "created_at": r.created_at,
+        })
+    return {"role_id": role_id, "items": items}
+
+
+@router.get("/roles/permissions/summary")
+def get_permissions_summary(
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+):
+    """Resumen global agregado para el panel derecho de Roles."""
+    perms = db.exec(select(RolePermission)).all()
+    modules = {p.module_key for p in perms}
+    critical_actions = {"delete", "manage"}
+    critical = sum(1 for p in perms if p.action in critical_actions)
+    integrations_modules = {"integraciones", "empresas", "marca", "configuracion"}
+    integrations_accessible = len({p.module_key for p in perms if p.module_key in integrations_modules})
+    return {
+        "modules_count": len(modules),
+        "permissions_total": len(perms),
+        "permissions_critical": critical,
+        "integrations_accessible": integrations_accessible,
+        "modules_available": len(VALID_MODULES),
+    }
 
 
 class ForgotPasswordRequest(BaseModel):

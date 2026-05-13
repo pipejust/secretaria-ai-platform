@@ -79,6 +79,30 @@ def on_startup():
                 len(stuck_sessions),
             )
 
+    # Migración ligera: marcar roles canónicos como `is_system=True` y
+    # rellenar `created_at`/`updated_at` para filas viejas que no los
+    # tuvieran. Idempotente.
+    try:
+        from models import Role
+        from datetime import datetime as _dt
+        with Session(engine) as session:
+            roles = session.exec(select(Role)).all()
+            now_iso = _dt.now().isoformat()
+            changed = False
+            for r in roles:
+                if r.name.lower() in {"admin", "validator", "viewer"} and not r.is_system:
+                    r.is_system = True
+                    session.add(r); changed = True
+                if not getattr(r, "created_at", None):
+                    r.created_at = now_iso; session.add(r); changed = True
+                if not getattr(r, "updated_at", None):
+                    r.updated_at = now_iso; session.add(r); changed = True
+            if changed:
+                session.commit()
+                logger.info("Migración de roles: campos system/timestamps normalizados.")
+    except Exception:
+        logger.exception("Migración de roles falló (no bloquea startup).")
+
     # Seed automático en development (admin@notiva.local / notiva)
     if os.getenv("ENVIRONMENT", "").lower() in ("dev", "development"):
         try:
