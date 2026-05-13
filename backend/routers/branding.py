@@ -1,22 +1,29 @@
 """Branding / White-label endpoints (per-tenant).
 
-GET  /api/branding/             público — resuelve tenant desde
-                                X-Tenant-Slug, ?tenant=slug, o cae al default.
-PUT  /api/branding/             admin del tenant — patch parcial.
-POST /api/branding/logo         admin del tenant — sube logo (full / wordmark).
-DELETE /api/branding/logo       admin del tenant — borra logo.
-POST /api/branding/icon         admin del tenant — sube imagologo (cuadrado).
-DELETE /api/branding/icon       admin del tenant — borra imagologo.
-POST /api/branding/favicon      admin del tenant — sube favicon.
+GET  /api/branding/                         público — resuelve tenant desde
+                                            X-Tenant-Slug, ?tenant=slug, o cae al default.
+GET  /api/branding/{tenant_id}/logo.png     público SIN auth — sirve el logo del
+                                            tenant como binario para usar en
+                                            `<img src>` de emails (Gmail/Outlook
+                                            bloquean data URLs).
+PUT  /api/branding/                         admin del tenant — patch parcial.
+POST /api/branding/logo                     admin del tenant — sube logo (full / wordmark).
+DELETE /api/branding/logo                   admin del tenant — borra logo.
+POST /api/branding/icon                     admin del tenant — sube imagologo (cuadrado).
+DELETE /api/branding/icon                   admin del tenant — borra imagologo.
+POST /api/branding/favicon                  admin del tenant — sube favicon.
 """
 
 from __future__ import annotations
 
 import base64
 import logging
+import os
+import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
@@ -69,6 +76,99 @@ def get_branding(
     return branding_service.get_branding(db, tenant.id)
 
 
+# ────────────────────────────────────────────────────────────────────────────
+# Logo binario (PÚBLICO sin auth) — para incrustar en emails.
+#
+# Los clientes de email (Gmail, Outlook, Apple Mail, etc.) BLOQUEAN
+# `<img src="data:image/png;base64,...">`. Por eso necesitamos servir el
+# logo como una URL HTTP normal. Este endpoint:
+#
+#   - decodifica el `logo_data_url` o `icon_data_url` que el admin subió
+#     vía la UI (almacenado en DB como data URL),
+#   - devuelve el binario con el MIME real,
+#   - NO requiere auth porque tiene que ser pedido por servidores SMTP
+#     externos (Gmail proxy de imágenes, etc.) que nunca van a presentar
+#     credenciales.
+#
+# Si el tenant no tiene logo subido, hace fallback al PNG default que vive
+# en `templates/assets/acten-logo-default.png`. Nunca devuelve 404 — siempre
+# garantiza una imagen para que el email no muestre placeholder roto.
+# ────────────────────────────────────────────────────────────────────────────
+
+# Cache de bytes para acelerar la lectura (evita hit a DB en cada email enviado).
+_LOGO_BYTES_CACHE: dict[tuple[int, str], tuple[bytes, str]] = {}
+_DEFAULT_LOGO_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "templates", "assets", "acten-logo-default.png",
+)
+_DATA_URL_RE = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<data>.+)$", re.DOTALL)
+
+
+def _serve_default_logo() -> Response:
+    if os.path.isfile(_DEFAULT_LOGO_PATH):
+        return FileResponse(
+            _DEFAULT_LOGO_PATH,
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    return Response(status_code=204)
+
+
+@router.get("/{tenant_id}/logo.png", include_in_schema=False)
+def get_tenant_logo_binary(
+    tenant_id: int,
+    db: Session = Depends(get_session),
+) -> Response:
+    """Devuelve el logo del tenant como imagen binaria (sin auth).
+    Pensado para `<img src>` en emails. Cachea agresivamente."""
+    # Validamos que el tenant exista — si no, devolvemos default (no 404
+    # para evitar placeholders rotos en emails ya enviados).
+    tenant = db.get(Tenant, tenant_id)
+    if not tenant:
+        return _serve_default_logo()
+
+    cached = _LOGO_BYTES_CACHE.get((tenant_id, "logo"))
+    if cached is not None:
+        body, mime = cached
+        return Response(
+            content=body,
+            media_type=mime,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    branding = branding_service.get_branding(db, tenant_id)
+    raw = (branding.get("logo_data_url") or "").strip()
+
+    # Si el branding apunta a una URL externa, redirigimos.
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return RedirectResponse(url=raw, status_code=302)
+
+    # Si es data URL, decodificamos y servimos el binario.
+    m = _DATA_URL_RE.match(raw)
+    if not m:
+        return _serve_default_logo()
+    try:
+        body = base64.b64decode(m.group("data"))
+        mime = m.group("mime").strip() or "image/png"
+    except Exception:
+        return _serve_default_logo()
+
+    _LOGO_BYTES_CACHE[(tenant_id, "logo")] = (body, mime)
+    return Response(
+        content=body,
+        media_type=mime,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+def _invalidate_logo_cache(tenant_id: int) -> None:
+    """Limpia el cache de bytes del logo binario cuando el admin sube
+    o borra el logo. Sin esto, los emails seguirían sirviendo la imagen
+    vieja durante 24h (TTL del cache HTTP)."""
+    _LOGO_BYTES_CACHE.pop((tenant_id, "logo"), None)
+    _LOGO_BYTES_CACHE.pop((tenant_id, "icon"), None)
+
+
 @router.put("/")
 def put_branding(
     patch: BrandingPatch,
@@ -77,7 +177,10 @@ def put_branding(
     tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     payload = {k: v for k, v in patch.model_dump().items() if v is not None}
-    return branding_service.update_branding(db, tenant.id, payload)
+    result = branding_service.update_branding(db, tenant.id, payload)
+    if "logo_data_url" in payload or "icon_data_url" in payload:
+        _invalidate_logo_cache(tenant.id)
+    return result
 
 
 @router.post("/logo")
@@ -100,7 +203,9 @@ async def upload_logo(
         )
     b64 = base64.b64encode(data).decode("ascii")
     data_url = f"data:{file.content_type};base64,{b64}"
-    return branding_service.update_branding(db, tenant.id, {"logo_data_url": data_url})
+    result = branding_service.update_branding(db, tenant.id, {"logo_data_url": data_url})
+    _invalidate_logo_cache(tenant.id)
+    return result
 
 
 @router.delete("/logo")
@@ -109,7 +214,9 @@ def delete_logo(
     admin: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
-    return branding_service.update_branding(db, tenant.id, {"logo_data_url": ""})
+    result = branding_service.update_branding(db, tenant.id, {"logo_data_url": ""})
+    _invalidate_logo_cache(tenant.id)
+    return result
 
 
 @router.post("/icon")

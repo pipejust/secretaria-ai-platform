@@ -1,4 +1,3 @@
-import base64
 import os
 import resend
 import json
@@ -14,29 +13,73 @@ DEFAULT_FROM_EMAIL = "no-reply@acten.local"
 DEFAULT_TO_EMAIL = os.environ.get("TO_EMAIL", "felipesof@gmail.com")
 
 
-# Cache del logo default de Acten embebido como data URL. Se usa cuando el
-# tenant no ha subido un logo en /admin/marca — garantiza que TODOS los
-# correos lleven un logo en el header (nunca solo texto). Lo cargamos una
-# vez al primer import del módulo.
-_DEFAULT_ACTEN_LOGO_DATA_URL: str | None = None
+# ────────────────────────────────────────────────────────────────────────────
+# Resolución de URLs absolutas para imágenes en emails.
+#
+# IMPORTANTE: Gmail, Outlook y la mayoría de clientes de email BLOQUEAN
+# `<img src="data:image/png;base64,...">` por seguridad anti-spam. Si embebés
+# el logo como data URL, el email llega SIN logo (placeholder roto).
+#
+# Solución: servir el logo desde una URL pública HTTPS y referenciarla
+# absolutamente en el template. El cliente de email descarga la imagen
+# normalmente.
+#
+# `EMAIL_ASSETS_BASE_URL` permite override (útil si los assets viven en un
+# CDN distinto al frontend). Default: `FRONTEND_URL` (que en prod apunta a
+# `https://acten.app`). En dev local, usar el default público de prod
+# garantiza que los emails de prueba tengan logo visible aunque se reciban
+# en Gmail.
+# ────────────────────────────────────────────────────────────────────────────
+_PUBLIC_LOGO_BASE_URL_DEFAULT = "https://acten.app"
 
 
-def _load_default_logo_data_url() -> str:
-    """Lee `templates/assets/acten-logo-default.png` y lo devuelve como
-    data URL. Cacheado en módulo — costo amortizado a 0 después del primer
-    correo."""
-    global _DEFAULT_ACTEN_LOGO_DATA_URL
-    if _DEFAULT_ACTEN_LOGO_DATA_URL is not None:
-        return _DEFAULT_ACTEN_LOGO_DATA_URL
-    try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(os.path.dirname(current_dir), "templates", "assets", "acten-logo-default.png")
-        with open(path, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode("ascii")
-        _DEFAULT_ACTEN_LOGO_DATA_URL = f"data:image/png;base64,{encoded}"
-    except Exception:  # noqa: BLE001
-        _DEFAULT_ACTEN_LOGO_DATA_URL = ""
-    return _DEFAULT_ACTEN_LOGO_DATA_URL
+def _resolve_public_base_url() -> str:
+    """URL absoluta donde están servidos los assets públicos del frontend.
+
+    Orden de precedencia:
+      1. `EMAIL_ASSETS_BASE_URL` (override explícito)
+      2. `FRONTEND_URL` si es HTTPS (los clientes de mail rechazan HTTP)
+      3. `https://acten.app` como fallback duro (siempre vivo en prod)
+    """
+    override = (os.environ.get("EMAIL_ASSETS_BASE_URL") or "").strip().rstrip("/")
+    if override:
+        return override
+    fe = (os.environ.get("FRONTEND_URL") or "").strip().rstrip("/")
+    if fe.startswith("https://"):
+        return fe
+    return _PUBLIC_LOGO_BASE_URL_DEFAULT
+
+
+def _get_default_logo_url() -> str:
+    """URL pública absoluta del logo default de Acten para emails.
+    El archivo vive en `frontend/public/email-logo.png` y se sirve en
+    `{base}/email-logo.png`. Garantiza compat con todos los clientes de mail.
+    """
+    return f"{_resolve_public_base_url()}/email-logo.png"
+
+
+def _resolve_tenant_logo_url(branding: dict, tenant_id: int | None) -> str:
+    """Convierte el `logo_data_url` del tenant (que en DB puede ser un
+    `data:image/...;base64,...`) en una URL HTTPS pública apta para email.
+
+    - Si el branding YA trae una URL absoluta http(s), se devuelve tal cual.
+    - Si trae un data URL, se devuelve el endpoint backend que sirve ese
+      logo decodificado: `{api_base}/branding/{tenant_id}/logo.png`.
+    - Si no hay logo del tenant, fallback al logo default público de Acten.
+    """
+    raw = (branding.get("logo_data_url") or "").strip()
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return raw
+    if raw.startswith("data:") and tenant_id is not None:
+        # Servimos el binario vía endpoint público — los clientes de email
+        # NO renderizan data URLs.
+        api_base = (os.environ.get("PUBLIC_BASE_URL") or "").strip().rstrip("/")
+        if api_base.startswith("https://"):
+            return f"{api_base}/branding/{tenant_id}/logo.png"
+        # Fallback: si el API no está accesible públicamente (dev), usamos
+        # el logo default de Acten para que el email igual tenga marca.
+        return _get_default_logo_url()
+    return _get_default_logo_url()
 
 
 class EmailService:
@@ -117,11 +160,15 @@ class EmailService:
                 except Exception as exc:
                     print(f"Error cargando branding para email: {exc}")
 
-        # Fallback de logo: si el tenant aún no subió logo en /admin/marca,
-        # usamos el imagologo Acten embebido como data URL para que TODOS los
-        # correos lleven un logo en el header.
-        if not self.branding.get("logo_data_url"):
-            self.branding["logo_data_url"] = _load_default_logo_data_url()
+        # Logo: resolvemos a una URL HTTPS PÚBLICA porque los clientes de
+        # email (Gmail/Outlook/etc.) bloquean `<img src="data:...">`.
+        # `_resolve_tenant_logo_url`:
+        #   - si el tenant tiene logo custom (data URL en DB) → URL del
+        #     endpoint backend que lo sirve binario.
+        #   - si no tiene → URL pública del logo default de Acten.
+        self.branding["logo_data_url"] = _resolve_tenant_logo_url(
+            self.branding, self.tenant_id
+        )
 
         if self.api_key:
             resend.api_key = self.api_key
