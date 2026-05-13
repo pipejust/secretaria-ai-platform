@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlmodel import Session, select
 
 from auth_utils import (
@@ -26,6 +26,17 @@ router = APIRouter(prefix="/auth", tags=["Autenticación"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
+def _normalize_email(v: str) -> str:
+    """Normaliza email para que el matching contra DB sea case-insensitive
+    y trim-safe. Los emails se guardan SIEMPRE en minúsculas (vimos
+    `register_user` y `tenants.create_tenant` aplican `.lower()`), pero
+    el user puede tipear "Fcortes@Softnexus.IO" o pegar con espacios.
+    Sin esta normalización, el lookup `User.email == :input` fallaba con
+    401 — el user pensaba "password mala" cuando era solo case mismatch.
+    """
+    return (v or "").strip().lower()
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -33,12 +44,22 @@ class LoginRequest(BaseModel):
     # Esto preserva el flujo histórico (single-tenant) intacto.
     tenant_slug: Optional[str] = None
 
+    @field_validator("username")
+    @classmethod
+    def _norm_username(cls, v: str) -> str:
+        return _normalize_email(v)
+
 
 class UserCreate(BaseModel):
     email: str
     password: str
     full_name: str
     role_id: int
+
+    @field_validator("email")
+    @classmethod
+    def _norm_email(cls, v: str) -> str:
+        return _normalize_email(v)
 
 
 # ----------------------------------------------------------------------------
@@ -236,6 +257,11 @@ class TwoFactorLoginVerify(BaseModel):
     username: str
     code: str
     tenant_slug: Optional[str] = None
+
+    @field_validator("username")
+    @classmethod
+    def _norm_username(cls, v: str) -> str:
+        return _normalize_email(v)
 
 
 @router.post("/login/2fa-verify")
@@ -1099,6 +1125,11 @@ def get_permissions_summary(
 class ForgotPasswordRequest(BaseModel):
     email: str
     tenant_slug: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def _norm_email(cls, v: str) -> str:
+        return _normalize_email(v)
 
 
 @router.post("/forgot-password")

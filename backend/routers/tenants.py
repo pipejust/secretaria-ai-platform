@@ -25,7 +25,7 @@ import re
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, select
 
 from auth_utils import get_password_hash
@@ -70,6 +70,22 @@ class TenantCreate(BaseModel):
         None, max_length=4 * 1024 * 1024,
         description="Imagologo / icono cuadrado como data URL"
     )
+
+    @field_validator("admin_email")
+    @classmethod
+    def _norm_admin_email(cls, v: str) -> str:
+        """Normaliza email a lowercase + trim. El user puede tipear con
+        mayúsculas o espacios y queremos que el create_tenant + el
+        primer login funcionen sin sorpresas."""
+        return (v or "").strip().lower()
+
+    @field_validator("slug")
+    @classmethod
+    def _norm_slug(cls, v: str) -> str:
+        """Slugs SIEMPRE en minúsculas — la URL `/t/<slug>/` es
+        case-insensitive en navegadores; guardarlos lowercase evita
+        duplicados accidentales (`Nexura` vs `nexura`)."""
+        return (v or "").strip().lower()
 
 
 class TenantUpdate(BaseModel):

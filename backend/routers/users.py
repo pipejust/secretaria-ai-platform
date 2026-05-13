@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlmodel import Session, select
 
 from database import get_session
@@ -28,6 +28,16 @@ class UserUpdatePayload(BaseModel):
     department: Optional[str] = None
     position: Optional[str] = None
     password: Optional[str] = None  # opcional; si viene, se re-hashea.
+
+    @field_validator("email")
+    @classmethod
+    def _norm_email(cls, v: Optional[str]) -> Optional[str]:
+        """Normaliza email a lowercase + trim para que el lookup en DB
+        sea case-insensitive y consistente con login."""
+        if v is None:
+            return None
+        normalized = v.strip().lower()
+        return normalized or None
 
 
 def _serialize_user(u: User) -> dict:

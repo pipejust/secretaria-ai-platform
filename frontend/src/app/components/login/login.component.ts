@@ -84,6 +84,13 @@ export class LoginComponent implements OnInit {
     onSubmit() {
         if (!this.email || !this.password) return;
 
+        // Normalizar email INMEDIATAMENTE: trim + lowercase. Aunque el
+        // backend ya lo hace vía Pydantic validator (defensa real), aquí
+        // damos feedback visual instantáneo y evitamos que el campo
+        // quede con "Felipe@SoftnexusIO" después de tipear con mayúsculas.
+        // Refleja el cambio en el ngModel para que el input lo muestre.
+        this.email = (this.email || '').trim().toLowerCase();
+
         this.isLoading = true;
         this.errorMessage = '';
 
