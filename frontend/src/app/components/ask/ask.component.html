@@ -49,13 +49,37 @@
                 </button>
                 <div class="aa-history-pop" *ngIf="showHistory && history.length"
                      (click)="$event.stopPropagation()">
-                    <p class="aa-history-title">Preguntas recientes</p>
+                    <header class="aa-history-head">
+                        <p class="aa-history-title">Preguntas recientes</p>
+                        <button type="button" class="aa-history-clear"
+                                (click)="clearAllHistory()"
+                                title="Borrar todo el historial">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                            </svg>
+                            Borrar todo
+                        </button>
+                    </header>
                     <ul class="aa-history-list">
                         <li *ngFor="let t of history; trackBy: trackByTurn">
-                            <button type="button" class="aa-history-item" (click)="jumpToTurn(t)">
-                                <span class="aa-history-time">{{ formatTurnTime(t.timestamp) }}</span>
-                                <span class="aa-history-q">{{ t.question }}</span>
-                            </button>
+                            <div class="aa-history-row">
+                                <button type="button" class="aa-history-item" (click)="jumpToTurn(t)">
+                                    <span class="aa-history-time">{{ formatTurnTime(t.timestamp) }}</span>
+                                    <span class="aa-history-q">{{ t.question }}</span>
+                                </button>
+                                <button type="button" class="aa-history-del"
+                                        (click)="deleteHistoryEntry(t, $event)"
+                                        title="Borrar esta pregunta">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </li>
                     </ul>
                 </div>

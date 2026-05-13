@@ -452,3 +452,41 @@ class Notification(SQLModel, table=True):
     is_read: bool = Field(default=False, index=True)
     read_at: Optional[str] = Field(default=None)
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), index=True)
+
+
+# ============================================================================
+# Historial de Pregunta a Acten (RAG)
+# ============================================================================
+# Cada vez que un usuario hace una pregunta vía POST /api/ask, persistimos
+# pregunta + respuesta para que el botón "Historial" del componente Ask sea
+# durable. El historial es POR USUARIO (no compartido en el tenant).
+# `structured` y `citations` se guardan como JSON serializado para no
+# inflar el modelo con campos N-cardinalidad.
+
+class AskHistory(SQLModel, table=True):
+    """Una entrada del historial RAG. 1 fila = 1 turn (pregunta + respuesta)."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+
+    # Pregunta original del usuario (preservamos el texto tal cual).
+    question: str = Field(max_length=4000)
+    # Respuesta en markdown (lo que se muestra como answer fallback).
+    answer: str = Field(default="")
+    # Estructura cruda devuelta por el LLM serializada como JSON string —
+    # `intro`, `decisions[]`, `action_items[]`. Guardamos texto para no
+    # casarnos con un esquema rígido a nivel de DB.
+    structured_json: Optional[str] = Field(default=None)
+    # Lista de citations (JSON string). Cada citation = {session_id, kind,
+    # snippet, distance}.
+    citations_json: Optional[str] = Field(default=None)
+
+    # Filtro aplicado en la consulta (útil para mostrar contexto al re-abrir).
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id", index=True)
+
+    # Metadata de la respuesta para mostrar confianza/modelo en el historial.
+    model: str = Field(default="", max_length=80)
+    chunks_used: int = Field(default=0)
+
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), index=True)

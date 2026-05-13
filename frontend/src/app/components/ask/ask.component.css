@@ -159,20 +159,51 @@
     flex-direction: column;
     gap: 6px;
 }
+.aa-history-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 4px 4px;
+}
 .aa-history-title {
-    margin: 0 4px 4px;
+    margin: 0;
     font-size: 11px;
     font-weight: 700;
     color: var(--aa-text-soft);
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
+.aa-history-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid var(--aa-border);
+    color: var(--aa-text-muted);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.aa-history-clear:hover { background: var(--aa-red-soft); color: #B91C1C; border-color: #FCA5A5; }
 .aa-history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.aa-history-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px;
+    align-items: center;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.aa-history-row:hover { background: var(--aa-blue-soft); border-color: #BFDBFE; }
 .aa-history-item {
-    width: 100%;
     text-align: left;
     background: transparent;
-    border: 1px solid transparent;
+    border: 0;
     border-radius: 8px;
     padding: 8px 10px;
     cursor: pointer;
@@ -180,9 +211,25 @@
     flex-direction: column;
     gap: 3px;
     color: var(--aa-text);
-    transition: background 120ms ease, border-color 120ms ease;
+    width: 100%;
 }
-.aa-history-item:hover { background: var(--aa-blue-soft); border-color: #BFDBFE; }
+.aa-history-del {
+    width: 26px;
+    height: 26px;
+    margin-right: 4px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--aa-text-soft);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms ease, color 120ms ease;
+    opacity: 0;
+}
+.aa-history-row:hover .aa-history-del { opacity: 1; }
+.aa-history-del:hover { background: var(--aa-red-soft); color: #B91C1C; }
 .aa-history-time { font-size: 10px; color: var(--aa-text-soft); font-weight: 600; }
 .aa-history-q {
     font-size: 12.5px;

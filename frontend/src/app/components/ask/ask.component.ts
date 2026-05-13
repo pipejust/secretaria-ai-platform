@@ -48,6 +48,8 @@ interface AskResponse {
     chunks_used: number;
 }
 interface ChatTurn {
+    /** id del backend (askhistory.id). 0 si todavía no se persistió. */
+    id?: number;
     question: string;
     answer: string;
     structured?: StructuredAnswer | null;
@@ -55,6 +57,19 @@ interface ChatTurn {
     model: string;
     chunks_used: number;
     timestamp: number;
+}
+
+/** Lo que devuelve GET /api/ask/history. */
+interface AskHistoryEntry {
+    id: number;
+    question: string;
+    answer: string;
+    structured?: StructuredAnswer | null;
+    citations: Citation[];
+    project_id?: number | null;
+    model: string;
+    chunks_used: number;
+    created_at: string;
 }
 
 interface SuggestedCategory {
@@ -119,6 +134,37 @@ export class AskComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.loadProjects();
         this.loadSessionsMeta();
+        this.loadHistory();
+    }
+
+    /** Carga el historial del backend al iniciar. Cada entry se transforma
+     *  a `ChatTurn` y se vuelca en `this.history`. Se preserva el orden
+     *  desc del backend (más reciente primero). */
+    loadHistory(): void {
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<AskHistoryEntry[]>(`${environment.apiUrl}/api/ask/history?limit=30`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (entries) => {
+                    this.history = (entries || []).map(e => ({
+                        id: e.id,
+                        question: e.question,
+                        answer: e.answer,
+                        structured: e.structured,
+                        citations: e.citations || [],
+                        model: e.model,
+                        chunks_used: e.chunks_used,
+                        timestamp: this._parseDateMs(e.created_at),
+                    }));
+                    this.cdr.detectChanges();
+                },
+                error: () => { /* historial es opcional */ }
+            });
+    }
+
+    private _parseDateMs(iso: string): number {
+        const t = Date.parse(iso || '');
+        return isNaN(t) ? Date.now() : t;
     }
 
     ngOnDestroy(): void {
@@ -193,13 +239,18 @@ export class AskComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (res) => {
+                    // Insertamos optimistamente el turn al tope con id=0
+                    // (placeholder). Disparamos un reload del historial para
+                    // sincronizar el id real de askhistory (necesario para
+                    // que delete funcione).
                     this.history = [
-                        { question: q, ...res, timestamp: Date.now() },
+                        { id: 0, question: q, ...res, timestamp: Date.now() },
                         ...this.history,
                     ];
                     this.question = '';
                     this.isAsking = false;
                     this.cdr.detectChanges();
+                    this._refreshHistoryIds();
                 },
                 error: (err) => {
                     this.isAsking = false;
@@ -210,6 +261,33 @@ export class AskComponent implements OnInit, OnDestroy {
             });
     }
 
+    /** Tras un submit exitoso, recargamos el historial para sincronizar
+     *  los ids reales de askhistory. La diferencia de orden es estable
+     *  (backend devuelve más reciente primero, igual que mostramos). */
+    private _refreshHistoryIds(): void {
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<AskHistoryEntry[]>(`${environment.apiUrl}/api/ask/history?limit=30`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (entries) => {
+                    // Reemplazamos solo los IDs preservando el resto del estado
+                    // (importante por si el usuario borró localmente algo
+                    // que aún existe en backend). Como el orden coincide
+                    // (desc por id), parchamos por índice.
+                    const fromBE = entries || [];
+                    this.history = this.history.map((t, i) => {
+                        const backendEntry = fromBE[i];
+                        if (backendEntry && backendEntry.question === t.question) {
+                            return { ...t, id: backendEntry.id };
+                        }
+                        return t;
+                    });
+                    this.cdr.detectChanges();
+                },
+                error: () => { /* mejor no molestar al usuario */ }
+            });
+    }
+
     /** Click en una sugerencia: pone el texto en el input y dispara submit. */
     usePrompt(text: string): void {
         if (this.isAsking) return;
@@ -217,11 +295,53 @@ export class AskComponent implements OnInit, OnDestroy {
         this.submit();
     }
 
-    /** Botón "Nueva pregunta" del topbar — limpia historial + input. */
+    /** Botón "Nueva pregunta" del topbar — solo limpia el input. El
+     *  historial se mantiene (vive en backend). Para borrar el historial,
+     *  el usuario debe usar el botón explícito en el dropdown. */
     newQuestion(): void {
-        this.history = [];
         this.question = '';
         this.cdr.detectChanges();
+    }
+
+    /** Borra UNA entrada del historial. */
+    deleteHistoryEntry(t: ChatTurn, ev: Event): void {
+        ev.stopPropagation();
+        if (!t.id) {
+            // Sin id (edge case), borrar localmente nomás.
+            this.history = this.history.filter(x => x.timestamp !== t.timestamp);
+            this.cdr.detectChanges();
+            return;
+        }
+        const headers = this.authService.getAuthHeaders();
+        this.http.delete(`${environment.apiUrl}/api/ask/history/${t.id}`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: () => {
+                    this.history = this.history.filter(x => x.id !== t.id);
+                    this.toast.success('Pregunta borrada del historial.');
+                    this.cdr.detectChanges();
+                },
+                error: () => this.toast.error('No se pudo borrar la entrada.'),
+            });
+    }
+
+    /** Borra TODO el historial. Pide confirmación. */
+    clearAllHistory(): void {
+        if (!this.history.length) return;
+        const ok = confirm(`¿Borrar las ${this.history.length} preguntas del historial? Esta acción no se puede deshacer.`);
+        if (!ok) return;
+        const headers = this.authService.getAuthHeaders();
+        this.http.delete(`${environment.apiUrl}/api/ask/history`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: () => {
+                    this.history = [];
+                    this.showHistory = false;
+                    this.toast.success('Historial borrado.');
+                    this.cdr.detectChanges();
+                },
+                error: () => this.toast.error('No se pudo borrar el historial.'),
+            });
     }
 
     // ============================================================

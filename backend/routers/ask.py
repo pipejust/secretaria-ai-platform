@@ -21,16 +21,19 @@ Cuando OPENAI_API_KEY o GROQ_API_KEY faltan, devuelve 503.
 
 from __future__ import annotations
 
+import json as _json_lib
 import logging
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from config import settings
 from database import get_session
+from models import AskHistory, Tenant, User
+from routers.auth import get_current_tenant, get_current_user
 from services.embedding_service import search_similar
 
 logger = logging.getLogger(__name__)
@@ -149,6 +152,20 @@ class AskResponse(BaseModel):
     chunks_used: int
 
 
+class AskHistoryEntry(BaseModel):
+    """Forma serializada de una entrada del historial. Misma forma que el
+    backend devuelve en `ask()` + `id` y `created_at`."""
+    id: int
+    question: str
+    answer: str
+    structured: Optional[StructuredAnswer] = None
+    citations: list[Citation] = []
+    project_id: Optional[int] = None
+    model: str = ""
+    chunks_used: int = 0
+    created_at: str
+
+
 def _build_context(chunks: list[dict]) -> str:
     blocks = []
     for c in chunks:
@@ -176,7 +193,12 @@ def _coerce_int_list(raw) -> list[int]:
 
 
 @router.post("", response_model=AskResponse)
-async def ask(payload: AskRequest, db: Session = Depends(get_session)):
+async def ask(
+    payload: AskRequest,
+    db: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
     if not settings.openai_api_key:
         raise HTTPException(503, "OPENAI_API_KEY no configurada (necesaria para embeddings).")
     if not settings.groq_api_key:
@@ -214,9 +236,11 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
             else "Las actas indexadas no parecen relacionarse con esa pregunta. "
                  "Intenta usar términos más específicos."
         )
-        return AskResponse(
+        empty_resp = AskResponse(
             answer=msg, citations=[], model=GROQ_MODEL, chunks_used=0,
         )
+        _persist_history(db, tenant.id, user.id, q, empty_resp, payload.project_id)
+        return empty_resp
 
     # Sólo expondremos como Fuentes las sesiones cuyo chunk pasó el filtro.
     relevant_session_ids = {c["session_id"] for c in chunks}
@@ -383,10 +407,144 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
         )
         for c in chunks
     ]
-    return AskResponse(
+    response = AskResponse(
         answer=answer_md,
         structured=structured,
         citations=citations,
         model=GROQ_MODEL,
         chunks_used=len(chunks),
     )
+    _persist_history(db, tenant.id, user.id, q, response, payload.project_id)
+    return response
+
+
+# ============================================================================
+# Historial — persistencia y endpoints
+# ============================================================================
+
+def _persist_history(
+    db: Session,
+    tenant_id: int,
+    user_id: int,
+    question: str,
+    resp: AskResponse,
+    project_id: Optional[int],
+) -> None:
+    """Guarda la entrada en `askhistory` (best-effort, swallow errors).
+
+    El historial NO debe tumbar la respuesta al usuario; si falla la
+    escritura, lo loggeamos y seguimos.
+    """
+    try:
+        entry = AskHistory(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            question=question[:4000],
+            answer=(resp.answer or "")[:20000],
+            structured_json=(_json_lib.dumps(resp.structured.model_dump())
+                             if resp.structured else None),
+            citations_json=_json_lib.dumps([c.model_dump() for c in resp.citations]),
+            project_id=project_id,
+            model=resp.model or "",
+            chunks_used=resp.chunks_used or 0,
+        )
+        db.add(entry)
+        db.commit()
+    except Exception as exc:
+        logger.warning("ask: no se pudo persistir historial (user=%s): %s", user_id, exc)
+        db.rollback()
+
+
+def _entry_to_dto(row: AskHistory) -> AskHistoryEntry:
+    """Deserializa los JSON de structured/citations a sus modelos pydantic."""
+    structured: Optional[StructuredAnswer] = None
+    if row.structured_json:
+        try:
+            data = _json_lib.loads(row.structured_json)
+            structured = StructuredAnswer(**data) if isinstance(data, dict) else None
+        except Exception:
+            structured = None
+
+    citations: list[Citation] = []
+    if row.citations_json:
+        try:
+            arr = _json_lib.loads(row.citations_json)
+            if isinstance(arr, list):
+                for c in arr:
+                    if isinstance(c, dict):
+                        citations.append(Citation(**c))
+        except Exception:
+            citations = []
+
+    return AskHistoryEntry(
+        id=row.id or 0,
+        question=row.question,
+        answer=row.answer,
+        structured=structured,
+        citations=citations,
+        project_id=row.project_id,
+        model=row.model,
+        chunks_used=row.chunks_used,
+        created_at=row.created_at,
+    )
+
+
+@router.get("/history", response_model=list[AskHistoryEntry])
+def list_history(
+    limit: int = 30,
+    project_id: Optional[int] = None,
+    db: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Devuelve las entradas del historial del usuario, ordenadas por
+    fecha desc. Filtros opcionales: `project_id` y `limit` (max 100)."""
+    limit = max(1, min(int(limit or 30), 100))
+    stmt = (
+        select(AskHistory)
+        .where(AskHistory.tenant_id == tenant.id)
+        .where(AskHistory.user_id == user.id)
+    )
+    if project_id is not None:
+        stmt = stmt.where(AskHistory.project_id == project_id)
+    stmt = stmt.order_by(AskHistory.id.desc()).limit(limit)
+    rows = list(db.exec(stmt).all())
+    return [_entry_to_dto(r) for r in rows]
+
+
+@router.delete("/history/{entry_id}", status_code=204)
+def delete_history_entry(
+    entry_id: int,
+    db: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Borra una entrada del historial. Sólo el dueño puede borrar."""
+    row = db.get(AskHistory, entry_id)
+    if not row or row.tenant_id != tenant.id or row.user_id != user.id:
+        raise HTTPException(404, "Entrada no encontrada.")
+    db.delete(row)
+    db.commit()
+    return None
+
+
+@router.delete("/history", status_code=204)
+def clear_history(
+    project_id: Optional[int] = None,
+    db: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Borra TODO el historial del usuario (opcionalmente filtrado por proyecto)."""
+    stmt = (
+        select(AskHistory)
+        .where(AskHistory.tenant_id == tenant.id)
+        .where(AskHistory.user_id == user.id)
+    )
+    if project_id is not None:
+        stmt = stmt.where(AskHistory.project_id == project_id)
+    rows = list(db.exec(stmt).all())
+    for r in rows:
+        db.delete(r)
+    db.commit()
+    return None
