@@ -94,7 +94,13 @@ interface ModelOption {
 })
 export class AskComponent implements OnInit, OnDestroy {
     question = '';
+    /** Vista actual del chat. Empieza VACÍA al cargar la página y al
+     *  apretar "Nueva pregunta". El historial completo vive en
+     *  `historyList` y solo se muestra desde el dropdown. */
     history: ChatTurn[] = [];
+    /** Historial persistido en backend (todas las preguntas del usuario).
+     *  Se usa solo para poblar el dropdown del botón "Historial". */
+    historyList: ChatTurn[] = [];
     isAsking = false;
     projects: Array<{ id: number; name: string }> = [];
     /** Filtro por proyecto — preservado del componente original. */
@@ -134,32 +140,39 @@ export class AskComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.loadProjects();
         this.loadSessionsMeta();
-        this.loadHistory();
+        // Sólo cargamos la LISTA del historial para el dropdown.
+        // La vista del chat empieza vacía intencionalmente.
+        this.loadHistoryList();
     }
 
     /** Carga el historial del backend al iniciar. Cada entry se transforma
-     *  a `ChatTurn` y se vuelca en `this.history`. Se preserva el orden
-     *  desc del backend (más reciente primero). */
-    loadHistory(): void {
+     *  a `ChatTurn` y se vuelca SÓLO en `historyList` (para el dropdown).
+     *  El chat principal (`history`) permanece vacío hasta que el usuario
+     *  haga una pregunta nueva o seleccione una del dropdown. */
+    loadHistoryList(): void {
         const headers = this.authService.getAuthHeaders();
         this.http.get<AskHistoryEntry[]>(`${environment.apiUrl}/api/ask/history?limit=30`, { headers })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (entries) => {
-                    this.history = (entries || []).map(e => ({
-                        id: e.id,
-                        question: e.question,
-                        answer: e.answer,
-                        structured: e.structured,
-                        citations: e.citations || [],
-                        model: e.model,
-                        chunks_used: e.chunks_used,
-                        timestamp: this._parseDateMs(e.created_at),
-                    }));
+                    this.historyList = (entries || []).map(e => this._entryToTurn(e));
                     this.cdr.detectChanges();
                 },
                 error: () => { /* historial es opcional */ }
             });
+    }
+
+    private _entryToTurn(e: AskHistoryEntry): ChatTurn {
+        return {
+            id: e.id,
+            question: e.question,
+            answer: e.answer,
+            structured: e.structured,
+            citations: e.citations || [],
+            model: e.model,
+            chunks_used: e.chunks_used,
+            timestamp: this._parseDateMs(e.created_at),
+        };
     }
 
     private _parseDateMs(iso: string): number {
@@ -239,14 +252,19 @@ export class AskComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (res) => {
-                    // Insertamos optimistamente el turn al tope con id=0
-                    // (placeholder). Disparamos un reload del historial para
-                    // sincronizar el id real de askhistory (necesario para
-                    // que delete funcione).
-                    this.history = [
-                        { id: 0, question: q, ...res, timestamp: Date.now() },
-                        ...this.history,
-                    ];
+                    // Insertamos el nuevo turn al tope de AMBAS listas:
+                    // - `history` (vista del chat actual)
+                    // - `historyList` (dropdown de Historial)
+                    // El id queda en 0 momentáneamente; lo sincronizamos
+                    // con un refresh del historial para que delete funcione.
+                    const newTurn: ChatTurn = {
+                        id: 0,
+                        question: q,
+                        ...res,
+                        timestamp: Date.now(),
+                    };
+                    this.history = [newTurn, ...this.history];
+                    this.historyList = [newTurn, ...this.historyList];
                     this.question = '';
                     this.isAsking = false;
                     this.cdr.detectChanges();
@@ -263,25 +281,28 @@ export class AskComponent implements OnInit, OnDestroy {
 
     /** Tras un submit exitoso, recargamos el historial para sincronizar
      *  los ids reales de askhistory. La diferencia de orden es estable
-     *  (backend devuelve más reciente primero, igual que mostramos). */
+     *  (backend devuelve más reciente primero). Patcheamos el id en
+     *  `history` (vista) y reconstruimos `historyList` (dropdown). */
     private _refreshHistoryIds(): void {
         const headers = this.authService.getAuthHeaders();
         this.http.get<AskHistoryEntry[]>(`${environment.apiUrl}/api/ask/history?limit=30`, { headers })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (entries) => {
-                    // Reemplazamos solo los IDs preservando el resto del estado
-                    // (importante por si el usuario borró localmente algo
-                    // que aún existe en backend). Como el orden coincide
-                    // (desc por id), parchamos por índice.
                     const fromBE = entries || [];
-                    this.history = this.history.map((t, i) => {
-                        const backendEntry = fromBE[i];
-                        if (backendEntry && backendEntry.question === t.question) {
-                            return { ...t, id: backendEntry.id };
+                    // historyList completo viene del backend (ya enriquecido).
+                    this.historyList = fromBE.map(e => this._entryToTurn(e));
+                    // Para `history` (vista actual), parchamos sólo el id
+                    // del turn más reciente sin pisar el resto del estado.
+                    if (this.history.length && fromBE.length) {
+                        const top = fromBE[0];
+                        if (top.question === this.history[0].question && !this.history[0].id) {
+                            this.history = [
+                                { ...this.history[0], id: top.id },
+                                ...this.history.slice(1),
+                            ];
                         }
-                        return t;
-                    });
+                    }
                     this.cdr.detectChanges();
                 },
                 error: () => { /* mejor no molestar al usuario */ }
@@ -295,20 +316,23 @@ export class AskComponent implements OnInit, OnDestroy {
         this.submit();
     }
 
-    /** Botón "Nueva pregunta" del topbar — solo limpia el input. El
-     *  historial se mantiene (vive en backend). Para borrar el historial,
-     *  el usuario debe usar el botón explícito en el dropdown. */
+    /** Botón "Nueva pregunta" — RESETEA la vista del chat por completo
+     *  para empezar limpio. El historial persistido en backend NO se toca
+     *  y sigue accesible desde el dropdown. */
     newQuestion(): void {
+        this.history = [];
         this.question = '';
+        this.showHistory = false;
+        this.showAdvanced = false;
         this.cdr.detectChanges();
     }
 
-    /** Borra UNA entrada del historial. */
+    /** Borra UNA entrada del historial. Quita de ambas listas. */
     deleteHistoryEntry(t: ChatTurn, ev: Event): void {
         ev.stopPropagation();
         if (!t.id) {
-            // Sin id (edge case), borrar localmente nomás.
             this.history = this.history.filter(x => x.timestamp !== t.timestamp);
+            this.historyList = this.historyList.filter(x => x.timestamp !== t.timestamp);
             this.cdr.detectChanges();
             return;
         }
@@ -318,6 +342,7 @@ export class AskComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: () => {
                     this.history = this.history.filter(x => x.id !== t.id);
+                    this.historyList = this.historyList.filter(x => x.id !== t.id);
                     this.toast.success('Pregunta borrada del historial.');
                     this.cdr.detectChanges();
                 },
@@ -325,10 +350,10 @@ export class AskComponent implements OnInit, OnDestroy {
             });
     }
 
-    /** Borra TODO el historial. Pide confirmación. */
+    /** Borra TODO el historial (backend + ambas listas locales). */
     clearAllHistory(): void {
-        if (!this.history.length) return;
-        const ok = confirm(`¿Borrar las ${this.history.length} preguntas del historial? Esta acción no se puede deshacer.`);
+        if (!this.historyList.length) return;
+        const ok = confirm(`¿Borrar las ${this.historyList.length} preguntas del historial? Esta acción no se puede deshacer.`);
         if (!ok) return;
         const headers = this.authService.getAuthHeaders();
         this.http.delete(`${environment.apiUrl}/api/ask/history`, { headers })
@@ -336,6 +361,7 @@ export class AskComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: () => {
                     this.history = [];
+                    this.historyList = [];
                     this.showHistory = false;
                     this.toast.success('Historial borrado.');
                     this.cdr.detectChanges();
@@ -425,11 +451,20 @@ export class AskComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
-    /** Click en una pregunta del historial: hace scroll al turn correspondiente. */
+    /** Click en una pregunta del historial: la trae a la vista del chat.
+     *  - Si ya está visible: hace scroll y la flashea.
+     *  - Si no está: la PREPENDE a la vista (no reemplaza el resto, así
+     *    el usuario puede mezclar preguntas viejas con la sesión actual). */
     jumpToTurn(turn: ChatTurn): void {
         this.showHistory = false;
+        const alreadyVisible = this.history.some(t =>
+            (turn.id && t.id === turn.id) || t.timestamp === turn.timestamp
+        );
+        if (!alreadyVisible) {
+            this.history = [turn, ...this.history];
+        }
         this.cdr.detectChanges();
-        // Se difiere al siguiente tick para que Angular pinte y exista el DOM.
+        // Diferido para que Angular pinte el nuevo turn y el DOM exista.
         setTimeout(() => {
             const el = document.querySelector(`[data-turn-id="${turn.timestamp}"]`) as HTMLElement | null;
             if (el) {

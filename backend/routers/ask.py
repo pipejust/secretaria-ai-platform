@@ -564,8 +564,14 @@ def _persist_history(
         db.rollback()
 
 
-def _entry_to_dto(row: AskHistory) -> AskHistoryEntry:
-    """Deserializa los JSON de structured/citations a sus modelos pydantic."""
+def _entry_to_dto(row: AskHistory, db: Optional[Session] = None) -> AskHistoryEntry:
+    """Deserializa los JSON de structured/citations a sus modelos pydantic.
+
+    Si `db` se pasa, re-enriquece los `action_items` contra la tabla DB
+    para que las entradas viejas del historial — guardadas antes del fix
+    de enriquecimiento — reflejen los datos actuales de owner/due_date/
+    status. Es idempotente; sólo rellena los campos vacíos.
+    """
     structured: Optional[StructuredAnswer] = None
     if row.structured_json:
         try:
@@ -584,6 +590,13 @@ def _entry_to_dto(row: AskHistory) -> AskHistoryEntry:
                         citations.append(Citation(**c))
         except Exception:
             citations = []
+
+    # Re-enriquecimiento de entradas históricas con la DB actual.
+    if db is not None and structured and structured.action_items:
+        try:
+            _enrich_action_items_from_db(db, row.tenant_id, structured.action_items)
+        except Exception as exc:
+            logger.info("ask/history: no se pudo re-enriquecer entry %s: %s", row.id, exc)
 
     return AskHistoryEntry(
         id=row.id or 0,
@@ -618,7 +631,7 @@ def list_history(
         stmt = stmt.where(AskHistory.project_id == project_id)
     stmt = stmt.order_by(AskHistory.id.desc()).limit(limit)
     rows = list(db.exec(stmt).all())
-    return [_entry_to_dto(r) for r in rows]
+    return [_entry_to_dto(r, db=db) for r in rows]
 
 
 @router.delete("/history/{entry_id}", status_code=204)
