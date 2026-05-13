@@ -62,6 +62,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
      *  esto pasa a filtrar. */
     overviewPeriod: '7d' | '14d' | '30d' = '14d';
 
+    /** Rango de fechas personalizado (formato yyyy-MM-dd). Cuando ambas
+     *  están seteadas, sobre-escribe overviewPeriod en el chart. Vacío =
+     *  usar preset. Botón "Restablecer" los limpia. */
+    customFromDate: string = '';
+    customToDate: string = '';
+
     /** Hover state del chart de actividad. null = nada hovereado. */
     chartHover: ChartHover | null = null;
 
@@ -416,13 +422,56 @@ export class DashboardComponent implements OnInit, OnDestroy {
         });
     }
 
-    /** Días del período según overviewPeriod (7/14/30). */
+    /** Días del período según overviewPeriod (7/14/30).
+     *  Si el user definió rango custom, devuelve el span en días entre
+     *  fromDate y toDate (mínimo 1 para no romper el chart). */
     private get _periodDays(): number {
+        if (this.hasCustomRange) {
+            const from = new Date(this.customFromDate);
+            const to = new Date(this.customToDate);
+            from.setHours(0, 0, 0, 0);
+            to.setHours(0, 0, 0, 0);
+            const ms = to.getTime() - from.getTime();
+            return Math.max(1, Math.round(ms / (24 * 60 * 60 * 1000)) + 1);
+        }
         return this.overviewPeriod === '7d' ? 7 : this.overviewPeriod === '30d' ? 30 : 14;
+    }
+
+    /** True cuando el rango personalizado está completo y es válido. */
+    get hasCustomRange(): boolean {
+        if (!this.customFromDate || !this.customToDate) return false;
+        const from = new Date(this.customFromDate);
+        const to = new Date(this.customToDate);
+        return !isNaN(from.getTime()) && !isNaN(to.getTime()) && from.getTime() <= to.getTime();
+    }
+
+    /** Fecha final del rango activo (rango custom o "hoy" si preset). */
+    private get _periodEnd(): Date {
+        if (this.hasCustomRange) {
+            const d = new Date(this.customToDate);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
     }
 
     private _periodMs(): number {
         return this._periodDays * 24 * 60 * 60 * 1000;
+    }
+
+    /** Limpia el rango personalizado y vuelve al preset (sin re-fetch
+     *  del backend, sólo recomputa los getters). */
+    clearCustomRange(): void {
+        this.customFromDate = '';
+        this.customToDate = '';
+    }
+
+    /** Hoy en formato yyyy-MM-dd para el atributo max del input date. */
+    get todayIso(): string {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     private _toDate(v: any): Date | null {
@@ -432,12 +481,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return isNaN(d.getTime()) ? null : d;
     }
 
-    /** Sesiones dentro del período activo (para KPIs y chart). */
+    /** Sesiones dentro del período activo (para KPIs y chart).
+     *  Acepta tanto preset (últimos N días desde HOY) como rango custom
+     *  (entre fromDate y toDate inclusive). */
     get periodSessions(): any[] {
-        const cutoff = Date.now() - this._periodMs();
+        const end = this._periodEnd;
+        const endMs = end.getTime() + 24 * 60 * 60 * 1000 - 1;   // fin del día
+        const startMs = end.getTime() - (this._periodDays - 1) * 24 * 60 * 60 * 1000;
         return (this.sessions || []).filter((s) => {
             const d = this._toDate(s?.date);
-            return d ? d.getTime() >= cutoff : true;
+            if (!d) return true;
+            const t = d.getTime();
+            return t >= startMs && t <= endMs;
         });
     }
 
@@ -553,15 +608,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
             .join(' ');
     }
 
-    /** Serie diaria de la gráfica Meetings Activity (Last N Days). */
+    /** Serie diaria de la gráfica Meetings Activity.
+     *  Funciona con preset (últimos N días) o con rango custom (between
+     *  fromDate y toDate). Usa _periodEnd como ancla. */
     get activitySeries(): { meetings: ChartPoint[]; analyzed: ChartPoint[] } {
         const days = this._periodDays;
         const buckets: { [k: string]: { m: number; a: number } } = {};
         const labels: string[] = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const end = this._periodEnd;            // último día del rango
         for (let i = days - 1; i >= 0; i--) {
-            const d = new Date(today);
+            const d = new Date(end);
             d.setDate(d.getDate() - i);
             const key = d.toISOString().slice(0, 10);
             buckets[key] = { m: 0, a: 0 };

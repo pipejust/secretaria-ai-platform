@@ -293,6 +293,108 @@
 .acn-chart-legend .legend-meetings { background: var(--acn-blue); }
 .acn-chart-legend .legend-analyzed { background: var(--acn-green); }
 
+/* ====== Date range picker en la card Actividad de Reuniones ======
+   Dos inputs date estilizados como un chip con separador. Visible
+   sólo en desktop / tablet ancho — en mobile colapsa abajo. */
+.acn-range {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #FFFFFF;
+    border: 1px solid var(--acn-border);
+    border-radius: 10px;
+    padding: 2px 6px 2px 8px;
+    height: 32px;
+}
+.acn-range:focus-within {
+    border-color: var(--acn-blue);
+    box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.10);
+}
+.acn-range-input {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    line-height: 1;
+}
+.acn-range-label {
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--acn-text-soft);
+    margin-bottom: 1px;
+}
+.acn-range-input input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--acn-text);
+    width: 110px;
+    cursor: pointer;
+    line-height: 1.1;
+}
+.acn-range-input input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 120ms ease;
+    margin-left: 2px;
+}
+.acn-range-input input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+.acn-range-sep {
+    color: var(--acn-text-soft);
+    font-size: 11px;
+    user-select: none;
+}
+.acn-range-clear {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: var(--acn-text-soft);
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+.acn-range-clear:hover { background: var(--acn-border-soft); color: var(--acn-text); }
+
+/* Estado disabled del preset cuando el rango custom está activo */
+.acn-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Card title con subtítulo inline (ej. "Últimos 14 días") */
+.acn-card-activity .acn-card-title .acn-card-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--acn-text-muted);
+    margin-left: 6px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Responsive: en mobile, el header de la card colapsa los controles
+   debajo del título para que no se aplasten. */
+@media (max-width: 768px) {
+    .acn-card-activity .acn-card-head { flex-wrap: wrap; gap: 8px; }
+    .acn-card-head-right { flex-wrap: wrap; gap: 8px; }
+    .acn-range { height: auto; padding: 6px 8px; }
+    .acn-range-input input[type="date"] { width: 100%; }
+}
+
 .acn-chart-tooltip {
     position: absolute;
     transform: translate(-50%, -100%);

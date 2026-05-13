@@ -72,10 +72,12 @@
         <!-- Meeting Activity -->
         <article class="acn-card acn-card-activity">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Actividad de Reuniones (Últimos 30 Días)</h2>
+                <h2 class="acn-card-title">
+                    Actividad de Reuniones
+                    <span class="acn-card-sub" *ngIf="!hasCustomRange">(Últimos {{ overviewPeriod === '7d' ? 7 : overviewPeriod === '30d' ? 30 : 14 }} días)</span>
+                </h2>
                 <div class="acn-card-head-right">
-                    <!-- Leyenda interactiva: click oculta/muestra cada serie.
-                         Permite comparar reuniones recibidas vs procesadas. -->
+                    <!-- Leyenda interactiva: click oculta/muestra cada serie. -->
                     <div class="acn-chart-legend" role="group" aria-label="Series visibles">
                         <button type="button" class="legend-toggle"
                                 [class.is-off]="!seriesVisible.meetings"
@@ -94,7 +96,47 @@
                             Procesadas
                         </button>
                     </div>
-                    <select class="acn-select" [(ngModel)]="overviewPeriod" (change)="setOverviewPeriod(overviewPeriod)" aria-label="Período">
+
+                    <!-- Date range picker. Si ambas fechas están vacías
+                         se aplica el preset (Diario/Semanal/Mensual).
+                         Al setear las dos, el chart usa el rango custom. -->
+                    <div class="acn-range" role="group" aria-label="Rango de fechas">
+                        <label class="acn-range-input">
+                            <span class="acn-range-label">Desde</span>
+                            <input type="date"
+                                   [(ngModel)]="customFromDate"
+                                   [max]="customToDate || todayIso"
+                                   aria-label="Fecha de inicio" />
+                        </label>
+                        <span class="acn-range-sep" aria-hidden="true">→</span>
+                        <label class="acn-range-input">
+                            <span class="acn-range-label">Hasta</span>
+                            <input type="date"
+                                   [(ngModel)]="customToDate"
+                                   [min]="customFromDate"
+                                   [max]="todayIso"
+                                   aria-label="Fecha de fin" />
+                        </label>
+                        <button type="button" class="acn-range-clear"
+                                *ngIf="hasCustomRange"
+                                (click)="clearCustomRange()"
+                                title="Restablecer rango">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- El preset queda disponible y se usa cuando NO hay
+                         rango custom. Disabled visual mientras hay rango. -->
+                    <select class="acn-select"
+                            [(ngModel)]="overviewPeriod"
+                            (change)="setOverviewPeriod(overviewPeriod)"
+                            [disabled]="hasCustomRange"
+                            [title]="hasCustomRange ? 'Restablece el rango para volver al preset' : 'Período preset'"
+                            aria-label="Período preset">
                         <option value="7d">Diario</option>
                         <option value="14d">Semanal</option>
                         <option value="30d">Mensual</option>
