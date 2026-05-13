@@ -504,19 +504,45 @@ export class TemplatesComponent implements OnInit {
     /** URL del Office Online embed viewer para un .docx público.
      *  Microsoft hostea un viewer gratuito que renderiza Word docs
      *  cuando se le pasa el URL del archivo encoded. Funciona con
-     *  cualquier URL accesible públicamente (Supabase Storage lo es). */
+     *  cualquier URL accesible públicamente (Supabase Storage lo es).
+     *
+     *  IMPORTANTE: cacheamos el SafeResourceUrl por id de plantilla.
+     *  Sin esto, cada change-detection generaría una instancia nueva del
+     *  SafeResourceUrl, y Angular re-renderizaría el <iframe>, causando
+     *  recargas continuas del viewer. */
+    private _previewUrlCache = new Map<number, SafeResourceUrl>();
+    private _previewUrlStringCache = new Map<number, string>();
+
     officePreviewUrl(t: any): SafeResourceUrl | null {
-        if (!t?.file_path) return null;
-        const encoded = encodeURIComponent(t.file_path);
-        const url = `https://view.officeapps.live.com/op/embed.aspx?src=${encoded}`;
-        // Angular bloquea <iframe [src]> sin sanitizar como SafeResourceUrl.
-        return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        if (!t?.file_path || !t?.id) return null;
+        const hit = this._previewUrlCache.get(t.id);
+        if (hit) return hit;
+        const url = this._buildPreviewUrl(t.file_path);
+        const safe = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this._previewUrlCache.set(t.id, safe);
+        this._previewUrlStringCache.set(t.id, url);
+        return safe;
     }
 
     /** Misma URL pero como string plano — útil para abrir en nueva pestaña. */
     officePreviewUrlString(t: any): string | null {
-        if (!t?.file_path) return null;
-        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(t.file_path)}`;
+        if (!t?.file_path || !t?.id) return null;
+        const hit = this._previewUrlStringCache.get(t.id);
+        if (hit) return hit;
+        const url = this._buildPreviewUrl(t.file_path);
+        this._previewUrlStringCache.set(t.id, url);
+        return url;
+    }
+
+    private _buildPreviewUrl(filePath: string): string {
+        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(filePath)}`;
+    }
+
+    /** Invalida el cache cuando una plantilla se actualiza (file_replaced
+     *  o re-subida). Se llama desde uploadFile y persistMeta. */
+    private invalidatePreviewCache(templateId: number): void {
+        this._previewUrlCache.delete(templateId);
+        this._previewUrlStringCache.delete(templateId);
     }
 
     /** Modal de vista previa: rompemos del tab cuando el user hace click
@@ -607,6 +633,9 @@ export class TemplatesComponent implements OnInit {
             next: (res) => {
                 const newId = this.editingTemplateId || res.template_id;
                 this.lastUploadedTemplateId = newId;
+                // Si se reemplazó el archivo, invalidamos el preview cache
+                // para que el viewer pinte el nuevo .docx en lugar del viejo.
+                if (this.selectedFile) this.invalidatePreviewCache(newId);
 
                 // Persistir metadata (type/description/updated_at) en el
                 // style_config inmediatamente después de la subida.

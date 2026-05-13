@@ -318,24 +318,16 @@
 
             <div *ngIf="detailTab === 'preview'" class="tpl-detail-body">
                 <!-- Vista previa real del .docx vía Microsoft Office Online
-                     Viewer. Requiere que el archivo sea accesible públicamente
-                     (las plantillas viven en Supabase Storage público). -->
+                     Viewer. El iframe se renderiza al 167% y se escala a
+                     0.6 (CSS) → fuerza al viewer a usar un zoom interno
+                     mayor que muestra la página completa sin scroll, todo
+                     dentro del footprint visible. -->
                 <div class="tpl-preview-frame" *ngIf="officePreviewUrl(selectedTemplate) as previewUrl; else previewUnavailable">
                     <iframe [src]="previewUrl"
                             title="Vista previa de la plantilla"
                             frameborder="0"
-                            allowfullscreen></iframe>
-                    <button type="button" class="tpl-preview-expand"
-                            (click)="openPreviewModal(selectedTemplate)"
-                            title="Abrir en grande">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="15 3 21 3 21 9"></polyline>
-                            <polyline points="9 21 3 21 3 15"></polyline>
-                            <line x1="21" y1="3" x2="14" y2="10"></line>
-                            <line x1="3" y1="21" x2="10" y2="14"></line>
-                        </svg>
-                    </button>
+                            allowfullscreen
+                            scrolling="no"></iframe>
                 </div>
                 <ng-template #previewUnavailable>
                     <div class="tpl-preview-empty">
