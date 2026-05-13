@@ -815,6 +815,36 @@ export class ProjectsComponent implements OnInit {
         return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '··';
     }
 
+    /** Iniciales de un contacto para el avatar del modal de Participantes. */
+    contactInitials(c: any): string {
+        return this._initialsFromName(c?.name || '');
+    }
+
+    /** Label humano de la plataforma de routing (Trello, Jira, ClickUp, …). */
+    routingPlatformLabel(type: string): string {
+        const map: Record<string, string> = {
+            trello: 'Trello',
+            jira: 'Jira',
+            clickup: 'ClickUp',
+            azure: 'Azure DevOps',
+            azure_devops: 'Azure DevOps',
+        };
+        return map[(type || '').toLowerCase()] || (type || 'Plataforma');
+    }
+
+    /** Iniciales / color del icono cuadrado de la plataforma. */
+    routingPlatformIcon(type: string): { letter: string; color: string; bg: string } {
+        const t = (type || '').toLowerCase();
+        const map: Record<string, { letter: string; color: string; bg: string }> = {
+            trello:        { letter: 'T', color: '#FFFFFF', bg: '#0079BF' },
+            jira:          { letter: 'J', color: '#FFFFFF', bg: '#2684FF' },
+            clickup:       { letter: 'C', color: '#FFFFFF', bg: '#7B68EE' },
+            azure:         { letter: 'A', color: '#FFFFFF', bg: '#0078D4' },
+            azure_devops:  { letter: 'A', color: '#FFFFFF', bg: '#0078D4' },
+        };
+        return map[t] || { letter: '•', color: '#FFFFFF', bg: '#64748B' };
+    }
+
     // ---- Side panel: counts + insights -------------------------------------
 
     /** Resumen para la card lateral. Cuenta sobre la lista actual completa

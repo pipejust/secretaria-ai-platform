@@ -1,268 +1,448 @@
-<!-- Modal de Proyecto (Nuevo/Editar) -->
-<div class="modal-overlay" *ngIf="showProjectModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>{{ editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h3>
-            <button class="btn-close" (click)="cancelEdit()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+<!-- ============================================================
+     Modal de Proyecto (Nuevo / Editar) — diseño SaaS enterprise
+     ============================================================ -->
+<div class="ap-modal-overlay" *ngIf="showProjectModal" (click)="cancelEdit()">
+    <div class="ap-modal ap-modal-md" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="ap-modal-head">
+            <h2 class="ap-modal-title">{{ editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h2>
+            <button type="button" class="ap-modal-close" (click)="cancelEdit()" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
-        </div>
-        <div class="modal-body">
-            <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
-            <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
+        </header>
 
-            <form (ngSubmit)="editingProject ? updateProject() : createProject()" #projectForm="ngForm">
-                <div class="form-group mb-4">
-                    <label>Nombre Identificador <span class="text-danger">*</span></label>
-                    <input type="text" name="name" [(ngModel)]="newProject.name" required placeholder="ej: Reclutamiento" />
+        <form (ngSubmit)="editingProject ? updateProject() : createProject()" #projectForm="ngForm" class="ap-modal-body-form">
+            <div class="ap-modal-body">
+                <div class="ap-alert ap-alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+                <div class="ap-alert ap-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
+
+                <div class="ap-field">
+                    <label class="ap-label">Nombre Identificador <span class="ap-required">*</span></label>
+                    <input class="ap-input" type="text" name="name" [(ngModel)]="newProject.name" required
+                           placeholder="ej: Reclutamiento" />
                 </div>
 
-                <div class="form-group mb-4">
-                    <label>Descripción</label>
-                    <textarea name="description" [(ngModel)]="newProject.description" rows="3" placeholder="Contexto del proyecto..."></textarea>
+                <div class="ap-field">
+                    <label class="ap-label">Descripción</label>
+                    <textarea class="ap-textarea" name="description" [(ngModel)]="newProject.description"
+                              rows="4" placeholder="Contexto del proyecto..."></textarea>
                 </div>
 
-                <div class="form-group mb-4">
-                    <label>Responsable del proyecto</label>
-                    <select name="owner_user_id" [(ngModel)]="newProject.owner_user_id">
-                        <option [ngValue]="null">— Sin responsable asignado —</option>
-                        <option *ngFor="let u of users" [ngValue]="u.id">{{ u.full_name || u.email }} ({{ u.role }})</option>
-                    </select>
-                    <small style="color:#6b7280; display:block; margin-top:.3rem;">
+                <div class="ap-field">
+                    <label class="ap-label">Responsable del proyecto</label>
+                    <div class="ap-select-wrap">
+                        <svg class="ap-select-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <select class="ap-select" name="owner_user_id" [(ngModel)]="newProject.owner_user_id">
+                            <option [ngValue]="null">— Sin responsable asignado —</option>
+                            <option *ngFor="let u of users" [ngValue]="u.id">{{ u.full_name || u.email }} ({{ u.role }})</option>
+                        </select>
+                    </div>
+                    <small class="ap-hint">
                         Quien hace seguimiento de los pendientes y recibe los reportes ejecutivos.
                     </small>
                 </div>
 
-                <fieldset style="border:1px solid #e5e7eb; border-radius:10px; padding:14px 16px; margin-bottom:16px;">
-                    <legend style="padding:0 8px; font-size:.85rem; color:#475569; font-weight:600;">
-                        Auto-Dispatch para este proyecto
-                    </legend>
+                <!-- Auto-Dispatch card -->
+                <section class="ap-inner-card">
+                    <div class="ap-inner-card-row">
+                        <div class="ap-inner-card-left">
+                            <div class="ap-inner-card-head">
+                                <span class="ap-inner-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                    </svg>
+                                </span>
+                                <strong class="ap-inner-card-title">Auto-Dispatch para este proyecto</strong>
+                            </div>
+                            <div class="ap-inner-card-info" *ngIf="!autoDispatchOverride">
+                                <svg class="ap-info-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <p>
+                                    Este proyecto sigue el ajuste global de
+                                    <a routerLink="/admin/settings" (click)="cancelEdit()">Configuración &gt; Auto-Curación</a>.
+                                </p>
+                            </div>
+                        </div>
 
-                    <div class="form-group mb-3" style="display:flex; align-items:center; gap:.6rem;">
-                        <input type="checkbox" id="ad_override" name="ad_override"
-                               [(ngModel)]="autoDispatchOverride"
-                               (change)="onAutoDispatchOverrideChange()" />
-                        <label for="ad_override" style="margin:0; cursor:pointer;">
-                            Sobrescribir el ajuste global para este proyecto
+                        <label class="ap-checkbox-block">
+                            <input type="checkbox" id="ad_override" name="ad_override"
+                                   [(ngModel)]="autoDispatchOverride"
+                                   (change)="onAutoDispatchOverrideChange()" />
+                            <span>Sobrescribir el ajuste<br/>global para este proyecto</span>
                         </label>
                     </div>
 
-                    <div *ngIf="autoDispatchOverride" style="padding-left:1.5rem; border-left:2px solid #c7d2fe;">
-                        <div class="form-group mb-3" style="display:flex; align-items:center; gap:.6rem;">
+                    <div *ngIf="autoDispatchOverride" class="ap-inner-card-extra">
+                        <label class="ap-checkbox-row">
                             <input type="checkbox" id="ad_enabled" name="ad_enabled"
                                    [(ngModel)]="newProject.auto_dispatch_enabled" />
-                            <label for="ad_enabled" style="margin:0; cursor:pointer;">
-                                Activar Auto-Dispatch (envío automático tras curación humana opcional)
-                            </label>
-                        </div>
-                        <div class="form-group mb-0">
-                            <label>Horas de espera antes de despachar automáticamente</label>
-                            <input type="number" min="0" step="0.5" name="ad_timeout"
+                            <span>Activar Auto-Dispatch (envío automático tras curación humana opcional)</span>
+                        </label>
+                        <div class="ap-field">
+                            <label class="ap-label">Horas de espera antes de despachar automáticamente</label>
+                            <input class="ap-input" type="number" min="0" step="0.5" name="ad_timeout"
                                    [(ngModel)]="newProject.auto_dispatch_timeout_hours"
                                    placeholder="Ej: 24" />
-                            <small style="color:#6b7280;">Si lo dejas vacío, usa el global (Configuración → Auto-Curación).</small>
+                            <small class="ap-hint">Si lo dejas vacío, usa el global (Configuración → Auto-Curación).</small>
                         </div>
                     </div>
+                </section>
+            </div>
 
-                    <small *ngIf="!autoDispatchOverride" style="color:#6b7280;">
-                        Este proyecto sigue el ajuste global de <a routerLink="/admin/settings">Configuración → Auto-Curación</a>.
-                    </small>
-                </fieldset>
+            <footer class="ap-modal-foot">
+                <button type="button" class="ap-btn ap-btn-secondary" (click)="cancelEdit()">Cancelar</button>
+                <button type="submit" class="ap-btn ap-btn-primary"
+                        [disabled]="!projectForm.form.valid || isCreating || isUpdating">
+                    <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Guardar cambios' : 'Guardar proyecto' }}</span>
+                    <span *ngIf="isCreating || isUpdating">Procesando…</span>
+                </button>
+            </footer>
+        </form>
+    </div>
+</div>
 
-                <div class="flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-primary flex-1" [disabled]="!projectForm.form.valid || isCreating || isUpdating">
-                        <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Actualizar Proyecto' : 'Crear Proyecto' }}</span>
-                        <span *ngIf="isCreating || isUpdating">Procesando...</span>
-                    </button>
-                    <button *ngIf="editingProject" type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancelar</button>
+<!-- ============================================================
+     Modal Participantes
+     ============================================================ -->
+<div class="ap-modal-overlay" *ngIf="managingContactsForProject" (click)="closeContacts()">
+    <div class="ap-modal ap-modal-lg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="ap-modal-head">
+            <h2 class="ap-modal-title">Participantes: {{ managingContactsForProject.name }}</h2>
+            <button type="button" class="ap-modal-close" (click)="closeContacts()" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+
+        <div class="ap-modal-body">
+            <div class="ap-alert ap-alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+            <div class="ap-alert ap-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
+
+            <!-- Lista de contactos como cards -->
+            <div *ngIf="isLoadingContacts" class="ap-modal-loading">Cargando…</div>
+            <div *ngIf="!isLoadingContacts && projectContacts.length === 0" class="ap-modal-empty">
+                Sin participantes guardados para este proyecto.
+            </div>
+
+            <ul class="ap-contact-list" *ngIf="!isLoadingContacts && projectContacts.length > 0">
+                <li *ngFor="let contact of projectContacts"
+                    class="ap-contact-card"
+                    [class.is-editing]="editingContactId === contact.id">
+                    <span class="ap-contact-avatar">{{ contactInitials(contact) }}</span>
+                    <div class="ap-contact-body">
+                        <strong class="ap-contact-name">{{ contact.name }}</strong>
+                        <span class="ap-contact-email">{{ contact.email }}</span>
+                        <div class="ap-contact-meta">
+                            <span class="ap-contact-meta-item" *ngIf="contact.role">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                                </svg>
+                                {{ contact.role }}
+                            </span>
+                            <span class="ap-contact-meta-sep" *ngIf="contact.role && contact.phone">|</span>
+                            <span class="ap-contact-meta-item" *ngIf="contact.phone">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                </svg>
+                                Tel: {{ contact.phone }}
+                            </span>
+                            <span class="ap-contact-meta-sep" *ngIf="contact.entity && (contact.phone || contact.role)">|</span>
+                            <span class="ap-contact-meta-item" *ngIf="contact.entity">{{ contact.entity }}</span>
+                        </div>
+                    </div>
+                    <div class="ap-contact-actions">
+                        <button type="button" class="ap-btn-edit"
+                                (click)="editContact(contact)"
+                                [disabled]="editingContactId === contact.id">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Editar
+                        </button>
+                        <button type="button" class="ap-btn-delete"
+                                (click)="deleteContact(contact.id)"
+                                [disabled]="isDeletingContactId === contact.id">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                            </svg>
+                            Eliminar
+                        </button>
+                    </div>
+                </li>
+            </ul>
+
+            <!-- Separador + formulario "Agregar nuevo contacto" -->
+            <div class="ap-modal-divider"></div>
+
+            <h3 class="ap-modal-section-title">{{ editingContactId ? 'Editar Contacto' : 'Agregar Nuevo Contacto' }}</h3>
+
+            <form (ngSubmit)="submitContact()" #contactForm="ngForm" class="ap-contact-form">
+                <div class="ap-grid-2">
+                    <div class="ap-field">
+                        <label class="ap-label">Nombre <span class="ap-required">*</span></label>
+                        <input class="ap-input" type="text" name="contactName" [(ngModel)]="newContact.name" required placeholder="ej: Juan Pérez" />
+                    </div>
+                    <div class="ap-field">
+                        <label class="ap-label">Correo <span class="ap-required">*</span></label>
+                        <input class="ap-input" type="email" name="contactEmail" [(ngModel)]="newContact.email" required placeholder="juan@empresa.com" />
+                    </div>
+                    <div class="ap-field">
+                        <label class="ap-label">Rol / Cargo <span class="ap-required">*</span></label>
+                        <input class="ap-input" type="text" name="contactRole" [(ngModel)]="newContact.role" required placeholder="ej: Gerente IT" />
+                    </div>
+                    <div class="ap-field">
+                        <label class="ap-label">Entidad (Opcional)</label>
+                        <input class="ap-input" type="text" name="contactEntity" [(ngModel)]="newContact.entity" placeholder="ej: Secretaria AI, Ministerio..." />
+                    </div>
+                </div>
+                <div class="ap-field">
+                    <label class="ap-label">Teléfono (Opcional)</label>
+                    <input class="ap-input" type="text" name="contactPhone" [(ngModel)]="newContact.phone" placeholder="+12345678" />
                 </div>
             </form>
         </div>
+
+        <footer class="ap-modal-foot">
+            <button type="button" class="ap-btn ap-btn-secondary"
+                    *ngIf="editingContactId"
+                    (click)="cancelEditContact()"
+                    [disabled]="isUpdatingContact">
+                Cancelar Edición
+            </button>
+            <button type="button" class="ap-btn ap-btn-primary"
+                    (click)="submitContact()"
+                    [disabled]="!newContact.name || !newContact.email || !newContact.role || isAddingContact || isUpdatingContact">
+                <span *ngIf="!isAddingContact && !isUpdatingContact">{{ editingContactId ? 'Actualizar Contacto' : 'Guardar Contacto' }}</span>
+                <span *ngIf="isAddingContact || isUpdatingContact">{{ editingContactId ? 'Actualizando…' : 'Guardando…' }}</span>
+            </button>
+        </footer>
     </div>
 </div>
 
-<!-- Modal Gestor de Participantes -->
-<div class="modal-overlay" *ngIf="managingContactsForProject">
-    <div class="modal-content" style="max-width: 650px;">
-        <div class="modal-header">
-            <h3>Participantes: {{ managingContactsForProject.name }}</h3>
-            <button class="btn-close" (click)="closeContacts()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+<!-- ============================================================
+     Modal Rutas de Integración
+     ============================================================ -->
+<div class="ap-modal-overlay" *ngIf="managingRoutingsForProject" (click)="closeRoutings()">
+    <div class="ap-modal ap-modal-lg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="ap-modal-head">
+            <h2 class="ap-modal-title">Rutas de Integración: {{ managingRoutingsForProject.name }}</h2>
+            <button type="button" class="ap-modal-close" (click)="closeRoutings()" title="Cerrar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
-        </div>
-        <div class="modal-body" style="background:#f8fafc; padding: 1.5rem;">
-            <!-- Lista de contactos -->
-            <div class="contacts-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;">
-                <div *ngIf="isLoadingContacts" class="text-center">Cargando...</div>
-                <div *ngIf="!isLoadingContacts && projectContacts.length === 0" class="text-center" style="color: gray;">
-                    Sin participantes guardados para este proyecto.
-                </div>
-                <ul *ngIf="!isLoadingContacts && projectContacts.length > 0" style="padding: 0; margin: 0; list-style: none;">
-                    <li *ngFor="let contact of projectContacts" [style]="'background: white; border: ' + (editingContactId === contact.id ? '2px solid #2563eb' : '1px solid #e2e8f0') + '; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'">
-                        <div>
-                            <strong style="display: block; color: var(--text-main);">{{ contact.name }}</strong>
-                            <small style="color: var(--text-muted);">{{ contact.email }} | {{ contact.role }}</small>
-                            <small *ngIf="contact.phone || contact.entity" style="display: block; color: var(--text-muted);">
-                                <span *ngIf="contact.phone">Tel: {{ contact.phone }}</span>
-                                <span *ngIf="contact.phone && contact.entity"> • </span>
-                                <span *ngIf="contact.entity">Entidad: {{ contact.entity }}</span>
-                            </small>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-sm" style="color: #2563eb; background: #eff6ff; border:none;" (click)="editContact(contact)" [disabled]="editingContactId === contact.id">
-                                Editar
-                            </button>
-                            <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteContact(contact.id)" [disabled]="isDeletingContactId === contact.id">
-                                Eliminar
-                            </button>
-                        </div>
-                    </li>
-                </ul>
-            </div>
+        </header>
 
-            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                <h4 style="margin-bottom: 1rem; color: var(--text-main); font-size: 1.1rem;">{{ editingContactId ? 'Editar Contacto' : 'Agregar Nuevo Contacto' }}</h4>
-                <form (ngSubmit)="submitContact()" #contactForm="ngForm">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group mb-4">
-                            <label>Nombre <span class="text-danger">*</span></label>
-                            <input type="text" name="contactName" [(ngModel)]="newContact.name" required placeholder="ej: Juan Pérez" />
-                        </div>
-                        <div class="form-group mb-4">
-                            <label>Correo <span class="text-danger">*</span></label>
-                            <input type="email" name="contactEmail" [(ngModel)]="newContact.email" required placeholder="juan@empresa.com" />
-                        </div>
-                        <div class="form-group mb-4">
-                            <label>Rol / Cargo <span class="text-danger">*</span></label>
-                            <input type="text" name="contactRole" [(ngModel)]="newContact.role" required placeholder="ej: Gerente IT" />
-                        </div>
-                        <div class="form-group mb-4">
-                            <label>Entidad (Opcional)</label>
-                            <input type="text" name="contactEntity" [(ngModel)]="newContact.entity" placeholder="ej: Secretaria AI, Ministerio..." />
-                        </div>
-                        <div class="form-group mb-4" style="grid-column: span 2;">
-                            <label>Teléfono (Opcional)</label>
-                            <input type="text" name="contactPhone" [(ngModel)]="newContact.phone" placeholder="+12345678" />
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-secondary w-full" *ngIf="editingContactId" (click)="cancelEditContact()" [disabled]="isUpdatingContact">
-                            Cancelar Edición
-                        </button>
-                        <button type="submit" class="btn btn-success w-full" [disabled]="!contactForm.form.valid || isAddingContact || isUpdatingContact">
-                            <span *ngIf="!isAddingContact && !isUpdatingContact">{{ editingContactId ? 'Actualizar Contacto' : 'Guardar Contacto' }}</span>
-                            <span *ngIf="isAddingContact || isUpdatingContact">{{ editingContactId ? 'Actualizando...' : 'Guardando...' }}</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+        <div class="ap-modal-body">
+            <div class="ap-alert ap-alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
+            <div class="ap-alert ap-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
 
-<!-- Modal Gestor de Rutas de Integración -->
-<div class="modal-overlay" *ngIf="managingRoutingsForProject">
-    <div class="modal-content" style="max-width: 700px;">
-        <div class="modal-header">
-            <h3>Rutas de Integración: {{ managingRoutingsForProject.name }}</h3>
-            <button class="btn-close" (click)="closeRoutings()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>
-        <div class="modal-body" style="background:#f8fafc; padding: 1.5rem;">
-            <!-- Lista de Rutas -->
-            <div class="routings-list" style="margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto;">
-                <div *ngIf="isLoadingRoutings" class="text-center">Cargando...</div>
-                <div *ngIf="!isLoadingRoutings && projectRoutings.length === 0" class="text-center" style="color: gray;">
+            <!-- Card "Rutas configuradas" -->
+            <section class="ap-inner-card">
+                <header class="ap-inner-card-toprow">
+                    <div class="ap-inner-card-titlewrap">
+                        <strong class="ap-inner-card-title">Rutas configuradas</strong>
+                        <span class="ap-inner-card-badge">{{ projectRoutings.length }}</span>
+                    </div>
+                </header>
+
+                <div *ngIf="isLoadingRoutings" class="ap-modal-loading">Cargando…</div>
+                <div *ngIf="!isLoadingRoutings && projectRoutings.length === 0" class="ap-modal-empty">
                     Sin rutas de integración configuradas para este proyecto. Cero tareas serán despachadas.
                 </div>
-                <ul *ngIf="!isLoadingRoutings && projectRoutings.length > 0" style="padding: 0; margin: 0; list-style: none;">
-                    <li *ngFor="let routing of projectRoutings" style="background: white; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                        <div>
-                            <strong style="display: block; color: var(--text-main); text-transform: capitalize;">{{ routing.destination_type }}</strong>
-                            <small style="color: var(--text-muted); font-family: monospace;">{{ routing.destination_config }}</small>
+
+                <ul class="ap-routing-list" *ngIf="!isLoadingRoutings && projectRoutings.length > 0">
+                    <li *ngFor="let routing of projectRoutings" class="ap-routing-card">
+                        <span class="ap-routing-icon"
+                              [style.background]="routingPlatformIcon(routing.destination_type).bg"
+                              [style.color]="routingPlatformIcon(routing.destination_type).color">
+                            {{ routingPlatformIcon(routing.destination_type).letter }}
+                        </span>
+                        <div class="ap-routing-body">
+                            <strong class="ap-routing-name">{{ routingPlatformLabel(routing.destination_type) }}</strong>
+                            <code class="ap-routing-config">{{ routing.destination_config }}</code>
                         </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.85rem; color: #64748b; margin: 0;">
-                                <input type="checkbox" [checked]="routing.is_active" (change)="toggleRoutingStatus(routing)" style="margin-right: 5px;">
-                                {{ routing.is_active ? 'Activa' : 'Inactiva' }}
-                            </label>
-                            <button class="btn btn-sm" style="color: red; background: #fee2e2; border:none;" (click)="deleteRouting(routing.id)" [disabled]="isDeletingRoutingId === routing.id">
-                                Eliminar
-                            </button>
-                        </div>
+                        <span class="ap-routing-state"
+                              [class.is-on]="routing.is_active"
+                              (click)="toggleRoutingStatus(routing)"
+                              role="button"
+                              [title]="routing.is_active ? 'Click para desactivar' : 'Click para activar'">
+                            <span class="ap-routing-state-dot"></span>
+                            {{ routing.is_active ? 'Activa' : 'Inactiva' }}
+                        </span>
+                        <button type="button" class="ap-btn-delete"
+                                (click)="deleteRouting(routing.id)"
+                                [disabled]="isDeletingRoutingId === routing.id">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                            </svg>
+                            Eliminar
+                        </button>
                     </li>
                 </ul>
-            </div>
+            </section>
 
-            <!-- Formulario para agregar nueva ruta -->
-            <div style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                <h4 style="margin-bottom: 1rem; color: var(--text-main); font-size: 1.1rem;">Agregar Nueva Ruta</h4>
+            <!-- Card "Agregar Nueva Ruta" -->
+            <section class="ap-inner-card ap-inner-card-form">
+                <h3 class="ap-modal-section-title">Agregar Nueva Ruta</h3>
                 <form (ngSubmit)="addRouting()" #routingForm="ngForm">
-                    <div class="form-group mb-4">
-                        <label>Plataforma de Destino <span class="text-danger">*</span></label>
-                        <select name="destType" [(ngModel)]="newRouting.destination_type" required style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;" [disabled]="activeIntegrations.length === 0">
-                            <option *ngFor="let integration of activeIntegrations" [value]="integration.id">{{ integration.name }}</option>
-                            <option *ngIf="activeIntegrations.length === 0" value="" disabled selected>Primero activa una integración en Ajustes</option>
-                        </select>
-                    </div>
-
-                    <div *ngIf="newRouting.destination_type === 'trello'" style="margin-bottom: 1rem;">
-                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
-                            <strong>¿Dónde encuentro los IDs?</strong> Ingresa a un tablero de Trello y agrega <code>.json</code> a la URL (ej: <code>trello.com/b/ABC/mi-tablero.json</code>). Busca <code>"id"</code> para el tablero y el array <code>"lists"</code> para obtener el ID de la lista.
-                        </p>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div class="form-group mb-0">
-                                <label>Trello Board ID <span class="text-danger">*</span></label>
-                                <input type="text" name="trelloBoardId" [(ngModel)]="destinationConfig['trello'].board_id" required placeholder="ej: 60a1b2c3..." />
-                            </div>
-                            <div class="form-group mb-0">
-                                <label>Trello List ID <span class="text-danger">*</span></label>
-                                <input type="text" name="trelloListId" [(ngModel)]="destinationConfig['trello'].list_id" required placeholder="ej: 60a1b2d4..." />
-                            </div>
+                    <div class="ap-field">
+                        <label class="ap-label">Plataforma de Destino <span class="ap-required">*</span></label>
+                        <div class="ap-select-wrap">
+                            <span class="ap-select-icon-img"
+                                  *ngIf="newRouting.destination_type"
+                                  [style.background]="routingPlatformIcon(newRouting.destination_type).bg"
+                                  [style.color]="routingPlatformIcon(newRouting.destination_type).color">
+                                {{ routingPlatformIcon(newRouting.destination_type).letter }}
+                            </span>
+                            <select class="ap-select"
+                                    name="destType"
+                                    [(ngModel)]="newRouting.destination_type"
+                                    required
+                                    [disabled]="activeIntegrations.length === 0">
+                                <option *ngFor="let integration of activeIntegrations" [value]="integration.id">
+                                    {{ integration.name }}
+                                </option>
+                                <option *ngIf="activeIntegrations.length === 0" value="" disabled selected>
+                                    Primero activa una integración en Ajustes
+                                </option>
+                            </select>
                         </div>
                     </div>
 
-                    <div *ngIf="newRouting.destination_type === 'jira'" style="margin-bottom: 1rem;">
-                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
-                            <strong>¿Dónde encuentro la Project Key?</strong> Es el prefijo corto en mayúsculas de todos tus tickets en ese proyecto. Si un ticket es <code>PROJ-123</code>, la Project Key es <code>PROJ</code>.
+                    <!-- Bloque informativo Trello -->
+                    <div class="ap-info-block" *ngIf="newRouting.destination_type === 'trello'">
+                        <svg class="ap-info-block-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <p>
+                            <strong>¿Dónde encuentro los IDs?</strong>
+                            Ingresa a un tablero de Trello y agrega <code>.json</code> a la URL
+                            (ej: <code>trello.com/b/ABC/mi-tablero.json</code>). Busca <code>"id"</code>
+                            para el tablero y el array <code>"lists"</code> para obtener el ID de la lista.
                         </p>
-                        <div class="form-group mb-0">
-                            <label>Jira Project Key <span class="text-danger">*</span></label>
-                            <input type="text" name="jiraProjectKey" [(ngModel)]="destinationConfig['jira'].project_key" required placeholder="ej: PROJ" />
+                    </div>
+                    <div class="ap-grid-2" *ngIf="newRouting.destination_type === 'trello'">
+                        <div class="ap-field">
+                            <label class="ap-label">Trello Board ID <span class="ap-required">*</span></label>
+                            <input class="ap-input" type="text" name="trelloBoardId"
+                                   [(ngModel)]="destinationConfig['trello'].board_id"
+                                   required placeholder="ej: 60a1b2c3..." />
+                        </div>
+                        <div class="ap-field">
+                            <label class="ap-label">Trello List ID <span class="ap-required">*</span></label>
+                            <input class="ap-input" type="text" name="trelloListId"
+                                   [(ngModel)]="destinationConfig['trello'].list_id"
+                                   required placeholder="ej: 60a1b2d4..." />
                         </div>
                     </div>
 
-                    <div *ngIf="newRouting.destination_type === 'clickup'" style="margin-bottom: 1rem;">
-                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
-                            <strong>¿Dónde encuentro el List ID?</strong> Abre tu lista en ClickUp. En la URL (ej: <code>.../v/l/li/1234567</code>), el ID de la lista son los números del final.
+                    <!-- Jira -->
+                    <div class="ap-info-block" *ngIf="newRouting.destination_type === 'jira'">
+                        <svg class="ap-info-block-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <p>
+                            <strong>¿Dónde encuentro la Project Key?</strong>
+                            Es el prefijo corto en mayúsculas de todos tus tickets en ese proyecto.
+                            Si un ticket es <code>PROJ-123</code>, la Project Key es <code>PROJ</code>.
                         </p>
-                        <div class="form-group mb-0">
-                            <label>ClickUp List ID <span class="text-danger">*</span></label>
-                            <input type="text" name="clickupListId" [(ngModel)]="destinationConfig['clickup'].list_id" required placeholder="ej: 1234567" />
-                        </div>
+                    </div>
+                    <div class="ap-field" *ngIf="newRouting.destination_type === 'jira'">
+                        <label class="ap-label">Jira Project Key <span class="ap-required">*</span></label>
+                        <input class="ap-input" type="text" name="jiraProjectKey"
+                               [(ngModel)]="destinationConfig['jira'].project_key"
+                               required placeholder="ej: PROJ" />
                     </div>
 
-                    <div *ngIf="newRouting.destination_type === 'azure'" style="margin-bottom: 1rem;">
-                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 0.75rem;">
-                            <strong>¿Area Path?</strong> Si tu proyecto usa subdivisiones (Area Paths), ingrésala aquí (ej: <code>MiProyecto\EquipoFrontend</code>). Déjalo en blanco para enviar las tareas a la bandeja general del Proyecto.
+                    <!-- ClickUp -->
+                    <div class="ap-info-block" *ngIf="newRouting.destination_type === 'clickup'">
+                        <svg class="ap-info-block-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <p>
+                            <strong>¿Dónde encuentro el List ID?</strong>
+                            Abre tu lista en ClickUp. En la URL (ej: <code>.../v/l/li/1234567</code>),
+                            el ID de la lista son los números del final.
                         </p>
-                        <div class="form-group mb-0">
-                            <label>Azure Area Path (Opcional)</label>
-                            <input type="text" name="azureAreaPath" [(ngModel)]="destinationConfig['azure'].area_path" placeholder="ej: MyProject\MyArea" />
-                        </div>
+                    </div>
+                    <div class="ap-field" *ngIf="newRouting.destination_type === 'clickup'">
+                        <label class="ap-label">ClickUp List ID <span class="ap-required">*</span></label>
+                        <input class="ap-input" type="text" name="clickupListId"
+                               [(ngModel)]="destinationConfig['clickup'].list_id"
+                               required placeholder="ej: 1234567" />
                     </div>
 
-                    <button type="submit" class="btn btn-success w-full mt-2" [disabled]="!routingForm.form.valid || isAddingRouting || activeIntegrations.length === 0">
-                        <span *ngIf="!isAddingRouting">Guardar Ruta</span>
-                        <span *ngIf="isAddingRouting">Guardando...</span>
-                    </button>
-                    
-                    <div class="alert alert-error mt-3" *ngIf="errorMsg">{{ errorMsg }}</div>
-                    <div class="alert alert-success mt-3" *ngIf="successMsg">{{ successMsg }}</div>
+                    <!-- Azure -->
+                    <div class="ap-info-block" *ngIf="newRouting.destination_type === 'azure'">
+                        <svg class="ap-info-block-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <p>
+                            <strong>¿Area Path?</strong>
+                            Si tu proyecto usa subdivisiones (Area Paths), ingrésala aquí
+                            (ej: <code>MiProyecto\EquipoFrontend</code>). Déjalo en blanco para enviar
+                            las tareas a la bandeja general del Proyecto.
+                        </p>
+                    </div>
+                    <div class="ap-field" *ngIf="newRouting.destination_type === 'azure'">
+                        <label class="ap-label">Azure Area Path (Opcional)</label>
+                        <input class="ap-input" type="text" name="azureAreaPath"
+                               [(ngModel)]="destinationConfig['azure'].area_path"
+                               placeholder="ej: MyProject\MyArea" />
+                    </div>
                 </form>
-            </div>
+            </section>
         </div>
+
+        <footer class="ap-modal-foot">
+            <button type="button" class="ap-btn ap-btn-secondary" (click)="closeRoutings()">Cancelar</button>
+            <button type="button" class="ap-btn ap-btn-primary"
+                    (click)="addRouting()"
+                    [disabled]="isAddingRouting || activeIntegrations.length === 0 || !newRouting.destination_type">
+                <span *ngIf="!isAddingRouting">Guardar ruta</span>
+                <span *ngIf="isAddingRouting">Guardando…</span>
+            </button>
+        </footer>
     </div>
 </div>
 
