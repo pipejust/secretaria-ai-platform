@@ -125,9 +125,18 @@ async def process_session_with_ai(
     db.commit()
 
     # ---------- 5. OpenAI → action_items ----------
+    # Pasamos también las secciones ya procesadas (decisions, agreements,
+    # summary) para que la extracción de tareas tenga TODA la información
+    # estructurada a su disposición. Esto evita que se pierdan
+    # compromisos que estaban claros en los acuerdos pero diluidos en el
+    # transcript ruidoso.
     try:
         tasks_payload = await openai.process_transcript_for_tasks_only(
-            transcript, project_contacts
+            transcript,
+            project_contacts,
+            decisions=session_obj.processed_decisions or "",
+            agreements=session_obj.processed_agreements or "",
+            summary=session_obj.raw_summary or "",
         )
     except Exception:
         logger.exception(

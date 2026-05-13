@@ -295,9 +295,18 @@ async def regenerate_tasks_from_transcript(
         project_contacts = [{"name": c.name, "email": c.email, "role": c.role, "entity": c.entity} for c in db_contacts]
 
     # 2. Llamamos a OpenAI (gpt-4o), que es el LLM dedicado para tareas.
+    # Le pasamos también las secciones ya procesadas (decisions, agreements,
+    # summary) para mejorar cobertura: el LLM verifica que cada compromiso
+    # listado en Acuerdos/Decisiones tenga su tarea correspondiente.
     openai_svc = OpenAIService()
     try:
-        structured_data = await openai_svc.process_transcript_for_tasks_only(session_obj.raw_transcript, project_contacts)
+        structured_data = await openai_svc.process_transcript_for_tasks_only(
+            session_obj.raw_transcript,
+            project_contacts,
+            decisions=session_obj.processed_decisions or "",
+            agreements=session_obj.processed_agreements or "",
+            summary=session_obj.raw_summary or "",
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error conectando con la IA (OpenAI): {str(e)}")
 

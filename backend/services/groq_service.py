@@ -178,14 +178,31 @@ class OpenAIService:
             "required": ["thinking_process", "action_items"]
         }
 
-    async def process_transcript_for_tasks_only(self, transcript: str, project_contacts: list = None) -> dict:
+    async def process_transcript_for_tasks_only(
+        self,
+        transcript: str,
+        project_contacts: list = None,
+        decisions: str = "",
+        agreements: str = "",
+        summary: str = "",
+    ) -> dict:
         """
         Envía el transcript a Groq pidiendo EXCLUSIVAMENTE action_items.
-        Ésto permite que la IA dedique todos sus tokens/atención a generar tareas altamente detalladas
-        y no pierda calidad al regenerar.
+
+        IMPORTANTE: además del transcript, ahora pasamos las secciones ya
+        procesadas (decisiones, acuerdos, resumen). Esto resuelve un bug
+        observado en producción donde compromisos claramente acordados
+        ("se desarrollará un manual de marca", "se realizará una validación")
+        aparecían en la sección de Acuerdos pero NO en las tareas
+        generadas — porque el LLM solo veía el transcript ruidoso y no
+        las secciones ya curadas con los compromisos limpios.
+
+        Estrategia: el LLM extrae primero del transcript, después VERIFICA
+        contra los acuerdos y decisiones, y agrega cualquier compromiso
+        que no haya capturado. La cobertura sube significativamente.
         """
         safe_transcript = transcript # REMOVED TRUNCATION, GPT-4o handles 128k context
-            
+
         contacts_info = ""
         if project_contacts:
             contacts_str = json.dumps(project_contacts, ensure_ascii=False)
@@ -193,28 +210,58 @@ class OpenAIService:
 
         current_date = datetime.now().strftime("%Y-%m-%d")
 
+        # Bloques opcionales con secciones ya procesadas. Cada uno se
+        # incluye sólo si tiene contenido — evita confundir al LLM con
+        # placeholders vacíos.
+        extra_context_blocks = []
+        if (summary or "").strip():
+            extra_context_blocks.append(
+                f"=== RESUMEN EJECUTIVO YA PROCESADO ===\n{summary.strip()}"
+            )
+        if (decisions or "").strip():
+            extra_context_blocks.append(
+                f"=== DECISIONES CLAVE YA PROCESADAS ===\n{decisions.strip()}"
+            )
+        if (agreements or "").strip():
+            extra_context_blocks.append(
+                f"=== ACUERDOS YA PROCESADOS (FUENTE PRIMARIA DE TAREAS) ===\n"
+                f"{agreements.strip()}"
+            )
+        extra_context = (
+            "\n\n" + "\n\n".join(extra_context_blocks)
+            if extra_context_blocks
+            else ""
+        )
+
         prompt = f"""
         Eres un asistente experto que procesa transcripciones de reuniones internacionales.
         Tu ÚNICO OBJETIVO es extraer los compromisos y tareas con el MÁXIMO detalle posible.
-        
+
         ¡MUY IMPORTANTE - REGLA DE ORO!: SIN IMPORTAR EL IDIOMA DE LA TRANSCRIPCIÓN, LAS TAREAS DEBEN SER GENERADAS EXCLUSIVAMENTE Y ESTRICTAMENTE EN ESPAÑOL.
-        
+
         DATO CLAVE DE CONTEXTO TEMPORAL:
         La fecha actual es {current_date}. Utiliza esta información para inferir correctamente los años y fechas relativas (ej. si dicen "el próximo martes" o "para el 15 de marzo", usa el año actual o el correspondiente). NUNCA asumas años pasados si no se dicen explícitamente.
-        
+
         PRECAUCIÓN MUY IMPORTANTE SOBRE BÚSQUEDA DE CORREOS:
         Intenta identificar y extraer los correos electrónicos mencionados para asignarlos a 'owner_email'. {contacts_info}
-        
-        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - FIDELIDAD ABSOLUTA A LA TRANSCRIPCIÓN:
-        Eres un analista implacable. Tu principal objetivo es la FIDELIDAD EXACTA. Extrae LAS TAREAS EXACTAS que de verdad haya en la transcripción, ni una más, ni una menos.
+
+        INSTRUCCIONES CLAVE PARA TAREAS (ACTION ITEMS) - FIDELIDAD ABSOLUTA Y COBERTURA TOTAL:
+        Eres un analista implacable. Tu objetivo es la FIDELIDAD EXACTA + COBERTURA TOTAL. Extrae LAS TAREAS EXACTAS que de verdad haya en la transcripción y en las secciones procesadas, ni una más, ni una menos.
+
         1. NO AGRUPES TAREAS: Tu principal debilidad es que resumes. Si se mencionan 10 cosas distintas sobre un proyecto, ESO SON 10 TAREAS, no 1 sola agrupada. Compórtate como OpenAI (GPT-4o) que saca la lista exacta de tareas (ej. 23) sin agrupar cosas independientes.
-        2. NO INVENTES TAREAS: Solo crea tareas que estén explícita o implícitamente comprometidas en la grabación. No hay un mínimo de tareas estricto, hay que respetar la realidad de la reunión.
-        3. FECHAS: INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} y ponla en 'due_date'.
-        4. OBLIGATORIO: El campo 'thinking_process' ÚSALO PRIMERO para justificar cada tarea extraída demostrando su origen en el texto real.
-        5. Todo debe usar el formato estricto (Objetivo, Detalle, etc) de la 'description'.
-        
+        2. NO INVENTES TAREAS: Solo crea tareas que estén explícita o implícitamente comprometidas en la reunión. No hay un mínimo de tareas estricto, hay que respetar la realidad.
+        3. **COBERTURA OBLIGATORIA DE ACUERDOS Y DECISIONES**: Las secciones "ACUERDOS YA PROCESADOS" y "DECISIONES CLAVE YA PROCESADAS" (cuando estén presentes) son la fuente PRIMARIA y más limpia de compromisos. Para CADA frase ahí que implique una acción futura ("se desarrollará X", "se realizará Y", "se acordó hacer Z", "se entregará W", "se validará V"), DEBE existir una tarea correspondiente en tu lista. Esta es la regla más importante: si un acuerdo dice "se desarrollará un manual de marca" → tarea "Desarrollar manual de marca". Si una decisión dice "se entregará el reporte el viernes" → tarea "Entregar reporte" con due_date el viernes.
+        4. RESPONSABLES: Si los acuerdos/decisiones no nombran al responsable explícitamente, búscalo en el transcript donde se discute ese tema. Si nadie lo asume, usa "Por asignar" como owner_name.
+        5. FECHAS: INFIERE LA FECHA EXACTA basándote en la fecha actual {current_date} y ponla en 'due_date'.
+        6. OBLIGATORIO: El campo 'thinking_process' ÚSALO PRIMERO para:
+            (a) Listar las tareas detectadas del TRANSCRIPT.
+            (b) Listar los compromisos encontrados en ACUERDOS y DECISIONES.
+            (c) Verificar que cada compromiso de (b) tiene su tarea correspondiente en (a). Si falta alguna, AGRÉGALA explícitamente.
+            (d) Justificar cada tarea final con su cita de origen (transcript o acuerdo).
+        7. Todo debe usar el formato estricto (Objetivo, Detalle, etc) de la 'description'.
+
         Transcripción:
-        {safe_transcript}
+        {safe_transcript}{extra_context}
         """
 
         schema = self._get_tasks_only_json_schema()
@@ -492,40 +539,88 @@ class OpenAIService:
         """
         schema_ins = self._get_insights_schema()
 
-        # AGENT 3: Tasks (Action Items + Thinking Process JSON Chain of Thought)
-        prompt_tasks = f"""
-        INSTRUCCIONES CLAVE PARA TAREAS - FIDELIDAD ABSOLUTA A LA TRANSCRIPCIÓN:
-        DATO: La fecha actual es {current_date}. 
-        {contacts_info}
-        1. REGLA OBLIGATORIA: Extrae las tareas EXACTAS que tiene la transcripción. Ni inventes cuotas arbitrarias ni omitas cosas reales.
-        2. NO AGRUPES: El problema es que resumes demasiado. Desglosa todo en sus tareas atómicas sin agrupar detalles independientes, logrando la misma exactitud microscópica que lograría OpenAI GPT-4.
-        3. 'thinking_process': Úsalo PRIMERO para listar mentalmente los compromisos reales que hay en el texto sin inventar nada.
-        4. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde {current_date}.
-        5. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de formato requerida en 'description' para CADA TAREA sin omitir nada.
-        
-        Transcripción:
-        {safe_transcript}
-        """
+        # AGENT 3: Tasks — el prompt se construye DESPUÉS de ejecutar el
+        # agent de insights, para incluir como contexto los acuerdos y
+        # decisiones ya destilados (no solo el transcript ruidoso). Ver
+        # el bloque async with abajo.
         schema_tasks = self._get_tasks_only_json_schema()
 
         async with httpx.AsyncClient(timeout=180.0) as client:
-            # Ejecutamos llamadas LLM de forma secuencial en lugar de paralela (asyncio.gather) para 
-            # reducir radicalmente la posibilidad de recibir error 429 Too Many Requests de OpenAI o Groq.
+            # Secuencial (no parallel) para evitar 429 Too Many Requests.
             results = []
-            results.append(await self._execute_agent(client, system_base, prompt_fundamentals, schema_fund, model_override="gpt-4o-mini"))
-            results.append(await self._execute_agent(client, system_base, prompt_insights, schema_ins, model_override="gpt-4o-mini"))
-            results.append(await self._execute_agent(client, system_base, prompt_tasks, schema_tasks)) # Este sí usará gpt-4o
-            
+
+            # Agent 1: Fundamentals
+            res_fund = await self._execute_agent(
+                client, system_base, prompt_fundamentals, schema_fund,
+                model_override="gpt-4o-mini",
+            )
+            results.append(res_fund)
+
+            # Agent 2: Insights (decisions, risks, agreements)
+            res_ins = await self._execute_agent(
+                client, system_base, prompt_insights, schema_ins,
+                model_override="gpt-4o-mini",
+            )
+            results.append(res_ins)
+
+            # Bloque de contexto extra para el agent de tareas: pasamos
+            # las decisiones y acuerdos que el agent 2 acaba de destilar.
+            # Esto resuelve el bug donde compromisos claros en Acuerdos
+            # se perdían porque el LLM solo veía el transcript ruidoso.
+            insights_decisions  = (res_ins.get("decisions", "")  if isinstance(res_ins, dict) else "")
+            insights_agreements = (res_ins.get("agreements", "") if isinstance(res_ins, dict) else "")
+            extra_blocks = []
+            if (insights_decisions or "").strip():
+                extra_blocks.append(
+                    "=== DECISIONES YA EXTRAÍDAS POR EL ANALISTA ===\n"
+                    + insights_decisions.strip()
+                )
+            if (insights_agreements or "").strip():
+                extra_blocks.append(
+                    "=== ACUERDOS YA EXTRAÍDOS (FUENTE PRIMARIA DE COMPROMISOS) ===\n"
+                    + insights_agreements.strip()
+                )
+            extra_context = (
+                "\n\n" + "\n\n".join(extra_blocks)
+                if extra_blocks else ""
+            )
+
+            # Agent 3: Tasks — ahora con visibilidad de acuerdos/decisiones
+            # ya curados. Verifica cobertura cruzando contra ellos.
+            prompt_tasks = f"""
+        INSTRUCCIONES CLAVE PARA TAREAS - FIDELIDAD ABSOLUTA + COBERTURA TOTAL:
+        DATO: La fecha actual es {current_date}.
+        {contacts_info}
+        1. REGLA OBLIGATORIA: Extrae las tareas EXACTAS que tiene la transcripción. Ni inventes cuotas arbitrarias ni omitas cosas reales.
+        2. NO AGRUPES: Desglosa todo en sus tareas atómicas sin agrupar detalles independientes, logrando la misma exactitud microscópica que lograría OpenAI GPT-4.
+        3. **COBERTURA OBLIGATORIA DE ACUERDOS Y DECISIONES**: Las secciones "ACUERDOS YA EXTRAÍDOS" y "DECISIONES YA EXTRAÍDAS" (cuando estén presentes) son la fuente PRIMARIA y más limpia de compromisos. Para CADA viñeta ahí que implique una acción futura ("se desarrollará X", "se realizará Y", "se acordó hacer Z", "se entregará W", "se validará V"), DEBE existir una tarea correspondiente en tu lista. Es la regla más importante: si un acuerdo dice "se desarrollará un manual de marca" → tarea "Desarrollar manual de marca". Si una decisión dice "se entregará el reporte el viernes" → tarea "Entregar reporte" con due_date el viernes.
+        4. RESPONSABLES: Si los acuerdos/decisiones no nombran responsable, búscalo en el transcript donde se discute ese tema. Si nadie lo asume, usa "Por asignar" como owner_name.
+        5. 'thinking_process': úsalo PRIMERO para:
+            (a) Listar tareas detectadas en el TRANSCRIPT.
+            (b) Listar compromisos en ACUERDOS y DECISIONES.
+            (c) Verificar que cada compromiso de (b) tiene su tarea en (a). Si falta alguna, AGRÉGALA explícitamente.
+            (d) Justificar cada tarea final con su cita de origen.
+        6. FECHAS: INFIERE la fecha exacta de 'due_date' calculando desde {current_date}.
+        7. ESPECIFICIDAD Y ESTRUCTURA: Usa estrictamente la plantilla de 'description' para CADA TAREA.
+
+        Transcripción:
+        {safe_transcript}{extra_context}
+        """
+            res_tasks = await self._execute_agent(
+                client, system_base, prompt_tasks, schema_tasks,
+            )  # Este sí usará gpt-4o
+            results.append(res_tasks)
+
             # Merge the dicts
             merged_payload = {}
             for res in results:
                 if isinstance(res, dict):
                     merged_payload.update(res)
-            
+
             # Limpiar rastro de IA cognitiva
             if "thinking_process" in merged_payload:
                 del merged_payload["thinking_process"]
-                
+
             return merged_payload
 
     async def deduce_project(self, summary: str, projects: List[Dict[str, Any]]) -> int | None:
