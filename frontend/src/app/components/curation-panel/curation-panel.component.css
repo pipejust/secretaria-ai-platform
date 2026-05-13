@@ -193,35 +193,61 @@
     border-color: rgba(124, 58, 237, 0.22);
 }
 
-/* Proyecto: badge "envuelve" un select para que parezca un chip */
+/* Proyecto: el <select> se estila DIRECTAMENTE como badge-pill para
+   sortear los defaults globales (input,select,textarea { height: 44px }
+   del styles.css raíz). El wrapper .cp-badge-select queda como contenedor
+   semántico pero sin altura propia. */
 .cp-badge-select {
     display: inline-flex;
     align-items: center;
-    height: 24px;
-    background: var(--brand-cream-100);
-    color: var(--color-fg-default);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-full);
-    padding: 0 6px 0 10px;
-    transition: var(--transition);
 }
-.cp-badge-select:focus-within { border-color: var(--color-accent); }
-.cp-badge-select select {
+/* Triple-selector + !important defensivos contra la regla global de
+   styles.css que aplica height:44px a TODOS los select del workspace. */
+.cp-badge-select select,
+.curation-page .cp-badge-select select {
+    /* Reset del native */
     appearance: none;
     -webkit-appearance: none;
-    background: transparent;
-    border: none;
-    outline: none;
-    font-family: var(--font-sans);
-    font-size: var(--text-12);
-    font-weight: var(--fw-semibold);
+    -moz-appearance: none;
+    /* Match visual con los otros badges: 24px, pill, cream-100 */
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 26px 0 12px !important;     /* 26 a la derecha para el chevron */
+    background-color: var(--brand-cream-100);
     color: var(--color-fg-default);
-    padding-right: 18px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full) !important;
+    font-family: var(--font-sans);
+    font-size: var(--text-12) !important;
+    font-weight: var(--fw-semibold);
+    line-height: 1;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    /* Chevron */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right center;
+    background-position: right 10px center;
     background-size: 10px;
+    box-shadow: none;
+    transition: var(--transition);
+    width: auto;
+    /* Reset del global focus-ring que pintaría box-shadow grande */
+}
+.cp-badge-select select:hover {
+    border-color: var(--color-border-strong);
+    background-color: var(--brand-cream-50);
+}
+.cp-badge-select select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(0, 34, 115, 0.10) !important;
+}
+/* Las option heredan el font-size del browser nativo: forzamos 13px
+   para que el dropdown se vea coherente y no microscópico. */
+.cp-badge-select select option {
+    font-size: 13px;
+    padding: 4px 8px;
+    color: var(--color-fg-default);
+    background: var(--color-bg-panel);
 }
 
 /* ============================================================
