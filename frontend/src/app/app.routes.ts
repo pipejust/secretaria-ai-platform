@@ -137,7 +137,15 @@ export const routes: Routes = [
             {
                 path: 'pendientes',
                 loadComponent: () => import('./components/pendientes/pendientes.component').then(m => m.PendientesComponent),
-                title: 'Pendientes | Acten',
+                title: 'Tareas | Acten',
+                data: { description: 'Trazabilidad transversal de tareas: vencidos, próximos, bloqueos y cumplimiento.', robots: 'noindex, nofollow' }
+            },
+            // Alias /admin/tareas → mismo componente, para que cualquier link
+            // o redirección que use el nombre nuevo funcione.
+            {
+                path: 'tareas',
+                loadComponent: () => import('./components/pendientes/pendientes.component').then(m => m.PendientesComponent),
+                title: 'Tareas | Acten',
                 data: { description: 'Trazabilidad transversal de tareas: vencidos, próximos, bloqueos y cumplimiento.', robots: 'noindex, nofollow' }
             },
             {

@@ -1,106 +1,458 @@
-<div class="pendientes-container">
-  <header class="header">
-    <div>
-      <h1>Pendientes</h1>
-      <p class="subtitle">Trazabilidad transversal de tareas: vencidos, próximos, bloqueos y cumplimiento.</p>
+<!-- ============================================================================
+     Tareas (antes "Pendientes") — vista enterprise SaaS de trazabilidad de
+     action_items, con métricas, tabs, filtros, tabla paginada y panel
+     derecho de carga de trabajo, vencidas, acciones y próximas fechas.
+     Conectada al endpoint existente /api/pendientes (no se modificó backend).
+     ============================================================================ -->
+<div class="acten-tasks">
+
+    <!-- ============= HEADER ============= -->
+    <header class="tk-hero">
+        <div class="tk-hero-text">
+            <h1 class="tk-title">Tareas</h1>
+            <p class="tk-sub">Rastrea, administra y completa tareas de tus proyectos.</p>
+        </div>
+        <div class="tk-hero-actions">
+            <button type="button" class="tk-btn tk-btn-primary" disabled
+                    title="Las tareas se generan al curar una sesión.">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Agregar tarea
+            </button>
+            <button type="button" class="tk-btn-ghost" title="Más opciones">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="19" cy="12" r="1"></circle>
+                    <circle cx="5" cy="12" r="1"></circle>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ============= LAYOUT GRID (main + side panel) ============= -->
+    <div class="tk-layout">
+
+        <!-- =================== COLUMNA MAIN =================== -->
+        <section class="tk-main">
+
+            <!-- ===== Cards superiores de métricas ===== -->
+            <div class="tk-metrics">
+                <article class="tk-metric" *ngFor="let m of metrics; trackBy: trackByIdx">
+                    <span class="tk-metric-icon" [attr.data-icon]="m.icon" aria-hidden="true">
+                        <ng-container [ngSwitch]="m.icon">
+                            <svg *ngSwitchCase="'open'"     width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg>
+                            <svg *ngSwitchCase="'progress'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <svg *ngSwitchCase="'week'"     width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <svg *ngSwitchCase="'overdue'"  width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <svg *ngSwitchCase="'done'"     width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </ng-container>
+                    </span>
+                    <div class="tk-metric-body">
+                        <span class="tk-metric-label">{{ m.label }}</span>
+                        <span class="tk-metric-value">{{ m.value }}</span>
+                        <span class="tk-metric-delta">{{ m.delta }}</span>
+                    </div>
+                </article>
+            </div>
+
+            <!-- ===== Tabs ===== -->
+            <nav class="tk-tabs" role="tablist">
+                <button type="button" class="tk-tab" [class.is-active]="activeTab==='todas'"
+                        role="tab" (click)="setTab('todas')">Todas las tareas</button>
+                <button type="button" class="tk-tab" [class.is-active]="activeTab==='mias'"
+                        role="tab" (click)="setTab('mias')">Mis tareas</button>
+                <button type="button" class="tk-tab" [class.is-active]="activeTab==='proyecto'"
+                        role="tab" (click)="setTab('proyecto')">Por proyecto</button>
+                <button type="button" class="tk-tab" [class.is-active]="activeTab==='prioridad'"
+                        role="tab" (click)="setTab('prioridad')">Por prioridad</button>
+            </nav>
+
+            <!-- ===== Card de tabla ===== -->
+            <article class="tk-card">
+
+                <!-- ── Filtros ── -->
+                <header class="tk-filters">
+                    <div class="tk-search">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" [(ngModel)]="searchQuery" placeholder="Buscar tareas..." />
+                    </div>
+
+                    <div class="tk-filter">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                        </svg>
+                        <input type="text" [(ngModel)]="ownerFilter" placeholder="Responsable" (keyup.enter)="load()" />
+                    </div>
+
+                    <div class="tk-filter">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <input type="text" [(ngModel)]="projectFilter" placeholder="Proyecto" />
+                    </div>
+
+                    <div class="tk-filter tk-filter-select">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                        <select [(ngModel)]="priorityFilter">
+                            <option value="">Prioridad</option>
+                            <option value="alta">Alta</option>
+                            <option value="media">Media</option>
+                            <option value="baja">Baja</option>
+                        </select>
+                    </div>
+
+                    <div class="tk-filter tk-filter-select">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <select [(ngModel)]="bucket" (change)="setBucket(bucket)">
+                            <option value="activos">Fecha de vencimiento</option>
+                            <option value="vencido">Vencidas</option>
+                            <option value="proximo">Próximas (≤7d)</option>
+                            <option value="sin_fecha">Sin fecha</option>
+                        </select>
+                    </div>
+
+                    <div class="tk-filter tk-filter-select">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="4" y1="21" x2="4" y2="14"></line>
+                            <line x1="4" y1="10" x2="4" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12" y2="3"></line>
+                            <line x1="20" y1="21" x2="20" y2="16"></line>
+                            <line x1="20" y1="12" x2="20" y2="3"></line>
+                        </svg>
+                        <select [(ngModel)]="statusFilter">
+                            <option value="">Estado</option>
+                            <option value="abierta">Abierta</option>
+                            <option value="en progreso">En progreso</option>
+                            <option value="vencida">Vencida</option>
+                            <option value="completada">Completada</option>
+                            <option value="bloqueada">Bloqueada</option>
+                        </select>
+                    </div>
+
+                    <button type="button" class="tk-clear" (click)="clearFilters()">Limpiar filtros</button>
+                </header>
+
+                <!-- ── Tabla ── -->
+                <div class="tk-table-wrap">
+                    <table class="tk-table">
+                        <thead>
+                            <tr>
+                                <th class="th-check">
+                                    <label class="tk-checkbox">
+                                        <input type="checkbox" [checked]="allOnPageSelected"
+                                               (change)="toggleAllOnPage()" />
+                                        <span></span>
+                                    </label>
+                                </th>
+                                <th class="th-task">Tarea</th>
+                                <th class="th-project">Proyecto</th>
+                                <th class="th-owner">Responsable</th>
+                                <th class="th-priority">Prioridad</th>
+                                <th class="th-due">
+                                    Fecha de vencimiento
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </th>
+                                <th class="th-status">Estado</th>
+                                <th class="th-progress">Progreso</th>
+                                <th class="th-actions"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let it of pagedItems; trackBy: trackById">
+                                <td class="td-check">
+                                    <label class="tk-checkbox">
+                                        <input type="checkbox" [checked]="isSelected(it.id)"
+                                               (change)="toggleSelected(it.id)" />
+                                        <span></span>
+                                    </label>
+                                </td>
+                                <td class="td-task">
+                                    <div class="tk-task-title" [title]="it.title">{{ it.title }}</div>
+                                    <div class="tk-task-code">{{ taskCode(it) }}</div>
+                                </td>
+                                <td class="td-project">
+                                    <span class="tk-project-badge"
+                                          [style.background]="projectTone(it.project_name).bg"
+                                          [style.color]="projectTone(it.project_name).fg"
+                                          [title]="it.project_name">
+                                        {{ it.project_name }}
+                                    </span>
+                                </td>
+                                <td class="td-owner">
+                                    <span class="tk-avatar"
+                                          [style.background]="ownerColor(it.owner_name)">
+                                        {{ ownerInitials(it.owner_name) }}
+                                    </span>
+                                    <span class="tk-owner-name" [title]="it.owner_name">{{ it.owner_name }}</span>
+                                </td>
+                                <td class="td-priority">
+                                    <span class="tk-pri-badge" [attr.data-pri]="priority(it)">
+                                        {{ priorityLabel(priority(it)) }}
+                                    </span>
+                                </td>
+                                <td class="td-due" [class.is-overdue]="isOverdue(it)">
+                                    {{ formatDateLong(it.due_date) || '—' }}
+                                </td>
+                                <td class="td-status">
+                                    <span class="tk-status-badge" [attr.data-tone]="estadoTone(it)">
+                                        {{ estadoLabel(it) }}
+                                    </span>
+                                </td>
+                                <td class="td-progress">
+                                    <div class="tk-progress">
+                                        <div class="tk-progress-track">
+                                            <div class="tk-progress-fill"
+                                                 [attr.data-tone]="progressTone(it)"
+                                                 [style.width.%]="progress(it)"></div>
+                                        </div>
+                                        <span class="tk-progress-num">{{ progress(it) }}%</span>
+                                    </div>
+                                </td>
+                                <td class="td-actions">
+                                    <button type="button" class="tk-row-kebab"
+                                            [attr.aria-label]="'Acciones de ' + it.title"
+                                            title="Más acciones">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="1"></circle>
+                                            <circle cx="19" cy="12" r="1"></circle>
+                                            <circle cx="5" cy="12" r="1"></circle>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr *ngIf="!pagedItems.length && !isLoading">
+                                <td colspan="9" class="tk-empty">
+                                    No hay tareas que coincidan con los filtros aplicados.
+                                </td>
+                            </tr>
+                            <tr *ngIf="isLoading">
+                                <td colspan="9" class="tk-empty">Cargando tareas…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Paginación ── -->
+                <footer class="tk-pagination" *ngIf="totalFiltered > 0">
+                    <span class="tk-pag-info">
+                        Mostrando {{ pageStart }} a {{ pageEnd }} de {{ totalFiltered }} tareas
+                    </span>
+                    <div class="tk-pag-controls">
+                        <button type="button" class="tk-pag-btn" (click)="goToPage(currentPage - 1)"
+                                [disabled]="currentPage === 1" aria-label="Anterior">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <button type="button" class="tk-pag-btn"
+                                *ngFor="let p of pageNumbers"
+                                [class.is-active]="p === currentPage"
+                                (click)="goToPage(p)">{{ p }}</button>
+                        <button type="button" class="tk-pag-btn" (click)="goToPage(currentPage + 1)"
+                                [disabled]="currentPage === totalPages" aria-label="Siguiente">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    <label class="tk-pag-size">
+                        <select [(ngModel)]="pageSize" (change)="goToPage(1)">
+                            <option [ngValue]="12">Mostrar 12</option>
+                            <option [ngValue]="24">Mostrar 24</option>
+                            <option [ngValue]="48">Mostrar 48</option>
+                        </select>
+                    </label>
+                </footer>
+            </article>
+        </section>
+
+        <!-- =================== PANEL DERECHO =================== -->
+        <aside class="tk-side">
+
+            <!-- ── Carga de trabajo (donut) ── -->
+            <article class="tk-card tk-side-card">
+                <header class="tk-side-head">
+                    <h3>Carga de trabajo</h3>
+                    <a routerLink="/admin/reportes" class="tk-side-link">Ver reporte completo</a>
+                </header>
+
+                <div class="tk-donut">
+                    <svg viewBox="0 0 140 140" width="140" height="140">
+                        <!-- track -->
+                        <circle cx="70" cy="70" r="56" fill="none" stroke="#E2E8F0" stroke-width="16"/>
+                        <!-- slices -->
+                        <circle *ngFor="let s of workloadSlices; let i = index; trackBy: trackByIdx"
+                                cx="70" cy="70" r="56" fill="none" stroke-width="16"
+                                [attr.stroke]="s.color"
+                                [attr.stroke-dasharray]="donutDasharray(s.pct)"
+                                [attr.stroke-dashoffset]="donutDashoffset(workloadSlicesPcts, i)"
+                                transform="rotate(-90 70 70)" />
+                    </svg>
+                    <div class="tk-donut-center">
+                        <div class="tk-donut-num">{{ workloadTotal }}</div>
+                        <div class="tk-donut-lbl">Tareas totales</div>
+                    </div>
+                </div>
+
+                <ul class="tk-legend">
+                    <li *ngFor="let s of workloadSlices; trackBy: trackByIdx">
+                        <span class="tk-legend-dot" [style.background]="s.color"></span>
+                        <span class="tk-legend-name" [title]="s.owner">{{ s.owner }}</span>
+                        <span class="tk-legend-num">{{ s.count }} ({{ s.pct }}%)</span>
+                    </li>
+                    <li *ngIf="!workloadSlices.length" class="tk-legend-empty">
+                        Sin datos de carga aún.
+                    </li>
+                </ul>
+            </article>
+
+            <!-- ── Tareas vencidas ── -->
+            <article class="tk-card tk-side-card">
+                <header class="tk-side-head">
+                    <h3>Tareas vencidas</h3>
+                    <a class="tk-side-link" (click)="setBucket('vencido')" href="javascript:void(0)">Ver todo</a>
+                </header>
+
+                <ul class="tk-overdue-list">
+                    <li *ngFor="let it of overdueItems; trackBy: trackById" class="tk-overdue-item">
+                        <span class="tk-overdue-dot"></span>
+                        <div class="tk-overdue-body">
+                            <span class="tk-overdue-title" [title]="it.title">{{ it.title }}</span>
+                            <span class="tk-overdue-date">{{ formatDateLong(it.due_date) }}</span>
+                        </div>
+                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)">
+                            {{ ownerInitials(it.owner_name) }}
+                        </span>
+                    </li>
+                    <li *ngIf="!overdueItems.length" class="tk-side-empty">
+                        Sin tareas vencidas. ✓
+                    </li>
+                </ul>
+            </article>
+
+            <!-- ── Acciones rápidas ── -->
+            <article class="tk-card tk-side-card">
+                <header class="tk-side-head">
+                    <h3>Acciones rápidas</h3>
+                </header>
+                <ul class="tk-quick-list">
+                    <li>
+                        <a class="tk-quick" routerLink="/admin/meetings"
+                           title="Las tareas se generan al curar una sesión.">
+                            <span class="tk-quick-icon" data-color="blue">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </span>
+                            <div class="tk-quick-body">
+                                <strong>Crear nueva tarea</strong>
+                                <small>Desde la curación de una sesión.</small>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="tk-quick" routerLink="/admin/templates">
+                            <span class="tk-quick-icon" data-color="violet">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                            </span>
+                            <div class="tk-quick-body">
+                                <strong>Plantillas de tareas</strong>
+                                <small>Usa plantillas predefinidas.</small>
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <button type="button" class="tk-quick" disabled
+                                title="Próximamente: importar tareas desde CSV o Jira.">
+                            <span class="tk-quick-icon" data-color="amber">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </span>
+                            <div class="tk-quick-body">
+                                <strong>Importar tareas</strong>
+                                <small>Importar desde CSV u otras herramientas.</small>
+                            </div>
+                        </button>
+                    </li>
+                    <li>
+                        <a class="tk-quick" routerLink="/admin/reportes">
+                            <span class="tk-quick-icon" data-color="green">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6"  y1="20" x2="6"  y2="14"></line>
+                                </svg>
+                            </span>
+                            <div class="tk-quick-body">
+                                <strong>Reporte de tareas</strong>
+                                <small>Ver analítica de tareas.</small>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+            </article>
+
+            <!-- ── Próximos vencimientos ── -->
+            <article class="tk-card tk-side-card">
+                <header class="tk-side-head">
+                    <h3>Próximos vencimientos</h3>
+                    <a class="tk-side-link" routerLink="/admin/calendar">Ver calendario</a>
+                </header>
+                <ul class="tk-upcoming-list">
+                    <li *ngFor="let it of upcomingItems; trackBy: trackById">
+                        <div class="tk-upcoming-date">{{ formatDateShort(it.due_date) }}</div>
+                        <div class="tk-upcoming-body">
+                            <span class="tk-upcoming-title" [title]="it.title">{{ it.title }}</span>
+                            <span class="tk-upcoming-meta">{{ it.project_name }}</span>
+                        </div>
+                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)">
+                            {{ ownerInitials(it.owner_name) }}
+                        </span>
+                    </li>
+                    <li *ngIf="!upcomingItems.length" class="tk-side-empty">
+                        Sin vencimientos en los próximos días.
+                    </li>
+                </ul>
+            </article>
+        </aside>
     </div>
-  </header>
-
-  <section class="stats-grid" *ngIf="stats">
-    <article class="stat-card stat-card--vencido"  (click)="setBucket('vencido')">
-      <span class="stat-num">{{ stats.counts['vencido'] || 0 }}</span>
-      <span class="stat-label">Vencidos</span>
-    </article>
-    <article class="stat-card stat-card--proximo"  (click)="setBucket('proximo')">
-      <span class="stat-num">{{ stats.counts['proximo'] || 0 }}</span>
-      <span class="stat-label">Próximos (≤7d)</span>
-    </article>
-    <article class="stat-card stat-card--pendiente" (click)="setBucket('pendiente')">
-      <span class="stat-num">{{ stats.counts['pendiente'] || 0 }}</span>
-      <span class="stat-label">Pendientes</span>
-    </article>
-    <article class="stat-card stat-card--bloqueado" (click)="setBucket('bloqueado')">
-      <span class="stat-num">{{ stats.counts['bloqueado'] || 0 }}</span>
-      <span class="stat-label">Bloqueados</span>
-    </article>
-    <article class="stat-card stat-card--sinfecha"  (click)="setBucket('sin_fecha')">
-      <span class="stat-num">{{ stats.counts['sin_fecha'] || 0 }}</span>
-      <span class="stat-label">Sin fecha</span>
-    </article>
-    <article class="stat-card stat-card--completado" (click)="setBucket('completado')">
-      <span class="stat-num">{{ stats.counts['completado'] || 0 }}</span>
-      <span class="stat-label">Completados</span>
-    </article>
-  </section>
-
-  <section class="filters">
-    <div class="bucket-tabs">
-      <button *ngFor="let b of ['activos','vencido','proximo','pendiente','bloqueado','sin_fecha','completado','cancelado']"
-              class="tab"
-              [class.tab--active]="bucket === b"
-              (click)="setBucket($any(b))">
-        {{ bucketLabel(b) }}
-      </button>
-    </div>
-
-    <input type="text"
-           class="owner-search"
-           placeholder="🔍 Filtrar por responsable…"
-           [(ngModel)]="ownerFilter"
-           (input)="load()" />
-  </section>
-
-  <section class="ranking" *ngIf="stats?.top_owners_active?.length">
-    <h3>Top responsables con tareas activas</h3>
-    <ol class="ranking-list">
-      <li *ngFor="let o of stats?.top_owners_active">
-        <span class="rank-name">{{ o.owner }}</span>
-        <span class="rank-badge">{{ o.count }}</span>
-      </li>
-    </ol>
-  </section>
-
-  <section class="list-wrapper">
-    <div *ngIf="isLoading" class="loading">Cargando…</div>
-
-    <div *ngIf="!isLoading && items.length === 0" class="empty-state">
-      No hay tareas en este filtro.
-    </div>
-
-    <article *ngFor="let item of items; trackBy: trackById" class="task-row">
-      <div class="task-row__main">
-        <span class="bucket-badge" [style.background]="bucketColor(item.bucket)">
-          {{ bucketLabel(item.bucket) }}
-        </span>
-        <a class="task-link" [routerLink]="['/admin/curation', item.session_id]" title="Ir a la sesión">
-          <strong>{{ item.title }}</strong>
-        </a>
-        <span class="project-chip">{{ item.project_name }}</span>
-      </div>
-
-      <div class="task-row__meta">
-        <span><strong>👤</strong> {{ item.owner_name || 'Sin asignar' }}</span>
-        <span *ngIf="item.owner_email"><strong>✉️</strong> {{ item.owner_email }}</span>
-        <span><strong>📅</strong> {{ formatDate(item.due_date) }}</span>
-        <span *ngIf="item.completed_at"><strong>✅</strong> {{ formatDate(item.completed_at) }}</span>
-      </div>
-
-      <p class="task-desc" *ngIf="item.description">{{ item.description }}</p>
-
-      <div class="task-row__actions">
-        <button *ngIf="item.status !== 'done'"
-                class="btn btn-success btn-mini"
-                (click)="setStatus(item, 'done')">✓ Completar</button>
-        <button *ngIf="item.status !== 'blocked' && item.status !== 'done'"
-                class="btn btn-warning btn-mini"
-                (click)="setStatus(item, 'blocked')">⛔ Bloquear</button>
-        <button *ngIf="item.status !== 'pending' && item.status !== 'done'"
-                class="btn btn-secondary btn-mini"
-                (click)="setStatus(item, 'pending')">↺ Reabrir</button>
-        <button *ngIf="item.status !== 'cancelled' && item.status !== 'done'"
-                class="btn btn-secondary btn-mini"
-                (click)="setStatus(item, 'cancelled')">✕ Cancelar</button>
-      </div>
-    </article>
-  </section>
 </div>

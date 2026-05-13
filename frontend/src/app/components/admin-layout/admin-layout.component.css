@@ -701,14 +701,16 @@
 /* ================== RESPONSIVE DESIGN (MOBILE BEYOND 768px) ================== */
 @media (max-width: 768px) {
 
-    /* 1. Reset Sidebar layout to absolute sliding model */
+    /* 1. Reset Sidebar layout to absolute sliding model.
+          z-index muy alto para que tape tooltips de la página (avatar-tooltip
+          usa z-index: 50 y se colaba encima cuando estaban iguales). */
     .sidebar {
         position: fixed;
         left: -100%;
         top: 0;
         bottom: 0;
         width: 260px !important;
-        z-index: 50;
+        z-index: 9999;
         background: rgba(15, 23, 42, 0.95);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
@@ -768,7 +770,7 @@
         background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(2px);
         -webkit-backdrop-filter: blur(2px);
-        z-index: 40;
+        z-index: 9998;
     }
 
     /* 5. Hide Desktop toggle Button */
@@ -933,7 +935,8 @@
    resto de páginas admin, conservamos el padding cream original. */
 .content-area:has(.acten-dashboard),
 .content-area:has(.acten-projects),
-.content-area:has(.acten-ask) { padding: 0; background: #F7F9FC; }
+.content-area:has(.acten-ask),
+.content-area:has(.acten-tasks) { padding: 0; background: #F7F9FC; }
 
 /* Para el chat de Acten queremos que la página entera entre en el viewport
    sin scroll: la lista de turns scrollea por dentro, no la página. Por eso
