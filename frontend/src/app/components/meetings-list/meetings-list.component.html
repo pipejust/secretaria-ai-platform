@@ -500,6 +500,11 @@
             </button>
         </div>
 
+        <!-- Wrapper interno scrollable: contiene tabs + contenido. Vive
+             FUERA del scope de los avatares para que sus tooltips puedan
+             escapar visualmente del panel sin recortarse. -->
+        <div class="dt-scroll">
+
         <!-- Tabs internos -->
         <nav class="dt-tabs" aria-label="Secciones del detalle">
             <button [class.active]="detailTab === 'summary'"    (click)="setDetailTab('summary')">Resumen</button>
@@ -649,6 +654,8 @@
                 </article>
             </ng-container>
         </div>
+
+        </div><!-- /.dt-scroll -->
     </aside>
 </div>
 

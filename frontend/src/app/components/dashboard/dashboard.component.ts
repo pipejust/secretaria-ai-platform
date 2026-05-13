@@ -9,7 +9,6 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
-import { AvatarTooltipDirective } from '../../directives/avatar-tooltip.directive';
 
 interface ChartPoint { date: Date; label: string; value: number; }
 interface KpiTile {
@@ -44,7 +43,7 @@ interface ChartHover { x: number; index: number; label: string; meetings: number
 @Component({
     selector: 'app-dashboard',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe, AvatarTooltipDirective],
+    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe],
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.css']
 })

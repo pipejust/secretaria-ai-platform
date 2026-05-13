@@ -753,7 +753,28 @@
     gap: var(--space-16);
     box-shadow: var(--shadow-xs);
     max-height: calc(100vh - 88px);
+    /* overflow: visible para que los tooltips de los avatares (que viven
+       en el head/participantes) escapen sin que el panel los recorte
+       horizontalmente. El scroll se delega al contenedor interno
+       `.dt-scroll`. Bug previo: con `overflow-y: auto`, el browser
+       implícitamente clipea también overflow-x → tooltip cortado. */
+    overflow: visible;
+}
+
+/* Wrapper interno scrollable: contiene tabs + contenido + tareas. Como
+   los avatares viven FUERA de este contenedor (en .dt-head/.dt-participants),
+   sus tooltips se renderizan sin recortes. */
+.dt-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    /* Compensa el padding del panel para que la scrollbar nativa quede
+       pegada al borde, no al contenido. */
+    margin: 0 calc(-1 * var(--space-20));
+    padding: 4px var(--space-20) 0;
 }
 
 .dt-head {
@@ -1375,4 +1396,47 @@
     text-align: center;
     color: var(--color-fg-muted);
     font-size: var(--text-13);
+}
+
+/* ============================================================================
+ *  AVATAR TOOLTIP — escape de overflow ancestor (CSS-only)
+ * ----------------------------------------------------------------------------
+ *  Bug previo: el tooltip CSS (.avatar-tip) usa position:absolute, así que
+ *  cualquier ancestor con overflow auto/hidden lo recortaba. Acá lo
+ *  resolvemos sin JS, sólo elevando el contexto de stacking del row/panel
+ *  que contiene el avatar cuando se hace hover.
+ * ============================================================================ */
+
+/* Filas de tabla: por defecto z-index 1 para crear stacking context.
+   En hover, subimos a 50 para que el tooltip escape a la fila siguiente. */
+.mt-tr {
+    position: relative;
+    z-index: 1;
+}
+.mt-tr:hover,
+.mt-tr.is-selected,
+.mt-tr:focus-within {
+    z-index: 50;
+}
+
+/* Bloque de participantes en el panel de detalle: relevante porque el
+   panel tiene overflow-y:auto. Lo sacamos del contexto del scroll inner
+   marcándolo como sticky-friendly y elevamos. */
+.dt-participants {
+    position: relative;
+    z-index: 5;
+    overflow: visible;
+}
+
+/* Cualquier .avatar dentro del panel/listado tiene su propio stacking
+   para que el tooltip propio gane sobre los hermanos. */
+.cell-participants .avatar,
+.dt-participants .avatar {
+    position: relative;
+}
+.cell-participants .avatar:hover,
+.cell-participants .avatar:focus-within,
+.dt-participants .avatar:hover,
+.dt-participants .avatar:focus-within {
+    z-index: 60;
 }

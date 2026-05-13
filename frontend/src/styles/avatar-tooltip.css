@@ -59,15 +59,6 @@
     border-top-color: var(--color-fg-default, #0F172A);
 }
 
-/* Cuando la directiva detecta que el tooltip se posiciona DEBAJO (no había
-   espacio arriba en el viewport), volteamos la flecha-puntero hacia arriba. */
-.avatar-tip.tip-below::after {
-    top: auto;
-    bottom: 100%;
-    border-top-color: transparent;
-    border-bottom-color: var(--color-fg-default, #0F172A);
-}
-
 .avatar-tip-name {
     font-weight: var(--fw-bold, 700);
     color: #FFFFFF;
