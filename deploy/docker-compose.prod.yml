@@ -114,22 +114,19 @@ services:
     # Coolify enrutará el dominio `api.<tu-dominio>` a este puerto.
     expose:
       - "8000"
-    # IMPORTANTE: Coolify genera labels traefik para el routing (Host + TLS)
-    # pero NO emite `loadbalancer.server.port`. Traefik cae al puerto 80
-    # por defecto y como uvicorn escucha en 8000 → timeout en api.acten.app.
+    # IMPORTANTE: Coolify autogenera routers traefik para HTTPS (Host + TLS),
+    # apuntando por defecto al service del MISMO nombre que el router. Pero NO
+    # emite `loadbalancer.server.port`, así que Traefik cae a puerto 80 por
+    # defecto y como uvicorn escucha en 8000 → timeout en api.acten.app.
     #
-    # Usamos un service name FIJO ("acten-backend") y lo enlazamos vía
-    # `routers.<auto>.service=acten-backend`. El UUID del recurso (Coolify
-    # lo autogenera) está hardcodeado abajo: `z4tjwakbk1yna94gt3isc2hf`.
+    # Fix: definimos el service con el nombre EXACTO que el router de Coolify
+    # espera. UUID hardcodeado (`z4tjwakbk1yna94gt3isc2hf`) porque Compose NO
+    # interpola variables dentro de label values.
     # Si recreás la app en Coolify, copia el nuevo UUID a estas labels.
-    #
-    # NOTA: Docker Compose NO interpola `${COOLIFY_RESOURCE_UUID}` dentro
-    # de labels (solo en container_name). Por eso el UUID va literal.
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.acten-backend.loadbalancer.server.port=8000"
-      - "traefik.http.routers.https-0-z4tjwakbk1yna94gt3isc2hf-backend.service=acten-backend"
-      - "traefik.http.routers.http-0-z4tjwakbk1yna94gt3isc2hf-backend.service=acten-backend"
+      - "traefik.http.services.https-0-z4tjwakbk1yna94gt3isc2hf-backend.loadbalancer.server.port=8000"
+      - "traefik.http.services.http-0-z4tjwakbk1yna94gt3isc2hf-backend.loadbalancer.server.port=8000"
     networks:
       - acten
 
