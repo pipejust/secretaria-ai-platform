@@ -89,16 +89,35 @@
    subió logo, displayLogoUrl cae al Acten full logo. Evita el caso
    "wordmark del tenant en negro sobre navy → invisible". */
 
-/* "Powered by Acten" — solo visible cuando el tenant no es default. */
+/* "Powered by Acten" — link a la web de Acten cuando el tenant no es Acten.
+   Es interactivo (anchor), así que añadimos hover/focus visibles para
+   reforzar affordance sin quitar la sobriedad del aside. */
 .aside-powered {
     display: inline-flex;
     align-items: center;
     gap: var(--space-8);
     margin-top: var(--space-24);
+    padding: var(--space-6) var(--space-10);
+    margin-left: calc(var(--space-10) * -1);  /* alinea visualmente con el texto */
     font-family: var(--font-sans);
     font-size: var(--text-12);
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     letter-spacing: var(--tracking-wide);
+    text-decoration: none;
+    border-radius: var(--radius-sm, 6px);
+    transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.aside-powered:hover,
+.aside-powered:focus-visible {
+    color: rgba(255, 255, 255, 0.95);
+    background-color: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+}
+
+.aside-powered:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--brand-accent, #10B981) 60%, transparent);
+    outline-offset: 2px;
 }
 
 .aside-powered img {
@@ -156,17 +175,32 @@
     color: color-mix(in srgb, var(--brand-accent, #10B981) 35%, #FFFFFF);
 }
 
-/* Hero CLIENTE — solo el nombre de la empresa, así que lo escalamos
-   más grande para que tenga peso visual real. text-wrap: balance evita
-   que un nombre largo quede con una palabra sola en la última línea. */
+/* Hero CLIENTE — "A tu espacio / de trabajo." en 2 líneas con paralelismo
+   tipo Acten. Tamaño un poco más grande que el hero plataforma porque
+   el copy es más corto y cabe sin riesgo de overflow.
+   Decisión: NO renderizar el nombre de la empresa porque YA está en el
+   logo (arriba) — repetirlo era redundante. */
 .aside-hero-client {
-    font-size: clamp(3.5rem, 6vw, 5.25rem);
-    line-height: 1.05;
+    font-size: clamp(2.5rem, 3.4vw, 3.25rem);
+    line-height: 1.1;
     letter-spacing: -0.02em;
     margin-bottom: var(--space-20);
-    /* Si el nombre es muy largo (raro pero posible), evitamos overflow */
-    overflow-wrap: break-word;
-    hyphens: auto;
+}
+
+.aside-hero-client .hero-line {
+    display: block;
+    text-wrap: balance;
+}
+
+.aside-hero-client .hero-line + .hero-line {
+    margin-top: var(--space-4);
+}
+
+.aside-hero-client .hero-line-accent {
+    /* Mismo patrón que el hero plataforma: la 2da línea con tinte sutil
+       del accent de marca. Cuando el tenant configura --brand-accent
+       propio, el cierre tipográfico hereda su color. */
+    color: color-mix(in srgb, var(--brand-accent, #10B981) 35%, #FFFFFF);
 }
 
 .aside-sub {

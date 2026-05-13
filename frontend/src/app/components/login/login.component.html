@@ -37,30 +37,42 @@
             </ng-container>
 
             <!--
-              Hero CLIENTE: nueva jerarquía con tres niveles tipográficos
-                · eyebrow — "Bienvenido a tu espacio de" (sans, opaco)
-                · hero    — nombre de la empresa (display, gigante)
+              Hero CLIENTE: 3 niveles tipográficos sin redundancia.
+                · eyebrow — saludo corto ("Bienvenido"), neutro
+                · hero    — invitación principal ("A tu espacio de trabajo.")
                 · sub     — micro-copy de contexto
-              Esto evita el split feo previo donde el nombre quedaba
-              colgado en una segunda línea con la misma jerarquía visual.
+              Decisión: el nombre de la empresa NO se renderiza como texto
+              porque YA aparece dentro del logo (arriba). Repetirlo era ruido
+              tipográfico (logo + nombre gigante = redundancia visual).
             -->
             <ng-template #clientHero>
-                <p class="aside-eyebrow">Bienvenido a tu espacio de</p>
-                <h1 class="aside-hero aside-hero-client">{{ branding.companyName() }}</h1>
+                <p class="aside-eyebrow">Bienvenido</p>
+                <h1 class="aside-hero aside-hero-client">
+                    <span class="hero-line">A tu espacio</span>
+                    <span class="hero-line hero-line-accent">de trabajo.</span>
+                </h1>
                 <p class="aside-sub">
-                    Inteligencia artificial para tus reuniones — operado con
-                    <strong>{{ branding.platformName() }}</strong>.
+                    Inteligencia artificial para tus reuniones —
+                    operado con <strong>{{ branding.platformName() }}</strong>.
                 </p>
             </ng-template>
 
-            <!-- "Powered by Acten" — sólo cuando el tenant NO es Acten.
-                 Usa el imagologo PNG de Acten (mismo asset que el sidebar
-                 colapsado), nunca un SVG. -->
-            <p class="aside-powered" *ngIf="!branding.isActenTenant()">
+            <!--
+              "Powered by Acten" — solo cuando el tenant NO es Acten.
+              Es un link a la web pública de Acten (https://acten.app/admin
+              por ahora, pendiente de página de marketing). Abre en nueva
+              pestaña con rel=noopener para no perder la sesión iniciando.
+            -->
+            <a class="aside-powered"
+               *ngIf="!branding.isActenTenant()"
+               href="https://acten.app/admin"
+               target="_blank"
+               rel="noopener noreferrer"
+               [attr.aria-label]="'Conoce más sobre ' + branding.platformName()">
                 <span>Powered by</span>
                 <img [src]="branding.actenIconUrl"
                      [alt]="branding.platformName()" />
-            </p>
+            </a>
         </div>
 
         <!-- Constelación decorativa: réplica del mockup con líneas curvas,
