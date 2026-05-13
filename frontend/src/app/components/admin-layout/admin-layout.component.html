@@ -357,10 +357,14 @@
             <router-outlet></router-outlet>
         </div>
 
-        <!-- App-wide footer (réplica del mockup). -->
+        <!-- App-wide footer (réplica del mockup).
+             El footer vive sobre fondo cream/blanco; usamos el imagologo
+             versión OSCURA (imagologo-old.png) para que se vea con buen
+             contraste. La versión clara (imagologo.png) se reserva para
+             fondos oscuros como el sidebar y el aside del login. -->
         <footer class="app-footer">
             <div class="app-footer-left">
-                <img src="brand/imagologo.png" alt="" class="app-footer-icon" />
+                <img src="brand/imagologo-old.png" alt="" class="app-footer-icon" />
                 <span class="app-footer-brand">{{ branding.platformName() }}</span>
                 <a class="app-footer-domain" href="https://acten.ai" target="_blank" rel="noopener">
                     {{ (branding.companyName() === 'Acten' ? 'Acten.ai' : branding.companyName()) }}
