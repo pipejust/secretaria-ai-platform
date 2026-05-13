@@ -121,9 +121,10 @@
     min-width: 0;
 }
 .tk-metric-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    /* CIRCULARES como en el mockup (no cuadrados redondeados). */
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -145,33 +146,52 @@
     line-height: 1;
     margin-top: 2px;
 }
-.tk-metric-delta { font-size: 11px; color: var(--tk-text-soft); margin-top: 4px; }
+/* Delta inferior con flecha — coincide con mockup ("↑ 12 nuevas esta semana"). */
+.tk-metric-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--tk-text-soft);
+    font-weight: 600;
+    margin-top: 6px;
+}
+.tk-metric-delta svg { flex-shrink: 0; }
+.tk-metric-delta[data-tone="good"]    { color: #047857; }
+.tk-metric-delta[data-tone="bad"]     { color: #B91C1C; }
+.tk-metric-delta[data-tone="neutral"] { color: var(--tk-text-soft); }
 
-/* ===================== Tabs ===================== */
+/* ===================== Tabs (estilo igual al de Reuniones) ===================== */
 .tk-tabs {
     display: flex;
     align-items: center;
     gap: 24px;
     border-bottom: 1px solid var(--tk-border);
     padding: 0 4px;
-    margin-bottom: -2px;
+    margin-bottom: -1px;
 }
-.tk-tab {
+.tk-tabs button {
+    appearance: none;
     background: transparent;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 10px 0;
+    border: none;
+    padding: 12px 0;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--tk-text-muted);
     cursor: pointer;
-    transition: color 120ms ease, border-color 120ms ease;
+    position: relative;
+    transition: color 150ms ease;
 }
-.tk-tab:hover { color: var(--tk-text); }
-.tk-tab.is-active {
-    color: var(--tk-blue);
-    border-bottom-color: var(--tk-blue);
+.tk-tabs button:hover { color: var(--tk-text); }
+.tk-tabs button.active { color: var(--tk-blue); }
+.tk-tabs button.active::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 2px;
+    background: var(--tk-blue);
+    border-radius: 2px;
 }
 
 /* ===================== Card principal ===================== */
@@ -182,71 +202,104 @@
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-/* ───── Filtros ───── */
+/* ───── Filtros (estilo igual al de Reuniones) ───── */
 .tk-filters {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 14px 16px;
     border-bottom: 1px solid var(--tk-border-soft);
     flex-wrap: wrap;
 }
-.tk-search, .tk-filter {
+
+/* Buscador: pill con icono + input */
+.tk-search {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 34px;
-    padding: 0 10px;
+    gap: 8px;
+    height: 40px;
+    padding: 0 12px;
     border: 1px solid var(--tk-border);
     border-radius: 10px;
     background: #FFFFFF;
     color: var(--tk-text-muted);
     transition: border-color 120ms ease, box-shadow 120ms ease;
+    flex: 1;
+    min-width: 220px;
+    max-width: 320px;
 }
-.tk-search { flex: 1; min-width: 200px; max-width: 320px; }
-.tk-search:focus-within, .tk-filter:focus-within {
+.tk-search:focus-within {
     border-color: var(--tk-blue);
     box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
 }
-.tk-search svg, .tk-filter svg { color: var(--tk-text-soft); flex-shrink: 0; }
-.tk-search input, .tk-filter input, .tk-filter select {
-    border: 0;
-    outline: none;
-    background: transparent;
+.tk-search svg { color: var(--tk-text-soft); flex-shrink: 0; }
+.tk-search input {
+    border: 0; outline: none; background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--tk-text);
+    width: 100%; min-width: 0;
+}
+.tk-search input::placeholder { color: var(--tk-text-soft); }
+
+/* Filter group: label arriba (10px uppercase) + valor abajo */
+.tk-filter-group {
+    display: flex;
+    flex-direction: column;
+    background: #FFFFFF;
+    border: 1px solid var(--tk-border);
+    border-radius: 10px;
+    padding: 4px 12px;
+    height: 40px;
+    justify-content: center;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    min-width: 130px;
+}
+.tk-filter-group:focus-within {
+    border-color: var(--tk-blue);
+    box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.10);
+}
+.tk-filter-group > label {
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--tk-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    line-height: 1;
+}
+.tk-filter-group input,
+.tk-filter-group select {
+    appearance: none; -webkit-appearance: none;
+    background: transparent;
+    border: 0; outline: none;
+    font-family: inherit;
+    font-size: 13px;
     color: var(--tk-text);
-    width: 100%;
-    min-width: 0;
+    padding: 0 18px 0 0;
+    margin-top: 2px;
+    cursor: pointer;
+    background-image: none;
 }
-.tk-search input::placeholder, .tk-filter input::placeholder { color: var(--tk-text-soft); }
-.tk-filter { width: 150px; }
-.tk-filter-select { padding-right: 24px; position: relative; cursor: pointer; }
-.tk-filter-select::after {
-    content: "";
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    transform: translateY(-60%);
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+.tk-filter-group input::placeholder { color: var(--tk-text-soft); font-weight: 500; }
+.tk-filter-group select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
     background-repeat: no-repeat;
-    background-position: center;
-    pointer-events: none;
+    background-position: right center;
+    background-size: 12px;
 }
-.tk-filter-select select { appearance: none; -webkit-appearance: none; cursor: pointer; }
+
 .tk-clear {
     margin-left: auto;
     background: transparent;
     border: 0;
     color: var(--tk-blue);
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 8px;
+    height: 40px;
 }
 .tk-clear:hover { background: var(--tk-blue-bg); }
 
@@ -300,7 +353,85 @@
     white-space: nowrap;
 }
 
-.td-owner { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.td-owner { padding-top: 10px; padding-bottom: 10px; }
+/* Cell wrapper para que el tooltip se ancle al conjunto avatar+nombre. */
+.tk-owner-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    position: relative;
+    cursor: default;
+}
+/* Tooltip CSS-only (data-tip) — aparece al hacer hover sobre el cell. */
+.tk-owner-cell[data-tip]::before {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: #0F172A;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+.tk-owner-cell[data-tip]::after {
+    content: "";
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid #0F172A;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+    z-index: 20;
+}
+.tk-owner-cell[data-tip]:hover::before {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.tk-owner-cell[data-tip]:hover::after { opacity: 1; }
+
+/* También aplicamos tooltip a avatares pequeños del side panel. */
+.tk-avatar-sm[data-tip] {
+    position: relative;
+    cursor: default;
+}
+.tk-avatar-sm[data-tip]::before {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #0F172A;
+    color: #FFFFFF;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+    z-index: 5;
+}
+.tk-avatar-sm[data-tip]:hover::before {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 .tk-avatar {
     width: 26px;
     height: 26px;
@@ -383,6 +514,8 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* Wrapper para anclar el menú de acciones de cada fila. */
+.tk-actions-wrap { position: relative; display: inline-flex; }
 .tk-row-kebab {
     width: 28px;
     height: 28px;
@@ -396,7 +529,51 @@
     justify-content: center;
     transition: background 120ms ease, color 120ms ease;
 }
-.tk-row-kebab:hover { background: var(--tk-grey-soft); color: var(--tk-text); }
+.tk-row-kebab:hover, .tk-row-kebab.is-active { background: var(--tk-grey-soft); color: var(--tk-text); }
+
+/* Menu desplegable de acciones por fila */
+.tk-actions-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 220px;
+    background: #FFFFFF;
+    border: 1px solid var(--tk-border);
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.tk-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--tk-text);
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+.tk-action svg { color: var(--tk-text-muted); flex-shrink: 0; }
+.tk-action:hover { background: var(--tk-grey-soft); }
+.tk-action-danger { color: #B91C1C; }
+.tk-action-danger svg { color: #B91C1C; }
+.tk-action-danger:hover { background: var(--tk-red-bg); }
+.tk-action-sep {
+    height: 1px;
+    background: var(--tk-border-soft);
+    margin: 4px 2px;
+}
 
 .tk-empty {
     padding: 32px;
@@ -693,5 +870,209 @@
     .tk-metrics { grid-template-columns: 1fr; }
     .tk-side { flex-direction: column; }
 }
+
+/* ============================================================================
+ * Modal "Agregar tarea"
+ * ============================================================================ */
+.tk-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.tk-modal {
+    width: min(640px, 100%);
+    max-height: min(640px, 90vh);
+    background: #FFFFFF;
+    border-radius: 16px;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.tk-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 12px;
+    border-bottom: 1px solid var(--tk-border-soft);
+    background: #F8FAFC;
+}
+.tk-modal-title { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: var(--tk-text); }
+.tk-modal-sub   { margin: 0; font-size: 12.5px; color: var(--tk-text-muted); line-height: 1.4; }
+.tk-modal-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: transparent;
+    border: 0;
+    color: var(--tk-text-soft);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms ease, color 120ms ease;
+    flex-shrink: 0;
+}
+.tk-modal-close:hover { background: var(--tk-grey-soft); color: var(--tk-text); }
+.tk-modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+.tk-modal-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--tk-border-soft);
+    background: #F8FAFC;
+}
+.tk-btn-secondary {
+    background: #FFFFFF;
+    color: var(--tk-text);
+    border-color: var(--tk-border);
+}
+.tk-btn-secondary:hover:not(:disabled) { background: var(--tk-grey-soft); border-color: var(--tk-text-soft); }
+
+/* Chooser cards */
+.tk-choice {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    text-align: left;
+    background: #FFFFFF;
+    border: 1px solid var(--tk-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    margin-bottom: 10px;
+}
+.tk-choice:last-child { margin-bottom: 0; }
+.tk-choice:hover {
+    background: #F8FAFC;
+    border-color: var(--tk-blue);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(21, 94, 239, 0.08);
+}
+.tk-choice-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.tk-choice-icon[data-color="blue"]   { background: var(--tk-blue-bg);   color: var(--tk-blue); }
+.tk-choice-icon[data-color="violet"] { background: var(--tk-violet-bg); color: var(--tk-violet); }
+.tk-choice-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.tk-choice-body strong { font-size: 14px; font-weight: 700; color: var(--tk-text); }
+.tk-choice-body small  { font-size: 12px; color: var(--tk-text-muted); line-height: 1.4; }
+.tk-choice-arrow { color: var(--tk-text-soft); flex-shrink: 0; }
+
+/* Form interno */
+.tk-form { display: flex; flex-direction: column; gap: 14px; }
+.tk-form-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tk-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.tk-form-grid .tk-form-row:last-child { grid-column: 1 / -1; }
+.tk-form-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--tk-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.tk-form-label small { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--tk-text-soft); }
+.tk-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--tk-border);
+    border-radius: 10px;
+    background: #FFFFFF;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--tk-text);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    box-sizing: border-box;
+}
+.tk-input:focus {
+    outline: none;
+    border-color: var(--tk-blue);
+    box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
+}
+.tk-textarea { resize: vertical; min-height: 70px; font-family: inherit; }
+.tk-form-search { height: 36px; padding: 0 10px; flex: none; max-width: none; min-width: 0; width: 100%; }
+
+/* Lista de sesiones */
+.tk-session-list {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--tk-border-soft);
+    border-radius: 10px;
+    padding: 6px;
+    background: #F8FAFC;
+}
+.tk-session-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: #FFFFFF;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.tk-session-row:hover { background: var(--tk-blue-bg); border-color: #BFDBFE; }
+.tk-session-row.is-picked {
+    background: var(--tk-blue-bg);
+    border-color: var(--tk-blue);
+}
+.tk-session-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--tk-blue-bg);
+    color: var(--tk-blue);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.tk-session-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.tk-session-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--tk-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.tk-session-meta { font-size: 10.5px; color: var(--tk-text-muted); }
+.tk-session-check { color: var(--tk-blue); flex-shrink: 0; }
+.tk-session-empty { padding: 16px; text-align: center; font-size: 12px; color: var(--tk-text-soft); }
 
 :host { display: block; height: 100%; }

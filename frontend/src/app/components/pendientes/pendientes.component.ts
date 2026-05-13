@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -38,7 +38,15 @@ interface Metric {
     label: string;
     value: number;
     delta: string;
+    deltaDir: 'up' | 'down' | 'flat';
+    deltaTone: 'good' | 'bad' | 'neutral';
     icon: 'open' | 'progress' | 'week' | 'overdue' | 'done';
+}
+
+interface SessionLite {
+    id: number;
+    title: string;
+    date: string;
 }
 
 interface DonutSlice {
@@ -81,6 +89,25 @@ export class PendientesComponent implements OnInit, OnDestroy {
     /** IDs marcados con checkbox (para selección masiva). */
     selectedIds = new Set<number>();
 
+    /** ID de la fila cuyo menú de acciones (3 puntos) está abierto. */
+    openActionsId: number | null = null;
+
+    /** Estado del modal "Agregar tarea". */
+    showCreateModal = false;
+    /** Vista interna del modal: chooser inicial o formulario meeting. */
+    createMode: 'chooser' | 'meeting' = 'chooser';
+    sessions: SessionLite[] = [];
+    sessionSearch = '';
+    isCreating = false;
+    newTask = {
+        session_id: null as number | null,
+        title: '',
+        owner_name: '',
+        owner_email: '',
+        due_date: '',
+        description: '',
+    };
+
     private readonly destroy$ = new Subject<void>();
 
     /** Paleta de colores para el donut de carga de trabajo (orden estable). */
@@ -91,6 +118,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
+        private router: Router,
     ) {}
 
     ngOnInit(): void {
@@ -364,16 +392,42 @@ export class PendientesComponent implements OnInit, OnDestroy {
     get metrics(): Metric[] {
         const c = this.stats?.counts || {};
         const open = (c['pendiente'] || 0) + (c['proximo'] || 0) + (c['vencido'] || 0) + (c['sin_fecha'] || 0);
+        const inprog = c['proximo'] || 0;
+        const week = c['proximo'] || 0;
+        const overdue = c['vencido'] || 0;
+        const done = c['completado'] || 0;
+
         return [
-            { key: 'open',     label: 'Tareas abiertas',    value: open,                icon: 'open',     delta: this._deltaText(open, 'nuevas esta semana') },
-            { key: 'progress', label: 'En progreso',        value: c['proximo'] || 0,    icon: 'progress', delta: this._deltaText(c['proximo'] || 0, 'esta semana') },
-            { key: 'week',     label: 'Vencen esta semana', value: c['proximo'] || 0,    icon: 'week',     delta: 'Próximas 7 días' },
-            { key: 'overdue',  label: 'Vencidas',           value: c['vencido'] || 0,    icon: 'overdue',  delta: this._deltaText(c['vencido'] || 0, 'requieren acción') },
-            { key: 'done',     label: 'Completadas',        value: c['completado'] || 0, icon: 'done',     delta: this._deltaText(c['completado'] || 0, 'cerradas') },
+            // Más tareas abiertas = neutral (no hay baseline histórico).
+            { key: 'open',     label: 'Tareas abiertas',    value: open,    icon: 'open',
+              delta: this._weekly(open, 'nuevas'),
+              deltaDir: open > 0 ? 'up' : 'flat',
+              deltaTone: 'neutral' },
+
+            { key: 'progress', label: 'En progreso',        value: inprog,  icon: 'progress',
+              delta: this._weekly(inprog, 'esta semana'),
+              deltaDir: inprog > 0 ? 'up' : 'flat',
+              deltaTone: 'neutral' },
+
+            { key: 'week',     label: 'Vencen esta semana', value: week,    icon: 'week',
+              delta: 'En los próximos 7 días',
+              deltaDir: 'flat', deltaTone: 'neutral' },
+
+            // Vencidas: más es PEOR.
+            { key: 'overdue',  label: 'Vencidas',           value: overdue, icon: 'overdue',
+              delta: this._weekly(overdue, 'requieren acción'),
+              deltaDir: overdue > 0 ? 'up' : 'flat',
+              deltaTone: overdue > 0 ? 'bad' : 'good' },
+
+            // Completadas: más es MEJOR.
+            { key: 'done',     label: 'Completadas',        value: done,    icon: 'done',
+              delta: this._weekly(done, 'cerradas'),
+              deltaDir: done > 0 ? 'up' : 'flat',
+              deltaTone: done > 0 ? 'good' : 'neutral' },
         ];
     }
-    private _deltaText(n: number, suffix: string): string {
-        if (!n) return `Sin cambios — ${suffix}`;
+    private _weekly(n: number, suffix: string): string {
+        if (!n) return `Sin cambios esta semana`;
         return `${n} ${suffix}`;
     }
 
@@ -522,9 +576,169 @@ export class PendientesComponent implements OnInit, OnDestroy {
     }
 
     // ============================================================
+    // Menú de acciones por fila (3 puntos)
+    // ============================================================
+
+    toggleActions(id: number, ev: Event): void {
+        ev.stopPropagation();
+        this.openActionsId = this.openActionsId === id ? null : id;
+        this.cdr.detectChanges();
+    }
+
+    closeActions(): void {
+        if (this.openActionsId !== null) {
+            this.openActionsId = null;
+            this.cdr.detectChanges();
+        }
+    }
+
+    @HostListener('document:click') onDocClick(): void {
+        this.closeActions();
+    }
+
+    /** Navega a la curación de la sesión origen de la tarea. */
+    goToSource(item: PendingItem): void {
+        this.openActionsId = null;
+        this.router.navigate(['/admin/curation', item.session_id]);
+    }
+
+    /** Marca como completada (atajo del menú). */
+    actionComplete(item: PendingItem): void {
+        this.openActionsId = null;
+        this.setStatus(item, 'done');
+    }
+    actionBlock(item: PendingItem): void {
+        this.openActionsId = null;
+        this.setStatus(item, 'blocked');
+    }
+    actionReopen(item: PendingItem): void {
+        this.openActionsId = null;
+        this.setStatus(item, 'pending');
+    }
+    actionCancel(item: PendingItem): void {
+        this.openActionsId = null;
+        if (!confirm('¿Cancelar esta tarea? Quedará archivada con estado "Cancelada".')) return;
+        this.setStatus(item, 'cancelled');
+    }
+
+    // ============================================================
+    // Modal "Agregar tarea"
+    // ============================================================
+
+    openCreateModal(): void {
+        this.showCreateModal = true;
+        this.createMode = 'chooser';
+        this.newTask = {
+            session_id: null,
+            title: '',
+            owner_name: '',
+            owner_email: '',
+            due_date: '',
+            description: '',
+        };
+        this.sessionSearch = '';
+        if (!this.sessions.length) this.loadSessions();
+        this.cdr.detectChanges();
+    }
+
+    closeCreateModal(): void {
+        this.showCreateModal = false;
+        this.cdr.detectChanges();
+    }
+
+    /** Lista las últimas N sesiones para el selector del modal. */
+    loadSessions(): void {
+        const headers = this.authService.getAuthHeaders();
+        this.http.get<any>(`${environment.apiUrl}/api/sessions/?page=1&limit=100`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (data) => {
+                    const items = (data?.items ?? data) || [];
+                    this.sessions = items.map((s: any) => ({
+                        id: s.id,
+                        title: s.title || `Sesión #${s.id}`,
+                        date: this._fmtDate(s.date),
+                    }));
+                    this.cdr.detectChanges();
+                },
+                error: () => { /* lista opcional */ }
+            });
+    }
+
+    private _fmtDate(v: any): string {
+        if (v == null) return '';
+        const n = typeof v === 'string' && !isNaN(Number(v)) ? Number(v) : v;
+        const d = new Date(n);
+        if (isNaN(d.getTime())) return String(v);
+        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    get filteredSessions(): SessionLite[] {
+        const q = this.sessionSearch.trim().toLowerCase();
+        if (!q) return this.sessions.slice(0, 60);
+        return this.sessions
+            .filter(s => s.title.toLowerCase().includes(q) || String(s.id).includes(q))
+            .slice(0, 60);
+    }
+
+    chooseMeeting(): void { this.createMode = 'meeting'; this.cdr.detectChanges(); }
+
+    /** Click en "Tarea de calendario" — redirige a /admin/calendar. */
+    chooseCalendar(): void {
+        this.closeCreateModal();
+        this.router.navigate(['/admin/calendar'], { queryParams: { new: 'task' } });
+    }
+
+    /** Selecciona una sesión del listado. */
+    pickSessionForTask(sid: number): void {
+        this.newTask.session_id = sid;
+    }
+
+    /** POST /api/sessions/{id}/action_items con multipart/form-data. */
+    submitNewTask(): void {
+        if (!this.newTask.session_id) {
+            this.toast.warning('Selecciona una reunión.');
+            return;
+        }
+        if (!this.newTask.title.trim()) {
+            this.toast.warning('La tarea necesita un título.');
+            return;
+        }
+        this.isCreating = true;
+        const headers = this.authService.getAuthHeaders();
+        const form = new FormData();
+        form.append('title', this.newTask.title.trim());
+        form.append('owner_name', this.newTask.owner_name.trim());
+        form.append('owner_email', this.newTask.owner_email.trim());
+        form.append('due_date', this.newTask.due_date);
+        form.append('description', this.newTask.description.trim());
+
+        this.http.post<any>(
+            `${environment.apiUrl}/api/sessions/${this.newTask.session_id}/action_items`,
+            form, { headers }
+        ).pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => {
+                this.isCreating = false;
+                this.toast.success('Tarea agregada correctamente.');
+                this.showCreateModal = false;
+                this.load();
+                this.loadStats();
+            },
+            error: (err) => {
+                this.isCreating = false;
+                const msg = err?.error?.detail || 'No se pudo crear la tarea.';
+                this.toast.error(msg);
+                this.cdr.detectChanges();
+            },
+        });
+    }
+
+    // ============================================================
     // trackBy
     // ============================================================
 
     trackById(_i: number, item: PendingItem): number { return item.id; }
     trackByIdx(i: number): number { return i; }
+    trackBySid(_i: number, s: SessionLite): number { return s.id; }
 }

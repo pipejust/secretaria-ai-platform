@@ -1,8 +1,6 @@
 <!-- ============================================================================
-     Tareas (antes "Pendientes") — vista enterprise SaaS de trazabilidad de
-     action_items, con métricas, tabs, filtros, tabla paginada y panel
-     derecho de carga de trabajo, vencidas, acciones y próximas fechas.
-     Conectada al endpoint existente /api/pendientes (no se modificó backend).
+     Tareas — vista enterprise SaaS de trazabilidad (action_items).
+     Usa el endpoint existente /api/pendientes (no se modificó backend).
      ============================================================================ -->
 <div class="acten-tasks">
 
@@ -13,22 +11,13 @@
             <p class="tk-sub">Rastrea, administra y completa tareas de tus proyectos.</p>
         </div>
         <div class="tk-hero-actions">
-            <button type="button" class="tk-btn tk-btn-primary" disabled
-                    title="Las tareas se generan al curar una sesión.">
+            <button type="button" class="tk-btn tk-btn-primary" (click)="openCreateModal()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
                 Agregar tarea
-            </button>
-            <button type="button" class="tk-btn-ghost" title="Más opciones">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="1"></circle>
-                    <circle cx="19" cy="12" r="1"></circle>
-                    <circle cx="5" cy="12" r="1"></circle>
-                </svg>
             </button>
         </div>
     </header>
@@ -54,28 +43,43 @@
                     <div class="tk-metric-body">
                         <span class="tk-metric-label">{{ m.label }}</span>
                         <span class="tk-metric-value">{{ m.value }}</span>
-                        <span class="tk-metric-delta">{{ m.delta }}</span>
+                        <span class="tk-metric-delta" [attr.data-tone]="m.deltaTone">
+                            <svg *ngIf="m.deltaDir === 'up'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 14 12 8 18 14"></polyline>
+                            </svg>
+                            <svg *ngIf="m.deltaDir === 'down'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 10 12 16 18 10"></polyline>
+                            </svg>
+                            <svg *ngIf="m.deltaDir === 'flat'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>{{ m.delta }}</span>
+                        </span>
                     </div>
                 </article>
             </div>
 
             <!-- ===== Tabs ===== -->
             <nav class="tk-tabs" role="tablist">
-                <button type="button" class="tk-tab" [class.is-active]="activeTab==='todas'"
+                <button type="button" [class.active]="activeTab==='todas'"
                         role="tab" (click)="setTab('todas')">Todas las tareas</button>
-                <button type="button" class="tk-tab" [class.is-active]="activeTab==='mias'"
+                <button type="button" [class.active]="activeTab==='mias'"
                         role="tab" (click)="setTab('mias')">Mis tareas</button>
-                <button type="button" class="tk-tab" [class.is-active]="activeTab==='proyecto'"
+                <button type="button" [class.active]="activeTab==='proyecto'"
                         role="tab" (click)="setTab('proyecto')">Por proyecto</button>
-                <button type="button" class="tk-tab" [class.is-active]="activeTab==='prioridad'"
+                <button type="button" [class.active]="activeTab==='prioridad'"
                         role="tab" (click)="setTab('prioridad')">Por prioridad</button>
             </nav>
 
             <!-- ===== Card de tabla ===== -->
             <article class="tk-card">
 
-                <!-- ── Filtros ── -->
+                <!-- ── Filtros (estilo igual al de Reuniones) ── -->
                 <header class="tk-filters">
+                    <!-- Buscador -->
                     <div class="tk-search">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -85,64 +89,41 @@
                         <input type="text" [(ngModel)]="searchQuery" placeholder="Buscar tareas..." />
                     </div>
 
-                    <div class="tk-filter">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                        </svg>
-                        <input type="text" [(ngModel)]="ownerFilter" placeholder="Responsable" (keyup.enter)="load()" />
+                    <div class="tk-filter-group">
+                        <label>Responsable</label>
+                        <input type="text" [(ngModel)]="ownerFilter" (keyup.enter)="load()"
+                               placeholder="Todos" />
                     </div>
 
-                    <div class="tk-filter">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        <input type="text" [(ngModel)]="projectFilter" placeholder="Proyecto" />
+                    <div class="tk-filter-group">
+                        <label>Proyecto</label>
+                        <input type="text" [(ngModel)]="projectFilter" placeholder="Todos" />
                     </div>
 
-                    <div class="tk-filter tk-filter-select">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                        </svg>
+                    <div class="tk-filter-group">
+                        <label>Prioridad</label>
                         <select [(ngModel)]="priorityFilter">
-                            <option value="">Prioridad</option>
+                            <option value="">Todas</option>
                             <option value="alta">Alta</option>
                             <option value="media">Media</option>
                             <option value="baja">Baja</option>
                         </select>
                     </div>
 
-                    <div class="tk-filter tk-filter-select">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                            <line x1="3" y1="10" x2="21" y2="10"></line>
-                        </svg>
+                    <div class="tk-filter-group">
+                        <label>Vencimiento</label>
                         <select [(ngModel)]="bucket" (change)="setBucket(bucket)">
-                            <option value="activos">Fecha de vencimiento</option>
+                            <option value="activos">Todas activas</option>
                             <option value="vencido">Vencidas</option>
                             <option value="proximo">Próximas (≤7d)</option>
                             <option value="sin_fecha">Sin fecha</option>
                         </select>
                     </div>
 
-                    <div class="tk-filter tk-filter-select">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="4" y1="21" x2="4" y2="14"></line>
-                            <line x1="4" y1="10" x2="4" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12" y2="3"></line>
-                            <line x1="20" y1="21" x2="20" y2="16"></line>
-                            <line x1="20" y1="12" x2="20" y2="3"></line>
-                        </svg>
+                    <div class="tk-filter-group">
+                        <label>Estado</label>
                         <select [(ngModel)]="statusFilter">
-                            <option value="">Estado</option>
+                            <option value="">Todos</option>
                             <option value="abierta">Abierta</option>
                             <option value="en progreso">En progreso</option>
                             <option value="vencida">Vencida</option>
@@ -204,11 +185,13 @@
                                     </span>
                                 </td>
                                 <td class="td-owner">
-                                    <span class="tk-avatar"
-                                          [style.background]="ownerColor(it.owner_name)">
-                                        {{ ownerInitials(it.owner_name) }}
-                                    </span>
-                                    <span class="tk-owner-name" [title]="it.owner_name">{{ it.owner_name }}</span>
+                                    <div class="tk-owner-cell" [attr.data-tip]="it.owner_name || 'Sin asignar'">
+                                        <span class="tk-avatar"
+                                              [style.background]="ownerColor(it.owner_name)">
+                                            {{ ownerInitials(it.owner_name) }}
+                                        </span>
+                                        <span class="tk-owner-name">{{ it.owner_name || 'Sin asignar' }}</span>
+                                    </div>
                                 </td>
                                 <td class="td-priority">
                                     <span class="tk-pri-badge" [attr.data-pri]="priority(it)">
@@ -234,16 +217,71 @@
                                     </div>
                                 </td>
                                 <td class="td-actions">
-                                    <button type="button" class="tk-row-kebab"
-                                            [attr.aria-label]="'Acciones de ' + it.title"
-                                            title="Más acciones">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                                            <circle cx="12" cy="12" r="1"></circle>
-                                            <circle cx="19" cy="12" r="1"></circle>
-                                            <circle cx="5" cy="12" r="1"></circle>
-                                        </svg>
-                                    </button>
+                                    <div class="tk-actions-wrap">
+                                        <button type="button" class="tk-row-kebab"
+                                                [class.is-active]="openActionsId === it.id"
+                                                (click)="toggleActions(it.id, $event)"
+                                                [attr.aria-label]="'Acciones de ' + it.title"
+                                                title="Más acciones">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="1"></circle>
+                                                <circle cx="19" cy="12" r="1"></circle>
+                                                <circle cx="5" cy="12" r="1"></circle>
+                                            </svg>
+                                        </button>
+                                        <div class="tk-actions-menu" *ngIf="openActionsId === it.id"
+                                             (click)="$event.stopPropagation()">
+                                            <button type="button" class="tk-action" (click)="goToSource(it)">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                                </svg>
+                                                Ir a la reunión origen
+                                            </button>
+                                            <button type="button" class="tk-action"
+                                                    *ngIf="it.status !== 'done'"
+                                                    (click)="actionComplete(it)">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                </svg>
+                                                Marcar como completada
+                                            </button>
+                                            <button type="button" class="tk-action"
+                                                    *ngIf="it.status === 'done'"
+                                                    (click)="actionReopen(it)">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M3 12a9 9 0 1 0 9-9c-2.4 0-4.6 1-6.3 2.6L3 8"></path>
+                                                    <polyline points="3 3 3 8 8 8"></polyline>
+                                                </svg>
+                                                Reabrir tarea
+                                            </button>
+                                            <button type="button" class="tk-action"
+                                                    *ngIf="it.status !== 'blocked' && it.status !== 'done'"
+                                                    (click)="actionBlock(it)">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                </svg>
+                                                Marcar como bloqueada
+                                            </button>
+                                            <div class="tk-action-sep"></div>
+                                            <button type="button" class="tk-action tk-action-danger"
+                                                    *ngIf="it.status !== 'cancelled'"
+                                                    (click)="actionCancel(it)">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                                </svg>
+                                                Cancelar tarea
+                                            </button>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                             <tr *ngIf="!pagedItems.length && !isLoading">
@@ -306,9 +344,7 @@
 
                 <div class="tk-donut">
                     <svg viewBox="0 0 140 140" width="140" height="140">
-                        <!-- track -->
                         <circle cx="70" cy="70" r="56" fill="none" stroke="#E2E8F0" stroke-width="16"/>
-                        <!-- slices -->
                         <circle *ngFor="let s of workloadSlices; let i = index; trackBy: trackByIdx"
                                 cx="70" cy="70" r="56" fill="none" stroke-width="16"
                                 [attr.stroke]="s.color"
@@ -348,7 +384,8 @@
                             <span class="tk-overdue-title" [title]="it.title">{{ it.title }}</span>
                             <span class="tk-overdue-date">{{ formatDateLong(it.due_date) }}</span>
                         </div>
-                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)">
+                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)"
+                              [attr.data-tip]="it.owner_name || 'Sin asignar'">
                             {{ ownerInitials(it.owner_name) }}
                         </span>
                     </li>
@@ -365,8 +402,7 @@
                 </header>
                 <ul class="tk-quick-list">
                     <li>
-                        <a class="tk-quick" routerLink="/admin/meetings"
-                           title="Las tareas se generan al curar una sesión.">
+                        <button type="button" class="tk-quick" (click)="openCreateModal()">
                             <span class="tk-quick-icon" data-color="blue">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -376,9 +412,9 @@
                             </span>
                             <div class="tk-quick-body">
                                 <strong>Crear nueva tarea</strong>
-                                <small>Desde la curación de una sesión.</small>
+                                <small>Agrega una nueva tarea a tu lista.</small>
                             </div>
-                        </a>
+                        </button>
                     </li>
                     <li>
                         <a class="tk-quick" routerLink="/admin/templates">
@@ -444,7 +480,8 @@
                             <span class="tk-upcoming-title" [title]="it.title">{{ it.title }}</span>
                             <span class="tk-upcoming-meta">{{ it.project_name }}</span>
                         </div>
-                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)">
+                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)"
+                              [attr.data-tip]="it.owner_name || 'Sin asignar'">
                             {{ ownerInitials(it.owner_name) }}
                         </span>
                     </li>
@@ -454,5 +491,164 @@
                 </ul>
             </article>
         </aside>
+    </div>
+
+    <!-- ============= MODAL: Agregar tarea ============= -->
+    <div class="tk-modal-backdrop" *ngIf="showCreateModal" (click)="closeCreateModal()">
+        <div class="tk-modal" (click)="$event.stopPropagation()">
+            <header class="tk-modal-head">
+                <div>
+                    <h3 class="tk-modal-title">Agregar tarea</h3>
+                    <p class="tk-modal-sub">
+                        <ng-container *ngIf="createMode === 'chooser'">¿Dónde quieres registrar la nueva tarea?</ng-container>
+                        <ng-container *ngIf="createMode === 'meeting'">Crea una tarea asociada a una reunión existente.</ng-container>
+                    </p>
+                </div>
+                <button type="button" class="tk-modal-close" (click)="closeCreateModal()" title="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </header>
+
+            <!-- ===== Modo chooser ===== -->
+            <div class="tk-modal-body" *ngIf="createMode === 'chooser'">
+                <button type="button" class="tk-choice" (click)="chooseMeeting()">
+                    <span class="tk-choice-icon" data-color="blue">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                            <circle cx="12" cy="16" r="2"></circle>
+                        </svg>
+                    </span>
+                    <div class="tk-choice-body">
+                        <strong>Asociar a una reunión</strong>
+                        <small>Vincula la tarea a un acta para mantener su trazabilidad.</small>
+                    </div>
+                    <svg class="tk-choice-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+
+                <button type="button" class="tk-choice" (click)="chooseCalendar()">
+                    <span class="tk-choice-icon" data-color="violet">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 11.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7"></path>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                            <circle cx="18" cy="18" r="3"></circle>
+                            <line x1="18" y1="16.5" x2="18" y2="18"></line>
+                            <line x1="18" y1="18" x2="19.5" y2="18.5"></line>
+                        </svg>
+                    </span>
+                    <div class="tk-choice-body">
+                        <strong>Programar en el calendario</strong>
+                        <small>Crea la tarea como evento en tu calendario.</small>
+                    </div>
+                    <svg class="tk-choice-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- ===== Modo meeting ===== -->
+            <div class="tk-modal-body" *ngIf="createMode === 'meeting'">
+                <div class="tk-form">
+
+                    <!-- 1. Selector de sesión -->
+                    <div class="tk-form-row">
+                        <label class="tk-form-label">Reunión</label>
+                        <div class="tk-search tk-form-search">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" [(ngModel)]="sessionSearch"
+                                   placeholder="Buscar por título o ID..." />
+                        </div>
+                        <ul class="tk-session-list">
+                            <li *ngFor="let s of filteredSessions; trackBy: trackBySid">
+                                <button type="button" class="tk-session-row"
+                                        [class.is-picked]="newTask.session_id === s.id"
+                                        (click)="pickSessionForTask(s.id)">
+                                    <span class="tk-session-icon">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                                        </svg>
+                                    </span>
+                                    <div class="tk-session-info">
+                                        <span class="tk-session-title">{{ s.title }}</span>
+                                        <span class="tk-session-meta">#{{ s.id }} <ng-container *ngIf="s.date">· {{ s.date }}</ng-container></span>
+                                    </div>
+                                    <svg *ngIf="newTask.session_id === s.id" class="tk-session-check"
+                                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </button>
+                            </li>
+                            <li *ngIf="!filteredSessions.length" class="tk-session-empty">
+                                Sin reuniones que coincidan.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- 2. Detalles -->
+                    <div class="tk-form-row">
+                        <label class="tk-form-label">Título de la tarea</label>
+                        <input type="text" class="tk-input" [(ngModel)]="newTask.title"
+                               placeholder="Ej: Validar pruebas funcionales en QA" />
+                    </div>
+
+                    <div class="tk-form-grid">
+                        <div class="tk-form-row">
+                            <label class="tk-form-label">Responsable</label>
+                            <input type="text" class="tk-input" [(ngModel)]="newTask.owner_name"
+                                   placeholder="Nombre" />
+                        </div>
+                        <div class="tk-form-row">
+                            <label class="tk-form-label">Email</label>
+                            <input type="email" class="tk-input" [(ngModel)]="newTask.owner_email"
+                                   placeholder="correo@empresa.com" />
+                        </div>
+                        <div class="tk-form-row">
+                            <label class="tk-form-label">Fecha límite</label>
+                            <input type="date" class="tk-input" [(ngModel)]="newTask.due_date" />
+                        </div>
+                    </div>
+
+                    <div class="tk-form-row">
+                        <label class="tk-form-label">Descripción <small>(opcional)</small></label>
+                        <textarea class="tk-input tk-textarea" rows="3" [(ngModel)]="newTask.description"
+                                  placeholder="Detalle, contexto, criterios de aceptación..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="tk-modal-foot" *ngIf="createMode === 'meeting'">
+                <button type="button" class="tk-btn tk-btn-secondary" (click)="createMode = 'chooser'">
+                    Volver
+                </button>
+                <button type="button" class="tk-btn tk-btn-primary"
+                        (click)="submitNewTask()"
+                        [disabled]="isCreating || !newTask.session_id || !newTask.title.trim()">
+                    {{ isCreating ? 'Creando…' : 'Crear tarea' }}
+                </button>
+            </footer>
+        </div>
     </div>
 </div>
