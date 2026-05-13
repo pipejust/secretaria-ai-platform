@@ -17,13 +17,21 @@
             </a>
 
             <ng-container *ngIf="branding.companyName() === branding.platformName(); else clientHero">
-                <h1 class="aside-hero">
-                    De la conversación a la claridad.<br />
-                    De la claridad al impacto.
+                <p class="aside-eyebrow">Inteligencia para reuniones empresariales</p>
+                <!--
+                  Hero ACTEN (marca principal): paralelismo retórico clásico
+                  "De la conversación → claridad → impacto". Cada frase va en su
+                  propio bloque con text-wrap:balance para que el line-break
+                  caiga simétrico en vez de cortar mal palabras como "claridad"
+                  colgada con un punto suelto.
+                -->
+                <h1 class="aside-hero aside-hero-platform">
+                    <span class="hero-line">De la conversación a la claridad.</span>
+                    <span class="hero-line hero-line-accent">De la claridad al impacto.</span>
                 </h1>
                 <p class="aside-sub">
-                    Acten es el asistente de IA para reuniones que transforma
-                    las conversaciones en decisiones, responsabilidades y
+                    El asistente de IA para reuniones que transforma las
+                    conversaciones en decisiones, responsabilidades y
                     entregables profesionales.
                 </p>
             </ng-container>

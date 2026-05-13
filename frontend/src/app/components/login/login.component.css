@@ -64,7 +64,9 @@
     gap: var(--space-16);
     text-decoration: none;
     color: inherit;
-    margin-bottom: var(--space-64);
+    /* Reducido de --space-64 a --space-40: el logo + tagline se sentían
+       demasiado separados, dejaba un hueco visual incómodo entre ambos. */
+    margin-bottom: var(--space-40);
 }
 
 /* Logo oficial Acten — la imagen ya combina monograma + wordmark. */
@@ -123,13 +125,35 @@
 
 .aside-hero {
     font-family: var(--font-display);
-    font-size: clamp(2.5rem, 3.4vw, 3rem);
+    font-size: clamp(2.25rem, 2.9vw, 2.6rem);
     font-weight: var(--fw-semibold);
-    line-height: 1.18;
-    letter-spacing: var(--tracking-tight);
+    line-height: 1.12;
+    letter-spacing: -0.018em;
     color: #FFFFFF;
     margin: 0 0 var(--space-24) 0;
     text-wrap: balance;
+}
+
+/* Hero PLATAFORMA (Acten) — paralelismo retórico en 2 líneas.
+   Cada frase es su propio bloque para garantizar break controlado y
+   jerarquía visual: la 2da línea (acento de impacto) lleva un tinte
+   sutil con --brand-accent para crear hilo visual con la marca. */
+.aside-hero-platform .hero-line {
+    display: block;
+    text-wrap: balance;
+}
+
+.aside-hero-platform .hero-line + .hero-line {
+    /* Aire intencional entre las dos frases — respetando el paralelismo
+       sin amontonarlas como un solo párrafo. */
+    margin-top: var(--space-8);
+}
+
+.aside-hero-platform .hero-line-accent {
+    /* Tinte muy sutil con el accent de marca (verde menta de Acten).
+       No saturado — debe seguir leyéndose como una sola unidad con la
+       primera línea, solo da una capa de jerarquía cromática. */
+    color: color-mix(in srgb, var(--brand-accent, #10B981) 35%, #FFFFFF);
 }
 
 /* Hero CLIENTE — solo el nombre de la empresa, así que lo escalamos
