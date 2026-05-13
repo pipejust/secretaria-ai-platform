@@ -1,6 +1,6 @@
 <!-- ===================================================================
      Plantillas — réplica del mockup adjunto.
-     Layout 3-col: Categorías (izq) · Lista central · Panel de detalle (der).
+     Layout 3-col: Categorías (izq) · Lista central · Panel detalle (der).
      =================================================================== -->
 <div class="tpl-page" (click)="closeRowMenu()">
 
@@ -11,13 +11,6 @@
             <p class="tpl-sub">Gestiona y reutiliza plantillas documentales para reuniones, proyectos y reportes.</p>
         </div>
         <div class="tpl-header-actions">
-            <button class="tpl-btn tpl-btn-outline" type="button" title="Filtros">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filtros
-            </button>
             <button class="tpl-btn tpl-btn-primary" type="button" (click)="openCreateModal()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -29,7 +22,6 @@
         </div>
     </header>
 
-    <!-- Mensajes globales -->
     <div class="tpl-alert tpl-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
     <div class="tpl-alert tpl-alert-error" *ngIf="errorMsg">{{ errorMsg }}</div>
 
@@ -43,38 +35,35 @@
                 <li *ngFor="let cat of categories"
                     [class.active]="activeCategory === cat.id"
                     (click)="activeCategory = cat.id">
-                    <span class="tpl-cat-icon" [attr.data-cat]="cat.icon">
-                        <!-- All -->
-                        <svg *ngIf="cat.icon === 'all'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    <span class="tpl-cat-icon" [attr.data-cat]="cat.id">
+                        <svg *ngIf="cat.id === 'all'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
                         </svg>
-                        <svg *ngIf="cat.icon === 'meeting'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg *ngIf="cat.id === 'meeting'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="4" width="18" height="18" rx="2"></rect>
                             <line x1="16" y1="2" x2="16" y2="6"></line>
                             <line x1="8" y1="2" x2="8" y2="6"></line>
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
-                        <svg *ngIf="cat.icon === 'project'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg *ngIf="cat.id === 'project'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                         </svg>
-                        <svg *ngIf="cat.icon === 'reports'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg *ngIf="cat.id === 'reports'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="18" y1="20" x2="18" y2="10"></line>
                             <line x1="12" y1="20" x2="12" y2="4"></line>
                             <line x1="6" y1="20" x2="6" y2="14"></line>
                         </svg>
-                        <svg *ngIf="cat.icon === 'finance'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg *ngIf="cat.id === 'finance'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="1" x2="12" y2="23"></line>
                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                         </svg>
-                        <svg *ngIf="cat.icon === 'comms'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg *ngIf="cat.id === 'comms'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                             <polyline points="22,6 12,13 2,6"></polyline>
                         </svg>
-                        <svg *ngIf="cat.icon === 'strategy'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg *ngIf="cat.id === 'strategy'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <circle cx="12" cy="12" r="6"></circle>
                             <circle cx="12" cy="12" r="2"></circle>
@@ -84,21 +73,13 @@
                     <span class="tpl-cat-count">{{ countByCategory(cat.id) }}</span>
                 </li>
             </ul>
-            <button class="tpl-cat-new" type="button" disabled title="Disponible próximamente">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Nueva categoría
-            </button>
         </aside>
 
         <!-- ====== Lista central ====== -->
         <section class="tpl-list-wrap" aria-label="Listado de plantillas">
 
-            <!-- Buscador + total -->
-            <div class="tpl-list-toolbar">
+            <!-- Búsqueda + botón Filtros toggle (mismo patrón que Meetings) -->
+            <section class="tpl-search-row" aria-label="Buscar plantillas">
                 <div class="tpl-search">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -107,7 +88,38 @@
                     </svg>
                     <input type="text" placeholder="Buscar plantillas…" [(ngModel)]="searchText" />
                 </div>
-            </div>
+                <button class="tpl-filters-btn"
+                        type="button"
+                        [class.is-open]="showFilters"
+                        [class.has-active]="activeFiltersCount > 0"
+                        [attr.aria-expanded]="showFilters"
+                        (click)="toggleFilters()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filtros
+                    <span class="tpl-filters-count" *ngIf="activeFiltersCount > 0">{{ activeFiltersCount }}</span>
+                    <svg class="tpl-filters-chev" [class.flipped]="showFilters"
+                         width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </section>
+
+            <!-- Panel de filtros expandible -->
+            <section class="tpl-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+                <div class="tpl-filter-group">
+                    <label>Estado</label>
+                    <select [(ngModel)]="filterStatus">
+                        <option value="all">Todos los estados</option>
+                        <option value="active">Activas</option>
+                        <option value="inactive">Inactivas</option>
+                        <option value="archived">Archivadas</option>
+                    </select>
+                </div>
+            </section>
 
             <!-- Tabla con cards -->
             <div class="tpl-table">
@@ -129,33 +141,32 @@
                      role="button"
                      tabindex="0">
 
-                    <!-- Plantilla: icono + nombre + descripción -->
                     <div class="tpl-cell-title">
-                        <span class="tpl-row-icon" [attr.data-cat]="typeOf(t).icon">
-                            <svg *ngIf="typeOf(t).icon === 'meeting'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <span class="tpl-row-icon" [attr.data-cat]="typeOf(t).id">
+                            <svg *ngIf="typeOf(t).id === 'meeting'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3" y="4" width="18" height="18" rx="2"></rect>
                                 <line x1="16" y1="2" x2="16" y2="6"></line>
                                 <line x1="8" y1="2" x2="8" y2="6"></line>
                                 <line x1="3" y1="10" x2="21" y2="10"></line>
                             </svg>
-                            <svg *ngIf="typeOf(t).icon === 'project'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg *ngIf="typeOf(t).id === 'project'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                                 <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                             </svg>
-                            <svg *ngIf="typeOf(t).icon === 'reports'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg *ngIf="typeOf(t).id === 'reports'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="18" y1="20" x2="18" y2="10"></line>
                                 <line x1="12" y1="20" x2="12" y2="4"></line>
                                 <line x1="6" y1="20" x2="6" y2="14"></line>
                             </svg>
-                            <svg *ngIf="typeOf(t).icon === 'finance'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg *ngIf="typeOf(t).id === 'finance'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="1" x2="12" y2="23"></line>
                                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                             </svg>
-                            <svg *ngIf="typeOf(t).icon === 'comms'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg *ngIf="typeOf(t).id === 'comms'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                                 <polyline points="22,6 12,13 2,6"></polyline>
                             </svg>
-                            <svg *ngIf="typeOf(t).icon === 'strategy'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg *ngIf="typeOf(t).id === 'strategy'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <circle cx="12" cy="12" r="6"></circle>
                                 <circle cx="12" cy="12" r="2"></circle>
@@ -167,15 +178,12 @@
                         </div>
                     </div>
 
-                    <!-- Tipo -->
                     <div class="tpl-cell-type">
-                        <span class="tpl-type-chip" [attr.data-cat]="typeOf(t).icon">{{ typeOf(t).label }}</span>
+                        <span class="tpl-type-chip" [attr.data-cat]="typeOf(t).id">{{ typeOf(t).label }}</span>
                     </div>
 
-                    <!-- Versión -->
                     <div class="tpl-cell-version">{{ versionOf(t) }}</div>
 
-                    <!-- Estado -->
                     <div class="tpl-cell-status">
                         <span class="tpl-status-badge" [attr.data-status]="statusOf(t).key">
                             <span class="tpl-status-dot"></span>
@@ -183,13 +191,11 @@
                         </span>
                     </div>
 
-                    <!-- Actualizado -->
                     <div class="tpl-cell-updated">
                         <span class="tpl-updated-main">{{ updatedOf(t) }}</span>
-                        <span class="tpl-updated-ago">{{ updatedAgo(t) }}</span>
+                        <span class="tpl-updated-ago" *ngIf="updatedAgo(t)">{{ updatedAgo(t) }}</span>
                     </div>
 
-                    <!-- Acciones (kebab) -->
                     <div class="tpl-cell-actions t-right">
                         <button class="tpl-kebab" (click)="toggleRowMenu(t.id, $event)" title="Más opciones">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -200,10 +206,17 @@
                             </svg>
                         </button>
                         <div class="tpl-kebab-menu" *ngIf="openRowMenuId === t.id" (click)="$event.stopPropagation()">
+                            <button type="button" (click)="downloadTemplate(t); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Descargar .docx
+                            </button>
                             <button type="button" (click)="openConfigurator(t); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="3"></circle>
-                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                                 </svg>
                                 Configurar bloques
                             </button>
@@ -213,6 +226,12 @@
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                                 Editar
+                            </button>
+                            <button type="button" (click)="toggleActive(t); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                {{ statusOf(t).key === 'active' ? 'Inactivar' : 'Activar' }}
                             </button>
                             <div class="tpl-kebab-divider"></div>
                             <button type="button" class="tpl-kebab-danger" (click)="deleteTemplate(t.id); closeRowMenu()">
@@ -238,7 +257,6 @@
                 </div>
             </div>
 
-            <!-- Paginación -->
             <div class="tpl-pagination" *ngIf="filteredTemplates.length">
                 <span class="tpl-page-info">
                     1–{{ filteredTemplates.length }} de {{ templates.length }} plantillas
@@ -262,7 +280,7 @@
         <aside class="tpl-detail" *ngIf="selectedTemplate" aria-label="Detalle de la plantilla">
             <header class="tpl-detail-head">
                 <div class="tpl-detail-head-text">
-                    <span class="tpl-detail-icon" [attr.data-cat]="typeOf(selectedTemplate).icon">
+                    <span class="tpl-detail-icon" [attr.data-cat]="typeOf(selectedTemplate).id">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -292,29 +310,21 @@
                 </button>
             </header>
 
-            <!-- Tabs -->
             <nav class="tpl-detail-tabs">
                 <button [class.active]="detailTab === 'preview'" (click)="setDetailTab('preview')">Vista previa</button>
                 <button [class.active]="detailTab === 'details'" (click)="setDetailTab('details')">Detalles</button>
                 <button [class.active]="detailTab === 'history'" (click)="setDetailTab('history')">Historial</button>
             </nav>
 
-            <!-- Vista previa: mock visual del documento -->
             <div *ngIf="detailTab === 'preview'" class="tpl-detail-body">
                 <article class="tpl-doc-preview">
                     <header class="tpl-doc-head">
                         <span class="tpl-doc-brand">A · Acten</span>
                         <h3 class="tpl-doc-title">{{ selectedTemplate.name }}</h3>
                     </header>
-                    <div class="tpl-doc-line tpl-doc-line-row">
-                        <span>Título de la reunión</span><span>Fecha</span>
-                    </div>
-                    <div class="tpl-doc-line tpl-doc-line-row">
-                        <span>Hora</span><span>Ubicación / enlace</span>
-                    </div>
-                    <div class="tpl-doc-line">
-                        <span>Asistentes</span>
-                    </div>
+                    <div class="tpl-doc-line tpl-doc-line-row"><span>Título de la reunión</span><span>Fecha</span></div>
+                    <div class="tpl-doc-line tpl-doc-line-row"><span>Hora</span><span>Ubicación / enlace</span></div>
+                    <div class="tpl-doc-line"><span>Asistentes</span></div>
                     <div class="tpl-doc-section">
                         <span class="tpl-doc-label">Agenda</span>
                         <div class="tpl-doc-skel" style="width: 92%"></div>
@@ -329,9 +339,7 @@
                         <div class="tpl-doc-skel" style="width: 70%"></div>
                     </div>
                     <table class="tpl-doc-table">
-                        <thead>
-                            <tr><th>Acción</th><th>Responsable</th><th>Vence</th><th>Estado</th></tr>
-                        </thead>
+                        <thead><tr><th>Acción</th><th>Responsable</th><th>Vence</th><th>Estado</th></tr></thead>
                         <tbody>
                             <tr><td></td><td></td><td></td><td></td></tr>
                             <tr><td></td><td></td><td></td><td></td></tr>
@@ -339,7 +347,6 @@
                     </table>
                 </article>
 
-                <!-- Casos de uso -->
                 <section class="tpl-detail-section">
                     <h4>Casos de uso</h4>
                     <div class="tpl-chip-list">
@@ -347,17 +354,18 @@
                     </div>
                 </section>
 
-                <!-- Descripción -->
                 <section class="tpl-detail-section">
                     <h4>Descripción</h4>
                     <p class="tpl-detail-text">{{ descriptionOf(selectedTemplate) }}</p>
                 </section>
 
-                <!-- Acciones -->
                 <section class="tpl-detail-section">
                     <h4>Acciones</h4>
                     <div class="tpl-detail-actions">
-                        <button class="tpl-btn tpl-btn-primary tpl-btn-block" (click)="openConfigurator(selectedTemplate)">
+                        <!-- Usar plantilla = descargar el .docx -->
+                        <button class="tpl-btn tpl-btn-primary tpl-btn-block"
+                                (click)="downloadTemplate(selectedTemplate)"
+                                [disabled]="!selectedTemplate.file_path">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -365,7 +373,10 @@
                             </svg>
                             Usar plantilla
                         </button>
-                        <button class="tpl-btn tpl-btn-outline tpl-btn-block">
+                        <!-- Vista previa = abrir en nueva pestaña -->
+                        <button class="tpl-btn tpl-btn-outline tpl-btn-block"
+                                (click)="previewFile(selectedTemplate)"
+                                [disabled]="!selectedTemplate.file_path">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -373,7 +384,9 @@
                             </svg>
                             Vista previa
                         </button>
-                        <button class="tpl-btn tpl-btn-outline tpl-btn-block">
+                        <!-- Duplicar = abrir upload prellenado -->
+                        <button class="tpl-btn tpl-btn-outline tpl-btn-block"
+                                (click)="duplicateTemplate(selectedTemplate)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -381,7 +394,8 @@
                             </svg>
                             Duplicar
                         </button>
-                        <button class="tpl-btn tpl-btn-outline tpl-btn-block" (click)="editTemplate(selectedTemplate)">
+                        <button class="tpl-btn tpl-btn-outline tpl-btn-block"
+                                (click)="editTemplate(selectedTemplate)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -389,12 +403,28 @@
                             </svg>
                             Editar
                         </button>
-                        <button class="tpl-btn tpl-btn-danger-outline tpl-btn-block" (click)="deleteTemplate(selectedTemplate.id)">
+                        <!-- Toggle Activar/Inactivar -->
+                        <button class="tpl-btn tpl-btn-outline tpl-btn-block"
+                                (click)="toggleActive(selectedTemplate)">
+                            <svg *ngIf="statusOf(selectedTemplate).key === 'active'"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+                            </svg>
+                            <svg *ngIf="statusOf(selectedTemplate).key !== 'active'"
+                                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            {{ statusOf(selectedTemplate).key === 'active' ? 'Inactivar' : 'Activar' }}
+                        </button>
+                        <button class="tpl-btn tpl-btn-danger-outline tpl-btn-block"
+                                (click)="archiveTemplate(selectedTemplate)">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                                <rect x="1" y="3" width="22" height="5"></rect>
+                                <line x1="10" y1="12" x2="14" y2="12"></line>
                             </svg>
                             Archivar
                         </button>
@@ -402,7 +432,6 @@
                 </section>
             </div>
 
-            <!-- Tab Detalles -->
             <div *ngIf="detailTab === 'details'" class="tpl-detail-body">
                 <section class="tpl-detail-section">
                     <h4>Información</h4>
@@ -411,8 +440,13 @@
                         <dt>Tipo</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>
                         <dt>Versión</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
                         <dt>Estado</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
-                        <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small>({{ updatedAgo(selectedTemplate) }})</small></dd>
+                        <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small *ngIf="updatedAgo(selectedTemplate)">({{ updatedAgo(selectedTemplate) }})</small></dd>
                         <dt>Proyecto</dt><dd>{{ selectedTemplate.project_id || '—' }}</dd>
+                        <dt>Archivo</dt>
+                        <dd>
+                            <a *ngIf="selectedTemplate.file_path" [href]="selectedTemplate.file_path" target="_blank" rel="noopener">Ver archivo Word</a>
+                            <span *ngIf="!selectedTemplate.file_path">—</span>
+                        </dd>
                     </dl>
                 </section>
             </div>
@@ -428,12 +462,13 @@
 <!-- ===================================================================
      Modal: Subir/Editar Plantilla
      =================================================================== -->
-<div class="tpl-modal-overlay" *ngIf="showUploadModal && !showConfigurator" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
+<div class="tpl-modal-overlay" *ngIf="showUploadModal && !showConfigurator"
+     (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
     <div class="tpl-modal tpl-modal-sm" (click)="$event.stopPropagation()">
         <header class="tpl-modal-head">
             <div>
                 <h2 class="tpl-modal-title">{{ editingTemplateId ? 'Editar plantilla' : 'Nueva plantilla' }}</h2>
-                <p class="tpl-modal-sub">Sube un archivo Word (.docx) para usarlo como base.</p>
+                <p class="tpl-modal-sub">Sube un archivo Word (.docx) y elige tipo y proyecto destino.</p>
             </div>
             <button class="tpl-modal-close" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -454,6 +489,17 @@
                            placeholder="Ej. Acta de reunión" />
                 </div>
                 <div class="tpl-field">
+                    <label>Tipo / categoría <span class="req">*</span></label>
+                    <select [(ngModel)]="templateType" name="templateType" required>
+                        <option value="meeting">Reunión</option>
+                        <option value="project">Gestión de proyectos</option>
+                        <option value="reports">Reportes</option>
+                        <option value="finance">Finanzas</option>
+                        <option value="comms">Comunicación</option>
+                        <option value="strategy">Estrategia</option>
+                    </select>
+                </div>
+                <div class="tpl-field">
                     <label>Proyecto destino <span class="req">*</span></label>
                     <select [(ngModel)]="selectedProjectId" name="project_id" required>
                         <option value="" disabled>Selecciona un proyecto</option>
@@ -461,7 +507,12 @@
                     </select>
                 </div>
                 <div class="tpl-field">
-                    <label>Documento Word (.docx)</label>
+                    <label>Descripción (opcional)</label>
+                    <input type="text" [(ngModel)]="templateDescription" name="templateDescription"
+                           placeholder="Breve descripción del uso de esta plantilla" />
+                </div>
+                <div class="tpl-field">
+                    <label>Documento Word (.docx) <span class="req" *ngIf="!editingTemplateId">*</span></label>
                     <label class="tpl-file-drop">
                         <input type="file" (change)="onFileSelected($event)" accept=".docx" hidden />
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -470,7 +521,8 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <span *ngIf="!selectedFile">Click para subir un archivo .docx</span>
+                        <span *ngIf="!selectedFile && !editingTemplateId">Click para subir un archivo .docx</span>
+                        <span *ngIf="!selectedFile && editingTemplateId">Opcional · deja vacío para conservar el archivo actual</span>
                         <strong *ngIf="selectedFile">{{ selectedFile.name }}</strong>
                     </label>
                 </div>
@@ -493,7 +545,8 @@
 <!-- ===================================================================
      Modal: Constructor Visual de Documento
      =================================================================== -->
-<div class="tpl-modal-overlay" *ngIf="showConfigurator" (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''">
+<div class="tpl-modal-overlay" *ngIf="showConfigurator"
+     (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''">
     <div class="tpl-modal tpl-modal-lg" (click)="$event.stopPropagation()">
 
         <header class="tpl-modal-head">
@@ -527,9 +580,11 @@
                          class="tpl-block-list"
                          (cdkDropListDropped)="drop($event)">
                         <div class="tpl-block-card"
-                             *ngFor="let item of availableTokens; track item.id"
-                             cdkDrag [cdkDragData]="item">
-                            <span class="tpl-block-grip">
+                             *ngFor="let item of availableTokens; trackBy: trackById"
+                             cdkDrag [cdkDragData]="item"
+                             (dblclick)="addToStructure(item)"
+                             title="Doble-click o arrastra para agregar">
+                            <span class="tpl-block-grip" cdkDragHandle>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle>
                                     <circle cx="15" cy="6" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="18" r="1"></circle>
@@ -576,7 +631,7 @@
                     </div>
                     <p class="tpl-builder-hint">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        Arrastra un bloque para agregarlo a la estructura del documento.
+                        Arrastra o haz doble-click en un bloque para agregarlo.
                     </p>
                 </section>
 
@@ -589,23 +644,16 @@
                          class="tpl-structure-list"
                          (cdkDropListDropped)="drop($event)">
                         <div class="tpl-structure-row"
-                             *ngFor="let item of activeTokens; let i = index; track item.id"
+                             *ngFor="let item of activeTokens; let i = index; trackBy: trackById"
                              cdkDrag [cdkDragData]="item">
                             <span class="tpl-structure-num">{{ i + 1 }}</span>
-                            <span class="tpl-block-grip">
+                            <span class="tpl-block-grip" cdkDragHandle>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle>
                                     <circle cx="15" cy="6" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="18" r="1"></circle>
                                 </svg>
                             </span>
                             <span class="tpl-structure-label">{{ item.label }}</span>
-                            <button class="tpl-structure-action" type="button" title="Editar bloque">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                            </button>
                             <button class="tpl-structure-action tpl-structure-action-danger"
                                     type="button" title="Quitar"
                                     *ngIf="item.id !== 'meta'"
@@ -619,7 +667,7 @@
                             </button>
                         </div>
 
-                        <div class="tpl-structure-drop" *ngIf="!activeTokens.length || availableTokens.length">
+                        <div class="tpl-structure-drop">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -694,25 +742,8 @@
             </div>
         </div>
 
-        <!-- Modo manual (escape hatch) — sin tocar funcionalidad -->
-        <div class="tpl-modal-body" *ngIf="isTraditionalConfigurator">
-            <div class="tpl-alert tpl-alert-info">
-                <strong>Modo manual:</strong> el sistema buscará estas llaves exactas en tu documento Word.
-            </div>
-            <div class="tpl-manual-grid">
-                <div class="tpl-manual-card" *ngFor="let tag of ['{{ title }}','{{ date }}','{{ summary }}','{{ decisions }}','{{ risks }}','{{ agreements }}']"
-                     (click)="copyTag(tag)">
-                    <span class="tpl-manual-label">{{ tag }}</span>
-                    <small>Click para copiar</small>
-                </div>
-            </div>
-        </div>
-
         <footer class="tpl-modal-foot">
-            <button type="button" class="tpl-btn tpl-btn-link"
-                    (click)="isTraditionalConfigurator = !isTraditionalConfigurator">
-                {{ isTraditionalConfigurator ? 'Volver al constructor visual' : 'Modo manual {{ }}' }}
-            </button>
+            <div></div>
             <div class="tpl-modal-foot-right">
                 <button type="button" class="tpl-btn tpl-btn-outline"
                         (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''"
