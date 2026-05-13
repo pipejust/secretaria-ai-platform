@@ -78,6 +78,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # max_age default es 600 (10 min). Si una preflight falla durante una
+    # transición de deploy, el browser cachea el rechazo CORS por 10 min y
+    # el usuario ve "blocked by CORS policy" aunque el server ya responda
+    # bien. Bajamos a 60 s — suficiente para ahorrar round-trips, lo bastante
+    # corto para que un deploy roto no inutilice la app por 10 min.
+    max_age=60,
 )
 
 # Static mount para servir avatares subidos por usuarios (Mi Perfil).

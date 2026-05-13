@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -266,10 +266,19 @@ def verify_login_2fa(
 @router.post("/register/admin-only")
 def register_user(
     user_in: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_session),
     admin_user: User = Depends(require_admin),
 ):
-    """Solo un Admin del MISMO tenant puede crear usuarios nuevos."""
+    """Solo un Admin del MISMO tenant puede crear usuarios nuevos.
+
+    Tras crear el user, dispara un email de bienvenida en background con:
+      · branding del tenant (logo, colores)
+      · rol asignado
+      · enlace al login de la plataforma
+    El email NO bloquea la respuesta al admin: si el SMTP falla, se loggea
+    pero el usuario igual queda creado.
+    """
     existing_user = db.exec(
         select(User)
         .where(User.email == user_in.email)
@@ -288,7 +297,43 @@ def register_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Email de bienvenida — best-effort en background.
+    background_tasks.add_task(
+        _send_welcome_email_safe,
+        user_id=user.id,
+        tenant_id=admin_user.tenant_id,
+    )
+
     return {"msg": "User created successfully", "user_id": user.id}
+
+
+async def _send_welcome_email_safe(user_id: int, tenant_id: int) -> None:
+    """Envía el email de bienvenida en background. Swallow errors —
+    nunca debe romper el flow de creación del user. El branding y el
+    sender SMTP se resuelven dentro del EmailService desde la DB del
+    tenant correspondiente."""
+    from sqlmodel import Session as _Session
+    from database import engine as _engine
+    from services.email_service import EmailService
+
+    try:
+        with _Session(_engine) as _db:
+            user = _db.get(User, user_id)
+            if not user:
+                logger.warning("welcome email: user_id=%s no existe", user_id)
+                return
+            role_name = user.role.name if user.role else "Usuario"
+            svc = EmailService(db=_db, tenant_id=tenant_id)
+            await svc.send_welcome_email(
+                to_email=user.email,
+                user_name=user.full_name or user.email,
+                role=role_name,
+            )
+            logger.info("welcome email enviado a %s (tenant=%s)", user.email, tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("welcome email FALLÓ para user_id=%s tenant=%s: %s",
+                         user_id, tenant_id, exc)
 
 
 def _serialize_user_profile(user: User, tenant: Tenant) -> dict:

@@ -24,7 +24,7 @@ import logging
 import re
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -171,6 +171,7 @@ def get_tenant(
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_tenant(
     payload: TenantCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_session),
     _su: User = Depends(require_superadmin),
 ):
@@ -251,7 +252,48 @@ def create_tenant(
     db.commit()
 
     logger.info("Tenant '%s' creado con admin %s", slug, payload.admin_email)
+
+    # Email de bienvenida al admin recién creado — best-effort en background.
+    # Lleva el branding del NUEVO tenant (logo + colores que el super-admin
+    # subió al crear la empresa). Si SMTP del nuevo tenant no está configurado,
+    # cae al SMTP del tenant 'acten' como fallback (resuelve dentro de
+    # EmailService).
+    background_tasks.add_task(
+        _send_tenant_welcome_safe,
+        user_id=user.id,
+        tenant_id=tenant.id,
+    )
+
     return TenantOut.from_db(tenant, 1)
+
+
+async def _send_tenant_welcome_safe(user_id: int, tenant_id: int) -> None:
+    """Envía email de bienvenida al admin del tenant recién provisionado.
+    Best-effort: si falla, se loggea pero NO rompe la creación del tenant."""
+    from sqlmodel import Session as _Session
+    from database import engine as _engine
+    from services.email_service import EmailService
+
+    try:
+        with _Session(_engine) as _db:
+            user = _db.get(User, user_id)
+            if not user:
+                logger.warning("tenant welcome email: user_id=%s no existe", user_id)
+                return
+            role_name = user.role.name if user.role else "Administrador"
+            svc = EmailService(db=_db, tenant_id=tenant_id)
+            await svc.send_welcome_email(
+                to_email=user.email,
+                user_name=user.full_name or user.email,
+                role=role_name,
+            )
+            logger.info(
+                "tenant welcome email enviado a %s (tenant_id=%s)",
+                user.email, tenant_id,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("tenant welcome email FALLÓ user=%s tenant=%s: %s",
+                         user_id, tenant_id, exc)
 
 
 @router.put("/{slug}")
