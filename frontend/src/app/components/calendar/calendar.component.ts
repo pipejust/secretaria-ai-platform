@@ -8,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
+import { UserDirectoryService } from '../../services/user-directory.service';
 
 interface CalAccount {
     id: number;
@@ -159,7 +160,26 @@ export class CalendarComponent implements OnInit, OnDestroy {
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
         private route: ActivatedRoute,
-    ) {}
+        private userDirectory: UserDirectoryService,
+    ) {
+        // Re-render del calendario cuando el directorio resuelve nuevos
+        // emails (la foto del dueño aparece en cuanto está disponible).
+        this.userDirectory.directory$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => this.cdr.markForCheck());
+    }
+
+    /** URL del avatar del User cuyo email coincide con la tarea. null → cae
+     *  al avatar de iniciales con tono asignado. */
+    taskAvatarUrl(t: any): string | null {
+        const email = (t?.owner_email || '').trim().toLowerCase();
+        if (!email) return null;
+        const u = this.userDirectory.peek(email);
+        if (!u || !u.avatar_url) return null;
+        const raw = u.avatar_url;
+        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+        return `${environment.apiUrl}${raw}`;
+    }
 
     ngOnInit(): void {
         this.loadNotes();
@@ -228,6 +248,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: (res) => {
                     this.tasks = (res?.items || []).filter(t => !!t.due_date);
+                    // Precargamos todos los emails de owners para que la foto
+                    // aparezca de inmediato en los pills del calendario.
+                    const emails = this.tasks.map(t => (t.owner_email || '').trim()).filter(Boolean);
+                    this.userDirectory.preload(emails);
                     this.isLoadingTasks = false;
                     this.cdr.detectChanges();
                 },

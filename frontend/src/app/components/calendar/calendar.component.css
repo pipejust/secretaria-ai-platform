@@ -706,6 +706,18 @@
     text-transform: uppercase;
     color: #1E3A8A;
     background: #DBE3FF;
+    position: relative;
+    overflow: hidden;
+}
+.cal-pill-avatar.has-photo { background: transparent !important; }
+.cal-pill-avatar .avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
 }
 .cal-pill.is-focused {
     background: #EFF6FF;
@@ -1025,6 +1037,18 @@
     margin-left: -6px;
     text-transform: uppercase;
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+.cal-avatar.has-photo { background: transparent !important; }
+.cal-avatar .avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
 }
 .cal-avatar:first-child { margin-left: 0; }
 .cal-avatar--more { background: var(--color-bg-muted); color: var(--color-fg-muted); }

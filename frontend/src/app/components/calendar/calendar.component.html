@@ -208,7 +208,12 @@
                     [class.is-focused]="focusedTaskId === t.id"
                     [title]="taskOwnerLabel(t) + ' · ' + t.title + (t.project_name ? ' · ' + t.project_name : '')"
                     (click)="focusTask(t, $event)">
-                  <span class="cal-pill-avatar cal-avatar--{{ownerColor(t)}}">{{ ownerInitials(t) }}</span>
+                  <span class="cal-pill-avatar cal-avatar--{{ownerColor(t)}}"
+                        [class.has-photo]="!!taskAvatarUrl(t)">
+                    <img *ngIf="taskAvatarUrl(t)" class="avatar-img"
+                         [src]="taskAvatarUrl(t)" [alt]="taskOwnerLabel(t)">
+                    <span *ngIf="!taskAvatarUrl(t)">{{ ownerInitials(t) }}</span>
+                  </span>
                   <span class="cal-pill-title">{{ t.title }}</span>
                 </li>
               </ul>
@@ -247,7 +252,12 @@
                   [class.is-focused]="focusedTaskId === t.id"
                   [title]="taskOwnerLabel(t) + ' · ' + t.title + (t.project_name ? ' · ' + t.project_name : '')"
                   (click)="focusTask(t, $event)">
-                <span class="cal-pill-avatar cal-avatar--{{ownerColor(t)}}">{{ ownerInitials(t) }}</span>
+                <span class="cal-pill-avatar cal-avatar--{{ownerColor(t)}}"
+                      [class.has-photo]="!!taskAvatarUrl(t)">
+                  <img *ngIf="taskAvatarUrl(t)" class="avatar-img"
+                       [src]="taskAvatarUrl(t)" [alt]="taskOwnerLabel(t)">
+                  <span *ngIf="!taskAvatarUrl(t)">{{ ownerInitials(t) }}</span>
+                </span>
                 <span class="cal-pill-title">{{ t.title }}</span>
               </li>
               <li class="cal-cell-empty"
@@ -433,8 +443,11 @@
               <div class="cal-task-foot">
                 <div class="cal-avatars" *ngIf="t.owner_name || t.owner_email">
                   <span class="cal-avatar cal-avatar--{{ownerColor(t)}}"
-                        [title]="t.owner_name || t.owner_email">
-                    {{ ownerInitials(t) }}
+                        [class.has-photo]="!!taskAvatarUrl(t)"
+                        [title]="(t.owner_email || t.owner_name)">
+                    <img *ngIf="taskAvatarUrl(t)" class="avatar-img"
+                         [src]="taskAvatarUrl(t)" [alt]="taskOwnerLabel(t)">
+                    <span *ngIf="!taskAvatarUrl(t)">{{ ownerInitials(t) }}</span>
                   </span>
                   <span class="cal-task-owner-name">{{ taskOwnerLabel(t) }}</span>
                 </div>

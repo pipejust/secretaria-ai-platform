@@ -738,6 +738,7 @@
     justify-content: center;
     margin-left: -8px;
     flex-shrink: 0;
+    position: relative;
 }
 .avatar-mini:first-child { margin-left: 0; }
 .avatar-mini[data-tone="0"] { background: #2563EB; }
@@ -745,6 +746,16 @@
 .avatar-mini[data-tone="2"] { background: #F59E0B; }
 .avatar-mini[data-tone="3"] { background: #7C3AED; }
 .avatar-mini[data-tone="4"] { background: #EC4899; }
+.avatar-mini.has-photo { background: transparent !important; }
+.avatar-mini .avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
 .avatar-extra {
     margin-left: -8px;
     background: var(--color-bg-muted);
@@ -915,12 +926,23 @@
     justify-content: center;
     flex-shrink: 0;
     background: #2563EB;
+    position: relative;
 }
 .task-owner[data-tone="0"] { background: #2563EB; }
 .task-owner[data-tone="1"] { background: #10B981; }
 .task-owner[data-tone="2"] { background: #F59E0B; }
 .task-owner[data-tone="3"] { background: #7C3AED; }
 .task-owner[data-tone="4"] { background: #EC4899; }
+.task-owner.has-photo { background: transparent !important; }
+.task-owner .avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
 .task-due {
     font-size: 11px;
     color: var(--acn-text-muted);

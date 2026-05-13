@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
+import { UserDirectoryService } from '../../services/user-directory.service';
 
 interface ChartPoint { date: Date; label: string; value: number; }
 interface KpiTile {
@@ -112,7 +113,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         private router: Router,
         private route: ActivatedRoute,
         private toast: ToastService,
-    ) { }
+        private userDirectory: UserDirectoryService,
+    ) {
+        // Re-render cuando el directorio resuelve nuevos emails (auto-refresh
+        // de avatares en participantes y owners de tareas).
+        this.userDirectory.directory$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => this.cdr.markForCheck());
+    }
 
     ngOnInit(): void {
         this.loadOverview();
@@ -978,7 +986,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         id: number;
         title: string;
         date: string;
-        participants: { initials: string; tone: number; name: string; role: string; company: string }[];
+        participants: { initials: string; tone: number; name: string; role: string; company: string; email: string }[];
         extra: number;
         extraNames: string;
         duration: string;
@@ -994,6 +1002,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     return [];
                 }
             })();
+            // Pre-cargamos los emails de los attendees al directorio para que
+            // el chip pinte avatares sin un round-trip por cada uno.
+            const allEmails = attendees
+                .map((a: any) => (typeof a === 'string' && a.includes('@')) ? a : (a?.email || ''))
+                .filter((e: string) => !!e);
+            if (allEmails.length) this.userDirectory.preload(allEmails);
+
             const visible = attendees.slice(0, 3).map((a: any, i: number) => {
                 const name = String(a?.name || a?.full_name || a?.email || 'Sin nombre').trim();
                 return {
@@ -1002,6 +1017,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     name,
                     role: String(a?.role || a?.position || a?.job_title || '').trim(),
                     company: String(a?.entity || a?.company || a?.organization || a?.org || '').trim(),
+                    email: String(a?.email || a?.mail || '').trim().toLowerCase(),
                 };
             });
             const extra = Math.max(0, attendees.length - 3);
@@ -1091,11 +1107,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
         title: string;
         sessionTitle: string;
         sessionDate: string;
-        owner: { initials: string; tone: number; name: string; role: string; company: string };
+        owner: { initials: string; tone: number; name: string; role: string; company: string; email: string };
         dueLabel: string;
         accent: 'success' | 'info' | 'warning';
     }[] {
         const items = (this.allActionItems || []).filter((it) => (it?.status || 'pending') !== 'done').slice(0, 3);
+        // Pre-carga emails al directorio para que el chip pinte avatares sin
+        // round-trips individuales.
+        const emails = items.map(it => (it?.owner_email || '').trim()).filter(Boolean);
+        if (emails.length) this.userDirectory.preload(emails);
         return items.map((it, idx) => {
             const accents: Array<'success' | 'info' | 'warning'> = ['success', 'info', 'warning'];
             const ownerName = String(it?.owner_name || it?.owner_email || 'Sin asignar').trim();
@@ -1110,6 +1130,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     name: ownerName,
                     role: String(it?.owner_role || it?.role || '').trim(),
                     company: String(it?.owner_company || it?.owner_entity || '').trim(),
+                    email: String(it?.owner_email || '').trim().toLowerCase(),
                 },
                 dueLabel: this.formatTableDate(it.due_date) || 'Sin fecha',
                 accent: accents[idx % 3],
@@ -1245,6 +1266,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (!name) return '··';
         const parts = String(name).trim().split(/\s+/);
         return (parts[0]?.[0] || '').toUpperCase() + (parts[1]?.[0] || '').toUpperCase();
+    }
+
+    /** URL del avatar del User cuyo email coincide con `email`. null si no
+     *  hay match → el avatar cae al fondo de color con iniciales. */
+    avatarUrlFor(email?: string): string | null {
+        if (!email) return null;
+        const u = this.userDirectory.peek(email);
+        if (!u || !u.avatar_url) return null;
+        const raw = u.avatar_url;
+        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+        return `${environment.apiUrl}${raw}`;
+    }
+
+    /** Display name del User cuando el email coincide; si no, el `fallback`. */
+    displayNameFor(email: string | undefined, fallback: string): string {
+        if (email) {
+            const u = this.userDirectory.peek(email);
+            if (u?.full_name) return u.full_name;
+        }
+        return fallback;
     }
 
     /** Formatea fecha + hora corta. */

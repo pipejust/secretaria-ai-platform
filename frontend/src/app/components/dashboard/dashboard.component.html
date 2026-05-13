@@ -371,13 +371,17 @@
                         <span class="avatar-stack">
                             <span class="avatar-mini avatar-tip-host"
                                   *ngFor="let p of r.participants"
+                                  [class.has-photo]="!!avatarUrlFor(p.email)"
                                   [attr.data-tone]="p.tone"
                                   tabindex="0">
-                                {{ p.initials }}
+                                <img *ngIf="avatarUrlFor(p.email)" class="avatar-img"
+                                     [src]="avatarUrlFor(p.email)" [alt]="displayNameFor(p.email, p.name)">
+                                <span *ngIf="!avatarUrlFor(p.email)">{{ p.initials }}</span>
                                 <span class="avatar-tip" role="tooltip">
-                                    <strong class="avatar-tip-name">{{ p.name }}</strong>
+                                    <strong class="avatar-tip-name">{{ displayNameFor(p.email, p.name) }}</strong>
                                     <span class="avatar-tip-meta" *ngIf="p.role">{{ p.role }}</span>
                                     <span class="avatar-tip-meta" *ngIf="p.company">{{ p.company }}</span>
+                                    <span class="avatar-tip-meta" *ngIf="p.email">{{ p.email }}</span>
                                 </span>
                             </span>
                             <span class="avatar-extra avatar-tip-host" *ngIf="r.extra > 0" tabindex="0">
@@ -463,13 +467,17 @@
                         <p class="task-meta">{{ t.sessionTitle }} &nbsp;·&nbsp; {{ t.sessionDate }}</p>
                     </div>
                     <span class="task-owner avatar-tip-host tip-right"
+                          [class.has-photo]="!!avatarUrlFor(t.owner.email)"
                           [attr.data-tone]="t.owner.tone"
                           tabindex="0">
-                        {{ t.owner.initials }}
+                        <img *ngIf="avatarUrlFor(t.owner.email)" class="avatar-img"
+                             [src]="avatarUrlFor(t.owner.email)" [alt]="displayNameFor(t.owner.email, t.owner.name)">
+                        <span *ngIf="!avatarUrlFor(t.owner.email)">{{ t.owner.initials }}</span>
                         <span class="avatar-tip" role="tooltip">
-                            <strong class="avatar-tip-name">{{ t.owner.name }}</strong>
+                            <strong class="avatar-tip-name">{{ displayNameFor(t.owner.email, t.owner.name) }}</strong>
                             <span class="avatar-tip-meta" *ngIf="t.owner.role">{{ t.owner.role }}</span>
                             <span class="avatar-tip-meta" *ngIf="t.owner.company">{{ t.owner.company }}</span>
+                            <span class="avatar-tip-meta" *ngIf="t.owner.email">{{ t.owner.email }}</span>
                         </span>
                     </span>
                     <span class="task-due muted">{{ t.dueLabel }}</span>
