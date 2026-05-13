@@ -342,6 +342,11 @@ async def ask(
         top_k=max(min(payload.top_k, 20), 1),
         project_id=payload.project_id,
         session_ids=sids_filter,
+        # CRÍTICO multi-tenant: restringe la búsqueda RAG a las sesiones
+        # del tenant del usuario. Sin esto, una pregunta de la empresa A
+        # podía recuperar fragmentos de actas de la empresa B (fuga de
+        # información entre clientes).
+        tenant_id=tenant.id,
     )
 
     # Filtro de relevancia DINÁMICO (ver `_filter_relevant`).

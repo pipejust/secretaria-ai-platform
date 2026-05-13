@@ -202,6 +202,7 @@ async def search_similar(
     top_k: int = 8,
     project_id: Optional[int] = None,
     session_ids: Optional[List[int]] = None,
+    tenant_id: Optional[int] = None,
 ) -> List[dict]:
     """Búsqueda híbrida (vector + título) con filtros opcionales.
 
@@ -212,6 +213,10 @@ async def search_similar(
     3. Re-ordena por distancia ascendente y trunca a top_k.
 
     Filtros opcionales:
+      · `tenant_id` — CRÍTICO multi-tenant: restringe a las sesiones de
+        UNA sola empresa. Sin esto, la búsqueda cruza tenants y filtra
+        información entre empresas (fuga de datos). Los call sites
+        productivos DEBEN pasarlo siempre.
       · `project_id` — restringe a una sola sub-base de actas.
       · `session_ids` — restringe la búsqueda a sesiones específicas.
         Útil cuando el usuario "enfoca" la consulta en una reunión
@@ -225,6 +230,10 @@ async def search_similar(
     # Filtros adicionales — los inyectamos como cláusulas WHERE.
     extra_where = ""
     extra_params: dict = {}
+    if tenant_id is not None:
+        # Aislamiento multi-tenant — siempre primero por seguridad.
+        extra_where += " AND ms.tenant_id = :tid"
+        extra_params["tid"] = tenant_id
     if project_id is not None:
         extra_where += " AND ms.project_id = :pid"
         extra_params["pid"] = project_id

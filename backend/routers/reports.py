@@ -17,7 +17,8 @@ from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from database import get_session
-from models import ActionItem, MeetingSession, Project
+from models import ActionItem, MeetingSession, Project, Tenant
+from routers.auth import get_current_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -244,31 +245,47 @@ def _build_report(
     period: str,
     ref: Optional[str],
     project_id: Optional[int],
+    tenant_id: int,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
 ) -> Dict[str, Any]:
+    """Construye el dataset del reporte. CRÍTICO multi-tenant: TODAS las
+    queries (sesiones, proyectos, action items) filtran por `tenant_id`.
+    Sin esto, los reportes de UNA empresa mostraban datos de TODAS las
+    empresas (fuga de información sensible entre clientes)."""
     start, end, label = _resolve_window(period, ref, start_date, end_date)
     now = datetime.now()
 
-    sessions_query = select(MeetingSession)
+    sessions_query = select(MeetingSession).where(MeetingSession.tenant_id == tenant_id)
     if project_id is not None:
         sessions_query = sessions_query.where(MeetingSession.project_id == project_id)
     all_sessions = db.exec(sessions_query).all()
     sessions_in_window = [s for s in all_sessions if _date_in_window(s.date, start, end)]
 
-    all_projects = list(db.exec(select(Project)).all())
+    all_projects = list(
+        db.exec(select(Project).where(Project.tenant_id == tenant_id)).all()
+    )
     project_names = {p.id: p.name for p in all_projects if p.id}
 
-    # Action items vinculados a esas sesiones.
+    # Action items vinculados a esas sesiones — el filtro por session_ids
+    # ya restringe al tenant (las sesiones ya vienen filtradas), pero
+    # añadimos `ActionItem.tenant_id` por defensa-en-profundidad.
     session_ids = [s.id for s in sessions_in_window if s.id is not None]
     items: list[ActionItem] = []
     if session_ids:
         items = list(
-            db.exec(select(ActionItem).where(ActionItem.session_id.in_(session_ids))).all()
+            db.exec(
+                select(ActionItem)
+                .where(ActionItem.tenant_id == tenant_id)
+                .where(ActionItem.session_id.in_(session_ids))
+            ).all()
         )
 
     completed_in_window = []
-    for it in db.exec(select(ActionItem)).all():
+    # Iteramos solo sobre los action items del tenant (no globales).
+    for it in db.exec(
+        select(ActionItem).where(ActionItem.tenant_id == tenant_id)
+    ).all():
         if it.completed_at and _date_in_window(it.completed_at, start, end):
             completed_in_window.append(it)
             if project_id is not None:
@@ -486,18 +503,20 @@ def _build_report(
 @router.get("/data")
 def get_report_data(
     db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
     period: str = Query("week", description="'week' | 'month' | 'custom'"),
     ref: Optional[str] = Query(None, description="Fecha ISO de referencia. Default: hoy."),
     project_id: Optional[int] = Query(None),
     start_date: Optional[str] = Query(None, description="Solo si period='custom' — ISO yyyy-mm-dd"),
     end_date: Optional[str] = Query(None, description="Solo si period='custom' — ISO yyyy-mm-dd"),
 ):
-    return _build_report(db, period, ref, project_id, start_date, end_date)
+    return _build_report(db, period, ref, project_id, tenant.id, start_date, end_date)
 
 
 @router.get("/pdf")
 def get_report_pdf(
     db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
     period: str = Query("week"),
     ref: Optional[str] = Query(None),
     project_id: Optional[int] = Query(None),
@@ -517,7 +536,7 @@ def get_report_pdf(
         return str(text).encode("latin-1", "replace").decode("latin-1")
 
     try:
-        report = _build_report(db, period, ref, project_id, start_date, end_date)
+        report = _build_report(db, period, ref, project_id, tenant.id, start_date, end_date)
     except HTTPException:
         raise
     except Exception:
@@ -654,6 +673,7 @@ def get_report_pdf(
 @router.get("/excel")
 def get_report_excel(
     db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
     period: str = Query("week"),
     ref: Optional[str] = Query(None),
     project_id: Optional[int] = Query(None),
@@ -665,7 +685,7 @@ def get_report_excel(
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment
 
-    report = _build_report(db, period, ref, project_id, start_date, end_date)
+    report = _build_report(db, period, ref, project_id, tenant.id, start_date, end_date)
     wb = Workbook()
 
     HEADER = Font(name="Calibri", size=11, bold=True, color="FFFFFF")

@@ -72,11 +72,18 @@
                 </li>
                 <li *ngIf="canSee('pregunta_acten')">
                     <a routerLink="/admin/ask" routerLinkActive="active" title="Pregúntale a la IA sobre tus actas (RAG)">
+                        <!--
+                          Sparkles ("destellos") — el ícono universal para
+                          interacciones con IA generativa (Notion AI, Microsoft
+                          Copilot, Gemini, ChatGPT, etc.). Reemplaza al signo
+                          de interrogación que era ambiguo (parecía Help/FAQ).
+                        -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                             aria-hidden="true">
+                            <path d="M12 3 L13.5 8.5 L19 10 L13.5 11.5 L12 17 L10.5 11.5 L5 10 L10.5 8.5 Z"></path>
+                            <path d="M19 14 L19.75 16 L21.75 16.75 L19.75 17.5 L19 19.5 L18.25 17.5 L16.25 16.75 L18.25 16 Z"></path>
+                            <path d="M5 14 L5.6 15.4 L7 16 L5.6 16.6 L5 18 L4.4 16.6 L3 16 L4.4 15.4 Z"></path>
                         </svg>
                         <span class="nav-text" *ngIf="!isCollapsed">Pregunta a Acten</span>
                     </a>
