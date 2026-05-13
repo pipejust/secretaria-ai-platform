@@ -298,7 +298,7 @@ async def ask(
             "  - NO afirmes hechos que no estén textualmente en el contexto."
         )
 
-    user = (
+    user_msg = (
         f"Pregunta del usuario: {q}\n\n"
         f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
         f"filtrados de {len(raw_chunks)} candidatos por umbral de relevancia):\n"
@@ -312,7 +312,7 @@ async def ask(
         "model": GROQ_MODEL,
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": user},
+            {"role": "user", "content": user_msg},
         ],
         "temperature": 0.1,  # Bajamos temperatura para reducir confabulación.
         # Modo JSON nativo de Groq (compat con OpenAI). Si Groq no soporta
