@@ -1,0 +1,158 @@
+# =============================================================================
+# Acten — docker-compose.PROD.yml
+# =============================================================================
+# Compose listo para producción en cualquier VPS (Hetzner, Contabo, AWS Lightsail).
+#
+# Diferencias vs docker-compose.yml (dev):
+#   · Sin bind-mount `./backend:/app` (la imagen se usa tal cual).
+#   · Sin `--reload` de uvicorn.
+#   · BCRYPT_ROUNDS=12, ENVIRONMENT=production, LOG_LEVEL=WARNING.
+#   · Postgres password REAL (viene de .env, NO hardcoded).
+#   · Sin puertos expuestos al host EXCEPTO los del reverse proxy
+#     (Coolify expone backend/frontend a través de su Traefik propio).
+#   · Healthchecks estrictos.
+#   · Volumen Postgres con label para identificarlo en backups.
+#
+# Uso con Coolify:
+#   1. Coolify lee este archivo automáticamente.
+#   2. Pasa las env vars desde su UI (NO subas tu .env al repo).
+#   3. Coolify se encarga del reverse proxy + SSL + dominio.
+#
+# Uso manual (sin Coolify):
+#   1. cp deploy/.env.production.example .env
+#   2. Llena las variables.
+#   3. docker compose -f deploy/docker-compose.prod.yml --env-file .env up -d --build
+#   4. Configura Caddy/Nginx aparte para SSL + dominio.
+# =============================================================================
+
+services:
+
+  # --------------------------------------------------------------------------
+  # PostgreSQL 17 con pgvector preinstalado.
+  # IMPORTANTE: el volumen `acten_pgdata` debe respaldarse periódicamente.
+  # Coolify ofrece backups automáticos por volumen; si vas manual, usa
+  # pg_dump en cron (ver POST_DEPLOY_CHECKLIST.md).
+  # --------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: acten-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-acten}
+      POSTGRES_USER: ${POSTGRES_USER:-acten}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
+    volumes:
+      - acten_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-acten} -d ${POSTGRES_DB:-acten}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    # Puerto NO expuesto al host — solo accesible desde la red interna
+    # de docker. Si necesitas conectarte desde fuera (ej. para psql
+    # remoto), usa `docker exec acten-postgres psql ...` o un SSH tunnel.
+    networks:
+      - acten
+
+  # --------------------------------------------------------------------------
+  # Backend FastAPI (Python 3.11 + uvicorn).
+  # Workers = 2× CPU cores. En CX22 (2 vCPU) → 4 workers.
+  # Coolify pasará TRAEFIK_* labels para enrutar tráfico hacia este servicio
+  # automáticamente — no las añadimos a mano.
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: acten-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # ── Persistencia ────────────────────────────────────────────────
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-acten}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-acten}
+
+      # ── Modo prod ───────────────────────────────────────────────────
+      ENVIRONMENT: production
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      # ── Seguridad ───────────────────────────────────────────────────
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY requerida (>=64 chars)}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+      BCRYPT_ROUNDS: "12"
+
+      # ── URLs públicas ───────────────────────────────────────────────
+      # Estas URLs DEBEN coincidir con los dominios que Coolify (o Caddy)
+      # apunta a cada servicio. Ej:
+      #   PUBLIC_BASE_URL = https://api.acten.ai
+      #   FRONTEND_URL    = https://app.acten.ai
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set la URL pública del backend}
+      FRONTEND_URL: ${FRONTEND_URL:?Set la URL pública del frontend}
+
+      # ── Servicios internos ──────────────────────────────────────────
+      GOTENBERG_URL: http://gotenberg:3000
+
+      # ── LLMs / integraciones ───────────────────────────────────────
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      FIREFLIES_API_KEY: ${FIREFLIES_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/openapi.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # Coolify enrutará el dominio `api.<tu-dominio>` a este puerto.
+    expose:
+      - "8000"
+    networks:
+      - acten
+
+  # --------------------------------------------------------------------------
+  # Frontend Angular servido por nginx.
+  # El build pasa NG_APP_API_URL como build-arg, NO como runtime env (Angular
+  # se compila estático). Por eso si cambias la URL del backend tienes que
+  # rebuildar el frontend (Coolify lo hace automáticamente al push).
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        # ⚠️ Coolify resolverá esta variable a la URL pública del backend.
+        NG_APP_API_URL: ${PUBLIC_BASE_URL:?Same as backend}
+    container_name: acten-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "80"
+    networks:
+      - acten
+
+  # --------------------------------------------------------------------------
+  # Gotenberg — conversor DOCX → PDF. Solo usado por el backend.
+  # No expuesto al exterior.
+  # --------------------------------------------------------------------------
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: acten-gotenberg
+    restart: unless-stopped
+    expose:
+      - "3000"
+    networks:
+      - acten
+
+# Volumen persistente de Postgres. Asegúrate de tener backups si manejas
+# datos reales — la pérdida de este volumen = pérdida total del tenant.
+volumes:
+  acten_pgdata:
+    name: acten_pgdata
+
+networks:
+  acten:
+    name: acten
+    driver: bridge
