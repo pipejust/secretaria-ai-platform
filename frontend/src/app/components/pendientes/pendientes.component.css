@@ -501,6 +501,10 @@
 .tk-table tbody tr { position: relative; }
 .tk-table tbody tr:hover { z-index: 5; }
 .tk-table tbody tr:has(.tk-owner-cell:hover) { z-index: 20; }
+/* Cuando el menú de acciones está ABIERTO en una fila, esa fila se
+   eleva por encima de TODAS las demás (incluido el hover de
+   tooltips). El propio menú vive a z-index 30 dentro de la celda. */
+.tk-table tbody tr.tk-row-actions-open { z-index: 100; }
 .tk-table thead th {
     text-align: left;
     padding: 10px 14px;

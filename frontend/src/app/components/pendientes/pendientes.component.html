@@ -183,11 +183,12 @@
                                 </th>
                                 <th class="th-status">Estado</th>
                                 <th class="th-progress">Progreso</th>
-                                <th class="th-actions"></th>
+                                <th class="th-actions">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let it of pagedItems; trackBy: trackById">
+                            <tr *ngFor="let it of pagedItems; trackBy: trackById"
+                                [class.tk-row-actions-open]="openActionsId === it.id">
                                 <td class="td-task">
                                     <div class="tk-task-title" [title]="it.title">{{ it.title }}</div>
                                     <div class="tk-task-code">{{ taskCode(it) }}</div>
