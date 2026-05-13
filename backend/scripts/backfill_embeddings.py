@@ -36,6 +36,9 @@ async def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--limit", type=int, default=0, help="0 = sin límite")
+    parser.add_argument("--force", action="store_true",
+                        help="Re-indexa también las sesiones ya embebidas (úsalo "
+                             "después de cambiar el formato de los chunks).")
     args = parser.parse_args()
 
     with Session(engine) as db:
@@ -52,7 +55,10 @@ async def main() -> int:
                 )
             ).all()
         )
-        pending = [s for s in sessions if s.id not in already_indexed]
+        if args.force:
+            pending = sessions  # embed_session es idempotente (borra y recrea)
+        else:
+            pending = [s for s in sessions if s.id not in already_indexed]
         if args.limit > 0:
             pending = pending[: args.limit]
 

@@ -96,6 +96,12 @@ async def embed_session(db: Session, session_id: int) -> int:
 
     Idempotente: borra los chunks previos de la sesión y los regenera.
     Retorna la cantidad de chunks insertados.
+
+    IMPORTANTE: cada chunk se prefija con `[Reunión: {title}]\\n` antes
+    de enviarse a OpenAI. Así el TÍTULO de la reunión queda incorporado
+    en cada vector. Esto resuelve el caso real donde una sesión titulada
+    "Colpensiones - Kyndryl" no aparecía en búsquedas de "kyndryl"
+    porque la palabra solo estaba en el título y nunca en el contenido.
     """
     if not settings.openai_api_key:
         logger.info("embed_session %s: sin OPENAI_API_KEY, skip.", session_id)
@@ -106,19 +112,28 @@ async def embed_session(db: Session, session_id: int) -> int:
         logger.error("embed_session: sesión %s no existe", session_id)
         return 0
 
+    # Prefijo común que se inyecta en cada chunk para que el título quede
+    # en el espacio vectorial. Ej: "[Reunión: Colpensiones - Kyndryl]\n..."
+    title_prefix = f"[Reunión: {sess.title}]\n" if (sess.title or "").strip() else ""
+
+    def _wrap(text: str, limit: int = 8000) -> str:
+        """Aplica el prefijo de título y respeta el límite total."""
+        body = (text or "")[: max(limit - len(title_prefix), 100)]
+        return title_prefix + body
+
     # Recolectar contenido por kind
     items: list[tuple[str, int, str]] = []
     if sess.raw_summary:
-        items.append(("summary", 0, sess.raw_summary[:8000]))
+        items.append(("summary", 0, _wrap(sess.raw_summary)))
     if sess.processed_decisions:
-        items.append(("decisions", 0, sess.processed_decisions[:8000]))
+        items.append(("decisions", 0, _wrap(sess.processed_decisions)))
     if sess.processed_risks:
-        items.append(("risks", 0, sess.processed_risks[:8000]))
+        items.append(("risks", 0, _wrap(sess.processed_risks)))
     if sess.processed_agreements:
-        items.append(("agreements", 0, sess.processed_agreements[:8000]))
+        items.append(("agreements", 0, _wrap(sess.processed_agreements)))
     if sess.raw_transcript:
         for i, chunk in enumerate(_split_transcript(sess.raw_transcript)):
-            items.append(("transcript", i, chunk))
+            items.append(("transcript", i, title_prefix + chunk))
 
     if not items:
         logger.info("embed_session %s: nada que indexar.", session_id)
@@ -159,18 +174,53 @@ async def embed_session(db: Session, session_id: int) -> int:
     return inserted
 
 
+# Stop-words mínimas para no buscar por título palabras vacías como "que",
+# "es", "de", "en", etc. — sólo añadimos lo justo para reducir ruido.
+_STOP_WORDS = {
+    "que", "qué", "es", "el", "la", "los", "las", "un", "una", "unos", "unas",
+    "de", "del", "en", "con", "por", "para", "y", "o", "u", "a", "al",
+    "como", "qué", "se", "su", "sus", "lo", "le", "les", "mi", "tu", "te",
+    "me", "nos", "ya", "muy", "más", "mas", "esta", "este", "estos", "estas",
+    "the", "and", "for", "from", "with", "that", "this", "these", "those",
+}
+
+# Bonus aplicado a la distancia cuando hay match de título: 0.7 = 30% más
+# cerca. Sin bajarla a 0 para no romper el ordenamiento general.
+_TITLE_MATCH_BONUS = 0.70
+
+
+def _extract_keywords(query: str) -> list[str]:
+    """Extrae palabras significativas (>=4 letras, no stop-words) de la
+    query del usuario. Sirve para hacer ILIKE sobre títulos de sesión."""
+    raw = re.findall(r"\b[\wáéíóúÁÉÍÓÚñÑ]+\b", (query or "").lower())
+    return [w for w in raw if len(w) >= 4 and w not in _STOP_WORDS]
+
+
 async def search_similar(
     db: Session,
     query: str,
     top_k: int = 8,
     project_id: Optional[int] = None,
 ) -> List[dict]:
-    """Búsqueda semántica top-k. Retorna dicts con session_id, kind, content, distance."""
+    """Búsqueda híbrida (vector + título).
+
+    1. Vector search: top_k chunks por similitud coseno con la pregunta.
+    2. Title match: identifica sesiones cuyo TÍTULO contiene alguna
+       palabra-clave de la pregunta (ILIKE). Para cada una que NO esté
+       ya en los resultados vectoriales, añade su mejor chunk con un
+       bonus de distancia (lo acerca un 30% para que rankee mejor).
+    3. Re-ordena por distancia ascendente y trunca a top_k.
+
+    Esto resuelve el caso "que es kyndryl?" donde el contenido de la
+    reunión "Colpensiones - Kyndryl" nunca menciona la palabra Kyndryl
+    pero sí está en su título.
+    """
     qvec = await embed_text(query)
     if qvec is None:
         return []
     qlit = _vector_literal(qvec)
 
+    # ─────── 1. Vector search ───────
     if project_id is not None:
         sql = sa_text(
             """
@@ -194,7 +244,53 @@ async def search_similar(
             """
         ).bindparams(qvec=qlit, k=top_k)
 
-    rows = db.exec(sql).all()
+    vector_rows = list(db.exec(sql).all())
+    vector_session_ids = {r[0] for r in vector_rows}
+
+    # ─────── 2. Title match ───────
+    keywords = _extract_keywords(query)
+    extra_rows: list = []
+    if keywords:
+        # Construimos OR dinámico de ILIKEs sobre el título
+        ilike_clauses = " OR ".join([f"LOWER(ms.title) LIKE :kw{i}" for i in range(len(keywords))])
+        params = {f"kw{i}": f"%{kw}%" for i, kw in enumerate(keywords)}
+        project_filter = " AND ms.project_id = :pid" if project_id is not None else ""
+        if project_id is not None:
+            params["pid"] = project_id
+
+        title_sql = sa_text(
+            f"""
+            SELECT id FROM meetingsession ms
+            WHERE ({ilike_clauses}){project_filter}
+            """
+        ).bindparams(**params)
+        title_session_ids = {r[0] for r in db.exec(title_sql).all()}
+
+        # Sesiones matched por título pero NO presentes en vector results
+        missing = title_session_ids - vector_session_ids
+        for sid in missing:
+            extra_sql = sa_text(
+                """
+                SELECT session_id, kind, chunk_index, content,
+                       embedding_vector <=> CAST(:qvec AS vector) AS distance
+                FROM embeddingchunk
+                WHERE session_id = :sid
+                ORDER BY embedding_vector <=> CAST(:qvec AS vector) ASC
+                LIMIT 1
+                """
+            ).bindparams(qvec=qlit, sid=sid)
+            row = db.exec(extra_sql).first()
+            if row:
+                # Aplicamos bonus por title-match: bajamos la distancia
+                # para que rankee mejor en la mezcla.
+                boosted_distance = float(row[4]) * _TITLE_MATCH_BONUS
+                extra_rows.append((row[0], row[1], row[2], row[3], boosted_distance))
+
+    # ─────── 3. Merge + re-rank + truncate ───────
+    all_rows = vector_rows + extra_rows
+    all_rows.sort(key=lambda r: r[4])
+    final = all_rows[:top_k]
+
     return [
         {
             "session_id": r[0],
@@ -203,5 +299,5 @@ async def search_similar(
             "content": r[3],
             "distance": float(r[4]),
         }
-        for r in rows
+        for r in final
     ]
