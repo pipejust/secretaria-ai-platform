@@ -22,6 +22,25 @@
   box-sizing: border-box;
 }
 
+/* Inputs / textarea / select: NUNCA exceder su contenedor.
+ *
+ * Bug observado en mobile: inputs con placeholder largo (ej: "Buscar
+ * empresa por nombre o slug...") respetaban el min-width intrínseco
+ * del browser (~200px+) y se desbordaban del card padre, generando
+ * scroll horizontal interno y placeholder cortado a "...por n...".
+ *
+ * Forzar `min-width:0; max-width:100%; box-sizing:border-box` en los
+ * controles de formulario evita esto en TODA la app sin tener que
+ * declararlo en cada componente.
+ */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Global overflow-x lockdown.
  *
  * Sin esta regla, CUALQUIER elemento descendiente que excede el viewport

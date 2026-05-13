@@ -1139,6 +1139,22 @@
     .br-header-actions .br-btn { flex: 1; justify-content: center; }
 }
 
+/* Mobile real (<= 540px): los KPIs en 2 columnas tenían cada card de
+   ~140-160px lo que cortaba "Canales configur..." y "Vistas previas
+   disponible...". A 1 columna cada card respira. */
+@media (max-width: 540px) {
+    .br-kpis { grid-template-columns: 1fr; }
+    .br-page { padding: 16px; }
+    /* Inputs de búsqueda DEBEN respetar el ancho del contenedor —
+       sin esto el placeholder largo expandía y se cortaba. */
+    .br-search input,
+    .br-search-input {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+}
+
 /* ============================================================
    Modal Ver detalle — comprehensivo
    ============================================================ */

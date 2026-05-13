@@ -1169,3 +1169,19 @@
     .tn-grid-2, .tn-uploads { grid-template-columns: 1fr; }
     .tn-page { padding: 14px; }
 }
+
+/* Mobile real (<= 540px): los KPIs estaban en 2 columnas (heredado del
+   1280px breakpoint) y cada card de ~150px cortaba "Sin dominios
+   personalizad..." y otros textos largos. A 1 columna respira todo.
+   Los inputs de búsqueda también tenían min-width fijo que se salía
+   del viewport — los volvemos width:100% box-sizing:border-box. */
+@media (max-width: 540px) {
+    .tn-kpis { grid-template-columns: 1fr; }
+    .tn-page { padding: 12px; }
+    .tn-search input,
+    .tn-search-input {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+}

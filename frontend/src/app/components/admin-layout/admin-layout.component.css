@@ -1014,8 +1014,28 @@
 }
 
 @media (max-width: 720px) {
-    .app-footer { grid-template-columns: 1fr; height: auto; padding: 12px 16px; gap: 6px; text-align: center; }
-    .app-footer-left, .app-footer-right { justify-content: center; }
+    .app-footer {
+        grid-template-columns: 1fr;
+        height: auto;
+        padding: 14px 16px;
+        gap: 8px;
+        text-align: center;
+    }
+    /* Centrar TODOS los grupos del footer en mobile.
+       `justify-self` en el grid item + `justify-content` interno del
+       inline-flex para que los items hijos también queden alineados.
+       Sin esto el "Versión 1.0 · 13 may 2026" quedaba pegado al borde
+       derecho (heredaba `justify-self: end` del CSS desktop) y "Acten ·
+       Acten.ai" pegado al izquierdo, dando sensación de footer roto. */
+    .app-footer-left,
+    .app-footer-center,
+    .app-footer-right {
+        justify-self: center;
+        justify-content: center;
+        text-align: center;
+    }
+    .app-footer-right { font-size: 11px; }
+    .app-footer-center { font-size: 11px; line-height: 1.5; }
 }
 
 /* ============================================================================

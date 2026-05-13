@@ -1260,6 +1260,16 @@
         gap: 10px var(--space-12);
         align-items: center;
         border-bottom: 1px solid var(--color-border);   /* sobre-escribe el rule global */
+        /* Min-height fija PARA EVITAR LAYOUT SHIFT (flickering reportado).
+           Cuando el directorio de usuarios resuelve los avatares (async,
+           via UserDirectoryService), las filas crecen verticalmente y la
+           página "salta" abajo. Reservando ~190px desde el principio,
+           el avatar aparece sin mover el resto del contenido. */
+        min-height: 190px;
+    }
+    .cell-participants {
+        /* Misma intención: reservar el espacio del row de avatares */
+        min-height: 32px;
     }
     /* Aplicar redondeo al primer/último row (el wrap ya no lo aplica) */
     .mt-table > .mt-tr:first-child,
