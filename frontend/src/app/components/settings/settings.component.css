@@ -215,21 +215,39 @@
     flex: 1;
     min-width: 0;
     width: 100%;
-    /* RESET TOTAL del estilo nativo del browser. */
-    margin: 0;
-    padding: 0;
+    /* RESET TOTAL — derrota a los estilos globales de styles.css que
+       aplican `border`, `border-radius`, `height: 44px`, `padding`,
+       `background-image` (chevron), `:focus { border-color, box-shadow }`
+       a TODOS los inputs/selects del documento. Necesitamos `!important`
+       y `border-radius: 0` para que NO se vea un segundo box redondeado
+       dentro de nuestro wrapper. */
+    margin: 0 !important;
+    padding: 0 !important;
     border: 0 !important;
+    border-radius: 0 !important;
     outline: none !important;
     box-shadow: none !important;
-    background: transparent;
+    background: transparent !important;
+    background-image: none !important;
     font-family: inherit;
     font-size: 13px;
     line-height: 1.4;
     color: var(--st-text);
-    height: 100%;
+    height: 100% !important;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
+}
+/* Hover/focus globales también disparan border + box-shadow en el select.
+   Los anulamos también, porque queremos que el FOCUS RING viva sólo en
+   el wrapper. */
+.st-field-input input:hover,
+.st-field-input input:focus,
+.st-field-input select:hover,
+.st-field-input select:focus {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 /* El select se ve como un input normal: sin borde, sin chrome propio.
    Le reservamos espacio a la derecha para el chevron del wrapper. */
@@ -257,14 +275,16 @@
     pointer-events: none;
 }
 
-/* Input "plano" sin icono */
+/* Input "plano" sin icono — overrides explícitos contra los globales
+   que setean height: 44px, padding 16, etc. */
 .st-input {
-    width: 100%;
-    height: 40px;
-    padding: 0 12px;
-    border: 1px solid var(--st-border);
-    border-radius: 10px;
-    background: #FFFFFF;
+    width: 100% !important;
+    height: 40px !important;
+    padding: 0 12px !important;
+    border: 1px solid var(--st-border) !important;
+    border-radius: 10px !important;
+    background: #FFFFFF !important;
+    background-image: none !important;
     font-family: inherit;
     font-size: 13px;
     color: var(--st-text);
@@ -272,25 +292,32 @@
     transition: border-color 120ms ease, box-shadow 120ms ease;
     appearance: none;
     -webkit-appearance: none;
+    box-shadow: none !important;
 }
 /* Si es <select> usado con clase st-input, lo tratamos como un input
    con chevron a la derecha. Sin doble borde, sin chrome del browser. */
 select.st-input {
     cursor: pointer;
-    padding-right: 32px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 12px;
+    padding-right: 32px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 12px !important;
     -moz-appearance: none;
 }
 select.st-input::-ms-expand { display: none; }
-.st-input:focus {
-    outline: none;
-    border-color: var(--st-blue);
-    box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
+.st-input:hover {
+    border-color: var(--st-text-soft) !important;
 }
-.st-input[readonly] { background: var(--st-grey-soft); color: var(--st-text-muted); }
+.st-input:focus {
+    outline: none !important;
+    border-color: var(--st-blue) !important;
+    box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12) !important;
+}
+.st-input[readonly] {
+    background: var(--st-grey-soft) !important;
+    color: var(--st-text-muted) !important;
+}
 .st-input::placeholder { color: var(--st-text-soft); }
 
 /* ===================== Password con toggle ===================== */
