@@ -71,10 +71,14 @@
 
         <!-- Meeting Activity -->
         <article class="acn-card acn-card-activity">
+            <!-- Header compacto: título + (legend + preset) a la derecha.
+                 El date range vive en su propia toolbar abajo para no
+                 aplastar al título cuando el contenedor se estrecha. -->
             <header class="acn-card-head">
                 <h2 class="acn-card-title">
                     Actividad de Reuniones
                     <span class="acn-card-sub" *ngIf="!hasCustomRange">(Últimos {{ overviewPeriod === '7d' ? 7 : overviewPeriod === '30d' ? 30 : 14 }} días)</span>
+                    <span class="acn-card-sub" *ngIf="hasCustomRange">(rango personalizado)</span>
                 </h2>
                 <div class="acn-card-head-right">
                     <!-- Leyenda interactiva: click oculta/muestra cada serie. -->
@@ -97,38 +101,6 @@
                         </button>
                     </div>
 
-                    <!-- Date range picker. Si ambas fechas están vacías
-                         se aplica el preset (Diario/Semanal/Mensual).
-                         Al setear las dos, el chart usa el rango custom. -->
-                    <div class="acn-range" role="group" aria-label="Rango de fechas">
-                        <label class="acn-range-input">
-                            <span class="acn-range-label">Desde</span>
-                            <input type="date"
-                                   [(ngModel)]="customFromDate"
-                                   [max]="customToDate || todayIso"
-                                   aria-label="Fecha de inicio" />
-                        </label>
-                        <span class="acn-range-sep" aria-hidden="true">→</span>
-                        <label class="acn-range-input">
-                            <span class="acn-range-label">Hasta</span>
-                            <input type="date"
-                                   [(ngModel)]="customToDate"
-                                   [min]="customFromDate"
-                                   [max]="todayIso"
-                                   aria-label="Fecha de fin" />
-                        </label>
-                        <button type="button" class="acn-range-clear"
-                                *ngIf="hasCustomRange"
-                                (click)="clearCustomRange()"
-                                title="Restablecer rango">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
-                        </button>
-                    </div>
-
                     <!-- El preset queda disponible y se usa cuando NO hay
                          rango custom. Disabled visual mientras hay rango. -->
                     <select class="acn-select"
@@ -143,6 +115,41 @@
                     </select>
                 </div>
             </header>
+
+            <!-- Date range picker en su propia toolbar para que el header
+                 quede legible. Si ambas fechas están vacías, se aplica el
+                 preset (Diario/Semanal/Mensual). Al setear las dos, el
+                 chart usa el rango custom. -->
+            <div class="acn-range-toolbar">
+                <div class="acn-range" role="group" aria-label="Rango de fechas">
+                    <label class="acn-range-input">
+                        <span class="acn-range-label">Desde</span>
+                        <input type="date"
+                               [(ngModel)]="customFromDate"
+                               [max]="customToDate || todayIso"
+                               aria-label="Fecha de inicio" />
+                    </label>
+                    <span class="acn-range-sep" aria-hidden="true">→</span>
+                    <label class="acn-range-input">
+                        <span class="acn-range-label">Hasta</span>
+                        <input type="date"
+                               [(ngModel)]="customToDate"
+                               [min]="customFromDate"
+                               [max]="todayIso"
+                               aria-label="Fecha de fin" />
+                    </label>
+                    <button type="button" class="acn-range-clear"
+                            *ngIf="hasCustomRange"
+                            (click)="clearCustomRange()"
+                            title="Restablecer rango">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
             <div class="acn-chart-wrap">
                 <svg class="acn-chart" viewBox="0 0 600 220" preserveAspectRatio="none" (mouseleave)="clearChartHover()">

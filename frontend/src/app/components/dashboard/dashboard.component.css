@@ -161,6 +161,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex-wrap: wrap;       /* si no caben, controla a la derecha se envuelven */
+    row-gap: 8px;
 }
 .acn-card-title {
     font-size: 12px;
@@ -169,7 +171,12 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin: 0;
+    flex-shrink: 0;        /* el título nunca se aplasta */
+    white-space: nowrap;
+    /* Permitir que sub-text inline (rango activo / preset) baje al
+       wrap si necesario sin partir la palabra principal. */
 }
+.acn-card-title .acn-card-sub { white-space: normal; }
 .acn-card-link {
     font-size: 12px;
     color: var(--acn-blue);
@@ -294,20 +301,27 @@
 .acn-chart-legend .legend-analyzed { background: var(--acn-green); }
 
 /* ====== Date range picker en la card Actividad de Reuniones ======
-   Cada input "date" se renderiza como un chip independiente: pequeño,
-   con label inline a la izquierda + valor a la derecha + chevron del
-   browser. La regla global `input { height:44px }` del styles.css raíz
-   se neutraliza con specificity alta + !important defensivos. */
+   Vive en su propia toolbar debajo del header para no aplastar al
+   título cuando el contenedor se estrecha. Cada input "date" es un
+   chip independiente. La regla global `input { height:44px }` del
+   styles.css raíz se neutraliza con !important defensivos. */
+.acn-range-toolbar {
+    display: flex;
+    justify-content: flex-end;     /* alineado a la derecha bajo el header */
+    align-items: center;
+    margin-top: -4px;              /* visualmente "pegado" al header */
+}
 .acn-range {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    /* SIN border ni background propios: cada input es su propio chip. */
     background: transparent;
     border: none;
     padding: 0;
     height: auto;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;                /* en mobile, los chips wrappean */
+    justify-content: flex-end;
+    row-gap: 6px;
 }
 
 /* Cada label envuelve un input. Es el "chip" visual. */
@@ -443,13 +457,18 @@
     letter-spacing: 0;
 }
 
-/* Responsive: en mobile, el header de la card colapsa los controles
-   debajo del título para que no se aplasten. */
+/* Responsive: en mobile, el toolbar del range se alinea a la izquierda y
+   los chips quedan más compactos. El header ya hace wrap nativo gracias
+   a flex-wrap del .acn-card-head. */
 @media (max-width: 768px) {
-    .acn-card-activity .acn-card-head { flex-wrap: wrap; gap: 8px; }
-    .acn-card-head-right { flex-wrap: wrap; gap: 8px; }
-    .acn-range { height: auto; padding: 6px 8px; }
-    .acn-range-input input[type="date"] { width: 100%; }
+    .acn-card-head-right { flex-wrap: wrap; gap: 8px; row-gap: 6px; }
+    .acn-range-toolbar { justify-content: flex-start; margin-top: 4px; }
+    .acn-range { flex-wrap: wrap; }
+    .acn-range-input { flex: 1 1 calc(50% - 12px); min-width: 130px; }
+    .acn-range-input input[type="date"] { width: auto; min-width: 80px; }
+}
+@media (max-width: 480px) {
+    .acn-range-input { flex: 1 1 100%; }
 }
 
 .acn-chart-tooltip {
