@@ -49,8 +49,29 @@ class Citation(BaseModel):
     distance: float
 
 
+class ActionItemDTO(BaseModel):
+    title: str
+    owner: str = ""
+    due_date: str = ""
+    status: str = ""  # "in_progress" | "pending" | "not_started" | "done"
+
+
+class StructuredAnswer(BaseModel):
+    """Respuesta estructurada que Groq devuelve cuando le pedimos JSON.
+
+    `intro` es el primer párrafo introductorio.
+    `decisions` es la lista de decisiones clave (cada una un bullet).
+    `action_items` es la tabla de tareas pendientes que extrajo del
+    contexto. Si el modelo no encuentra alguna sección, devuelve [] o "".
+    """
+    intro: str = ""
+    decisions: list[str] = []
+    action_items: list[ActionItemDTO] = []
+
+
 class AskResponse(BaseModel):
     answer: str
+    structured: Optional[StructuredAnswer] = None
     citations: list[Citation]
     model: str
     chunks_used: int
@@ -85,17 +106,37 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
         )
 
     context = _build_context(chunks)
+    # Pedimos JSON estructurado para que el frontend pueda renderizar
+    # secciones (Decisiones / Tareas pendientes / Fuentes) tal como el
+    # mockup. El campo `intro` es el resumen introductorio en markdown
+    # corto. Si Groq no detecta alguna sección, devuelve [] o "".
     system = (
-        "Eres el asistente de Notiva. Responde EXCLUSIVAMENTE en español. "
-        "Cita las sesiones que usaste como evidencia con el formato "
-        "(Sesión #ID). NO inventes datos que no estén en el contexto. "
-        "Si la información en el contexto es insuficiente, dilo claramente."
+        "Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
+        "con esta estructura EXACTA:\n"
+        "{\n"
+        '  "intro": "<resumen introductorio en español, 1-2 frases>",\n'
+        '  "decisions": ["<decisión 1>", "<decisión 2>", ...],\n'
+        '  "action_items": [\n'
+        '    {"title": "<tarea>", "owner": "<responsable>", '
+        '"due_date": "<fecha YYYY-MM-DD o vacío>", '
+        '"status": "<in_progress|pending|not_started|done>"}\n'
+        "  ]\n"
+        "}\n"
+        "REGLAS:\n"
+        "- Responde EXCLUSIVAMENTE en español.\n"
+        "- Si el contexto no menciona decisiones, devuelve decisions = [].\n"
+        "- Si no hay tareas explícitas, devuelve action_items = [].\n"
+        "- NO inventes nombres ni fechas que no estén en el contexto.\n"
+        "- Cada decisión es UNA frase clara, sin viñetas, sin asteriscos.\n"
+        "- `due_date` solo cuando la fecha esté en el contexto; si no, vacío.\n"
+        "- `status` por defecto 'pending' si no se infiere uno claro.\n"
+        "- Si la pregunta es genérica, sintetiza lo más relevante del contexto."
     )
     user = (
         f"Pregunta del usuario: {q}\n\n"
         f"Contexto extraído de actas anteriores (top_k={len(chunks)}):\n"
         f"{context}\n\n"
-        f"Responde de forma concisa y cita las sesiones."
+        f"Devuelve la respuesta como JSON estricto siguiendo el esquema."
     )
 
     payload_llm = {
@@ -105,6 +146,10 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
             {"role": "user", "content": user},
         ],
         "temperature": 0.2,
+        # Modo JSON nativo de Groq (compat con OpenAI). Si Groq no soporta
+        # response_format en esta versión del modelo, se ignora silently
+        # y validamos parseando manualmente.
+        "response_format": {"type": "json_object"},
     }
     headers = {
         "Authorization": f"Bearer {settings.groq_api_key}",
@@ -121,7 +166,46 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
                 GROQ_MODEL, usage.get("prompt_tokens"),
                 usage.get("completion_tokens"), usage.get("total_tokens"),
             )
-        answer = body["choices"][0]["message"]["content"].strip()
+        raw_answer = body["choices"][0]["message"]["content"].strip()
+
+    structured: Optional[StructuredAnswer] = None
+    answer_md = raw_answer
+    try:
+        import json as _json
+        parsed = _json.loads(raw_answer)
+        if isinstance(parsed, dict):
+            structured = StructuredAnswer(
+                intro=str(parsed.get("intro") or ""),
+                decisions=[str(d).strip() for d in (parsed.get("decisions") or []) if str(d).strip()],
+                action_items=[
+                    ActionItemDTO(
+                        title=str(it.get("title") or "").strip(),
+                        owner=str(it.get("owner") or "").strip(),
+                        due_date=str(it.get("due_date") or "").strip(),
+                        status=str(it.get("status") or "pending").strip().lower(),
+                    )
+                    for it in (parsed.get("action_items") or [])
+                    if isinstance(it, dict) and it.get("title")
+                ],
+            )
+            # Re-componemos un markdown legible como fallback para el
+            # campo `answer` (que es lo que ven los integradores que NO
+            # consumen `structured`).
+            answer_md = structured.intro
+            if structured.decisions:
+                answer_md += "\n\n### Decisiones clave\n" + "\n".join(
+                    f"- {d}" for d in structured.decisions
+                )
+            if structured.action_items:
+                answer_md += "\n\n### Tareas pendientes\n" + "\n".join(
+                    f"- **{it.title}** — {it.owner or 'Sin asignar'}"
+                    + (f" · vence {it.due_date}" if it.due_date else "")
+                    for it in structured.action_items
+                )
+    except (ValueError, TypeError) as exc:
+        # Groq devolvió texto libre (no JSON). Lo dejamos como markdown
+        # plano y `structured` queda en None.
+        logger.info("ask: respuesta no es JSON válido (%s) — fallback a markdown", exc)
 
     citations = [
         Citation(
@@ -130,4 +214,10 @@ async def ask(payload: AskRequest, db: Session = Depends(get_session)):
         )
         for c in chunks
     ]
-    return AskResponse(answer=answer, citations=citations, model=GROQ_MODEL, chunks_used=len(chunks))
+    return AskResponse(
+        answer=answer_md,
+        structured=structured,
+        citations=citations,
+        model=GROQ_MODEL,
+        chunks_used=len(chunks),
+    )

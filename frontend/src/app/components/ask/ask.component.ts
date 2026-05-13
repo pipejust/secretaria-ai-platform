@@ -1,4 +1,6 @@
-import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import {
+    Component, OnDestroy, OnInit, ChangeDetectorRef, ViewChild, ElementRef, HostListener,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -16,8 +18,23 @@ interface Citation {
     snippet: string;
     distance: number;
 }
+
+interface ActionItem {
+    title: string;
+    owner: string;
+    due_date: string;
+    status: string;
+}
+
+interface StructuredAnswer {
+    intro: string;
+    decisions: string[];
+    action_items: ActionItem[];
+}
+
 interface AskResponse {
     answer: string;
+    structured?: StructuredAnswer | null;
     citations: Citation[];
     model: string;
     chunks_used: number;
@@ -25,6 +42,7 @@ interface AskResponse {
 interface ChatTurn {
     question: string;
     answer: string;
+    structured?: StructuredAnswer | null;
     citations: Citation[];
     model: string;
     chunks_used: number;
@@ -35,6 +53,13 @@ interface SuggestedCategory {
     label: string;
     icon: 'meeting' | 'risk' | 'decision';
     prompts: string[];
+}
+
+interface ModelOption {
+    id: string;
+    label: string;
+    sublabel: string;
+    disabled: boolean;
 }
 
 @Component({
@@ -54,6 +79,22 @@ export class AskComponent implements OnInit, OnDestroy {
     /** Sesiones cargadas para enriquecer el listado de Fuentes con metadatos. */
     private sessionMeta: Map<number, { title: string; date: string; duration?: string; participants?: number }> = new Map();
     private readonly destroy$ = new Subject<void>();
+
+    /** Catálogo de modelos disponibles. Backend siempre usa Groq por ahora,
+     *  pero exponemos un select preparado para cuando agreguemos OpenAI/Claude. */
+    readonly modelOptions: ModelOption[] = [
+        { id: 'groq-llama-3.3-70b', label: 'Acten AI', sublabel: 'Groq · Llama 3.3 70B', disabled: false },
+        { id: 'gpt-4o',             label: 'GPT-4o',   sublabel: 'OpenAI · próximamente', disabled: true },
+        { id: 'claude-sonnet',      label: 'Claude Sonnet', sublabel: 'Anthropic · próximamente', disabled: true },
+    ];
+    selectedModel: string = this.modelOptions[0].id;
+
+    /** Controles avanzados (popover de sliders). */
+    showAdvanced = false;
+    topK: number = 8;
+
+    @ViewChild('attachInput') attachInput?: ElementRef<HTMLInputElement>;
+    @ViewChild('advancedPanel') advancedPanel?: ElementRef<HTMLDivElement>;
 
     constructor(
         private http: HttpClient,
@@ -131,7 +172,8 @@ export class AskComponent implements OnInit, OnDestroy {
         }
         this.isAsking = true;
         const headers = this.authService.getAuthHeaders();
-        const body: any = { question: q, top_k: 8 };
+        const topK = Math.max(3, Math.min(20, Math.round(this.topK || 8)));
+        const body: any = { question: q, top_k: topK };
         if (this.projectId) body.project_id = this.projectId;
 
         this.http.post<AskResponse>(`${environment.apiUrl}/api/ask`, body, { headers })
@@ -169,9 +211,71 @@ export class AskComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
+    // ============================================================
+    // Tool buttons (paperclip + sliders) del input chat
+    // ============================================================
+
+    /** Abre el file picker. Acepta texto plano para inyectarlo como
+     *  contexto adicional dentro de la pregunta. */
+    triggerAttach(): void {
+        this.attachInput?.nativeElement?.click();
+    }
+
+    onAttachFile(ev: Event): void {
+        const input = ev.target as HTMLInputElement;
+        const file = input?.files?.[0];
+        if (!file) return;
+        // Limitamos a 200kb de texto plano para no sobrepasar el contexto.
+        if (file.size > 200_000) {
+            this.toast.warning('El archivo es muy grande (máx 200 KB de texto).');
+            input.value = '';
+            return;
+        }
+        const okTypes = ['text/plain', 'text/markdown', 'application/json', ''];
+        const ext = file.name.toLowerCase().split('.').pop() || '';
+        const looksText = okTypes.includes(file.type) || ['txt','md','json','csv'].includes(ext);
+        if (!looksText) {
+            this.toast.warning('Solo se admite texto plano (.txt, .md, .json, .csv).');
+            input.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const txt = String(reader.result || '').slice(0, 4000);
+            const prefix = this.question ? this.question + '\n\n' : '';
+            this.question = `${prefix}--- Contexto adjunto (${file.name}) ---\n${txt}`;
+            this.toast.success(`Adjunté ${file.name} como contexto.`);
+            this.cdr.detectChanges();
+        };
+        reader.onerror = () => this.toast.error('No se pudo leer el archivo.');
+        reader.readAsText(file);
+        input.value = '';
+    }
+
+    /** Toggle del popover de ajustes avanzados (top_k, etc.). */
+    toggleAdvanced(): void {
+        this.showAdvanced = !this.showAdvanced;
+        this.cdr.detectChanges();
+    }
+
+    /** Cerrar popover al click fuera. */
+    @HostListener('document:click', ['$event'])
+    onDocumentClick(ev: MouseEvent): void {
+        if (!this.showAdvanced) return;
+        const panel = this.advancedPanel?.nativeElement;
+        const target = ev.target as Node | null;
+        if (panel && target && !panel.contains(target)) {
+            // El click fue fuera del panel → cerrar.
+            this.showAdvanced = false;
+            this.cdr.detectChanges();
+        }
+    }
+
     trackByTurn(_i: number, t: ChatTurn): number { return t.timestamp; }
     trackByCitation(_i: number, c: Citation): string { return `${c.session_id}-${c.kind}`; }
     trackBySource(_i: number, s: { session_id: number }): number { return s.session_id; }
+    trackByDecision(i: number, _d: string): number { return i; }
+    trackByActionItem(i: number, _it: ActionItem): number { return i; }
 
     // ============================================================
     // Helpers de presentación
@@ -282,5 +386,46 @@ export class AskComponent implements OnInit, OnDestroy {
      *  reconoce el click. Cuando exista endpoint, lo cableamos. */
     rateAnswer(turn: ChatTurn, score: 'up' | 'down'): void {
         this.toast.success(score === 'up' ? '¡Gracias por tu feedback!' : 'Gracias, tomaremos nota.');
+    }
+
+    // ============================================================
+    // Helpers para la respuesta estructurada
+    // ============================================================
+
+    /** ¿Tiene el turn datos estructurados que valga la pena renderizar? */
+    hasStructured(turn: ChatTurn): boolean {
+        const s = turn?.structured;
+        if (!s) return false;
+        return !!(s.intro || s.decisions?.length || s.action_items?.length);
+    }
+
+    /** Iniciales del owner para el avatar circular (mismo helper que
+     *  usa la lista de usuarios global). */
+    ownerInitials(name: string): string {
+        const n = (name || '').trim();
+        if (!n) return '··';
+        const parts = n.split(/\s+/);
+        return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
+    }
+
+    /** Etiqueta legible para el badge de status. */
+    statusLabel(status: string): string {
+        const s = (status || '').toLowerCase();
+        switch (s) {
+            case 'in_progress': return 'En progreso';
+            case 'pending':     return 'Pendiente';
+            case 'not_started': return 'No iniciado';
+            case 'done':        return 'Completado';
+            default:            return s ? s : 'Pendiente';
+        }
+    }
+
+    /** Tono del badge — debe coincidir con [data-tone] en el CSS. */
+    statusTone(status: string): 'blue' | 'amber' | 'gray' | 'green' {
+        const s = (status || '').toLowerCase();
+        if (s === 'in_progress') return 'blue';
+        if (s === 'done')        return 'green';
+        if (s === 'not_started') return 'gray';
+        return 'amber'; // pending o desconocido
     }
 }

@@ -1,8 +1,8 @@
 <!-- ============================================================================
      Pregunta a Acten — réplica visual del mockup adjunto.
      Layout: header → grid 2-col (sugerencias izq + conversación der)
-     Toda la lógica/datos viene del AskComponent existente; aquí sólo
-     re-estructuramos para parecernos al mockup.
+     Pensado para ocupar exactamente el viewport (sin scroll vertical en la
+     página). El scroll sólo vive dentro de `.aa-chat-list` y `.aa-suggested`.
      ============================================================================ -->
 <div class="acten-ask">
 
@@ -11,7 +11,7 @@
         <div class="aa-hero-text">
             <h1 class="aa-title">
                 <span class="aa-title-icon" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path>
                         <path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path>
@@ -29,15 +29,6 @@
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
                 Nueva pregunta
-            </button>
-            <button type="button" class="aa-btn aa-btn-secondary" disabled
-                    title="Próximamente — el historial de consultas se persistirá por workspace.">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                Historial
             </button>
         </div>
     </header>
@@ -92,17 +83,6 @@
                     </li>
                 </ul>
             </ng-container>
-
-            <button type="button" class="aa-prompt aa-prompt-all" disabled
-                    title="Próximamente — biblioteca completa de prompts curados.">
-                Ver todos los prompts
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-            </button>
         </aside>
 
         <!-- ============= PANEL DER: CONVERSACIÓN ============= -->
@@ -154,8 +134,13 @@
                         <div class="aa-a-card">
                             <header class="aa-a-card-head">
                                 <p class="aa-a-intro">
-                                    Esta es la respuesta de Acten basada en
-                                    {{ turn.chunks_used }} fragmentos de contexto.
+                                    <ng-container *ngIf="hasStructured(turn) && turn.structured?.intro; else genericIntro">
+                                        {{ turn.structured?.intro }}
+                                    </ng-container>
+                                    <ng-template #genericIntro>
+                                        Esta es la respuesta de Acten basada en
+                                        {{ turn.chunks_used }} fragmentos de contexto.
+                                    </ng-template>
                                 </p>
                                 <div class="aa-a-actions">
                                     <button type="button" class="aa-a-action" (click)="copyAnswer(turn)" title="Copiar respuesta">
@@ -180,17 +165,100 @@
                                 </div>
                             </header>
 
-                            <!-- Cuerpo de la respuesta (markdown) -->
-                            <div class="aa-a-body md-block" [innerHTML]="turn.answer | mdRender"></div>
+                            <!-- ============= RESPUESTA ESTRUCTURADA ============= -->
+                            <ng-container *ngIf="hasStructured(turn); else fallbackMd">
+
+                                <!-- Decisiones clave -->
+                                <div class="aa-section aa-decisions" *ngIf="turn.structured?.decisions?.length">
+                                    <h3 class="aa-section-title">
+                                        <span class="aa-section-icon aa-section-icon--green" aria-hidden="true">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        </span>
+                                        Decisiones clave
+                                    </h3>
+                                    <ul class="aa-decision-list">
+                                        <li class="aa-decision"
+                                            *ngFor="let d of turn.structured?.decisions; trackBy: trackByDecision">
+                                            <span class="aa-decision-dot" aria-hidden="true">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                </svg>
+                                            </span>
+                                            <span class="aa-decision-text">{{ d }}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Tareas pendientes -->
+                                <div class="aa-section aa-tasks" *ngIf="turn.structured?.action_items?.length">
+                                    <h3 class="aa-section-title">
+                                        <span class="aa-section-icon aa-section-icon--blue" aria-hidden="true">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M9 11l3 3L22 4"></path>
+                                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                            </svg>
+                                        </span>
+                                        Tareas pendientes
+                                    </h3>
+                                    <div class="aa-table-wrap">
+                                        <table class="aa-task-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="th-task">Tarea</th>
+                                                    <th class="th-owner">Responsable</th>
+                                                    <th class="th-due">Fecha límite</th>
+                                                    <th class="th-status">Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr *ngFor="let it of turn.structured?.action_items; trackBy: trackByActionItem">
+                                                    <td class="td-task">{{ it.title }}</td>
+                                                    <td class="td-owner">
+                                                        <ng-container *ngIf="it.owner; else noOwner">
+                                                            <span class="aa-owner-avatar">{{ ownerInitials(it.owner) }}</span>
+                                                            <span class="aa-owner-name">{{ it.owner }}</span>
+                                                        </ng-container>
+                                                        <ng-template #noOwner>
+                                                            <span class="aa-owner-empty">Sin asignar</span>
+                                                        </ng-template>
+                                                    </td>
+                                                    <td class="td-due">
+                                                        <ng-container *ngIf="it.due_date; else noDue">{{ it.due_date }}</ng-container>
+                                                        <ng-template #noDue><span class="aa-due-empty">—</span></ng-template>
+                                                    </td>
+                                                    <td class="td-status">
+                                                        <span class="aa-status-badge"
+                                                              [attr.data-tone]="statusTone(it.status)">
+                                                            {{ statusLabel(it.status) }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </ng-container>
+
+                            <ng-template #fallbackMd>
+                                <!-- Fallback markdown si Groq no devolvió JSON. -->
+                                <div class="aa-a-body md-block" [innerHTML]="turn.answer | mdRender"></div>
+                            </ng-template>
 
                             <!-- Sección Fuentes -->
                             <div class="aa-sources" *ngIf="sourceList(turn).length">
                                 <h3 class="aa-section-title">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                    </svg>
+                                    <span class="aa-section-icon aa-section-icon--gray" aria-hidden="true">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                    </span>
                                     Fuentes
                                 </h3>
                                 <ul class="aa-source-list">
@@ -244,35 +312,74 @@
                         [disabled]="isAsking"></textarea>
                     <div class="aa-chat-input-foot">
                         <div class="aa-chat-input-tools">
-                            <button type="button" class="aa-tool-btn" disabled title="Adjuntar — próximamente">
+                            <!-- Adjuntar archivo de texto como contexto -->
+                            <button type="button" class="aa-tool-btn"
+                                    (click)="triggerAttach()"
+                                    [disabled]="isAsking"
+                                    title="Adjuntar contexto (.txt, .md, .json, .csv hasta 200 KB)">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                                 </svg>
                             </button>
-                            <button type="button" class="aa-tool-btn" disabled title="Ajustes — próximamente">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="4" y1="21" x2="4" y2="14"></line>
-                                    <line x1="4" y1="10" x2="4" y2="3"></line>
-                                    <line x1="12" y1="21" x2="12" y2="12"></line>
-                                    <line x1="12" y1="8" x2="12" y2="3"></line>
-                                    <line x1="20" y1="21" x2="20" y2="16"></line>
-                                    <line x1="20" y1="12" x2="20" y2="3"></line>
-                                    <line x1="1" y1="14" x2="7" y2="14"></line>
-                                    <line x1="9" y1="8" x2="15" y2="8"></line>
-                                    <line x1="17" y1="16" x2="23" y2="16"></line>
-                                </svg>
-                            </button>
+                            <input #attachInput type="file" hidden
+                                   accept=".txt,.md,.json,.csv,text/plain,text/markdown,application/json,text/csv"
+                                   (change)="onAttachFile($event)" />
+
+                            <!-- Ajustes avanzados (top_k slider) -->
+                            <div class="aa-advanced-wrap" #advancedPanel>
+                                <button type="button" class="aa-tool-btn"
+                                        [class.is-active]="showAdvanced"
+                                        (click)="toggleAdvanced(); $event.stopPropagation()"
+                                        [disabled]="isAsking"
+                                        title="Ajustes de búsqueda">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="4" y1="21" x2="4" y2="14"></line>
+                                        <line x1="4" y1="10" x2="4" y2="3"></line>
+                                        <line x1="12" y1="21" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12" y2="3"></line>
+                                        <line x1="20" y1="21" x2="20" y2="16"></line>
+                                        <line x1="20" y1="12" x2="20" y2="3"></line>
+                                        <line x1="1" y1="14" x2="7" y2="14"></line>
+                                        <line x1="9" y1="8" x2="15" y2="8"></line>
+                                        <line x1="17" y1="16" x2="23" y2="16"></line>
+                                    </svg>
+                                </button>
+                                <div class="aa-advanced-pop" *ngIf="showAdvanced" (click)="$event.stopPropagation()">
+                                    <p class="aa-advanced-title">Ajustes de búsqueda</p>
+                                    <label class="aa-advanced-row">
+                                        <span class="aa-advanced-label">
+                                            Fragmentos de contexto
+                                            <strong>{{ topK }}</strong>
+                                        </span>
+                                        <input type="range" min="3" max="20" step="1"
+                                               [(ngModel)]="topK"
+                                               class="aa-range" />
+                                        <span class="aa-advanced-hint">
+                                            Más fragmentos = respuesta más rica, pero más lenta.
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
+
                         <div class="aa-chat-input-right">
-                            <span class="aa-model-badge">
+                            <!-- Select real para cambiar modelo -->
+                            <label class="aa-model-select" title="Modelo de IA">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path>
                                 </svg>
-                                Acten AI
-                            </span>
+                                <select [(ngModel)]="selectedModel" [disabled]="isAsking">
+                                    <option *ngFor="let m of modelOptions"
+                                            [value]="m.id"
+                                            [disabled]="m.disabled">
+                                        {{ m.label }} · {{ m.sublabel }}
+                                    </option>
+                                </select>
+                            </label>
+
                             <button type="button" class="aa-send"
                                     (click)="submit()"
                                     [disabled]="isAsking || !question.trim()"
