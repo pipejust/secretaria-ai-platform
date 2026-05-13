@@ -22,6 +22,26 @@
   box-sizing: border-box;
 }
 
+/* Global overflow-x lockdown.
+ *
+ * Sin esta regla, CUALQUIER elemento descendiente que excede el viewport
+ * horizontalmente (un input mal medido, una tabla, un dropdown que se
+ * sale, una imagen sin max-width) infla el body y los browsers móviles
+ * hacen zoom-out automático para mostrar todo. Resultado: la app se ve
+ * "mordida", carga con minizoom, y el scroll vertical "baila"
+ * horizontalmente (el viewport sigue al contenido más ancho de lo que
+ * el user ve cuando scrollea).
+ *
+ * Con `overflow-x: hidden` + `max-width: 100vw` cualquier overflow
+ * horizontal se clipea silenciosamente — el browser muestra exactamente
+ * el viewport que pidió el meta. El zoom queda controlado por el user
+ * (no auto), y el scroll vertical es solo vertical.
+ */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-bg-base);
