@@ -1220,6 +1220,17 @@
         max-height: none;
     }
 }
+/* Padding mobile alineado al resto de vistas (dashboard, projects, reportes).
+   .tpl-page tenía padding: 32px FIJO sin override mobile → se veía con
+   "más aire" que /reuniones, /resumen, /proyectos, /reportes (que todas
+   bajan a 20-16px en móvil). Estandarizamos: 20px en tablet, 16px en
+   móvil real para que se sienta consistente entre vistas. */
+@media (max-width: 720px) {
+    .tpl-page { padding: 20px; gap: var(--space-16); }
+}
+@media (max-width: 540px) {
+    .tpl-page { padding: 16px; }
+}
 @media (max-width: 980px) {
     .tpl-grid, .tpl-grid:not(.has-detail) { grid-template-columns: 1fr; }
     .tpl-categories { order: -1; }

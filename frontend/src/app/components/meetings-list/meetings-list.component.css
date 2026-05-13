@@ -6,7 +6,17 @@
 
 .meetings-page {
     display: grid;
-    grid-template-columns: 1fr;
+    /* IMPORTANTE: minmax(0, 1fr) en vez de solo 1fr.
+       Sin el min:0 explícito, CSS Grid permite que un descendiente con
+       contenido ancho (ej: una métrica con número grande, una fila de
+       tabla) EXPANDA la columna más allá del viewport. Eso producía:
+         viewport 375px → .meetings-main era 425px (overflow oculto por
+         el overflow-x:hidden global, pero todos los hijos heredaban
+         "ensanche fantasma" — el efecto visual reportado de "carga bien
+         y luego se ensancha al llegar la data real").
+       Con minmax(0, 1fr) el grid item se encajona en el ancho real
+       disponible. */
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-20);
     align-items: start;
     min-height: calc(100vh - 64px);
@@ -1214,7 +1224,16 @@
 
 /* Tablet: panel lateral pasa abajo, métricas a 2×2 */
 @media (max-width: 1200px) {
-    .meetings-page.has-detail { grid-template-columns: 1fr; }
+    /* CRÍTICO: minmax(0, 1fr), no solo 1fr.
+       Sin minmax(0, ...) el grid permite que un descendiente con
+       contenido ancho (ej: una métrica con número grande, una fila
+       con título largo) EXPANDA la columna más allá del viewport.
+       Resultado observado: viewport 375px → meetings-main era 425px
+       (50px de overflow oculto por overflow-x:hidden global). El
+       efecto visual: la página "se ensancha unos segundos después
+       de cargar" porque al llegar la data real ese overflow crece.
+       minmax(0, 1fr) fuerza la columna a respetar el ancho real. */
+    .meetings-page.has-detail { grid-template-columns: minmax(0, 1fr); }
     .meetings-detail { position: static; max-height: none; }
 }
 
@@ -1234,9 +1253,13 @@
         row 2: fecha + duración (split)
         row 3: participantes (full)
         row 4: origen + estado (split)
-   El header tabular se oculta. */
+   El header tabular se oculta.
+
+   Padding alineado al resto de vistas (dashboard, projects, reportes,
+   plantillas usan 20-16px en mobile). Antes .meetings-page tenía 32px
+   fijo, lo cual desnivelaba la sensación visual entre páginas. */
 @media (max-width: 780px) {
-    .meetings-page { gap: var(--space-16); }
+    .meetings-page { gap: var(--space-16); padding: 20px; }
     .mt-title { font-size: 1.5rem; }
     .mt-sub { font-size: var(--text-13); }
 
@@ -1309,6 +1332,7 @@
 @media (max-width: 560px) {
     .mt-metrics { grid-template-columns: 1fr; }
     .mt-filters { grid-template-columns: 1fr; }
+    .meetings-page { padding: 16px; }
     /* En mobile, el botón "Filtros" queda más compacto pero sin perder
        el badge ni el chevron. */
     .mt-search-row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-8); }
