@@ -1,8 +1,9 @@
 import logging
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import create_db_and_tables
@@ -83,6 +84,58 @@ app.add_middleware(
 _UPLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 os.makedirs(os.path.join(_UPLOADS_DIR, "avatars"), exist_ok=True)
 app.mount("/static", StaticFiles(directory=_UPLOADS_DIR), name="static-uploads")
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# SEO middleware — el API en api.acten.app NO debe ser indexado por Google.
+# Sin esto, los crawlers podrían indexar los OpenAPI/docs y exponer la
+# superficie del API públicamente en SERPs.
+# ────────────────────────────────────────────────────────────────────────────
+@app.middleware("http")
+async def add_seo_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Bloqueamos indexación del subdominio API completo.
+    response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet")
+    return response
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# robots.txt restrictivo en el subdominio API.
+# Si un crawler igual intenta indexar api.acten.app, encuentra Disallow: /
+# ────────────────────────────────────────────────────────────────────────────
+_API_ROBOTS_TXT = """# Acten API — subdominio NO indexable
+# Toda la superficie del API queda fuera de los buscadores.
+# Para SEO de la app, ver https://acten.app/robots.txt
+
+User-agent: *
+Disallow: /
+"""
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def api_robots_txt() -> PlainTextResponse:
+    return PlainTextResponse(content=_API_ROBOTS_TXT, media_type="text/plain")
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# favicon.ico para que cuando un browser/crawler haga GET api.acten.app/favicon.ico
+# devolvamos el mismo favicon de la marca en vez de 404.
+# El archivo se busca en backend/uploads/favicon.ico (lo monta Coolify si existe);
+# si no, fallback a un 204 No Content para no spamear logs con 404.
+# ────────────────────────────────────────────────────────────────────────────
+_FAVICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def api_favicon() -> Response:
+    if os.path.isfile(_FAVICON_PATH):
+        return FileResponse(
+            _FAVICON_PATH,
+            media_type="image/x-icon",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    return Response(status_code=204)
+
 
 @app.on_event("startup")
 def on_startup():

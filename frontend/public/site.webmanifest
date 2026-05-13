@@ -1,0 +1,67 @@
+{
+  "name": "Acten — Plataforma IA de actas y tareas",
+  "short_name": "Acten",
+  "description": "Convierte reuniones en actas, decisiones y tareas distribuidas a Trello, Jira, ClickUp y Azure DevOps.",
+  "start_url": "/?utm_source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "es-CO",
+  "dir": "ltr",
+  "theme_color": "#4F46E5",
+  "background_color": "#ffffff",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Reuniones",
+      "short_name": "Reuniones",
+      "description": "Acceso rápido al listado de reuniones",
+      "url": "/admin/meetings?utm_source=pwa-shortcut",
+      "icons": [{ "src": "/favicon-32x32.png", "sizes": "32x32" }]
+    },
+    {
+      "name": "Tareas",
+      "short_name": "Tareas",
+      "description": "Tareas pendientes de la reunión",
+      "url": "/admin/tareas?utm_source=pwa-shortcut",
+      "icons": [{ "src": "/favicon-32x32.png", "sizes": "32x32" }]
+    },
+    {
+      "name": "Calendario",
+      "short_name": "Calendario",
+      "description": "Próximas reuniones",
+      "url": "/admin/calendar?utm_source=pwa-shortcut",
+      "icons": [{ "src": "/favicon-32x32.png", "sizes": "32x32" }]
+    }
+  ]
+}

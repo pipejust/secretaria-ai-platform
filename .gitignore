@@ -79,3 +79,6 @@ PROMPT.md
 rediseño/
 *.css-E
 *.bak
+
+# Favicons originales (ya copiados a frontend/public/)
+/favicon/

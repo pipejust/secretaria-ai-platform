@@ -1,33 +1,200 @@
 <!doctype html>
-<html lang="es">
+<html lang="es-CO" dir="ltr">
 <head>
   <meta charset="utf-8">
-  <title>Acten — Plataforma de actas inteligentes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
 
-  <!-- Primary Meta Tags -->
-  <meta name="title" content="Acten — Plataforma de actas inteligentes">
-  <meta name="description" content="Plataforma empresarial de inteligencia artificial (Fireflies, Groq) que extrae tareas, decisiones y crea actas precisas directamente desde las grabaciones de tus reuniones a Trello, Jira, ClickUp y Azure DevOps.">
-  <meta name="keywords" content="IA, secretaria virtual, actas automatizadas, transcripción fireflies, gestión de proyectos, trello, jira, clickup, azure devops, groq ai">
-  <meta name="author" content="Nexura">
+  <!-- ─────────────────────────────────────────────────────────────────
+       Primary SEO
+       ───────────────────────────────────────────────────────────────── -->
+  <title>Acten — Plataforma IA de actas y tareas para reuniones empresariales</title>
+  <meta name="title" content="Acten — Plataforma IA de actas y tareas para reuniones empresariales">
+  <meta name="description" content="Acten transforma tus reuniones en actas precisas, decisiones rastreables y tareas distribuidas automáticamente a Trello, Jira, ClickUp y Azure DevOps. Integra Fireflies, Groq y OpenAI para extraer valor real de cada conversación corporativa.">
+  <meta name="keywords" content="actas inteligentes, IA reuniones, transcripción Fireflies, gestión de tareas, Trello, Jira, ClickUp, Azure DevOps, asistente IA empresarial, productividad corporativa, automatización reuniones, secretaria virtual IA, Groq, OpenAI">
+  <meta name="author" content="Acten · Softnexus">
+  <meta name="application-name" content="Acten">
+  <meta name="generator" content="Acten Platform">
 
-  <!-- Open Graph / Facebook -->
+  <link rel="canonical" href="https://acten.app/">
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Robots / search engines
+       ───────────────────────────────────────────────────────────────── -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="googlebot" content="index, follow">
+  <meta name="bingbot" content="index, follow">
+  <meta name="rating" content="general">
+  <meta name="distribution" content="global">
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Theme & PWA
+       ───────────────────────────────────────────────────────────────── -->
+  <meta name="theme-color" content="#4F46E5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#312E81" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="msapplication-TileColor" content="#4F46E5">
+  <meta name="msapplication-TileImage" content="/android-chrome-192x192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Acten">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Favicons (cubre ICO, PNG variants, iOS, Android)
+       ───────────────────────────────────────────────────────────────── -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/favicon.ico" color="#4F46E5">
+  <link rel="shortcut icon" href="/favicon.ico">
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Open Graph / Facebook / LinkedIn
+       ───────────────────────────────────────────────────────────────── -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://secretaria-ai-platform.onrender.com/">
-  <meta property="og:title" content="Acten — Tu asistente inteligente de reuniones">
-  <meta property="og:description" content="Plataforma empresarial de inteligencia artificial que extrae tareas, decisiones y crea actas precisas directamente desde las grabaciones de tus reuniones.">
-  <meta property="og:image" content="https://secretaria-ai-platform.onrender.com/assets/images/og-image.png">
+  <meta property="og:url" content="https://acten.app/">
+  <meta property="og:site_name" content="Acten">
+  <meta property="og:title" content="Acten — Plataforma IA de actas y tareas para reuniones empresariales">
+  <meta property="og:description" content="Transforma cada reunión en decisiones, tareas y entregables distribuidos a Trello, Jira, ClickUp y Azure DevOps. Powered by Fireflies + Groq + OpenAI.">
+  <meta property="og:image" content="https://acten.app/android-chrome-512x512.png">
+  <meta property="og:image:secure_url" content="https://acten.app/android-chrome-512x512.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="Acten — Plataforma IA empresarial">
+  <meta property="og:locale" content="es_CO">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:locale:alternate" content="es_MX">
 
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://secretaria-ai-platform.onrender.com/">
-  <meta property="twitter:title" content="Acten — Tu asistente inteligente de reuniones">
-  <meta property="twitter:description" content="De la reunión al trabajo real. Transcribe, resume y despacha tareas automáticamente con nuestra IA para corporativos.">
-  <meta property="twitter:image" content="https://secretaria-ai-platform.onrender.com/assets/images/twitter-card.png">
+  <!-- ─────────────────────────────────────────────────────────────────
+       Twitter / X Cards
+       ───────────────────────────────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://acten.app/">
+  <meta name="twitter:title" content="Acten — IA que convierte reuniones en resultados">
+  <meta name="twitter:description" content="Transcribe, decide, asigna tareas y entrega actas listas. Integraciones nativas con Fireflies, Trello, Jira, ClickUp y Azure DevOps.">
+  <meta name="twitter:image" content="https://acten.app/android-chrome-512x512.png">
+  <meta name="twitter:image:alt" content="Acten — Plataforma IA empresarial">
+  <meta name="twitter:creator" content="@acten_app">
+  <meta name="twitter:site" content="@acten_app">
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Performance hints
+       ───────────────────────────────────────────────────────────────── -->
+  <link rel="preconnect" href="https://api.acten.app" crossorigin>
+  <link rel="dns-prefetch" href="https://api.acten.app">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Structured data — Organization
+       Provides rich snippets in Google (knowledge graph eligibility).
+       ───────────────────────────────────────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://acten.app/#organization",
+    "name": "Acten",
+    "alternateName": "Acten — Plataforma IA de actas",
+    "url": "https://acten.app",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://acten.app/android-chrome-512x512.png",
+      "width": 512,
+      "height": 512
+    },
+    "image": "https://acten.app/android-chrome-512x512.png",
+    "description": "Plataforma SaaS de inteligencia artificial que transforma reuniones empresariales en actas precisas, decisiones rastreables y tareas distribuidas automáticamente a las herramientas de gestión de proyectos.",
+    "foundingDate": "2025",
+    "sameAs": [
+      "https://www.linkedin.com/company/acten",
+      "https://twitter.com/acten_app"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "email": "soporte@acten.app",
+      "availableLanguage": ["Spanish", "English"]
+    }
+  }
+  </script>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Structured data — SoftwareApplication
+       Helps Google understand this is a SaaS product (rich features in SERP).
+       ───────────────────────────────────────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://acten.app/#software",
+    "name": "Acten",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "Meeting Productivity",
+    "operatingSystem": "Web Browser, iOS, Android",
+    "browserRequirements": "Requires JavaScript and HTML5. Modern browser (Chrome, Firefox, Safari, Edge).",
+    "url": "https://acten.app",
+    "image": "https://acten.app/android-chrome-512x512.png",
+    "description": "Acten convierte reuniones grabadas en Fireflies en actas, decisiones y tareas asignadas en Trello, Jira, ClickUp o Azure DevOps. Multi-tenant, multi-idioma, con IA on-device (Groq) y embeddings semánticos (OpenAI).",
+    "featureList": [
+      "Transcripción automática vía Fireflies",
+      "Resúmenes ejecutivos con IA (Groq Llama 3.3)",
+      "Extracción de action items con OpenAI",
+      "Routing automático a Trello, Jira, ClickUp, Azure DevOps",
+      "Búsqueda semántica con embeddings vectoriales",
+      "Multi-tenant white-label",
+      "Calendario integrado (Google + Microsoft)",
+      "2FA y auditoría completa",
+      "Notificaciones por email (Resend) e in-app"
+    ],
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "USD",
+      "price": "0",
+      "description": "Plan demo gratuito disponible bajo solicitud."
+    },
+    "creator": {
+      "@id": "https://acten.app/#organization"
+    }
+  }
+  </script>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Structured data — WebSite (sitelinks search box eligibility)
+       ───────────────────────────────────────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://acten.app/#website",
+    "url": "https://acten.app",
+    "name": "Acten",
+    "description": "Plataforma IA de actas y tareas para reuniones empresariales",
+    "publisher": { "@id": "https://acten.app/#organization" },
+    "inLanguage": "es-CO"
+  }
+  </script>
 </head>
 <body>
   <app-root></app-root>
+
+  <!-- Fallback para usuarios sin JavaScript habilitado.
+       Mejora UX y accesibilidad — y los crawlers que no ejecutan JS verán algo. -->
+  <noscript>
+    <div style="font-family: system-ui, sans-serif; max-width: 640px; margin: 4rem auto; padding: 2rem; text-align: center; line-height: 1.6;">
+      <h1 style="color: #4F46E5; margin-bottom: 1rem;">Acten</h1>
+      <p>Esta plataforma requiere JavaScript habilitado para funcionar.</p>
+      <p>Por favor activá JavaScript en tu navegador y recargá la página.</p>
+      <p style="margin-top: 2rem; font-size: 0.875rem; color: #6b7280;">
+        Si necesitás ayuda, escribinos a
+        <a href="mailto:soporte@acten.app" style="color: #4F46E5;">soporte@acten.app</a>.
+      </p>
+    </div>
+  </noscript>
 </body>
 </html>
