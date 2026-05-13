@@ -16,30 +16,34 @@
                      [class.aside-logo-client]="branding.hasLogo()" />
             </a>
 
-            <h1 class="aside-hero">
-                <ng-container *ngIf="branding.companyName() === branding.platformName(); else clientHero">
-                    De la conversación a la claridad.
-                    <br />
+            <ng-container *ngIf="branding.companyName() === branding.platformName(); else clientHero">
+                <h1 class="aside-hero">
+                    De la conversación a la claridad.<br />
                     De la claridad al impacto.
-                </ng-container>
-                <ng-template #clientHero>
-                    Bienvenido a tu espacio de
-                    <br />
-                    <strong>{{ branding.companyName() }}</strong>.
-                </ng-template>
-            </h1>
-
-            <p class="aside-sub">
-                <ng-container *ngIf="branding.companyName() === branding.platformName(); else clientSub">
+                </h1>
+                <p class="aside-sub">
                     Acten es el asistente de IA para reuniones que transforma
                     las conversaciones en decisiones, responsabilidades y
                     entregables profesionales.
-                </ng-container>
-                <ng-template #clientSub>
+                </p>
+            </ng-container>
+
+            <!--
+              Hero CLIENTE: nueva jerarquía con tres niveles tipográficos
+                · eyebrow — "Bienvenido a tu espacio de" (sans, opaco)
+                · hero    — nombre de la empresa (display, gigante)
+                · sub     — micro-copy de contexto
+              Esto evita el split feo previo donde el nombre quedaba
+              colgado en una segunda línea con la misma jerarquía visual.
+            -->
+            <ng-template #clientHero>
+                <p class="aside-eyebrow">Bienvenido a tu espacio de</p>
+                <h1 class="aside-hero aside-hero-client">{{ branding.companyName() }}</h1>
+                <p class="aside-sub">
                     Inteligencia artificial para tus reuniones — operado con
                     <strong>{{ branding.platformName() }}</strong>.
-                </ng-template>
-            </p>
+                </p>
+            </ng-template>
 
             <!-- "Powered by Acten" — sólo cuando el tenant NO es Acten.
                  Usa el imagologo PNG de Acten (mismo asset que el sidebar

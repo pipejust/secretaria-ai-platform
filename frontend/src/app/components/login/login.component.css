@@ -15,12 +15,36 @@
     color: var(--color-fg-default);
 }
 
-/* ===================== ASIDE NAVY PROFUNDO ===================== */
+/* ===================== ASIDE BRANDED ===================== */
+/* Fondo conectado al color PRIMARIO de la empresa (--brand-primary).
+   Capas:
+     1. radial-gradient con el primary-color al 28% de opacidad → halo
+        suave que tinta el centro con la marca sin saturar.
+     2. linear-gradient navy oscuro de fondo → mantiene contraste
+        garantizado para el texto blanco aunque el primary sea claro.
+     3. solid color base como último fallback si las gradients fallan.
+   Si el tenant no setea brand-primary, --brand-primary cae al navy
+   default vía branding.service (#223148), así no se rompe nunca. */
 .login-aside {
     position: relative;
-    background:
-        radial-gradient(ellipse at 50% 50%, #14214E 0%, transparent 60%),
-        linear-gradient(180deg, #0B1330 0%, #0A1530 50%, #0E1A3D 100%);
+    background-color: #0B1330;
+    background-image:
+        radial-gradient(
+            ellipse 120% 80% at 50% 30%,
+            color-mix(in srgb, var(--brand-primary, #14214E) 55%, transparent) 0%,
+            transparent 65%
+        ),
+        radial-gradient(
+            ellipse 90% 60% at 80% 90%,
+            color-mix(in srgb, var(--brand-secondary, #06B6D4) 22%, transparent) 0%,
+            transparent 70%
+        ),
+        linear-gradient(
+            165deg,
+            color-mix(in srgb, var(--brand-primary, #0B1330) 45%, #0A1530) 0%,
+            #0A1530 55%,
+            color-mix(in srgb, var(--brand-primary, #0E1A3D) 35%, #0E1A3D) 100%
+        );
     color: #FFFFFF;
     padding: var(--space-56) var(--space-64) var(--space-32);
     display: flex;
@@ -83,6 +107,20 @@
        (contorno blanco + acentos). Cualquier fondo competiría con eso. */
 }
 
+/* Eyebrow — copy contextual encima del nombre de la empresa.
+   Tipografía de cuerpo (no display), tamaño chico, opaco — cumple su
+   función de "etiqueta" sin competir con el hero. */
+.aside-eyebrow {
+    font-family: var(--font-sans);
+    font-size: clamp(0.95rem, 1.05vw, 1.05rem);
+    font-weight: var(--fw-medium);
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.72);
+    margin: 0 0 var(--space-12) 0;
+    text-wrap: balance;
+}
+
 .aside-hero {
     font-family: var(--font-display);
     font-size: clamp(2.5rem, 3.4vw, 3rem);
@@ -91,15 +129,30 @@
     letter-spacing: var(--tracking-tight);
     color: #FFFFFF;
     margin: 0 0 var(--space-24) 0;
+    text-wrap: balance;
+}
+
+/* Hero CLIENTE — solo el nombre de la empresa, así que lo escalamos
+   más grande para que tenga peso visual real. text-wrap: balance evita
+   que un nombre largo quede con una palabra sola en la última línea. */
+.aside-hero-client {
+    font-size: clamp(3.5rem, 6vw, 5.25rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-20);
+    /* Si el nombre es muy largo (raro pero posible), evitamos overflow */
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 
 .aside-sub {
     font-family: var(--font-sans);
     font-size: var(--text-15);
-    line-height: 1.55;
-    color: rgba(247, 244, 238, 0.65);
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
     margin: 0;
     max-width: 44ch;
+    text-wrap: pretty;
 }
 
 /* Constelación abajo, más densa */
