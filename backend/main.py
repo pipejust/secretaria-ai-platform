@@ -42,18 +42,37 @@ try:
 except ImportError:
     logger.warning("slowapi no instalado; rate limiting desactivado.")
 
-# Configurar CORS para permitir peticiones desde el frontend Angular ANTES de cargar los routers
+# Configurar CORS para permitir peticiones desde el frontend Angular ANTES de cargar los routers.
+# Origins:
+#   - Desarrollo local (Angular dev server)
+#   - FRONTEND_URL inyectada por env (prod: https://acten.app)
+#   - Variantes www y apex de FRONTEND_URL (sin tener que duplicar config)
+#   - Legacy de Vercel/Render (compat hasta retirar dominios viejos)
+_frontend_url = os.environ.get("FRONTEND_URL", "").rstrip("/")
+_dynamic_origins: list[str] = []
+if _frontend_url:
+    _dynamic_origins.append(_frontend_url)
+    # Añade contraparte www/apex (acten.app ↔ www.acten.app)
+    if "://www." in _frontend_url:
+        _dynamic_origins.append(_frontend_url.replace("://www.", "://"))
+    else:
+        _dynamic_origins.append(_frontend_url.replace("://", "://www."))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # Dev local
         "http://localhost:52481",
         "http://127.0.0.1:52481",
         "http://localhost:4200",
         "http://127.0.0.1:4200",
+        # Prod (acten.app + www) inyectado por env
+        *_dynamic_origins,
+        # Legacy (Vercel/Render) — TODO: retirar tras corte definitivo
         "https://secretaria-api.vercel.app",
         "https://frontend-alpha-gules-63.vercel.app",
         "https://secretaria-ai-platform.vercel.app",
-        "https://secretaria-ai-platform.onrender.com"
+        "https://secretaria-ai-platform.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],

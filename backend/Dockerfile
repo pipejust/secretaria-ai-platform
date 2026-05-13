@@ -59,6 +59,11 @@ RUN pip install --no-index --find-links=/wheels -r requirements.txt && \
 # Copia el código de la app y ajusta permisos
 COPY --chown=app:app . /app
 
+# IMPORTANTE: WORKDIR /app crea el directorio como root. Necesitamos
+# pre-crear /app/uploads/avatars (lo crea main.py al arrancar) y dar
+# ownership de /app entero al user `app` para que makedirs funcione.
+RUN mkdir -p /app/uploads/avatars && chown -R app:app /app
+
 USER app
 
 EXPOSE 8000

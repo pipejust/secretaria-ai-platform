@@ -99,6 +99,12 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       GROQ_API_KEY: ${GROQ_API_KEY}
       FIREFLIES_API_KEY: ${FIREFLIES_API_KEY:-}
+    volumes:
+      # Persistencia de uploads (avatares de usuarios, attachments, etc.).
+      # Sin esto, los avatares se pierden en cada redeploy porque la imagen
+      # se reconstruye desde cero. El volumen se monta sobre /app/uploads,
+      # que el Dockerfile pre-crea con ownership app:app.
+      - acten_uploads:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/openapi.json"]
       interval: 30s
@@ -141,6 +147,11 @@ services:
     image: gotenberg/gotenberg:8
     container_name: acten-gotenberg
     restart: unless-stopped
+    # IMPORTANTE: Coolify auto-inyecta `env_file: .env` a TODOS los servicios,
+    # lo que pasa LOG_LEVEL=INFO (mayúsculas, formato Python). Gotenberg solo
+    # acepta lowercase (error|warn|info|debug). Forzamos override explícito.
+    environment:
+      LOG_LEVEL: info
     expose:
       - "3000"
     networks:
@@ -151,6 +162,8 @@ services:
 volumes:
   acten_pgdata:
     name: acten_pgdata
+  acten_uploads:
+    name: acten_uploads
 
 networks:
   acten:
