@@ -290,33 +290,35 @@
     border-color: var(--color-border-strong);
 }
 
+/* Botón "Guardar cambios" del panel de curación = acción → SECUNDARIO. */
 .cp-btn-word {
-    background: #155EEF;
-    color: #fff;
-    border-color: #155EEF;
+    background: var(--brand-action, #155EEF);
+    color: var(--color-fg-on-dark);
+    border-color: var(--brand-action, #155EEF);
     box-shadow: 0 1px 2px rgba(21, 94, 239, 0.18);
 }
-.cp-btn-word:hover:not(:disabled) { background: #0B4DDD; }
+.cp-btn-word:hover:not(:disabled) { background: var(--brand-action-hover, #0B4DDD); }
 
 .cp-btn-pdf {
     background: #EF4444;
-    color: #fff;
+    color: var(--color-fg-on-dark);
     border-color: #EF4444;
     box-shadow: 0 1px 2px rgba(239, 68, 68, 0.18);
 }
 .cp-btn-pdf:hover:not(:disabled) { background: #DC2626; }
 
+/* Botón guardar cambios = acción primaria → SECUNDARIO. */
 .cp-btn-save {
-    background: #10B981;
-    color: #fff;
-    border-color: #10B981;
+    background: var(--brand-action, #10B981);
+    color: var(--color-fg-on-dark);
+    border-color: var(--brand-action, #10B981);
     box-shadow: 0 1px 2px rgba(16, 185, 129, 0.18);
 }
-.cp-btn-save:hover:not(:disabled) { background: #059669; }
+.cp-btn-save:hover:not(:disabled) { background: var(--brand-action-hover, #059669); }
 
 .cp-btn-artifacts {
     background: #F59E0B;
-    color: #fff;
+    color: var(--color-fg-on-dark);
     border-color: #F59E0B;
     box-shadow: 0 1px 2px rgba(245, 158, 11, 0.18);
 }
@@ -626,7 +628,7 @@
 }
 .cp-btn-add {
     background: var(--color-accent);
-    color: #fff;
+    color: var(--color-fg-on-dark);
     border-color: var(--color-accent);
     box-shadow: 0 1px 2px rgba(0, 34, 115, 0.15);
 }

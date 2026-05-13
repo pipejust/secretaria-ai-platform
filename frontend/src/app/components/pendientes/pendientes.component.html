@@ -203,11 +203,11 @@
                                 </td>
                                 <td class="td-owner">
                                     <div class="tk-owner-cell" [attr.data-tip]="ownerTooltip(it)">
-                                        <span class="tk-avatar"
-                                              [style.background]="ownerColor(it.owner_name)">
-                                            {{ ownerInitials(it.owner_name) }}
-                                        </span>
-                                        <span class="tk-owner-name">{{ it.owner_name || 'Sin asignar' }}</span>
+                                        <app-user-chip
+                                            [email]="it.owner_email"
+                                            [fallbackName]="it.owner_name"
+                                            size="sm">
+                                        </app-user-chip>
                                     </div>
                                 </td>
                                 <td class="td-priority">
@@ -433,10 +433,12 @@
                             <span class="tk-overdue-title" [title]="it.title">{{ it.title }}</span>
                             <span class="tk-overdue-date">{{ formatDateLong(it.due_date) }}</span>
                         </div>
-                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)"
-                              [attr.data-tip]="ownerTooltip(it)">
-                            {{ ownerInitials(it.owner_name) }}
-                        </span>
+                        <app-user-chip
+                            [email]="it.owner_email"
+                            [fallbackName]="it.owner_name"
+                            size="xs"
+                            [hideName]="true">
+                        </app-user-chip>
                     </li>
                     <li *ngIf="!overdueItems.length" class="tk-side-empty">
                         Sin tareas vencidas. ✓
@@ -529,10 +531,12 @@
                             <span class="tk-upcoming-title" [title]="it.title">{{ it.title }}</span>
                             <span class="tk-upcoming-meta">{{ it.project_name }}</span>
                         </div>
-                        <span class="tk-avatar tk-avatar-sm" [style.background]="ownerColor(it.owner_name)"
-                              [attr.data-tip]="ownerTooltip(it)">
-                            {{ ownerInitials(it.owner_name) }}
-                        </span>
+                        <app-user-chip
+                            [email]="it.owner_email"
+                            [fallbackName]="it.owner_name"
+                            size="xs"
+                            [hideName]="true">
+                        </app-user-chip>
                     </li>
                     <li *ngIf="!upcomingItems.length" class="tk-side-empty">
                         Sin vencimientos en los próximos días.

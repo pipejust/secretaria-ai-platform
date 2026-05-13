@@ -188,19 +188,87 @@ export class BrandingService {
   }
 
   /**
-   * Escribe los colores en `:root` como CSS custom properties.
+   * Escribe los colores en `:root` como CSS custom properties con la
+   * semántica nueva del producto:
+   *
+   *   PRIMARIO  → sidebar oscuro + dark surfaces. Brand pillar.
+   *   SECUNDARIO → botones de acción con relleno completo (primary action).
+   *   ACENTO    → estado seleccionado / activo (tabs, items, filtros).
+   *
    * Esto reaplica el tema sin recargar la página.
    */
   private applyToRoot(b: Branding): void {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    root.style.setProperty('--brand-primary', b.primary_color);
-    root.style.setProperty('--brand-secondary', b.secondary_color);
-    root.style.setProperty('--brand-accent', b.accent_color);
-    // Mapeamos también a las vars históricas que ya consumen los componentes.
-    root.style.setProperty('--accent-color', b.primary_color);
-    root.style.setProperty('--accent-hover', this.shade(b.primary_color, -10));
-    root.style.setProperty('--topbar-bg', b.primary_color);
+    const primary   = b.primary_color   || '#223148';
+    const secondary = b.secondary_color || '#1B7F67';
+    const accent    = b.accent_color    || '#D9A441';
+
+    // -------- Brand vars (referencias semánticas) --------
+    root.style.setProperty('--brand-primary',   primary);
+    root.style.setProperty('--brand-secondary', secondary);
+    root.style.setProperty('--brand-accent',    accent);
+    root.style.setProperty('--brand-ink-blue-500', primary);
+
+    // Aliases por capa (frontend nuevo y código viejo).
+    root.style.setProperty('--brand-action',         secondary);                 // botones acción
+    root.style.setProperty('--brand-action-hover',   this.shade(secondary, -10));
+    root.style.setProperty('--brand-action-strong',  this.shade(secondary, -16));
+    root.style.setProperty('--brand-selected',       accent);                    // selección
+    root.style.setProperty('--brand-selected-hover', this.shade(accent, -10));
+    root.style.setProperty('--brand-selected-tint',  this.hexToRgba(accent, 0.10));
+    root.style.setProperty('--brand-selected-border',this.hexToRgba(accent, 0.35));
+
+    // -------- Sidebar oscuro (sigue siendo el primario) --------
+    root.style.setProperty('--color-bg-sidebar',   primary);
+    root.style.setProperty('--color-bg-sidebar-2', this.shade(primary, -8));
+    root.style.setProperty('--color-bg-aside',     primary);
+    root.style.setProperty('--color-bg-aside-2',   this.shade(primary, -8));
+
+    // -------- Botones de acción (relleno completo) → SECUNDARIO --------
+    // Estas vars son las que históricamente usan los botones primarios.
+    // Apuntan ahora al color secundario por petición del cliente.
+    root.style.setProperty('--accent-color',          secondary);
+    root.style.setProperty('--accent-hover',          this.shade(secondary, -10));
+    root.style.setProperty('--color-accent',          secondary);
+    root.style.setProperty('--color-accent-hover',    this.shade(secondary, -10));
+    root.style.setProperty('--color-accent-strong',   this.shade(secondary, -16));
+
+    // -------- Selección / activo (tabs, items, filtros) → ACENTO --------
+    // `--color-fg-accent` lo usan tabs activas, links activos, links de cards.
+    root.style.setProperty('--color-fg-accent', accent);
+
+    // Color success/warning para badges informativos.
+    root.style.setProperty('--color-success', secondary);
+    root.style.setProperty('--color-warning', accent);
+  }
+
+  /** Convierte hex (#RRGGBB) a rgba con alpha — usado para tintes suaves. */
+  private hexToRgba(hex: string, alpha: number): string {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return `rgba(0, 0, 0, ${alpha})`;
+    const num = parseInt(m[1], 16);
+    const r = (num >> 16) & 0xff;
+    const g = (num >> 8) & 0xff;
+    const b = num & 0xff;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  /**
+   * Aplica un preview EFÍMERO al tema sin tocar el estado persistido
+   * (`brand()`). Útil para que el sidebar cambie en vivo mientras el admin
+   * edita los colores. Si el admin descarta los cambios, llamar a
+   * `revertPreview()` para volver al estado guardado.
+   */
+  applyPreview(overrides: Partial<Branding>): void {
+    const current = this.brand();
+    const merged: Branding = { ...current, ...overrides };
+    this.applyToRoot(merged);
+  }
+
+  /** Revierte el preview al estado real persistido en `brand()`. */
+  revertPreview(): void {
+    this.applyToRoot(this.brand());
   }
 
   /** Actualiza `<title>` y favicon dinámico. */

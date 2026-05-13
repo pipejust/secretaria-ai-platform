@@ -1,117 +1,714 @@
-<!-- Modal de Creación -->
-<div class="modal-overlay" *ngIf="showCreateModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Crear Nuevo Rol</h3>
-            <button class="btn-close" (click)="showCreateModal = false; errorMsg = ''; successMsg = ''">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
+<div class="rl-page">
+
+    <!-- ============================================================
+         Header
+         ============================================================ -->
+    <header class="rl-header">
+        <div class="rl-header-text">
+            <h1>Gestión de Roles</h1>
+            <p class="rl-subtitle">Administra los niveles de acceso y permisos del sistema.</p>
         </div>
-        <div class="modal-body">
-            <div class="alert alert-error" *ngIf="errorMsg" style="margin-bottom: 20px;">{{ errorMsg }}</div>
-            <div class="alert alert-success" *ngIf="successMsg" style="margin-bottom: 20px;">{{ successMsg }}</div>
+        <button class="rl-btn rl-btn--primary rl-btn--lg" (click)="openCreateModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" class="rl-btn-ico">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Crear nuevo rol
+        </button>
+    </header>
 
-            <form (ngSubmit)="createRole()" #roleForm="ngForm">
-                <div class="form-group">
-                    <label>Nombre del Rol <span class="text-danger">*</span></label>
-                    <input type="text" name="name" [(ngModel)]="newRole.name" required placeholder="ej: supervisor" />
+    <!-- ============================================================
+         KPIs
+         ============================================================ -->
+    <section class="rl-kpis">
+        <article class="rl-kpi">
+            <div class="rl-kpi-ico rl-kpi-ico--blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div class="rl-kpi-body">
+                <span class="rl-kpi-label">Roles totales</span>
+                <span class="rl-kpi-value">{{ totalRoles }}</span>
+                <span class="rl-kpi-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" class="rl-trend">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                    Todos los roles del sistema
+                </span>
+            </div>
+        </article>
+
+        <article class="rl-kpi">
+            <div class="rl-kpi-ico rl-kpi-ico--green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <div class="rl-kpi-body">
+                <span class="rl-kpi-label">Roles activos</span>
+                <span class="rl-kpi-value">{{ activeRoles }}</span>
+                <span class="rl-kpi-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" class="rl-trend">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                    {{ activeRolesPct }}% del total
+                </span>
+            </div>
+        </article>
+
+        <article class="rl-kpi">
+            <div class="rl-kpi-ico rl-kpi-ico--purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div class="rl-kpi-body">
+                <span class="rl-kpi-label">Usuarios asignados</span>
+                <span class="rl-kpi-value">{{ usersAssignedCount }}</span>
+                <span class="rl-kpi-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" class="rl-trend">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                    Distribuidos en roles
+                </span>
+            </div>
+        </article>
+
+        <article class="rl-kpi">
+            <div class="rl-kpi-ico rl-kpi-ico--orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <div class="rl-kpi-body">
+                <span class="rl-kpi-label">Permisos personalizados</span>
+                <span class="rl-kpi-value">{{ customPermissions }}</span>
+                <span class="rl-kpi-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" class="rl-trend">
+                        <line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                    Permisos configurados
+                </span>
+            </div>
+        </article>
+    </section>
+
+    <!-- ============================================================
+         Body
+         ============================================================ -->
+    <section class="rl-body">
+        <div class="rl-main">
+
+            <!-- Filtros — patrón Reuniones: barra de búsqueda con icono lupa
+                 + botón Filtros que despliega un panel + switch de vistas. -->
+            <section class="rl-filters-bar">
+                <div class="rl-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" placeholder="Buscar rol por nombre, descripción o ID..."
+                           [(ngModel)]="searchText" (input)="onFilterChange()"/>
                 </div>
 
-                <div class="form-group">
-                    <label>Descripción</label>
-                    <textarea name="description" [(ngModel)]="newRole.description" placeholder="Descripción de los permisos..." rows="3"></textarea>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-full" style="margin-top: 10px;" [disabled]="!roleForm.form.valid || isCreating">
-                    <span *ngIf="!isCreating">Guardar Rol</span>
-                    <span *ngIf="isCreating">Guardando...</span>
+                <button class="rl-btn rl-btn--ghost" [class.is-active]="showFilters" (click)="toggleFilters()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" class="rl-btn-ico">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    Filtros
+                    <span class="rl-filter-count" *ngIf="activeFilterCount">{{ activeFilterCount }}</span>
                 </button>
-            </form>
+
+                <div class="rl-view-switch">
+                    <button [class.is-active]="viewMode === 'list'" (click)="setViewMode('list')"
+                            aria-label="Vista lista">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                    </button>
+                    <button [class.is-active]="viewMode === 'grid'" (click)="setViewMode('grid')"
+                            aria-label="Vista cuadrícula">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <section class="rl-filters-panel" *ngIf="showFilters">
+                <div class="rl-select-group">
+                    <label>Estado</label>
+                    <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
+                        <option value="all">Todos</option>
+                        <option value="active">Activos</option>
+                        <option value="inactive">Inactivos</option>
+                    </select>
+                </div>
+                <div class="rl-select-group">
+                    <label>Tipo de rol</label>
+                    <select [(ngModel)]="filterType" (change)="onFilterChange()">
+                        <option value="all">Todos</option>
+                        <option value="system">Sistema</option>
+                        <option value="custom">Personalizados</option>
+                    </select>
+                </div>
+                <div class="rl-select-group">
+                    <label>Usuarios asignados</label>
+                    <select [(ngModel)]="filterUsers" (change)="onFilterChange()">
+                        <option value="all">Todos</option>
+                        <option value="with">Con usuarios</option>
+                        <option value="without">Sin usuarios</option>
+                    </select>
+                </div>
+                <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">Limpiar</button>
+            </section>
+
+            <!-- Loading -->
+            <div class="rl-loading" *ngIf="isLoading">
+                <span class="rl-spinner"></span>
+                <span>Cargando roles…</span>
+            </div>
+
+            <!-- Tabla -->
+            <section class="rl-table" *ngIf="!isLoading && viewMode === 'list'">
+                <div class="rl-tr rl-th">
+                    <span>ID</span>
+                    <span>Nombre del rol</span>
+                    <span>Descripción</span>
+                    <span>Usuarios asignados</span>
+                    <span>Estado</span>
+                    <span class="rl-t-actions">Acciones</span>
+                </div>
+
+                <div class="rl-tr"
+                     *ngFor="let r of pagedRoles; trackBy: trackRole"
+                     [class.is-selected]="isSelected(r)"
+                     [class.has-open-menu]="openRowMenuId === r.id"
+                     (click)="selectRole(r)">
+                    <span class="rl-td rl-td--id">#{{ r.id }}</span>
+                    <span class="rl-td"><span class="rl-role-badge">{{ r.name }}</span></span>
+                    <span class="rl-td rl-td--desc">{{ r.description || 'Sin descripción' }}</span>
+                    <span class="rl-td">
+                        <span class="rl-avatars"
+                              *ngIf="usersForRole(r).length"
+                              [attr.aria-label]="usersForRole(r).length + ' usuario(s)'">
+                            <span class="avatar avatar-sm avatar-tip-host"
+                                  *ngFor="let u of avatarsForRole(r); trackBy: trackUser"
+                                  [style.background]="avatarColor(u.email || u.full_name || '')">
+                                <span class="avatar-text">{{ initials(u.full_name || u.email || '') }}</span>
+                                <span class="avatar-tip" role="tooltip">
+                                    <strong class="avatar-tip-name">{{ userTitle(u) }}</strong>
+                                    <span class="avatar-tip-meta" *ngIf="u.email && u.full_name">{{ u.email }}</span>
+                                    <span class="avatar-tip-meta">{{ u.is_active === false ? 'Inactivo' : 'Activo' }}</span>
+                                </span>
+                            </span>
+                            <span class="avatar-more avatar-more-sm" *ngIf="extraUsersForRole(r) > 0">
+                                +{{ extraUsersForRole(r) }}
+                            </span>
+                        </span>
+                        <span class="rl-no-users" *ngIf="!usersForRole(r).length">+0</span>
+                    </span>
+                    <span class="rl-td">
+                        <span class="rl-status" [class.rl-status--active]="r.is_active !== false"
+                              [class.rl-status--inactive]="r.is_active === false">
+                            <span class="rl-status-dot"></span>
+                            {{ r.is_active === false ? 'Inactivo' : 'Activo' }}
+                        </span>
+                    </span>
+
+                    <!-- Acciones: kebab menu (igual a Reuniones / Proyectos / Plantillas) -->
+                    <span class="rl-td rl-t-actions" (click)="$event.stopPropagation()"
+                          [class.has-open-menu]="openRowMenuId === r.id">
+                        <div class="kebab-wrap" [class.is-open]="openRowMenuId === r.id">
+                            <button class="kebab" (click)="toggleRowMenu(r.id, $event)" title="Más opciones">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="12" cy="5" r="1"></circle>
+                                    <circle cx="12" cy="19" r="1"></circle>
+                                </svg>
+                            </button>
+                            <div class="kebab-menu" *ngIf="openRowMenuId === r.id" (click)="$event.stopPropagation()">
+                                <button (click)="viewRole(r, $event); closeRowMenu()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                    Ver detalle
+                                </button>
+                                <button (click)="openEditModal(r, $event); closeRowMenu()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 20h9"></path>
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                                    </svg>
+                                    Editar
+                                </button>
+                                <button (click)="toggleActive(r, $event); closeRowMenu()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                                        <line x1="12" y1="2" x2="12" y2="12"></line>
+                                    </svg>
+                                    {{ r.is_active === false ? 'Activar' : 'Desactivar' }}
+                                </button>
+                                <div class="kebab-divider"></div>
+                                <button class="kebab-danger" (click)="deleteRole(r, $event); closeRowMenu()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                    </svg>
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </span>
+                </div>
+
+                <div class="rl-empty" *ngIf="!pagedRoles.length">
+                    <h4>No hay roles que coincidan con los filtros.</h4>
+                    <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">Limpiar filtros</button>
+                </div>
+            </section>
+
+            <!-- Vista cuadrícula -->
+            <section class="rl-grid" *ngIf="!isLoading && viewMode === 'grid'">
+                <article class="rl-card-role"
+                         *ngFor="let r of pagedRoles; trackBy: trackRole"
+                         [class.is-selected]="isSelected(r)"
+                         (click)="selectRole(r)">
+                    <div class="rl-card-top">
+                        <span class="rl-role-badge">{{ r.name }}</span>
+                        <span class="rl-status" [class.rl-status--active]="r.is_active !== false"
+                              [class.rl-status--inactive]="r.is_active === false">
+                            <span class="rl-status-dot"></span>
+                            {{ r.is_active === false ? 'Inactivo' : 'Activo' }}
+                        </span>
+                    </div>
+                    <p class="rl-card-desc">{{ r.description || 'Sin descripción' }}</p>
+                    <div class="rl-card-foot">
+                        <span class="rl-avatars">
+                            <span class="avatar avatar-sm avatar-tip-host"
+                                  *ngFor="let u of avatarsForRole(r); trackBy: trackUser"
+                                  [style.background]="avatarColor(u.email || u.full_name || '')">
+                                <span class="avatar-text">{{ initials(u.full_name || u.email || '') }}</span>
+                                <span class="avatar-tip" role="tooltip">
+                                    <strong class="avatar-tip-name">{{ userTitle(u) }}</strong>
+                                    <span class="avatar-tip-meta" *ngIf="u.email && u.full_name">{{ u.email }}</span>
+                                </span>
+                            </span>
+                            <span class="avatar-more avatar-more-sm" *ngIf="extraUsersForRole(r) > 0">
+                                +{{ extraUsersForRole(r) }}
+                            </span>
+                        </span>
+                        <span class="rl-card-id">#{{ r.id }}</span>
+                    </div>
+                </article>
+            </section>
+
+            <!-- Paginación -->
+            <section class="rl-pagination" *ngIf="!isLoading && filteredRoles.length">
+                <span class="rl-pg-info">{{ pageRangeLabel }}</span>
+                <div class="rl-pg-controls">
+                    <button class="rl-pg-btn"
+                            [disabled]="currentPage === 1"
+                            (click)="setPage(currentPage - 1)" aria-label="Anterior">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <button *ngFor="let p of [].constructor(totalFilteredPages); let i = index"
+                            class="rl-pg-btn rl-pg-num"
+                            [class.is-active]="currentPage === i + 1"
+                            (click)="setPage(i + 1)">{{ i + 1 }}</button>
+                    <button class="rl-pg-btn"
+                            [disabled]="currentPage === totalFilteredPages"
+                            (click)="setPage(currentPage + 1)" aria-label="Siguiente">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <span class="rl-pg-size">Mostrar {{ pageSize }}</span>
+            </section>
+        </div>
+
+        <!-- ============================================================
+             Panel derecho — datos reales del rol seleccionado
+             ============================================================ -->
+        <aside class="rl-side">
+
+            <article class="rl-card">
+                <header class="rl-card-head">
+                    <h3>Rol seleccionado</h3>
+                    <button class="rl-icon-btn rl-icon-btn--ghost"
+                            (click)="togglePanel()"
+                            [title]="panelCollapsed ? 'Expandir' : 'Contraer'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline *ngIf="!panelCollapsed" points="18 15 12 9 6 15"></polyline>
+                            <polyline *ngIf="panelCollapsed"  points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                </header>
+
+                <ng-container *ngIf="!panelCollapsed && selectedRole as sel">
+                    <div class="rl-selected-hero">
+                        <div class="rl-selected-avatar" [style.background]="avatarColor(sel.name || '')">
+                            {{ initials(sel.name) }}
+                        </div>
+                        <div class="rl-selected-info">
+                            <div class="rl-selected-title">
+                                <strong>{{ sel.name }}</strong>
+                                <span class="rl-status" [class.rl-status--active]="sel.is_active !== false"
+                                      [class.rl-status--inactive]="sel.is_active === false">
+                                    <span class="rl-status-dot"></span>
+                                    {{ sel.is_active === false ? 'Inactivo' : 'Activo' }}
+                                </span>
+                            </div>
+                            <p class="rl-selected-desc">{{ sel.description || 'Sin descripción' }}</p>
+                        </div>
+                    </div>
+
+                    <dl class="rl-selected-meta">
+                        <div><dt>ID de rol</dt><dd>#{{ sel.id }}</dd></div>
+                        <div><dt>Tipo</dt><dd>{{ roleTypeLabel(sel) }}</dd></div>
+                        <div><dt>Usuarios asignados</dt><dd>{{ usersCountForRole(sel) }}</dd></div>
+                        <div><dt>Fecha de creación</dt><dd>{{ formatDate(sel.created_at) }}</dd></div>
+                        <div><dt>Última edición</dt><dd>{{ formatDate(sel.updated_at) }}</dd></div>
+                    </dl>
+
+                    <div class="rl-selected-actions">
+                        <button class="rl-btn rl-btn--outline-blue" (click)="viewRole(sel)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" class="rl-btn-ico">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            Ver detalle
+                        </button>
+                        <button class="rl-btn rl-btn--outline-green" (click)="openEditModal(sel)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" class="rl-btn-ico">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                            </svg>
+                            Editar rol
+                        </button>
+                    </div>
+                </ng-container>
+
+                <p class="rl-empty-side" *ngIf="!selectedRole">Selecciona un rol para ver sus detalles.</p>
+            </article>
+
+            <!-- Resumen de permisos — global, no del rol -->
+            <article class="rl-card" *ngIf="permSummary">
+                <header class="rl-card-head"><h3>Resumen de permisos</h3></header>
+                <ul class="rl-perm-list">
+                    <li>
+                        <span class="rl-perm-ico">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                <polyline points="2 17 12 22 22 17"></polyline>
+                                <polyline points="2 12 12 17 22 12"></polyline>
+                            </svg>
+                        </span>
+                        <span class="rl-perm-label">Módulos habilitados</span>
+                        <span class="rl-perm-value">{{ permSummary.modules_count }}</span>
+                    </li>
+                    <li>
+                        <span class="rl-perm-ico">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                            </svg>
+                        </span>
+                        <span class="rl-perm-label">Permisos totales</span>
+                        <span class="rl-perm-value">{{ permSummary.permissions_total }}</span>
+                    </li>
+                    <li>
+                        <span class="rl-perm-ico">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                        </span>
+                        <span class="rl-perm-label">Permisos críticos</span>
+                        <span class="rl-perm-value">{{ permSummary.permissions_critical }}</span>
+                    </li>
+                    <li>
+                        <span class="rl-perm-ico">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            </svg>
+                        </span>
+                        <span class="rl-perm-label">Integraciones accesibles</span>
+                        <span class="rl-perm-value">{{ permSummary.integrations_accessible }}</span>
+                    </li>
+                </ul>
+            </article>
+
+            <!-- Actividad reciente del rol seleccionado — datos reales -->
+            <article class="rl-card">
+                <header class="rl-card-head">
+                    <h3>Actividad reciente</h3>
+                </header>
+                <ul class="rl-activity" *ngIf="selectedActivity.length">
+                    <li *ngFor="let a of selectedActivity; trackBy: trackActivity" class="rl-activity-item">
+                        <span class="rl-activity-dot rl-activity-dot--{{ activityTone(a.action) }}"></span>
+                        <div class="rl-activity-body">
+                            <span class="rl-activity-title">{{ activityLabel(a.action) }}</span>
+                            <span class="rl-activity-meta">{{ activityMeta(a) }}</span>
+                            <span class="rl-activity-note" *ngIf="a.note">{{ a.note }}</span>
+                        </div>
+                    </li>
+                </ul>
+                <p class="rl-empty-side" *ngIf="!selectedActivity.length">
+                    {{ selectedRole ? 'Sin actividad registrada para este rol.' : 'Selecciona un rol.' }}
+                </p>
+            </article>
+        </aside>
+    </section>
+</div>
+
+
+<!-- ============================================================
+     MODAL: Crear / Editar rol (con matriz de permisos)
+     ============================================================ -->
+<div class="rl-modal-overlay" *ngIf="showRoleModal" (click)="closeRoleModal()">
+    <div class="rl-modal rl-modal--wide" (click)="$event.stopPropagation()">
+        <header class="rl-modal-head">
+            <h3>{{ roleModalMode === 'create' ? 'Crear nuevo rol' : 'Editar rol' }}</h3>
+            <button class="rl-icon-btn" (click)="closeRoleModal()" aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+        <div class="rl-modal-body">
+            <div class="rl-alert rl-alert--error" *ngIf="roleFormError">{{ roleFormError }}</div>
+
+            <div class="rl-form">
+                <div class="rl-form-row">
+                    <label class="rl-field">
+                        <span>Nombre del rol <em>*</em></span>
+                        <input type="text" [(ngModel)]="roleForm.name" placeholder="ej: supervisor" autofocus/>
+                    </label>
+                    <label class="rl-field rl-field--toggle">
+                        <span>Estado</span>
+                        <div class="rl-toggle">
+                            <input type="checkbox" [(ngModel)]="roleForm.is_active" id="rl-active-toggle"/>
+                            <label for="rl-active-toggle"></label>
+                            <span>{{ roleForm.is_active ? 'Activo' : 'Inactivo' }}</span>
+                        </div>
+                    </label>
+                </div>
+
+                <label class="rl-field">
+                    <span>Descripción</span>
+                    <textarea [(ngModel)]="roleForm.description" rows="2"
+                              placeholder="Describe el alcance y propósito del rol…"></textarea>
+                </label>
+
+                <div class="rl-perm-matrix">
+                    <header>
+                        <span class="rl-perm-title">Permisos por módulo y vista</span>
+                        <span class="rl-perm-sub">Marca lo que este rol podrá ver y hacer dentro de la plataforma.</span>
+                    </header>
+
+                    <div class="rl-perm-grid">
+                        <div class="rl-perm-module" *ngFor="let m of catalog; trackBy: trackModule">
+                            <div class="rl-perm-module-head">
+                                <label class="rl-perm-module-check">
+                                    <input type="checkbox"
+                                           [checked]="isModuleFullySelected(m)"
+                                           [indeterminate]="isModulePartiallySelected(m)"
+                                           (change)="selectAllForModule(m, $any($event.target).checked)"/>
+                                    <span class="rl-perm-module-name">{{ m.label }}</span>
+                                </label>
+                            </div>
+                            <div class="rl-perm-actions">
+                                <label class="rl-perm-pill"
+                                       *ngFor="let a of m.actions; trackBy: trackAction"
+                                       [class.is-checked]="isPermChecked(m.key, a)">
+                                    <input type="checkbox"
+                                           [checked]="isPermChecked(m.key, a)"
+                                           (change)="togglePerm(m.key, a)"/>
+                                    {{ actionLabel(a) }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rl-modal-actions">
+                    <button type="button" class="rl-btn rl-btn--ghost" (click)="closeRoleModal()">Cancelar</button>
+                    <button type="button" class="rl-btn rl-btn--primary"
+                            [disabled]="isSavingRole || !roleForm.name.trim()"
+                            (click)="saveRole()">
+                        {{ isSavingRole
+                            ? 'Guardando…'
+                            : (roleModalMode === 'create' ? 'Crear rol' : 'Guardar cambios') }}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="fade-in">
 
-    <!-- Header Actions idéntico a Dashboard -->
-    <div class="header-actions">
-        <div>
-            <h2 class="section-title">Gestión de Roles</h2>
-            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">Administra los niveles de acceso y permisos del sistema.</p>
-        </div>
-        <button class="btn btn-primary" (click)="showCreateModal = true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                style="margin-right:0.5rem;">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Crear Nuevo Rol
-        </button>
-    </div>
-
-    <div class="filter-row fade-in" style="display:flex; gap:10px; margin-bottom: 20px;">
-        <input type="text" class="modern-search" placeholder="🔍 Buscar rol por nombre o ID..." [(ngModel)]="searchText" style="flex:1;">
-    </div>
-
-    <!-- Tabla Full-Width -->
-    <div class="card glass-panel w-full">
-        <div class="card-body p-0">
-            <!-- Loading State (Skeletons) -->
-            <div class="table-container" *ngIf="isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th><div class="skeleton skeleton-text" style="width: 40px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 150px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 200px;"></div></th>
-                            <th><div class="skeleton skeleton-text" style="width: 80px;"></div></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let i of [1,2,3]">
-                            <td><div class="skeleton skeleton-text" style="width: 30px;"></div></td>
-                            <td><div class="skeleton skeleton-title" style="margin-bottom: 0;"></div></td>
-                            <td><div class="skeleton skeleton-text" style="width: 180px;"></div></td>
-                            <td><div class="skeleton skeleton-text" style="width: 80px; height: 24px; border-radius: 12px;"></div></td>
-                        </tr>
-                    </tbody>
-                </table>
+<!-- ============================================================
+     MODAL: Ver detalle (read-only)
+     ============================================================ -->
+<div class="rl-modal-overlay" *ngIf="showDetailModal && detailRole" (click)="closeDetailModal()">
+    <div class="rl-modal" (click)="$event.stopPropagation()">
+        <header class="rl-modal-head">
+            <h3>Detalle del rol</h3>
+            <button class="rl-icon-btn" (click)="closeDetailModal()" aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+        <div class="rl-modal-body">
+            <div class="rl-selected-hero">
+                <div class="rl-selected-avatar" [style.background]="avatarColor(detailRole.name)">
+                    {{ initials(detailRole.name) }}
+                </div>
+                <div class="rl-selected-info">
+                    <div class="rl-selected-title">
+                        <strong>{{ detailRole.name }}</strong>
+                        <span class="rl-status" [class.rl-status--active]="detailRole.is_active !== false"
+                              [class.rl-status--inactive]="detailRole.is_active === false">
+                            <span class="rl-status-dot"></span>
+                            {{ detailRole.is_active === false ? 'Inactivo' : 'Activo' }}
+                        </span>
+                    </div>
+                    <p class="rl-selected-desc">{{ detailRole.description || 'Sin descripción' }}</p>
+                </div>
             </div>
 
-            <div class="table-container" *ngIf="!isLoading">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre del Rol</th>
-                            <th>Descripción</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let role of filteredRoles">
-                            <td><span class="badge" style="background:rgba(255,255,255,0.1); color:var(--text-main);">#{{ role.id }}</span></td>
-                            <td><strong><span class="badge badge-primary">{{ role.name }}</span></strong></td>
-                            <td>{{ role.description || 'Sin descripción' }}</td>
-                            <td>
-                                <span class="status-indicator" [class.active]="role.is_active">
-                                    {{ role.is_active ? 'Activo' : 'Inactivo' }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr *ngIf="roles.length === 0">
-                            <td colspan="4" class="p-0">
-                                <div class="empty-state">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                    </svg>
-                                    <h4>No hay roles registrados</h4>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <dl class="rl-selected-meta">
+                <div><dt>ID</dt><dd>#{{ detailRole.id }}</dd></div>
+                <div><dt>Tipo</dt><dd>{{ roleTypeLabel(detailRole) }}</dd></div>
+                <div><dt>Usuarios asignados</dt><dd>{{ usersCountForRole(detailRole) }}</dd></div>
+                <div><dt>Permisos activos</dt><dd>{{ selectedPermissions.length }}</dd></div>
+                <div><dt>Fecha de creación</dt><dd>{{ formatDate(detailRole.created_at) }}</dd></div>
+                <div><dt>Última edición</dt><dd>{{ formatDate(detailRole.updated_at) }}</dd></div>
+            </dl>
+
+            <section class="rl-detail-section" *ngIf="selectedUsers.length">
+                <h4>Usuarios con este rol ({{ selectedUsers.length }})</h4>
+                <ul class="rl-detail-users">
+                    <li *ngFor="let u of selectedUsers; trackBy: trackUser">
+                        <span class="avatar avatar-sm" [style.background]="avatarColor(u.email || '')">
+                            <span class="avatar-text">{{ initials(u.full_name || u.email || '') }}</span>
+                        </span>
+                        <div>
+                            <strong>{{ userTitle(u) }}</strong>
+                            <small>{{ userMeta(u) }}</small>
+                        </div>
+                        <span class="rl-status"
+                              [class.rl-status--active]="u.is_active !== false"
+                              [class.rl-status--inactive]="u.is_active === false">
+                            <span class="rl-status-dot"></span>
+                            {{ u.is_active === false ? 'Inactivo' : 'Activo' }}
+                        </span>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="rl-detail-section">
+                <h4>Permisos asignados ({{ selectedPermissions.length }})</h4>
+                <ul class="rl-detail-perms" *ngIf="selectedPermissions.length">
+                    <li *ngFor="let p of selectedPermissions">
+                        <span class="rl-perm-mod">{{ p.module_key }}</span>
+                        <span class="rl-perm-act">{{ actionLabel(p.action) }}</span>
+                    </li>
+                </ul>
+                <p class="rl-empty-side" *ngIf="!selectedPermissions.length">Este rol aún no tiene permisos asignados.</p>
+            </section>
+
+            <div class="rl-modal-actions">
+                <button class="rl-btn rl-btn--ghost" (click)="closeDetailModal()">Cerrar</button>
+                <button class="rl-btn rl-btn--primary" (click)="closeDetailModal(); openEditModal(detailRole)">
+                    Editar rol
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================================
+     MODAL: Confirmar borrado
+     ============================================================ -->
+<div class="rl-modal-overlay" *ngIf="showDeleteModal && deleteTarget" (click)="cancelDelete()">
+    <div class="rl-modal rl-modal--sm" (click)="$event.stopPropagation()">
+        <header class="rl-modal-head">
+            <h3>Eliminar rol</h3>
+            <button class="rl-icon-btn" (click)="cancelDelete()" aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+        <div class="rl-modal-body">
+            <p style="margin: 0 0 12px; color:#475569; font-size:0.875rem;">
+                ¿Eliminar el rol <strong>{{ deleteTarget.name }}</strong>? Esta acción no se puede deshacer.
+            </p>
+            <div class="rl-modal-actions">
+                <button class="rl-btn rl-btn--ghost" (click)="cancelDelete()" [disabled]="isDeleting">Cancelar</button>
+                <button class="rl-btn rl-btn--danger" (click)="confirmDelete()" [disabled]="isDeleting">
+                    {{ isDeleting ? 'Eliminando…' : 'Sí, eliminar' }}
+                </button>
             </div>
         </div>
     </div>

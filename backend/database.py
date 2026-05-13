@@ -72,6 +72,9 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE "user" ADD COLUMN position TEXT',
             'ALTER TABLE "user" ADD COLUMN created_at TEXT',
             'ALTER TABLE "user" ADD COLUMN last_login_at TEXT',
+            'ALTER TABLE role ADD COLUMN is_system  INTEGER NOT NULL DEFAULT 0',
+            'ALTER TABLE role ADD COLUMN created_at TEXT',
+            'ALTER TABLE role ADD COLUMN updated_at TEXT',
         ]
     else:
         statements = [
@@ -125,6 +128,25 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS position VARCHAR(128)',
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS created_at VARCHAR(64)',
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS last_login_at VARCHAR(64)',
+            # Mi Perfil — campos extendidos + preferencias de notificación.
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS location VARCHAR(160)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS bio TEXT',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS updated_at VARCHAR(64)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS notif_email_enabled BOOLEAN NOT NULL DEFAULT TRUE',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS notif_push_enabled BOOLEAN NOT NULL DEFAULT TRUE',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS notif_meeting_reminders BOOLEAN NOT NULL DEFAULT TRUE',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS notif_task_assigned BOOLEAN NOT NULL DEFAULT TRUE',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS notif_session_processed BOOLEAN NOT NULL DEFAULT TRUE',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS notif_weekly_report BOOLEAN NOT NULL DEFAULT FALSE',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS notif_security_alerts BOOLEAN NOT NULL DEFAULT TRUE',
+            # 2FA email-OTP
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_method VARCHAR(32) DEFAULT \'email\'',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_code_hash VARCHAR(255)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_code_expires_at VARCHAR(64)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_code_purpose VARCHAR(32)',
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_attempts INTEGER NOT NULL DEFAULT 0',
             # Role — columnas nuevas que SQLModel mapea pero la DB heredada no tiene.
             "ALTER TABLE role               ADD COLUMN IF NOT EXISTS is_system  BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE role               ADD COLUMN IF NOT EXISTS created_at VARCHAR(64)",

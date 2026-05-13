@@ -67,6 +67,37 @@ def _exists_recent(
     return row is not None
 
 
+# Mapeo kind → atributo de preferencias del usuario. Si el flag está en False,
+# la notificación push se suprime (la fila no se crea).
+_KIND_TO_PREF: dict[str, str] = {
+    KIND_SESSION_PROCESSED: "notif_session_processed",
+    KIND_SESSION_RECEIVED:  "notif_session_processed",
+    KIND_TASK_ASSIGNED:     "notif_task_assigned",
+    KIND_ROUTING_FAILED:    "notif_security_alerts",  # alertas técnicas
+    KIND_COMMENT_MENTION:   "notif_push_enabled",
+    KIND_SYSTEM:            "notif_push_enabled",
+}
+
+
+def _user_allows_kind(db: Session, user_id: int, kind: str) -> bool:
+    """Devuelve True si el usuario tiene activada la categoría correspondiente.
+    Si no podemos resolver al usuario o la preferencia, asumimos True (no
+    queremos perder notificaciones por un default desconocido)."""
+    try:
+        u = db.get(User, user_id)
+        if not u:
+            return True
+        # Master switch: push desactivado → no se crea ninguna.
+        if not getattr(u, "notif_push_enabled", True):
+            return False
+        pref_attr = _KIND_TO_PREF.get(kind)
+        if not pref_attr:
+            return True
+        return bool(getattr(u, pref_attr, True))
+    except Exception:
+        return True
+
+
 def notify_user(
     db: Session,
     *,
@@ -81,8 +112,16 @@ def notify_user(
     dedup: bool = True,
 ) -> Optional[Notification]:
     """Crea una notificación para un usuario. Retorna la fila creada o None
-    si fue deduplicada o si falló (no levanta excepciones)."""
+    si fue deduplicada, si el usuario desactivó la categoría, o si falló."""
     try:
+        # Respeta las preferencias granulares del usuario.
+        if not _user_allows_kind(db, user_id, kind):
+            logger.debug(
+                "notify_user: bloqueado por preferencias user=%s kind=%s",
+                user_id, kind,
+            )
+            return None
+
         if dedup and _exists_recent(
             db,
             user_id=user_id,

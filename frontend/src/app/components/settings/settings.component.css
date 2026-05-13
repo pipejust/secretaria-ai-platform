@@ -6,13 +6,15 @@
 
 .acten-settings {
     --st-bg:          #F7F9FC;
-    --st-card:        #FFFFFF;
-    --st-border:      #E2E8F0;
-    --st-border-soft: #EEF1F6;
-    --st-text:        #0F172A;
-    --st-text-muted:  #475569;
-    --st-text-soft:   #94A3B8;
-    --st-blue:        #155EEF;
+    --st-card:        var(--color-bg-panel);
+    --st-border:      var(--color-border);
+    --st-border-soft: var(--color-border-light);
+    --st-text:        var(--color-fg-default);
+    --st-text-muted:  var(--color-fg-secondary);
+    --st-text-soft:   var(--color-fg-soft);
+    /* `--st-blue` para botones de acción (`.st-btn-primary`).
+       Hace fallback al color SECUNDARIO de la marca. */
+    --st-blue:        var(--brand-action, #155EEF);
     --st-blue-soft:   #DBEAFE;
     --st-blue-bg:     #EFF6FF;
     --st-amber-bg:    #FFF7ED;
@@ -21,13 +23,13 @@
     --st-violet-bg:   #F5F3FF;
     --st-green:       #10B981;
     --st-green-bg:    #ECFDF5;
-    --st-grey-soft:   #F1F5F9;
+    --st-grey-soft:   var(--color-bg-muted);
     --st-radius:      16px;
 
     background: var(--st-bg);
     color: var(--st-text);
     font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
-    padding: 24px;
+    padding: 32px;
     min-height: 100%;
     box-sizing: border-box;
 }
@@ -72,12 +74,15 @@
 .st-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .st-btn-primary {
     background: var(--st-blue);
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     border-color: var(--st-blue);
 }
-.st-btn-primary:hover:not(:disabled) { background: #134CD8; border-color: #134CD8; }
+.st-btn-primary:hover:not(:disabled) {
+    background: var(--brand-action-hover, #134CD8);
+    border-color: var(--brand-action-hover, #134CD8);
+}
 .st-btn-secondary {
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     color: var(--st-text);
     border-color: var(--st-border);
 }
@@ -199,7 +204,7 @@
     padding: 0 12px;
     border: 1px solid var(--st-border);
     border-radius: 10px;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     transition: border-color 120ms ease, box-shadow 120ms ease;
     /* En selects, el chevron lo dibujamos en el wrapper para no chocar
        con el wrapper-focus-ring. */
@@ -283,7 +288,7 @@
     padding: 0 12px !important;
     border: 1px solid var(--st-border) !important;
     border-radius: 10px !important;
-    background: #FFFFFF !important;
+    background: var(--color-bg-panel) !important;
     background-image: none !important;
     font-family: inherit;
     font-size: 13px;
@@ -383,7 +388,7 @@ select.st-input::-ms-expand { display: none; }
     display: inline-block;
     width: 32px;
     height: 18px;
-    background: #CBD5E1;
+    background: var(--color-border-strong);
     border-radius: 999px;
     position: relative;
     transition: background 120ms ease;
@@ -395,7 +400,7 @@ select.st-input::-ms-expand { display: none; }
     top: 2px; left: 2px;
     width: 14px; height: 14px;
     border-radius: 50%;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
     transition: left 120ms ease;
 }
@@ -423,7 +428,7 @@ select.st-input::-ms-expand { display: none; }
     padding: 6px 12px 6px 6px;
     border: 1px solid var(--st-border);
     border-radius: 999px;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     cursor: pointer;
     font-family: inherit;
     font-size: 12px;
@@ -442,7 +447,7 @@ select.st-input::-ms-expand { display: none; }
     padding: 14px 16px;
     border: 1px solid var(--st-border-soft);
     border-radius: 12px;
-    background: #F8FAFC;
+    background: var(--color-bg-elevated);
 }
 .st-toggle-card strong { display: block; font-size: 13px; font-weight: 700; color: var(--st-text); margin-bottom: 2px; }
 .st-toggle-card small  { display: block; font-size: 12px; color: var(--st-text-muted); line-height: 1.4; }
@@ -455,7 +460,7 @@ select.st-input::-ms-expand { display: none; }
     height: 88px;
     border-radius: 14px;
     border: 1px solid var(--st-border);
-    background: #F8FAFC;
+    background: var(--color-bg-elevated);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -469,7 +474,7 @@ select.st-input::-ms-expand { display: none; }
     width: 16px; height: 16px;
     border-radius: 50%;
     background: var(--st-green);
-    border: 2px solid #FFFFFF;
+    border: 2px solid var(--color-bg-panel);
 }
 .st-logo-actions { display: flex; flex-direction: column; gap: 4px; }
 .st-help { font-size: 11px; color: var(--st-text-soft); line-height: 1.3; }
@@ -530,7 +535,7 @@ select.st-input::-ms-expand { display: none; }
     padding: 12px 14px;
     border: 1px solid var(--st-border-soft);
     border-radius: 12px;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     text-decoration: none;
     color: var(--st-text);
     transition: background 120ms ease, border-color 120ms ease;

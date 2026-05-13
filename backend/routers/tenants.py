@@ -86,9 +86,19 @@ class TenantOut(BaseModel):
     is_active: bool
     user_count: int
     created_at: str
+    # Branding extraído del JSON — útil para el dashboard de super-admin.
+    logo_data_url: Optional[str] = None
+    icon_data_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    company_name: Optional[str] = None
 
     @classmethod
     def from_db(cls, t: Tenant, user_count: int) -> "TenantOut":
+        import json as _json
+        try:
+            brand = _json.loads(t.branding_json or "{}") if t.branding_json else {}
+        except (_json.JSONDecodeError, TypeError):
+            brand = {}
         return cls(
             id=t.id,
             slug=t.slug,
@@ -97,6 +107,10 @@ class TenantOut(BaseModel):
             is_active=t.is_active,
             user_count=user_count,
             created_at=t.created_at,
+            logo_data_url=brand.get("logo_data_url"),
+            icon_data_url=brand.get("icon_data_url"),
+            primary_color=brand.get("primary_color"),
+            company_name=brand.get("company_name"),
         )
 
 

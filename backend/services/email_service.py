@@ -1,3 +1,4 @@
+import base64
 import os
 import resend
 import json
@@ -11,6 +12,31 @@ from services import branding_service
 # Sin DB, no se envían correos: se imprime el HTML en consola (modo dev).
 DEFAULT_FROM_EMAIL = "no-reply@acten.local"
 DEFAULT_TO_EMAIL = os.environ.get("TO_EMAIL", "felipesof@gmail.com")
+
+
+# Cache del logo default de Acten embebido como data URL. Se usa cuando el
+# tenant no ha subido un logo en /admin/marca — garantiza que TODOS los
+# correos lleven un logo en el header (nunca solo texto). Lo cargamos una
+# vez al primer import del módulo.
+_DEFAULT_ACTEN_LOGO_DATA_URL: str | None = None
+
+
+def _load_default_logo_data_url() -> str:
+    """Lee `templates/assets/acten-logo-default.png` y lo devuelve como
+    data URL. Cacheado en módulo — costo amortizado a 0 después del primer
+    correo."""
+    global _DEFAULT_ACTEN_LOGO_DATA_URL
+    if _DEFAULT_ACTEN_LOGO_DATA_URL is not None:
+        return _DEFAULT_ACTEN_LOGO_DATA_URL
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(os.path.dirname(current_dir), "templates", "assets", "acten-logo-default.png")
+        with open(path, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode("ascii")
+        _DEFAULT_ACTEN_LOGO_DATA_URL = f"data:image/png;base64,{encoded}"
+    except Exception:  # noqa: BLE001
+        _DEFAULT_ACTEN_LOGO_DATA_URL = ""
+    return _DEFAULT_ACTEN_LOGO_DATA_URL
 
 
 class EmailService:
@@ -90,6 +116,12 @@ class EmailService:
                     self.branding = branding_service.get_branding(db, tid)
                 except Exception as exc:
                     print(f"Error cargando branding para email: {exc}")
+
+        # Fallback de logo: si el tenant aún no subió logo en /admin/marca,
+        # usamos el imagologo Acten embebido como data URL para que TODOS los
+        # correos lleven un logo en el header.
+        if not self.branding.get("logo_data_url"):
+            self.branding["logo_data_url"] = _load_default_logo_data_url()
 
         if self.api_key:
             resend.api_key = self.api_key
@@ -208,6 +240,34 @@ class EmailService:
         )
         company = self.branding.get("company_name") or self.branding.get("platform_name") or "Acten"
         await self._send_html_email(to_email, f"¡Bienvenido a {company}!", html_content)
+
+    async def send_two_factor_code_email(
+        self,
+        to_email: str,
+        user_name: str,
+        code: str,
+        purpose: str = "login",
+        ttl_minutes: int = 10,
+        max_attempts: int = 5,
+    ):
+        """Email con el código OTP para activar o desafiar 2FA. Usa el
+        template branded como TODOS los demás correos (logo + colores)."""
+        template = self.jinja_env.get_template('email_two_factor_code.html')
+        html_content = template.render(
+            user_name=user_name,
+            code=code,
+            purpose=purpose,
+            ttl_minutes=ttl_minutes,
+            max_attempts=max_attempts,
+            current_year=2026,
+            brand=self.branding,
+        )
+        company = self.branding.get("company_name") or self.branding.get("platform_name") or "Acten"
+        if purpose == "enable":
+            subject = f"Código para activar 2FA en {company}"
+        else:
+            subject = f"Código de verificación · {company}"
+        await self._send_html_email(to_email, subject, html_content)
 
     async def send_forgot_password_email(self, to_email: str, user_name: str, reset_token: str):
         # Bug histórico: faltaba cargar el template — el render usaba `template`

@@ -7,6 +7,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { UserDirectoryService, UserSummary } from '../../services/user-directory.service';
+import { UserChipComponent } from '../shared/user-chip/user-chip.component';
 import { environment } from '../../../environments/environment';
 
 interface PendingItem {
@@ -16,11 +18,16 @@ interface PendingItem {
     description: string;
     owner_name: string;
     owner_email: string;
-    /** Datos extra del owner (vienen enriquecidos del backend cuando el
-     *  email matchea con un usuario del workspace). Vacíos si es contacto
-     *  externo. Se usan en el tooltip de hover sobre el responsable. */
+    /** Resolución a User del tenant (backend enriquecido). Si owner_user_id
+     *  está presente, el owner es el mismo usuario de la plataforma → mostrar
+     *  su avatar_url y full_name (en vivo, no el detectado por IA). */
+    owner_user_id?: number | null;
+    owner_full_name?: string;
+    owner_avatar_url?: string | null;
+    owner_is_user?: boolean;
     owner_role?: string;
     owner_department?: string;
+    owner_position?: string;
     owner_company?: string;
     due_date: string | null;
     due_time?: string | null;
@@ -70,7 +77,7 @@ interface DonutSlice {
 @Component({
     selector: 'app-pendientes',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, UserChipComponent],
     templateUrl: './pendientes.component.html',
     styleUrls: ['./pendientes.component.css'],
 })
@@ -156,6 +163,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
         private router: Router,
+        private userDirectory: UserDirectoryService,
     ) {}
 
     ngOnInit(): void {
@@ -211,6 +219,28 @@ export class PendientesComponent implements OnInit, OnDestroy {
                     this.items = res.items || [];
                     this.isLoading = false;
                     this.currentPage = 1;
+                    // Pre-poblar el cache del directorio para que el chip
+                    // tenga el avatar/nombre sin necesidad de un segundo
+                    // round-trip — el backend ya enriqueció cada fila.
+                    for (const it of this.items) {
+                        if (!it.owner_email) continue;
+                        if (it.owner_is_user && it.owner_user_id) {
+                            const summary: UserSummary = {
+                                id: it.owner_user_id,
+                                email: it.owner_email,
+                                full_name: it.owner_full_name || it.owner_name || '',
+                                avatar_url: it.owner_avatar_url || null,
+                                role: it.owner_role || null,
+                                department: it.owner_department || null,
+                                position: it.owner_position || null,
+                                is_active: true,
+                            };
+                            this.userDirectory.primeCache(it.owner_email, summary);
+                        } else {
+                            // Confirmamos al cache que este email es contacto externo.
+                            this.userDirectory.primeCache(it.owner_email, null);
+                        }
+                    }
                     this.cdr.detectChanges();
                 },
                 error: () => {

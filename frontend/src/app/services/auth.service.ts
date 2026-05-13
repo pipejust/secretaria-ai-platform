@@ -41,10 +41,13 @@ export class AuthService {
         return this.http.post<any>(`${this.apiUrl}/login`, body, { headers })
             .pipe(
                 tap(response => {
+                    if (response?.two_factor_required) {
+                        // El caller debe redirigir al paso de verificación 2FA.
+                        // No persistimos token todavía.
+                        return;
+                    }
                     if (response && response.access_token) {
                         localStorage.setItem('access_token', response.access_token);
-                        // Confirmamos el tenant que el backend devolvió (puede
-                        // diferir si el frontend mandó un slug equivocado).
                         if (response.tenant?.slug) {
                             this.tenants.setSlug(response.tenant.slug);
                         }
@@ -54,11 +57,114 @@ export class AuthService {
             );
     }
 
+    /** Completa el login cuando el backend pidió 2FA. */
+    verifyLogin2FA(email: string, code: string, tenantSlug?: string): Observable<any> {
+        const slug = tenantSlug || this.tenants.slug();
+        return this.http.post<any>(`${this.apiUrl}/login/2fa-verify`, {
+            username: email,
+            code,
+            tenant_slug: slug,
+        }).pipe(
+            tap((response) => {
+                if (response?.access_token) {
+                    localStorage.setItem('access_token', response.access_token);
+                    if (response.tenant?.slug) this.tenants.setSlug(response.tenant.slug);
+                    this.loadUserProfile();
+                }
+            }),
+        );
+    }
+
     changePassword(current_password: string, new_password: string): Observable<any> {
         return this.http.put(`${this.apiUrl}/password`, {
             current_password,
             new_password
         }, { headers: this.getAuthHeaders() });
+    }
+
+    /** Actualiza los campos editables del perfil (PUT /auth/me).
+     *  Devuelve el shape completo del perfil y refresca el currentUser$ stream. */
+    updateProfile(payload: Partial<{
+        full_name: string;
+        phone: string;
+        position: string;
+        department: string;
+        location: string;
+        bio: string;
+        avatar_url: string;
+    }>): Observable<any> {
+        return this.http.put<any>(`${this.apiUrl}/me`, payload).pipe(
+            tap((user) => this.currentUserSubject.next(user)),
+        );
+    }
+
+    /** Actualiza las preferencias de notificación (PUT /auth/me/notifications). */
+    updateNotificationPrefs(payload: Partial<{
+        email_enabled: boolean;
+        push_enabled: boolean;
+        meeting_reminders: boolean;
+        task_assigned: boolean;
+        session_processed: boolean;
+        weekly_report: boolean;
+        security_alerts: boolean;
+    }>): Observable<any> {
+        return this.http.put<any>(`${this.apiUrl}/me/notifications`, payload).pipe(
+            tap((notifications) => {
+                const u = this.currentUserSubject.value;
+                if (u) this.currentUserSubject.next({ ...u, notifications });
+            }),
+        );
+    }
+
+    /** Devuelve las últimas N entradas del audit log del propio usuario. */
+    getMyActivity(limit = 20): Observable<{ items: Array<{
+        id: number;
+        action: string;
+        label: string;
+        icon: string;
+        resource_type: string | null;
+        resource_id: string | null;
+        created_at: string;
+        ip: string | null;
+    }>; total: number }> {
+        return this.http.get<any>(`${this.apiUrl}/me/activity?limit=${limit}`);
+    }
+
+    /** Inicia el flujo de activación 2FA (genera código + envía email). */
+    init2FA(): Observable<{ status: string; email: string; ttl_minutes: number }> {
+        return this.http.post<any>(`${this.apiUrl}/me/2fa/init`, {});
+    }
+
+    /** Confirma el código de activación 2FA. */
+    confirm2FA(code: string): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/me/2fa/confirm`, { code }).pipe(
+            tap((user) => this.currentUserSubject.next(user)),
+        );
+    }
+
+    /** Desactiva 2FA (requiere contraseña). */
+    disable2FA(password: string): Observable<any> {
+        return this.http.request<any>('DELETE', `${this.apiUrl}/me/2fa`, {
+            body: { password },
+        }).pipe(
+            tap((user) => this.currentUserSubject.next(user)),
+        );
+    }
+
+    /** Sube un avatar (multipart/form-data). */
+    uploadAvatar(file: File): Observable<any> {
+        const fd = new FormData();
+        fd.append('file', file);
+        return this.http.post<any>(`${this.apiUrl}/me/avatar`, fd).pipe(
+            tap((user) => this.currentUserSubject.next(user)),
+        );
+    }
+
+    /** Elimina el avatar actual. */
+    deleteAvatar(): Observable<any> {
+        return this.http.delete<any>(`${this.apiUrl}/me/avatar`).pipe(
+            tap((user) => this.currentUserSubject.next(user)),
+        );
     }
 
     logout() {

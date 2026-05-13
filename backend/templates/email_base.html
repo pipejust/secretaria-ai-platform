@@ -110,8 +110,9 @@
     <div class="header">
       {% if brand and brand.logo_data_url %}
         <img class="logo" src="{{ brand.logo_data_url }}" alt="{{ brand.company_name | default('Acten') }}">
+      {% else %}
+        <h1>{{ brand.company_name | default('Acten') }}</h1>
       {% endif %}
-      <h1>{{ brand.company_name | default('Acten') }}</h1>
       {% if brand and brand.company_tagline %}
         <p class="tagline">{{ brand.company_tagline }}</p>
       {% endif %}

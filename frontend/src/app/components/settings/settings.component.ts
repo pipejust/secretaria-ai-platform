@@ -1,11 +1,14 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { SettingsService } from '../../services/settings.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
+import { PreferencesService, UiPrefs, DEFAULT_PREFS } from '../../services/preferences.service';
 import { environment } from '../../../environments/environment';
 
 interface OAuthCfg {
@@ -21,45 +24,6 @@ interface OAuthStatus {
   source: 'tenant' | 'env' | null;
 }
 
-/** Preferencias de UX puramente frontend — persistidas en localStorage.
- *  No tocan al backend (no hay modelo de UserPreferences todavía). */
-interface UiPrefs {
-  dateFormat: string;
-  timeZone: string;
-  language: string;
-  landingPage: string;
-  darkMode: boolean;
-  workspaceName: string;
-  weekStartsOn: 'monday' | 'sunday';
-  defaultMeetingDuration: number;
-  defaultTaskAssignee: string;
-  defaultProjectPrivacy: 'workspace' | 'private' | 'public';
-  autoArchiveDays: number;
-  defaultCalendar: string;
-  defaultFileStorage: string;
-  defaultCommunicationChannel: string;
-  defaultDocEditor: string;
-}
-
-const PREFS_LS_KEY = 'acten:ui-prefs:v1';
-const DEFAULT_PREFS: UiPrefs = {
-  dateFormat: 'DD/MM/YYYY',
-  timeZone: 'America/Bogota',
-  language: 'es-CO',
-  landingPage: '/admin/dashboard',
-  darkMode: false,
-  workspaceName: '',
-  weekStartsOn: 'monday',
-  defaultMeetingDuration: 60,
-  defaultTaskAssignee: '',
-  defaultProjectPrivacy: 'workspace',
-  autoArchiveDays: 90,
-  defaultCalendar: 'google',
-  defaultFileStorage: 'google-drive',
-  defaultCommunicationChannel: '',
-  defaultDocEditor: 'google-docs',
-};
-
 /** Las secciones Documents / Security / Audit se removieron por
  *  petición del cliente — la marca/logo vive en /admin/branding,
  *  los usuarios y roles tienen sus propias vistas, y la auditoría
@@ -74,7 +38,8 @@ type SectionKey =
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css']
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
   // ============================================================
   // Settings reales del backend (preservadas tal cual)
   // ============================================================
@@ -188,7 +153,13 @@ export class SettingsComponent implements OnInit {
     private toast: ToastService,
     private http: HttpClient,
     private auth: AuthService,
+    private preferences: PreferencesService,
   ) { }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   get defaultGoogleRedirect(): string {
     return `${environment.apiUrl}/api/calendar/google/callback`;
@@ -222,36 +193,39 @@ export class SettingsComponent implements OnInit {
   }
 
   // ============================================================
-  // Preferencias UX (localStorage)
+  // Preferencias UX — borrador local. SOLO se aplican al backend / al
+  // PreferencesService cuando el usuario pulsa "Guardar cambios".
   // ============================================================
 
-  private loadPrefs(): void {
-    try {
-      const raw = localStorage.getItem(PREFS_LS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        this.prefs = { ...DEFAULT_PREFS, ...parsed };
-      }
-    } catch { /* ignore */ }
+  /** Indica si hay cambios en `prefs` aún no guardados.  */
+  get hasUnsavedPrefs(): boolean {
+    const saved = this.preferences.get();
+    return JSON.stringify(saved) !== JSON.stringify(this.prefs);
   }
 
-  savePrefs(): void {
-    try {
-      localStorage.setItem(PREFS_LS_KEY, JSON.stringify(this.prefs));
-    } catch { /* quota o private mode */ }
-  }
-
-  /** Toggle de Dark Mode — persiste y aplica una clase global al body. */
-  toggleDarkMode(): void {
-    this.prefs.darkMode = !this.prefs.darkMode;
-    this._applyDarkMode();
-    this.savePrefs();
+  /** Marca que el borrador cambió (no hace I/O). Sirve para forzar CD. */
+  markPrefsDirty(): void {
     this.cdr.detectChanges();
   }
-  private _applyDarkMode(): void {
-    if (typeof document === 'undefined') return;
-    document.body.classList.toggle('dark-mode', this.prefs.darkMode);
+
+  /** Toggle visual del switch — sólo cambia el borrador local.
+   *  El efecto en toda la app se aplica al guardar. */
+  toggleDarkMode(): void {
+    this.prefs.darkMode = !this.prefs.darkMode;
+    this.markPrefsDirty();
+  }
+
+  /** Confirma TODOS los cambios pendientes del borrador.
+   *  Aplica side-effects del servicio (dark mode visible, week-start, lang). */
+  commitPrefs(): void {
+    this.preferences.setAll(this.prefs);
+    this.toast.success('Preferencias guardadas.');
+  }
+
+  /** Revierte el borrador al estado guardado. */
+  discardPrefChanges(): void {
+    this.prefs = { ...this.preferences.get() };
+    this.cdr.detectChanges();
   }
 
   setSection(s: SectionKey): void {
@@ -263,8 +237,15 @@ export class SettingsComponent implements OnInit {
   // ============================================================
 
   ngOnInit(): void {
-    this.loadPrefs();
-    this._applyDarkMode();
+    // Cargar prefs desde el servicio y sincronizar al estado local.
+    this.prefs = { ...this.preferences.get() };
+    // Cualquier cambio en el servicio (otra pestaña, otro componente) se
+    // refleja aquí también.
+    this.preferences.prefs$.pipe(takeUntil(this.destroy$)).subscribe((p) => {
+      this.prefs = { ...p };
+      this.cdr.detectChanges();
+    });
+
     this.loadOauthStatus();
 
     this.settingsService.getSettings().subscribe({
@@ -293,8 +274,10 @@ export class SettingsComponent implements OnInit {
     this.successMessage = '';
     this.errorMessage = '';
 
-    // 1) Guardar prefs UX en localStorage (sin red).
-    this.savePrefs();
+    // 1) Aplicar el borrador de prefs UX → servicio (localStorage + side
+    //    effects). Sin toast aquí — el final del saveSettings ya muestra el
+    //    success global para evitar toasts duplicados.
+    this.preferences.setAll(this.prefs);
 
     // 2) Guardar settings reales en backend (preserva la API existente).
     const payload = {

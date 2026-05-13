@@ -6,7 +6,7 @@
     background: var(--color-bg-base);
 }
 
-/* Sidebar Acten — Charcoal #111318, 240px expanded / 80px collapsed.
+/* Sidebar Acten — Charcoal var(--color-fg-default), 240px expanded / 80px collapsed.
    Spec del handoff Page 01 — Section 4 (Redesigned Navigation System).
    Item activo: solo background sutil (sin barra lateral). */
 .sidebar {
@@ -148,12 +148,15 @@
     color: var(--color-fg-on-dark);
 }
 
-/* Item activo: solo background sutil, SIN barra lateral.
-   Spec del handoff Page 01 — Section 4. */
+/* Item activo del menú lateral = estado SELECCIONADO → color ACENTO.
+   Pinta el fondo con un tinte del acento (acolchado sobre el sidebar
+   oscuro) y un borde izquierdo del acento sólido para que sea legible
+   sobre el primario. */
 .sidebar-nav a.active {
-    background: var(--color-bg-sidebar-2);
+    background: var(--brand-selected, var(--color-bg-sidebar-2));
     color: var(--color-fg-on-dark);
     font-weight: var(--fw-semibold);
+    box-shadow: inset 3px 0 0 var(--brand-selected-hover, currentColor);
 }
 
 .sidebar-nav a svg {
@@ -273,7 +276,7 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     padding: 0 var(--space-24);
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     color: var(--color-fg-default);
     border-bottom: 1px solid var(--color-border);
     gap: var(--space-16);
@@ -356,17 +359,17 @@
 .topbar-date svg { color: var(--color-fg-muted); flex-shrink: 0; }
 .topbar-date:hover { background: var(--brand-cream-100); border-color: var(--color-border-strong); }
 
-/* CTA azul "+ New Meeting" del topbar (réplica del mockup). */
+/* CTA "+ Nueva reunión" del topbar — botón de ACCIÓN → color SECUNDARIO. */
 .topbar-cta {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     height: 36px;
     padding: 0 14px;
-    background: #2563EB;
-    border: 1px solid #2563EB;
+    background: var(--brand-action, #2563EB);
+    border: 1px solid var(--brand-action, #2563EB);
     border-radius: var(--radius-md);
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     font-family: var(--font-sans);
     font-size: var(--text-13);
     font-weight: var(--fw-semibold);
@@ -376,8 +379,8 @@
     flex-shrink: 0;
 }
 .topbar-cta:hover {
-    background: #1D4ED8;
-    border-color: #1D4ED8;
+    background: var(--brand-action-hover, #1D4ED8);
+    border-color: var(--brand-action-hover, #1D4ED8);
     box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
 }
 .topbar-cta svg { stroke-width: 2.5; }
@@ -392,14 +395,14 @@
     height: 16px;
     border-radius: 999px;
     background: #EF4444;
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     font-size: 10px;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0 5px;
-    border: 2px solid var(--color-bg-topbar, #FFFFFF);
+    border: 2px solid var(--color-bg-topbar, var(--color-bg-panel));
 }
 
 /* Search central — pill estilo handoff Page 01 — Section 4 (COMMAND BAR).
@@ -569,6 +572,20 @@
     font-weight: var(--fw-semibold);
     font-family: var(--font-sans);
     letter-spacing: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Cuando el usuario subió foto, el background colorido se reemplaza por la
+   imagen (cover) y desaparece el "borde" de color sólido. */
+.top-avatar.has-photo {
+    background: transparent;
+}
+.top-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .user-details {
@@ -607,7 +624,7 @@
     right: 0;
     margin-top: 0.5rem;
     width: 240px;
-    background: white;
+    background: var(--color-bg-panel);
     border-radius: var(--radius-md);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
@@ -837,7 +854,7 @@
     height: 34px;
     border-radius: 50%;
     background: linear-gradient(135deg, #2563EB, #1E3A8A);
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     font-size: 12px;
     font-weight: 700;
     display: inline-flex;
@@ -845,6 +862,17 @@
     justify-content: center;
     flex-shrink: 0;
     border: 2px solid rgba(255, 255, 255, 0.10);
+    overflow: hidden;
+    position: relative;
+}
+.sidebar-user-avatar.has-photo {
+    background: transparent;
+}
+.sidebar-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 .sidebar-user-meta {
     display: flex;
@@ -856,7 +884,7 @@
 .sidebar-user-meta .su-name {
     font-size: 13px;
     font-weight: 600;
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -889,7 +917,7 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-16);
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     border-top: 1px solid var(--color-border);
     color: var(--color-fg-muted);
     font-family: var(--font-sans);
@@ -937,7 +965,15 @@
 .content-area:has(.acten-projects),
 .content-area:has(.acten-ask),
 .content-area:has(.acten-tasks),
-.content-area:has(.acten-settings) { padding: 0; background: #F7F9FC; }
+.content-area:has(.acten-settings),
+.content-area:has(.meetings-page),
+.content-area:has(.tpl-page),
+.content-area:has(.rp-page),
+.content-area:has(.cal-page),
+.content-area:has(.us-page),
+.content-area:has(.rl-page),
+.content-area:has(.tn-page),
+.content-area:has(.br-page) { padding: 0; background: var(--color-bg-base); }
 
 /* Para el chat de Acten queremos que la página entera entre en el viewport
    sin scroll: la lista de turns scrollea por dentro, no la página. Por eso
@@ -963,7 +999,7 @@
     top: calc(100% + 6px);
     left: 0;
     right: 0;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
     border-radius: 12px;
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
@@ -982,7 +1018,7 @@
 .ts-empty p { margin: 0; }
 
 .ts-group { padding: 4px 0; }
-.ts-group + .ts-group { border-top: 1px solid var(--color-border-soft, #EEF1F6); }
+.ts-group + .ts-group { border-top: 1px solid var(--color-border-soft, var(--color-border-light)); }
 .ts-group-head {
     padding: 6px 16px;
     font-size: 11px;
@@ -1002,12 +1038,12 @@
     transition: background 120ms ease;
 }
 .ts-group li:hover,
-.ts-group li:focus { background: #F8FAFC; outline: none; }
+.ts-group li:focus { background: var(--color-bg-elevated); outline: none; }
 .ts-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: #F1F5F9;
+    background: var(--color-bg-muted);
     color: var(--color-fg-muted);
     display: inline-flex;
     align-items: center;
@@ -1046,7 +1082,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--color-border, #E2E8F0);
+    border-bottom: 1px solid var(--color-border, var(--color-border));
     font-size: 13px;
     font-weight: 700;
     color: var(--color-fg-default);
@@ -1084,10 +1120,10 @@
     padding: 12px 16px;
     cursor: pointer;
     transition: background 120ms ease;
-    border-bottom: 1px solid var(--color-border-soft, #EEF1F6);
+    border-bottom: 1px solid var(--color-border-soft, var(--color-border-light));
 }
 .notif-item:last-child { border-bottom: 0; }
-.notif-item:hover { background: #F8FAFC; }
+.notif-item:hover { background: var(--color-bg-elevated); }
 
 .notif-dot {
     width: 8px;
@@ -1105,7 +1141,7 @@
 .notif-item[data-kind="task_assigned"]     .notif-dot { background: #F59E0B; }
 .notif-item[data-kind="routing_failed"]    .notif-dot { background: #EF4444; }
 .notif-item[data-kind="comment_mention"]   .notif-dot { background: #7C3AED; }
-.notif-item:not(.is-unread) .notif-dot { background: var(--color-fg-soft, #94A3B8); opacity: 0.4; }
+.notif-item:not(.is-unread) .notif-dot { background: var(--color-fg-soft, var(--color-fg-soft)); opacity: 0.4; }
 
 .notif-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .notif-kind {
@@ -1137,5 +1173,5 @@
 .notif-time {
     margin-top: 6px;
     font-size: 11px;
-    color: var(--color-fg-soft, #94A3B8);
+    color: var(--color-fg-soft, var(--color-fg-soft));
 }

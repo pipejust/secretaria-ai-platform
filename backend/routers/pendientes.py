@@ -69,19 +69,22 @@ def _serialize(
     item: ActionItem,
     project_name: str,
     now: datetime,
-    user_meta: Optional[Dict[str, Dict[str, str]]] = None,
+    user_meta: Optional[Dict[str, Dict[str, Any]]] = None,
     tenant_name: str = "",
 ) -> Dict[str, Any]:
     """Serializa un ActionItem para respuesta API.
 
-    `user_meta` es un dict opcional `{email_lower: {role, department}}`
-    para enriquecer cada item con los datos del usuario interno cuando
-    matchea por email. Si el owner no es un usuario del workspace, se
-    devuelven cadenas vacías.
+    `user_meta` es un dict opcional `{email_lower: UserSummary}` —
+    cuando el `owner_email` matchea un User del tenant, devolvemos también
+    `owner_user_id`, `owner_full_name` (nombre EDITADO por el usuario en su
+    perfil, no el que detectó la IA), `owner_avatar_url`, rol y departamento.
     """
-    meta: Dict[str, str] = {}
+    meta: Dict[str, Any] = {}
     if user_meta and item.owner_email:
-        meta = user_meta.get((item.owner_email or "").strip().lower(), {})
+        meta = user_meta.get((item.owner_email or "").strip().lower(), {}) or {}
+    # Nombre display: si el email matchea un user, ese es la fuente de verdad;
+    # si no, el nombre extraído por IA al procesar la reunión.
+    display_name = meta.get("full_name") or item.owner_name or ""
     return {
         "id": item.id,
         "session_id": item.session_id,
@@ -89,11 +92,15 @@ def _serialize(
         "description": item.description,
         "owner_name": item.owner_name,
         "owner_email": item.owner_email,
-        # Datos extra del usuario (si está en el tenant) — para el tooltip
-        # de hover en la UI: rol y departamento. Vacío si es contacto externo.
-        "owner_role": meta.get("role", ""),
-        "owner_department": meta.get("department", ""),
-        "owner_company": tenant_name,
+        # Resolución a User del tenant (None si es contacto externo).
+        "owner_user_id":    meta.get("id"),
+        "owner_full_name":  display_name,
+        "owner_avatar_url": meta.get("avatar_url"),
+        "owner_role":       meta.get("role") or "",
+        "owner_department": meta.get("department") or "",
+        "owner_position":   meta.get("position") or "",
+        "owner_is_user":    bool(meta.get("id")),
+        "owner_company":    tenant_name,
         "due_date": item.due_date,
         "due_time": getattr(item, "due_time", None),
         "priority": (getattr(item, "priority", None) or "media").lower(),
@@ -148,18 +155,32 @@ def list_pendientes(
         if s.id is not None
     }
 
-    # Carga de usuarios del tenant (para enriquecer owner con rol/depto).
-    user_meta: Dict[str, Dict[str, str]] = {}
-    user_rows = db.exec(
-        select(User, Role).join(Role, Role.id == User.role_id, isouter=True)
-        .where(User.tenant_id == tenant.id)
-    ).all()
-    for u, r in user_rows:
-        if u.email:
-            user_meta[u.email.strip().lower()] = {
-                "role": (r.name if r else "") or "",
-                "department": (getattr(u, "department", "") or ""),
-            }
+    # Carga de usuarios del tenant — resolver centralizado.
+    # 1) Match por email (más confiable)
+    # 2) Match por NOMBRE solo si es UNÍVOCO en el tenant (fallback seguro
+    #    cuando la tarea solo tiene owner_name de Fireflies). Tageamos el
+    #    email real del user para que el resto del pipeline sea email-only.
+    from services import user_resolver
+    emails_in_use = list({(i.owner_email or "").strip().lower() for i in items if i.owner_email})
+    user_meta = user_resolver.resolve_emails(db, tenant.id, emails_in_use)
+    names_in_use = list({(i.owner_name or "").strip() for i in items if (i.owner_name and not i.owner_email)})
+    name_meta = user_resolver.resolve_names_unambiguous(db, tenant.id, names_in_use) if names_in_use else {}
+    # Inyectamos: si una tarea no tiene owner_email pero su nombre matchea
+    # unívocamente a un user del tenant, ponemos su email en user_meta para
+    # que el _serialize lo encuentre por email_lower.
+    for i in items:
+        if i.owner_email:
+            continue
+        if not i.owner_name:
+            continue
+        nm = user_resolver._normalize_name(i.owner_name)
+        if nm and nm in name_meta:
+            u = name_meta[nm]
+            email_key = u["email"].strip().lower()
+            user_meta[email_key] = u
+            # parche transitorio en el objeto in-memory para que _serialize
+            # use ese email al lookupear (no se persiste a la BD).
+            i.owner_email = u["email"]
     tenant_name = tenant.name or ""
 
     out: List[Dict[str, Any]] = []

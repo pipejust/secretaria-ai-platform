@@ -746,3 +746,526 @@ select:not(.glass-select),
 textarea {
   background: var(--color-bg-panel) !important;
 }
+/* ============================================================================
+ * Dark mode global — controlado por PreferencesService → body.acten-dark.
+ *
+ * Estrategia:
+ *   1) Variables de design system (--color-bg-*, --color-fg-*, etc.) se
+ *      sobreescriben para que CUALQUIER componente que use tokens reciba
+ *      dark mode gratis.
+ *   2) Selectores literales (#FFFFFF, #F8FAFC) — clases que sabemos que
+ *      hardcodean colores claros se invierten explícitamente.
+ *   3) Texto: cualquier color oscuro hardcoded (#0F172A, #111318, #1f2937,
+ *      #1e293b, #475569, #334155, #6b7280) → cream legible.
+ * ============================================================================ */
+
+/* === Tokens nuevos para colores que antes vivían hardcoded en componentes === */
+:root {
+    --color-fg-secondary: #475569;
+    --color-bg-muted:     #F1F5F9;
+    --color-border-light: #EEF1F6;
+}
+
+/* === 1) Tokens — la mayoría de componentes los heredan === */
+body.acten-dark {
+    --color-bg-base:     #0B1330;
+    --color-bg-elevated: #152042;
+    --color-bg-panel:    #152042;
+    --color-bg-muted:    #1F2A4D;
+    --color-bg-topbar:   #0F1A3F;
+    --color-fg-default:  #E5E7EB;
+    --color-fg-secondary: #CBD5E1;
+    --color-fg-muted:    #9CA3AF;
+    --color-fg-soft:     #6B7280;
+    --color-border:      #2A3559;
+    --color-border-light: #1F2A4D;
+    --color-border-strong: #3B4576;
+    --bg-main:           #0B1330;
+    --panel-bg:          #152042;
+    --topbar-bg:         #0F1A3F;
+    --text-main:         #E5E7EB;
+    --text-muted:        #9CA3AF;
+    --border-color:      #2A3559;
+    --color-bg-aside:    #0B1330;
+    --color-bg-aside-2:  #152042;
+    background: #0B1330;
+    color: #E5E7EB;
+}
+body.acten-dark .content-area { background: #0B1330 !important; }
+
+/* === 2) Contenedores raíz de cada vista === */
+body.acten-dark .rp-page,
+body.acten-dark .cal-page,
+body.acten-dark .meetings-page,
+body.acten-dark .tpl-page,
+body.acten-dark .us-page,
+body.acten-dark .rl-page,
+body.acten-dark .acten-settings,
+body.acten-dark .acten-dashboard,
+body.acten-dark .acten-tasks,
+body.acten-dark .acten-projects,
+body.acten-dark .acten-ask {
+    background: #0B1330 !important;
+    color: #E5E7EB !important;
+}
+
+/* === 3) Topbar siempre debe verse oscura coherente === */
+body.acten-dark .topbar { background: #0F1A3F !important; border-bottom-color: #1F2A4D !important; }
+
+/* === 4) Cards / paneles blancos === */
+body.acten-dark .rp-card,
+body.acten-dark .rp-kpi,
+body.acten-dark .rp-workload-donut,
+body.acten-dark .rp-workload-summary,
+body.acten-dark .rp-workload-row,
+body.acten-dark .rp-modal,
+body.acten-dark .rp-modal-foot,
+body.acten-dark .rp-modal-field input,
+body.acten-dark .rp-period-menu,
+body.acten-dark .rp-mini-select,
+body.acten-dark .rp-btn,
+body.acten-dark .rp-pg-btn,
+body.acten-dark .rp-deadline,
+body.acten-dark .rp-progress-bar,
+body.acten-dark .rp-team-row,
+body.acten-dark .rp-meeting,
+body.acten-dark .rp-task,
+body.acten-dark .rp-note,
+body.acten-dark .st-card,
+body.acten-dark .st-card-head,
+body.acten-dark .st-side,
+body.acten-dark .st-nav-item,
+body.acten-dark .st-input,
+body.acten-dark .st-integration,
+body.acten-dark .st-btn,
+body.acten-dark .cal-surface,
+body.acten-dark .cal-panel,
+body.acten-dark .cal-cell,
+body.acten-dark .cal-weekdays,
+body.acten-dark .cal-toolbar,
+body.acten-dark .cal-meeting,
+body.acten-dark .cal-task,
+body.acten-dark .cal-deadline,
+body.acten-dark .cal-note,
+body.acten-dark .cal-sources-menu,
+body.acten-dark .cal-period-menu,
+body.acten-dark .cal-btn,
+body.acten-dark .cal-icon-btn,
+body.acten-dark .cal-nav-group,
+body.acten-dark .cal-view-switch,
+body.acten-dark .cal-segmented,
+body.acten-dark .mt-metric,
+body.acten-dark .mt-table-wrap,
+body.acten-dark .mt-row,
+body.acten-dark .mt-tr,
+body.acten-dark .filter-search,
+body.acten-dark .filter-group,
+body.acten-dark .kebab-menu,
+body.acten-dark .meetings-detail,
+body.acten-dark .dt-head,
+body.acten-dark .dt-participants,
+body.acten-dark .us-card,
+body.acten-dark .us-row,
+body.acten-dark .us-detail,
+body.acten-dark .us-modal,
+body.acten-dark .rl-card,
+body.acten-dark .rl-row,
+body.acten-dark .rl-detail,
+body.acten-dark .rl-modal,
+body.acten-dark .tpl-shell,
+body.acten-dark .tpl-side,
+body.acten-dark .tpl-card,
+body.acten-dark .tpl-list,
+body.acten-dark .tpl-detail,
+body.acten-dark .tpl-modal,
+body.acten-dark .tpl-row,
+body.acten-dark .tk-card,
+body.acten-dark .tk-side-card,
+body.acten-dark .tk-row,
+body.acten-dark .ap-modal,
+body.acten-dark .ap-modal-content,
+body.acten-dark .acten-card,
+body.acten-dark .card,
+body.acten-dark .glass-panel,
+body.acten-dark [class*="-card"]:not(.us-pill):not(.rl-pill):not(.rp-status):not(.cal-status) {
+    background: #152042 !important;
+    border-color: #2A3559 !important;
+    color: #E5E7EB !important;
+}
+
+/* === 5) Tablas / filas con borde-bottom claro === */
+body.acten-dark tr,
+body.acten-dark .rp-tr,
+body.acten-dark .mt-tr,
+body.acten-dark .us-tr,
+body.acten-dark .rl-tr,
+body.acten-dark .tpl-row,
+body.acten-dark .tk-tr {
+    border-bottom-color: #2A3559 !important;
+}
+
+body.acten-dark .rp-th,
+body.acten-dark .mt-th,
+body.acten-dark .us-th,
+body.acten-dark .rl-th { border-bottom-color: #3B4576 !important; color: #9CA3AF !important; }
+
+/* === 6) Texto: cualquier color OSCURO hardcoded → cream legible === */
+body.acten-dark h1,
+body.acten-dark h2,
+body.acten-dark h3,
+body.acten-dark h4,
+body.acten-dark h5,
+body.acten-dark p,
+body.acten-dark span,
+body.acten-dark label,
+body.acten-dark a:not(.cp-btn):not([class*="btn"]):not([class*="cta"]):not(.rp-card-link):not(.rp-status):not(.cal-status):not(.us-pill):not(.rl-pill) {
+    color: inherit;
+}
+/* Cualquier elemento con color literal oscuro recibe override.
+   Esto cubre componentes que pintan `color: #0F172A` etc directo. */
+body.acten-dark [style*="color: #0F172A"],
+body.acten-dark [style*="color:#0F172A"],
+body.acten-dark [style*="color: #111318"],
+body.acten-dark [style*="color:#111318"] {
+    color: #E5E7EB !important;
+}
+
+body.acten-dark .rp-subtitle,
+body.acten-dark .rp-kpi-label,
+body.acten-dark .rp-kpi-delta,
+body.acten-dark .rp-card-link,
+body.acten-dark .rp-axis-label,
+body.acten-dark .rp-bar-value,
+body.acten-dark .rp-progress-num,
+body.acten-dark .rp-pg-info,
+body.acten-dark .rp-meeting-time,
+body.acten-dark .rp-meeting-meta,
+body.acten-dark .rp-deadline-when,
+body.acten-dark .rp-task-foot,
+body.acten-dark .rp-team-bar-label,
+body.acten-dark .rp-team-bar-num,
+body.acten-dark .rp-workload-pct,
+body.acten-dark .rp-workload-total,
+body.acten-dark .st-card-sub,
+body.acten-dark .st-field-label,
+body.acten-dark .st-help,
+body.acten-dark .st-nav-icon,
+body.acten-dark .cal-subtitle,
+body.acten-dark .cal-period,
+body.acten-dark .cal-meeting-meta,
+body.acten-dark .cal-meeting-time,
+body.acten-dark .cal-deadline-when,
+body.acten-dark .mt-sub,
+body.acten-dark .mt-meta,
+body.acten-dark .metric-label,
+body.acten-dark .metric-foot,
+body.acten-dark .filter-group label,
+body.acten-dark .filter-search input::placeholder {
+    color: #9CA3AF !important;
+}
+
+body.acten-dark .rp-kpi-value,
+body.acten-dark .rp-donut-value,
+body.acten-dark .rp-workload-kpi-num,
+body.acten-dark .rp-table .rp-tr:not(.rp-th) .rp-td,
+body.acten-dark .rp-meeting-title,
+body.acten-dark .rp-deadline-title,
+body.acten-dark .rp-task-title,
+body.acten-dark .rp-team-name,
+body.acten-dark .rp-workload-name,
+body.acten-dark .rp-note-text,
+body.acten-dark .st-card-title,
+body.acten-dark .cal-period,
+body.acten-dark .cal-panel-title,
+body.acten-dark .cal-meeting-title,
+body.acten-dark .cal-task-title,
+body.acten-dark .cal-deadline-title,
+body.acten-dark .mt-title,
+body.acten-dark .mt-cell-title,
+body.acten-dark .metric-value,
+body.acten-dark .filter-search input,
+body.acten-dark .filter-group select {
+    color: #E5E7EB !important;
+}
+
+/* === 7) Inputs / selects / textareas === */
+body.acten-dark input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+body.acten-dark select,
+body.acten-dark textarea,
+body.acten-dark .rp-input,
+body.acten-dark .st-input,
+body.acten-dark .filter-search input,
+body.acten-dark .cal-filter-input,
+body.acten-dark .cal-note-input {
+    background: #0F1A3F !important;
+    color: #E5E7EB !important;
+    border-color: #2A3559 !important;
+}
+body.acten-dark input::placeholder,
+body.acten-dark textarea::placeholder { color: #6B7280 !important; }
+
+/* === 8) Hovers/states === */
+body.acten-dark .rp-btn:hover:not(:disabled),
+body.acten-dark .cal-btn:hover:not(:disabled),
+body.acten-dark .st-btn:hover:not(:disabled),
+body.acten-dark .rp-period-menu > button:hover,
+body.acten-dark .st-nav-item:hover { background: #1B2752 !important; }
+
+body.acten-dark .rp-period-menu > button.is-active,
+body.acten-dark .rp-btn.is-active,
+body.acten-dark .cal-btn.is-active,
+body.acten-dark .st-nav-item.is-active { background: #1E2D5E !important; color: #BFDBFE !important; }
+
+/* === 9) Background gradiente y secciones específicas === */
+body.acten-dark .rp-workload-summary {
+    background: linear-gradient(180deg, #0F1A3F 0%, #152042 100%) !important;
+}
+body.acten-dark .rp-workload-kpi { background: #152042 !important; border-color: #2A3559 !important; }
+body.acten-dark .rp-stack-bar,
+body.acten-dark .rp-team-bar-track,
+body.acten-dark .rp-progress-bar { background: #1F2A4D !important; }
+
+/* === 10) Donut anillo base más oscuro === */
+body.acten-dark .rp-donut-svg circle[stroke="#F1F5F9"] { stroke: #1F2A4D !important; }
+body.acten-dark .rp-line-grid line { stroke: #2A3559 !important; }
+body.acten-dark .rp-line-area { fill: rgba(59, 130, 246, 0.15) !important; }
+
+/* === 11) Pill / chip / status badges mantienen sus colores propios === */
+body.acten-dark .rp-status,
+body.acten-dark .cal-status,
+body.acten-dark .rp-workload-chip,
+body.acten-dark .us-pill,
+body.acten-dark .rl-pill,
+body.acten-dark .st-pill { color: inherit; }
+
+/* === 12) Líneas/divisores claras === */
+body.acten-dark .rp-pagination,
+body.acten-dark .rp-modal-head,
+body.acten-dark .rp-modal-foot,
+body.acten-dark .rp-card-head,
+body.acten-dark .st-card-head,
+body.acten-dark .cal-panel-head,
+body.acten-dark .cal-panel-section { border-color: #2A3559 !important; }
+
+/* ============================================================================
+ * Dark mode — overrides finales para tinted backgrounds, modals, selected rows
+ * y "tonos" semánticos (success/warning/danger). Estos eran los espacios que
+ * quedaban con fondo claro (verde menta, naranja crema, azul pálido) sobre el
+ * navy oscuro.
+ * ============================================================================ */
+
+/* Modales: header, content, footer — sea cual sea el prefijo. */
+body.acten-dark [class*="modal"],
+body.acten-dark [class*="-modal"],
+body.acten-dark [class*="modal-"],
+body.acten-dark .ap-modal,
+body.acten-dark .ap-modal-content,
+body.acten-dark .ap-modal-header,
+body.acten-dark .ap-modal-body,
+body.acten-dark .ap-modal-footer {
+    background: var(--color-bg-panel) !important;
+    color: var(--color-fg-default) !important;
+    border-color: var(--color-border) !important;
+}
+body.acten-dark .ap-modal-overlay,
+body.acten-dark [class*="modal-overlay"],
+body.acten-dark [class*="modal-backdrop"] {
+    background: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Filas seleccionadas en tablas — antes #EFF6FF (azul claro) sobre dark. */
+body.acten-dark .us-tr.is-selected,
+body.acten-dark .rl-tr.is-selected,
+body.acten-dark .tn-tr.is-selected,
+body.acten-dark .tpl-tr.is-selected,
+body.acten-dark .mt-tr.is-selected,
+body.acten-dark [class*="-tr"][class*="selected"],
+body.acten-dark [class*="row"][class*="selected"],
+body.acten-dark [class*="-item"][class*="selected"] {
+    background: rgba(21, 94, 239, 0.20) !important;
+    border-color: rgba(21, 94, 239, 0.45) !important;
+}
+
+/* Tonos semánticos (status pills, kpi icons, alerts, notification banners). */
+
+/* SUCCESS / DONE / ACTIVE / COMPLETED — verde */
+body.acten-dark .rp-status--completed,
+body.acten-dark .rp-status--linked,
+body.acten-dark .rp-status--live,
+body.acten-dark .cal-status--linked,
+body.acten-dark .cal-status--live,
+body.acten-dark .us-status--active,
+body.acten-dark .rl-status--active,
+body.acten-dark .tn-status--active,
+body.acten-dark .rp-workload-chip--done,
+body.acten-dark [class$="-status--active"],
+body.acten-dark [class$="-status--done"],
+body.acten-dark [class$="-status--completed"],
+body.acten-dark [class$="--success"],
+body.acten-dark [class*="-tone-success"],
+body.acten-dark [class*="-kpi-ico--green"],
+body.acten-dark .rp-kpi-ico--green,
+body.acten-dark .us-kpi-ico--green,
+body.acten-dark .rl-kpi-ico--green,
+body.acten-dark .tn-kpi-ico--green,
+body.acten-dark .br-kpi-ico--green {
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: #6EE7B7 !important;
+}
+
+/* DANGER / OVERDUE / INACTIVE / FAILED — rojo */
+body.acten-dark .rp-status--overdue,
+body.acten-dark .rp-status--missing,
+body.acten-dark .cal-status--missing,
+body.acten-dark .us-status--inactive,
+body.acten-dark .rl-status--inactive,
+body.acten-dark .tn-status--inactive,
+body.acten-dark .rp-workload-chip--overdue,
+body.acten-dark [class$="-status--overdue"],
+body.acten-dark [class$="-status--inactive"],
+body.acten-dark [class$="--danger"],
+body.acten-dark [class*="-tone-danger"],
+body.acten-dark [class*="-tone-error"],
+body.acten-dark [class*="-kpi-ico--red"],
+body.acten-dark .rp-kpi-ico--red,
+body.acten-dark .us-kpi-ico--red,
+body.acten-dark .rl-kpi-ico--red {
+    background: rgba(239, 68, 68, 0.18) !important;
+    color: #FCA5A5 !important;
+}
+
+/* WARNING / PENDING / INVITED — naranja */
+body.acten-dark .rp-status--pending,
+body.acten-dark .cal-status--scheduled,
+body.acten-dark .us-status--invited,
+body.acten-dark .rl-status--pending,
+body.acten-dark .tn-status--inactive,
+body.acten-dark .rp-workload-chip--pending,
+body.acten-dark [class$="-status--pending"],
+body.acten-dark [class$="-status--invited"],
+body.acten-dark [class$="--warning"],
+body.acten-dark [class*="-tone-warning"],
+body.acten-dark [class*="-kpi-ico--orange"],
+body.acten-dark .rp-kpi-ico--orange,
+body.acten-dark .us-kpi-ico--orange,
+body.acten-dark .rl-kpi-ico--orange,
+body.acten-dark .tn-kpi-ico--orange,
+body.acten-dark .br-kpi-ico--orange,
+body.acten-dark .rp-workload-kpi--bad {
+    background: rgba(249, 115, 22, 0.18) !important;
+    color: #FDBA74 !important;
+}
+
+/* INFO / IN_PROGRESS / SCHEDULED — azul */
+body.acten-dark .rp-status--in_progress,
+body.acten-dark .rp-status--scheduled,
+body.acten-dark .rp-workload-chip--meetings,
+body.acten-dark [class$="-status--in_progress"],
+body.acten-dark [class$="-status--scheduled"],
+body.acten-dark [class*="-tone-info"],
+body.acten-dark [class*="-kpi-ico--blue"],
+body.acten-dark .rp-kpi-ico--blue,
+body.acten-dark .us-kpi-ico--blue,
+body.acten-dark .rl-kpi-ico--blue,
+body.acten-dark .tn-kpi-ico--blue,
+body.acten-dark .br-kpi-ico--blue {
+    background: rgba(21, 94, 239, 0.20) !important;
+    color: #93C5FD !important;
+}
+
+/* PURPLE — bloqueado / decisiones */
+body.acten-dark .rp-status--blocked,
+body.acten-dark .rp-kpi-ico--purple,
+body.acten-dark .us-kpi-ico--purple,
+body.acten-dark .rl-kpi-ico--purple,
+body.acten-dark .tn-kpi-ico--purple,
+body.acten-dark .br-kpi-ico--purple,
+body.acten-dark .rp-workload-chip--blocked {
+    background: rgba(124, 58, 237, 0.20) !important;
+    color: #C4B5FD !important;
+}
+
+/* NEUTRAL / NOT_STARTED / CANCELLED — gris */
+body.acten-dark .rp-status--not_started,
+body.acten-dark .rp-status--neutral,
+body.acten-dark .rp-workload-chip--cancelled,
+body.acten-dark [class$="-status--cancelled"],
+body.acten-dark [class$="-status--neutral"] {
+    background: rgba(148, 163, 184, 0.18) !important;
+    color: #CBD5E1 !important;
+}
+
+/* Cards "Buen trabajo / Excelente / Atención" del dashboard (tone-success). */
+body.acten-dark [class*="-tone--success"],
+body.acten-dark [class*="-banner--success"],
+body.acten-dark [class*="alert-success"] {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: rgba(16, 185, 129, 0.30) !important;
+    color: #A7F3D0 !important;
+}
+body.acten-dark [class*="-tone--warning"],
+body.acten-dark [class*="-banner--warning"],
+body.acten-dark [class*="alert-warning"] {
+    background: rgba(249, 115, 22, 0.12) !important;
+    border-color: rgba(249, 115, 22, 0.30) !important;
+    color: #FDBA74 !important;
+}
+body.acten-dark [class*="-tone--danger"],
+body.acten-dark [class*="-banner--danger"],
+body.acten-dark [class*="alert-danger"] {
+    background: rgba(239, 68, 68, 0.12) !important;
+    border-color: rgba(239, 68, 68, 0.30) !important;
+    color: #FCA5A5 !important;
+}
+
+/* Cabeceras de tablas — el row de cabecera era blanco crema. */
+body.acten-dark .us-th,
+body.acten-dark .rl-th,
+body.acten-dark .tn-th,
+body.acten-dark .tpl-th,
+body.acten-dark .mt-th,
+body.acten-dark .br-th,
+body.acten-dark [class$="-th"],
+body.acten-dark thead {
+    background: var(--color-bg-elevated) !important;
+    color: var(--color-fg-muted) !important;
+    border-color: var(--color-border-strong) !important;
+}
+
+/* Hover de filas — antes claro, ahora navy-2. */
+body.acten-dark [class*="-tr"]:hover:not([class*="-th"]),
+body.acten-dark [class*="row"]:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Catch-all final: cualquier .card / .tile / .panel / .surface que el sweep
+   no haya tocado, debe usar fondo navy. */
+body.acten-dark .card,
+body.acten-dark .tile,
+body.acten-dark .panel,
+body.acten-dark .surface,
+body.acten-dark [class*="-card"]:not([class*="-status"]):not([class*="-pill"]):not([class*="-tag"]):not([class*="-chip"]):not([class*="-badge"]):not([class*="-kpi-ico"]):not([class*="-tone-"]),
+body.acten-dark [class*="-panel"]:not([class*="-status"]),
+body.acten-dark [class*="-tile"] {
+    background: var(--color-bg-panel) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-fg-default) !important;
+}
+
+/* Tinted icon backgrounds que aún quedan literales en componentes
+   (`#FFF7ED`, `#ECFDF5`, etc.) → darken. */
+body.acten-dark [style*="#FFF7ED"],
+body.acten-dark [style*="#ECFDF5"],
+body.acten-dark [style*="#EFF6FF"],
+body.acten-dark [style*="#FEF2F2"],
+body.acten-dark [style*="#F5F3FF"] {
+    filter: brightness(0.4) saturate(1.5);
+}
+
+/* Web preview / iframe blanco — un overlay no es viable. Pero el contenedor
+   sí lo podemos oscurecer al menos en sus paddings. */
+body.acten-dark .tpl-preview-frame,
+body.acten-dark [class*="preview-frame"],
+body.acten-dark [class*="-preview"]:not([class*="-card"]) {
+    background: var(--color-bg-elevated) !important;
+}

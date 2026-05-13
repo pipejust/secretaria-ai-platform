@@ -55,6 +55,11 @@ def _resolve_window(
         if end < start:
             raise HTTPException(status_code=400, detail="end_date debe ser >= start_date")
         label = f"Del {start.strftime('%d/%m/%Y')} al {end.strftime('%d/%m/%Y')}"
+    elif period == "all":
+        # Sin restricción de fecha — cubre toda la historia del tenant.
+        start = datetime(2000, 1, 1, 0, 0, 0)
+        end = datetime(2100, 12, 31, 23, 59, 59)
+        label = "Siempre"
     elif period == "week":
         start = base - timedelta(days=base.weekday())
         start = start.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -67,7 +72,7 @@ def _resolve_window(
         end = next_month - timedelta(microseconds=1)
         label = start.strftime("%B %Y").capitalize()
     else:
-        raise HTTPException(status_code=400, detail="period debe ser 'week', 'month' o 'custom'")
+        raise HTTPException(status_code=400, detail="period debe ser 'week', 'month', 'all' o 'custom'")
     return start, end, label
 
 
@@ -114,30 +119,64 @@ def _parse_due_date(value) -> Optional[datetime]:
         return None
 
 
-def _classify_project(items: List[ActionItem], now: datetime) -> str:
-    """Deriva un estado simple de un proyecto a partir de sus action_items."""
-    if not items:
+def _classify_project_by_sessions(
+    sessions: List[MeetingSession],
+    now: datetime,
+    stale_days: int = 14,
+) -> str:
+    """Deriva el estado del proyecto a partir del estado de CURACIÓN de sus
+    sesiones (no por action_items). Esta es la métrica que tiene sentido para
+    el dashboard de reportes según el flujo de la plataforma: una sesión
+    'completed' significa que fue revisada/curada por el equipo.
+
+    Reglas:
+      - No hay sesiones (no archivadas) → not_started.
+      - 100% sesiones completadas      → completed.
+      - Hay completadas y pendientes   → in_progress.
+      - Todas pendientes y al menos una con > stale_days días sin curar → overdue.
+      - Todas pendientes recientes     → pending.
+    """
+    # Ignoramos archivadas; cuentan solo sesiones activas (pending/processing/completed).
+    active = [s for s in sessions if s.status not in ("archived",)]
+    if not active:
         return "not_started"
-    statuses = [it.status for it in items]
-    if all(s == "done" or s == "cancelled" for s in statuses):
-        # Todas cerradas → completed (si al menos UNA fue done; si todas cancelled, también lo marcamos completed visualmente).
+
+    completed = [s for s in active if s.status == "completed"]
+    pending   = [s for s in active if s.status in ("pending", "processing")]
+
+    # Todo curado.
+    if completed and not pending:
         return "completed"
-    # Vencido si hay alguna pendiente con due_date < ahora.
-    for it in items:
-        if it.status in ("done", "cancelled"):
-            continue
-        d = _parse_due_date(it.due_date)
-        if d and d.replace(tzinfo=None) < now.replace(tzinfo=None):
-            return "overdue"
-    # En progreso si al menos una está en done o tocada recientemente.
-    if any(s == "done" for s in statuses):
+
+    # Mezcla: hay avance pero no terminado.
+    if completed and pending:
         return "in_progress"
-    # Si tiene action items pero ninguno avanzó, está pending.
-    return "pending"
+
+    # Solo pendientes — verificar si hay alguna estancada.
+    if pending and not completed:
+        for s in pending:
+            d = _parse_due_date(s.date)
+            if d and (now.replace(tzinfo=None) - d.replace(tzinfo=None)).days > stale_days:
+                return "overdue"
+        return "pending"
+
+    return "not_started"
+
+
+def _project_progress_pct_by_sessions(sessions: List[MeetingSession]) -> int:
+    """Porcentaje de progreso = sesiones curadas / sesiones activas."""
+    active = [s for s in sessions if s.status not in ("archived",)]
+    if not active:
+        return 0
+    completed = sum(1 for s in active if s.status == "completed")
+    return int(round((completed / len(active)) * 100))
 
 
 def _project_progress_pct(items: List[ActionItem]) -> int:
-    """Porcentaje de avance de un proyecto = action_items 'done' / total."""
+    """Porcentaje de cumplimiento de tareas = action_items 'done' / total.
+
+    Útil para tooltips/breakdown adicional, no para clasificar el proyecto.
+    """
     if not items:
         return 0
     done = sum(1 for it in items if it.status == "done")
@@ -249,32 +288,36 @@ def _build_report(
     top_owners = sorted(by_owner.items(), key=lambda kv: -kv[1])[:10]
 
     # ============================================================
-    # Datos derivados nuevos para el dashboard (reales, no placeholder).
+    # Datos derivados — TODO filtrado por la ventana del periodo.
     # ============================================================
 
-    # Set de proyectos con actividad EN LA VENTANA — para filtrar top_projects
-    # según el período seleccionado.
+    # Set de proyectos con actividad EN LA VENTANA.
     active_in_window = {s.project_id for s in sessions_in_window if s.project_id}
 
-    # 1) Breakdown de proyectos por estado computado.
+    # Si el usuario eligió un proyecto específico, lo INCLUIMOS aunque no
+    # tenga actividad en la ventana (para que vea cero/empty state real).
+    # Si NO, solo incluimos proyectos que sí tuvieron movimiento.
     target_projects = [
         p for p in all_projects
-        if (project_id is None or p.id == project_id)
-        and p.is_active
+        if p.is_active
+        and ((project_id is None and p.id in active_in_window) or (project_id is not None and p.id == project_id))
     ]
+
+    # Sesiones de cada proyecto SOLO dentro de la ventana.
     project_sessions: Dict[int, List[MeetingSession]] = {p.id: [] for p in target_projects if p.id}
-    for s in all_sessions:
+    for s in sessions_in_window:
         if s.project_id in project_sessions:
             project_sessions[s.project_id].append(s)
 
+    # Action items de cada proyecto SOLO derivados de sus sesiones en ventana.
+    # `items` ya estaba filtrado a session_ids in window, así que mapeamos
+    # cada item al project_id de su sesión.
     project_items: Dict[int, List[ActionItem]] = {p.id: [] for p in target_projects if p.id}
-    if project_sessions:
-        sids = [sid for sess_list in project_sessions.values() for s in sess_list if (sid := s.id) is not None]
-        if sids:
-            for it in db.exec(select(ActionItem).where(ActionItem.session_id.in_(sids))).all():
-                ms = db.get(MeetingSession, it.session_id)
-                if ms and ms.project_id in project_items:
-                    project_items[ms.project_id].append(it)
+    sid_to_pid = {s.id: s.project_id for s in sessions_in_window if s.id is not None}
+    for it in items:
+        pid = sid_to_pid.get(it.session_id)
+        if pid in project_items:
+            project_items[pid].append(it)
 
     projects_breakdown_counts = {
         "completed": 0, "in_progress": 0, "pending": 0, "overdue": 0, "not_started": 0,
@@ -284,10 +327,11 @@ def _build_report(
         if not p.id:
             continue
         its = project_items.get(p.id, [])
-        status_key = _classify_project(its, now)
+        proj_sessions = project_sessions.get(p.id, [])  # ya filtrado a la ventana
+        # CLASIFICACIÓN: por curación de sesiones DE LA VENTANA, no del proyecto entero.
+        status_key = _classify_project_by_sessions(proj_sessions, now)
         projects_breakdown_counts[status_key] = projects_breakdown_counts.get(status_key, 0) + 1
 
-        # Breakdown interno del proyecto por estado de sus action_items.
         items_break = {"pending": 0, "done": 0, "blocked": 0, "cancelled": 0, "overdue": 0}
         for it in its:
             items_break[it.status] = items_break.get(it.status, 0) + 1
@@ -296,33 +340,71 @@ def _build_report(
                 if d and d.replace(tzinfo=None) < now.replace(tzinfo=None):
                     items_break["overdue"] += 1
 
+        active_sessions = [s for s in proj_sessions if s.status not in ("archived",)]
+        sessions_break = {
+            "completed": sum(1 for s in active_sessions if s.status == "completed"),
+            "pending":   sum(1 for s in active_sessions if s.status in ("pending", "processing")),
+            "total":     len(active_sessions),
+        }
+
         top_projects.append({
             "id": p.id,
             "name": p.name,
             "owner": _top_owner_for_project(its),
-            "progress": _project_progress_pct(its),
+            # progress refleja curación de sesiones EN LA VENTANA.
+            "progress": _project_progress_pct_by_sessions(proj_sessions),
+            "tasks_progress": _project_progress_pct(its),
             "status": status_key,
             "items_breakdown": items_break,
             "items_total": len(its),
+            "sessions_breakdown": sessions_break,
             "had_activity_in_window": p.id in active_in_window,
         })
-    # Top por progreso descendente, priorizando proyectos con actividad.
-    top_projects.sort(key=lambda r: (-int(r["had_activity_in_window"]), -r["progress"]))
+    # Top por progreso descendente.
+    top_projects.sort(key=lambda r: -r["progress"])
 
     # 2) Decisions timeline (sesiones por bucket en el rango).
     decisions_timeline = _build_decisions_timeline(sessions_in_window, start, end)
 
-    # 3) Team activity — MEETINGS y ACTIONS son métricas SEMÁNTICAMENTE DISTINTAS.
-    #    - meetings: cuántas reuniones distintas tocó cada owner (por sus action_items)
-    #    - actions: total de action_items del owner (carga real)
+    # 3) Team activity + Workload — métricas POR OWNER con breakdown rico.
+    #    - meetings: reuniones distintas tocadas por el owner
+    #    - actions:  total action_items del owner
+    #    - workload: por_owner con status_breakdown {pending, done, blocked, cancelled, overdue}
     owner_sessions: Dict[str, set] = {}
     team_activity_actions: Dict[str, int] = {}
+    workload: Dict[str, Dict[str, Any]] = {}
     for it in items:
         owner = (it.owner_name or "Sin asignar").strip() or "Sin asignar"
+        email = (it.owner_email or "").strip()
         if it.session_id is not None:
             owner_sessions.setdefault(owner, set()).add(it.session_id)
         team_activity_actions[owner] = team_activity_actions.get(owner, 0) + 1
+
+        entry = workload.setdefault(owner, {
+            "owner": owner,
+            "email": email,
+            "total": 0,
+            "by_status": {"pending": 0, "done": 0, "blocked": 0, "cancelled": 0, "overdue": 0},
+            "meetings": 0,
+        })
+        entry["total"] += 1
+        entry["by_status"][it.status] = entry["by_status"].get(it.status, 0) + 1
+        if it.status in ("pending", "blocked"):
+            d = _parse_due_date(it.due_date)
+            if d and d.replace(tzinfo=None) < now.replace(tzinfo=None):
+                entry["by_status"]["overdue"] += 1
+        # Mantener email más reciente si lo trae.
+        if email and not entry.get("email"):
+            entry["email"] = email
     team_activity_meetings = {o: len(s) for o, s in owner_sessions.items()}
+    for o, count in team_activity_meetings.items():
+        if o in workload:
+            workload[o]["meetings"] = count
+
+    workload_list = sorted(
+        workload.values(),
+        key=lambda r: -r["total"],
+    )
 
     return {
         "period": period,
@@ -333,8 +415,11 @@ def _build_report(
         "project_name": project_names.get(project_id) if project_id else "Todos los proyectos",
         "metrics": {
             "sessions_count": len(sessions_in_window),
+            "sessions_curated": sum(1 for s in sessions_in_window if s.status == "completed"),
+            "sessions_pending": sum(1 for s in sessions_in_window if s.status in ("pending", "processing")),
             "action_items_total": len(items),
             "action_items_by_status": by_status,
+            "tasks_completed": by_status.get("done", 0),
             "completed_in_window": len(completed_in_window),
             "auto_dispatched": sum(1 for s in sessions_in_window if s.status == "processed"),
             "decisions_count": len(sessions_in_window),  # proxy: 1 reunión = 1+ decisiones
@@ -343,7 +428,13 @@ def _build_report(
                                  and (d := _parse_due_date(it.due_date))
                                  and d.replace(tzinfo=None) < now),
             "projects_count": len(target_projects),
+            "projects_active_in_window": len(active_in_window),
             "completion_rate": int(round((by_status.get("done", 0) / len(items)) * 100)) if items else 0,
+            # Tasa REAL de curación: % de sesiones en la ventana ya completadas.
+            "curation_rate": int(round(
+                (sum(1 for s in sessions_in_window if s.status == "completed") /
+                 len(sessions_in_window)) * 100
+            )) if sessions_in_window else 0,
         },
         "sessions": [
             {
@@ -370,7 +461,21 @@ def _build_report(
                 [{"owner": o, "value": v} for o, v in team_activity_actions.items()],
                 key=lambda x: -x["value"],
             )[:8],
+            # Combined rows: ambas métricas a la vez por persona — para la
+            # nueva vista de filas (no más segmented control).
+            "combined": [
+                {
+                    "owner": o,
+                    "meetings": team_activity_meetings.get(o, 0),
+                    "actions":  team_activity_actions.get(o, 0),
+                }
+                for o in sorted(
+                    set(team_activity_meetings) | set(team_activity_actions),
+                    key=lambda o: -(team_activity_actions.get(o, 0) + team_activity_meetings.get(o, 0)),
+                )
+            ][:10],
         },
+        "workload": workload_list,
         "available_projects": [
             {"id": p.id, "name": p.name}
             for p in all_projects if p.is_active and p.id

@@ -150,6 +150,42 @@ def require_superadmin(current_user: User = Depends(get_current_user)) -> User:
 # Auth endpoints
 # ----------------------------------------------------------------------------
 
+def _issue_access_token(user: User, tenant: Tenant) -> str:
+    """Crea el JWT de acceso. Centralizado para que el flujo normal y el
+    flujo 2FA emitan tokens idénticos."""
+    return create_access_token(
+        data={
+            "sub": user.email,
+            "role": user.role.name if user.role else "",
+            "tenant_id": tenant.id,
+            "tenant_slug": tenant.slug,
+            "is_superadmin": user.is_superadmin,
+        },
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+
+
+def _login_success_payload(user: User, tenant: Tenant, request: Optional[Request], db: Session) -> dict:
+    """Marca last_login + audit + devuelve el shape de respuesta unificado."""
+    try:
+        user.last_login_at = datetime.now().isoformat()
+        db.add(user); db.commit()
+    except Exception:
+        try: db.rollback()
+        except Exception: pass
+    try:
+        from services import audit as _audit
+        _audit.log(db, user, request, action="login_ok",
+                   resource_type="user", resource_id=user.id)
+    except Exception:
+        pass
+    return {
+        "access_token": _issue_access_token(user, tenant),
+        "token_type": "bearer",
+        "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+    }
+
+
 @router.post("/login")
 def login_for_access_token(
     login_req: LoginRequest,
@@ -177,37 +213,54 @@ def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={
-            "sub": user.email,
-            "role": user.role.name if user.role else "",
-            "tenant_id": tenant.id,
-            "tenant_slug": tenant.slug,
-            "is_superadmin": user.is_superadmin,
-        },
-        expires_delta=access_token_expires,
-    )
-    # Registrar el último acceso real. Si la columna aún no existe (migración
-    # pendiente) o falla, el login no se rompe — solo se queda sin actualizar.
-    try:
-        from datetime import datetime as _dt
-        user.last_login_at = _dt.now().isoformat()
-        db.add(user); db.commit()
-    except Exception:
-        try: db.rollback()
-        except Exception: pass
-    try:
-        from services import audit as _audit
-        _audit.log(db, user, request, action="login_ok",
-                   resource_type="user", resource_id=user.id)
-    except Exception:
-        pass
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
-    }
+    # ── 2FA gate ────────────────────────────────────────────────
+    # Si el usuario tiene 2FA activo, NO emitimos token todavía. Generamos
+    # un código nuevo, lo enviamos por email y devolvemos un payload que
+    # el frontend interpreta como "pídeme el código".
+    if user.two_factor_enabled:
+        from services import two_factor as _tf
+        _tf.start_challenge(db, user, purpose="login")
+        masked = user.email.split("@")[0]
+        masked = masked[:2] + "***" + (masked[-1:] if len(masked) > 3 else "")
+        return {
+            "two_factor_required": True,
+            "method": user.two_factor_method or "email",
+            "email_masked": f"{masked}@{user.email.split('@')[-1]}",
+            "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+        }
+
+    return _login_success_payload(user, tenant, request, db)
+
+
+class TwoFactorLoginVerify(BaseModel):
+    username: str
+    code: str
+    tenant_slug: Optional[str] = None
+
+
+@router.post("/login/2fa-verify")
+def verify_login_2fa(
+    body: TwoFactorLoginVerify,
+    request: Request,
+    db: Session = Depends(get_session),
+):
+    """Completa el login cuando el usuario tiene 2FA activo. Recibe el
+    código que llegó por email y devuelve el access_token real."""
+    tenant = _resolve_tenant(db, body.tenant_slug)
+    user = db.exec(
+        select(User)
+        .where(User.email == body.username)
+        .where(User.tenant_id == tenant.id)
+    ).first()
+    if not user or not user.two_factor_enabled:
+        raise HTTPException(status_code=400, detail="Sesión inválida. Reinicia el login.")
+
+    from services import two_factor as _tf
+    ok, reason = _tf.verify_code(db, user, body.code, purpose="login")
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
+    _tf.clear(db, user)
+    return _login_success_payload(user, tenant, request, db)
 
 
 @router.post("/register/admin-only")
@@ -238,18 +291,387 @@ def register_user(
     return {"msg": "User created successfully", "user_id": user.id}
 
 
+def _serialize_user_profile(user: User, tenant: Tenant) -> dict:
+    """Shape canónico del perfil — incluye todos los campos editables y prefs
+    de notificación. Lo consumen GET /auth/me y PUT /auth/me."""
+    return {
+        "id": user.id,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role.name if user.role else None,
+        "is_superadmin": user.is_superadmin,
+        "is_active": user.is_active,
+        "phone": user.phone,
+        "department": user.department,
+        "position": user.position,
+        "location": user.location,
+        "bio": user.bio,
+        "avatar_url": user.avatar_url,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+        "last_login_at": user.last_login_at,
+        "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+        "notifications": {
+            "email_enabled":           user.notif_email_enabled,
+            "push_enabled":            user.notif_push_enabled,
+            "meeting_reminders":       user.notif_meeting_reminders,
+            "task_assigned":           user.notif_task_assigned,
+            "session_processed":       user.notif_session_processed,
+            "weekly_report":           user.notif_weekly_report,
+            "security_alerts":         user.notif_security_alerts,
+        },
+        "two_factor": {
+            "enabled": bool(user.two_factor_enabled),
+            "method": user.two_factor_method or "email",
+        },
+    }
+
+
 @router.get("/me")
 def read_users_me(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
+    return _serialize_user_profile(current_user, tenant)
+
+
+class ProfileUpdateRequest(BaseModel):
+    full_name:   Optional[str] = None
+    phone:       Optional[str] = None
+    position:    Optional[str] = None
+    department:  Optional[str] = None
+    location:    Optional[str] = None
+    bio:         Optional[str] = None
+    avatar_url:  Optional[str] = None
+
+
+@router.put("/me")
+def update_my_profile(
+    payload: ProfileUpdateRequest,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Actualiza los campos editables del propio perfil. Email y rol NO
+    son editables aquí — el email requiere flujo verificado y el rol lo
+    administra un usuario con privilegios."""
+    data = payload.model_dump(exclude_unset=True)
+    # Validaciones suaves.
+    if "full_name" in data:
+        name = (data["full_name"] or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="El nombre no puede estar vacío.")
+        if len(name) > 160:
+            raise HTTPException(status_code=400, detail="El nombre es demasiado largo (máx 160).")
+        current_user.full_name = name
+    if "phone" in data:
+        current_user.phone = (data["phone"] or "").strip() or None
+    if "position" in data:
+        current_user.position = (data["position"] or "").strip() or None
+    if "department" in data:
+        current_user.department = (data["department"] or "").strip() or None
+    if "location" in data:
+        current_user.location = (data["location"] or "").strip() or None
+    if "bio" in data:
+        bio_val = (data["bio"] or "").strip()
+        if len(bio_val) > 600:
+            raise HTTPException(status_code=400, detail="La biografía es demasiado larga (máx 600).")
+        current_user.bio = bio_val or None
+    if "avatar_url" in data:
+        current_user.avatar_url = (data["avatar_url"] or "").strip() or None
+
+    current_user.updated_at = datetime.now().isoformat()
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
+    # Audit trail.
+    try:
+        from services import audit
+        audit.log(db, current_user, None, action="profile_update",
+                  resource_type="user", resource_id=current_user.id)
+    except Exception:  # pragma: no cover
+        pass
+
+    return _serialize_user_profile(current_user, tenant)
+
+
+class NotificationPrefsRequest(BaseModel):
+    email_enabled:     Optional[bool] = None
+    push_enabled:      Optional[bool] = None
+    meeting_reminders: Optional[bool] = None
+    task_assigned:     Optional[bool] = None
+    session_processed: Optional[bool] = None
+    weekly_report:     Optional[bool] = None
+    security_alerts:   Optional[bool] = None
+
+
+@router.put("/me/notifications")
+def update_notification_prefs(
+    payload: NotificationPrefsRequest,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Actualiza las preferencias de notificación granulares del usuario.
+    Los servicios que envían notificaciones consultan estos flags antes de
+    emitir (ver `services/notification_dispatcher`)."""
+    data = payload.model_dump(exclude_unset=True)
+    mapping = {
+        "email_enabled":      "notif_email_enabled",
+        "push_enabled":       "notif_push_enabled",
+        "meeting_reminders":  "notif_meeting_reminders",
+        "task_assigned":      "notif_task_assigned",
+        "session_processed":  "notif_session_processed",
+        "weekly_report":      "notif_weekly_report",
+        "security_alerts":    "notif_security_alerts",
+    }
+    for k, v in data.items():
+        col = mapping.get(k)
+        if col and v is not None:
+            setattr(current_user, col, bool(v))
+
+    current_user.updated_at = datetime.now().isoformat()
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return _serialize_user_profile(current_user, tenant)["notifications"]
+
+
+@router.post("/me/2fa/init")
+def init_2fa(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Genera y envía un código por email para activar 2FA. Si el usuario ya
+    tiene 2FA activo, también es válido para re-enviar el código (refresh)."""
+    from services import two_factor as _tf
+    _tf.start_challenge(db, current_user, purpose="enable")
     return {
-        "id": current_user.id,
+        "status": "code_sent",
         "email": current_user.email,
-        "full_name": current_user.full_name,
-        "role": current_user.role.name if current_user.role else None,
-        "is_superadmin": current_user.is_superadmin,
-        "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+        "ttl_minutes": _tf.CODE_TTL_MINUTES,
+    }
+
+
+class TwoFactorConfirmRequest(BaseModel):
+    code: str
+
+
+@router.post("/me/2fa/confirm")
+def confirm_2fa(
+    body: TwoFactorConfirmRequest,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Confirma el código y activa la 2FA permanentemente."""
+    from services import two_factor as _tf
+    ok, reason = _tf.verify_code(db, current_user, body.code, purpose="enable")
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
+    current_user.two_factor_enabled = True
+    current_user.two_factor_method = "email"
+    current_user.updated_at = datetime.now().isoformat()
+    _tf.clear(db, current_user)
+    db.add(current_user); db.commit(); db.refresh(current_user)
+
+    try:
+        from services import audit
+        audit.log(db, current_user, None, action="2fa_enabled",
+                  resource_type="user", resource_id=current_user.id)
+    except Exception:
+        pass
+    return _serialize_user_profile(current_user, tenant)
+
+
+class TwoFactorDisableRequest(BaseModel):
+    password: str
+
+
+@router.delete("/me/2fa")
+def disable_2fa(
+    body: TwoFactorDisableRequest,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Desactiva 2FA. Requiere la contraseña actual para evitar que un
+    atacante con token robado la deshabilite."""
+    if not verify_password(body.password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Contraseña incorrecta.")
+    from services import two_factor as _tf
+    current_user.two_factor_enabled = False
+    current_user.updated_at = datetime.now().isoformat()
+    _tf.clear(db, current_user)
+    db.add(current_user); db.commit(); db.refresh(current_user)
+
+    try:
+        from services import audit
+        audit.log(db, current_user, None, action="2fa_disabled",
+                  resource_type="user", resource_id=current_user.id)
+    except Exception:
+        pass
+    return _serialize_user_profile(current_user, tenant)
+
+
+# ────────────────────────────────────────────────────────────────
+# Avatar upload — multipart/form-data
+# ────────────────────────────────────────────────────────────────
+import os
+from fastapi import UploadFile, File
+
+AVATAR_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "avatars")
+AVATAR_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+AVATAR_ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp"}
+AVATAR_ALLOWED_EXT = {"png", "jpg", "jpeg", "webp"}
+
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Recibe un archivo y lo guarda como avatar del usuario actual."""
+    if file.content_type not in AVATAR_ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Usa PNG, JPG o WebP.")
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+    if ext not in AVATAR_ALLOWED_EXT:
+        # Inferir por content-type si la extensión es rara.
+        ext = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}.get(file.content_type, "png")
+
+    data = await file.read()
+    if len(data) > AVATAR_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="La imagen pesa más de 2 MB.")
+    if not data:
+        raise HTTPException(status_code=400, detail="Archivo vacío.")
+
+    os.makedirs(AVATAR_DIR, exist_ok=True)
+    fname = f"user-{current_user.id}.{ext}"
+    fpath = os.path.join(AVATAR_DIR, fname)
+    with open(fpath, "wb") as f:
+        f.write(data)
+
+    # URL pública servida por el StaticFiles mount en main.py.
+    public_url = f"/static/avatars/{fname}?v={int(datetime.now().timestamp())}"
+    current_user.avatar_url = public_url
+    current_user.updated_at = datetime.now().isoformat()
+    db.add(current_user); db.commit(); db.refresh(current_user)
+
+    try:
+        from services import audit
+        audit.log(db, current_user, None, action="avatar_update",
+                  resource_type="user", resource_id=current_user.id)
+    except Exception:
+        pass
+    return _serialize_user_profile(current_user, tenant)
+
+
+@router.delete("/me/avatar")
+def delete_avatar(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Elimina el avatar actual (deja el archivo en disco; solo desreferencia)."""
+    current_user.avatar_url = None
+    current_user.updated_at = datetime.now().isoformat()
+    db.add(current_user); db.commit(); db.refresh(current_user)
+    return _serialize_user_profile(current_user, tenant)
+
+
+@router.get("/me/activity")
+def my_activity(
+    limit: int = 20,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Devuelve las últimas N entradas del AuditLog del propio usuario,
+    para mostrarlas como "Actividad reciente" en Mi Perfil."""
+    from models import AuditLog
+    limit = max(1, min(int(limit or 20), 100))
+    # user_id ya es único globalmente; tenant_id se respeta cuando está set
+    # pero también aceptamos NULL para entradas legacy.
+    rows = db.exec(
+        select(AuditLog)
+        .where(AuditLog.user_id == current_user.id)
+        .order_by(AuditLog.id.desc())
+        .limit(limit)
+    ).all()
+
+    # Labels legibles por acción — fallback al raw action.
+    labels = {
+        "login":               ("Inicio de sesión", "🔑"),
+        "logout":              ("Cierre de sesión", "🚪"),
+        "profile_update":      ("Actualización de perfil", "✏️"),
+        "password_change":     ("Cambio de contraseña", "🔒"),
+        "gdpr_export":         ("Exportación de datos personales", "📦"),
+        "gdpr_delete_request": ("Solicitud de eliminación de cuenta", "🗑️"),
+        "edit_settings":       ("Cambios en configuración", "⚙️"),
+        "session_dispatch":    ("Envío de reunión procesada", "📤"),
+    }
+    items: list[dict] = []
+    for r in rows:
+        label, icon = labels.get(r.action, (r.action.replace("_", " ").capitalize(), "•"))
+        items.append({
+            "id": r.id,
+            "action": r.action,
+            "label": label,
+            "icon": icon,
+            "resource_type": r.resource_type,
+            "resource_id": r.resource_id,
+            "created_at": r.created_at,
+            "ip": r.ip,
+        })
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/me/permissions")
+def read_my_permissions(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Permisos efectivos del usuario actual.
+
+    Devuelve `{module: [actions]}` agrupado para que el frontend pueda
+    consultar `can('reuniones', 'create')` rápido. El admin (`is_superadmin`)
+    siempre tiene TODO sin importar lo que diga `RolePermission`.
+    """
+    from models import RolePermission
+
+    # Super-admin de plataforma → todos los permisos.
+    if current_user.is_superadmin:
+        full = {k: list(v) for k, v in VALID_MODULES.items()}
+        return {
+            "role": current_user.role.name if current_user.role else "superadmin",
+            "is_superadmin": True,
+            "permissions": full,
+        }
+
+    role_name = current_user.role.name if current_user.role else None
+    if not current_user.role_id:
+        return {"role": None, "is_superadmin": False, "permissions": {}}
+
+    # Admin → siempre todos los permisos del catálogo (regla de negocio).
+    if role_name and role_name.lower() == "admin":
+        full = {k: list(v) for k, v in VALID_MODULES.items()}
+        return {"role": role_name, "is_superadmin": False, "permissions": full}
+
+    perms = db.exec(
+        select(RolePermission)
+        .where(RolePermission.role_id == current_user.role_id)
+        .where(RolePermission.is_granted == True)  # noqa: E712
+    ).all()
+    grouped: dict[str, list[str]] = {}
+    for p in perms:
+        grouped.setdefault(p.module_key, []).append(p.action)
+    return {
+        "role": role_name,
+        "is_superadmin": False,
+        "permissions": grouped,
     }
 
 
@@ -268,8 +690,18 @@ def change_password(
         raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
 
     current_user.hashed_password = get_password_hash(pass_req.new_password)
+    current_user.updated_at = datetime.now().isoformat()
     db.add(current_user)
     db.commit()
+
+    # Audit trail para que aparezca en "Actividad reciente".
+    try:
+        from services import audit
+        audit.log(db, current_user, None, action="password_change",
+                  resource_type="user", resource_id=current_user.id)
+    except Exception:  # pragma: no cover
+        pass
+
     return {"msg": "Contraseña actualizada exitosamente"}
 
 
@@ -337,20 +769,19 @@ def _apply_role_permissions(db: Session, role_id: int, permissions: list[dict]) 
     """Reemplaza las permissions de un rol — borra todo y vuelve a insertar.
 
     `permissions` es lista de `{ module_key, action, is_granted? }`. Valida
-    contra el catálogo y descarta filas inválidas.
+    contra el catálogo y descarta filas inválidas. Hace flush entre el
+    delete y el insert para evitar choque con el UNIQUE(role_id, module, action).
     """
-    db.exec(
-        # SQLModel no tiene helper para DELETE WHERE, usamos raw via session.
-        # Hacemos un select+delete porque es chiquito y mantiene el código
-        # legible.
-        select(RolePermission).where(RolePermission.role_id == role_id)
-    )
     existing = db.exec(
         select(RolePermission).where(RolePermission.role_id == role_id)
     ).all()
     for row in existing:
         db.delete(row)
+    # Flush para que el UNIQUE constraint vea los DELETE antes de los INSERT.
+    db.flush()
 
+    # Deduplicar el payload (un mismo (mod, act) puede llegar repetido del UI).
+    seen: set[tuple[str, str]] = set()
     saved = 0
     for p in permissions or []:
         mod = (p.get("module_key") or "").strip()
@@ -362,6 +793,10 @@ def _apply_role_permissions(db: Session, role_id: int, permissions: list[dict]) 
             continue
         if act not in VALID_MODULES[mod]:
             continue
+        key = (mod, act)
+        if key in seen:
+            continue
+        seen.add(key)
         db.add(RolePermission(role_id=role_id, module_key=mod, action=act, is_granted=True))
         saved += 1
     db.commit()
@@ -515,13 +950,15 @@ def delete_role(
             status_code=400,
             detail=f"No puedes eliminar este rol — tiene {len(users_with_role)} usuario(s) asignado(s).",
         )
-    # Borramos permisos primero (no hay ON DELETE CASCADE definido).
+    # Borramos permisos y actividad primero (FK sin CASCADE definido).
     for p in db.exec(select(RolePermission).where(RolePermission.role_id == role_id)).all():
         db.delete(p)
+    for a in db.exec(select(RoleActivity).where(RoleActivity.role_id == role_id)).all():
+        db.delete(a)
+    db.flush()
     role_name = role.name
     db.delete(role)
     db.commit()
-    # No registramos en activity porque la FK se rompería; lo dejamos en log.
     logger.info("Rol %s eliminado por user_id=%s", role_name, admin_user.id)
     return None
 

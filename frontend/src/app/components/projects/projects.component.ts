@@ -1,11 +1,14 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { SettingsService } from '../../services/settings.service';
+import { UserDirectoryService } from '../../services/user-directory.service';
 import { environment } from '../../../environments/environment';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
     selector: 'app-projects',
@@ -14,7 +17,7 @@ import { environment } from '../../../environments/environment';
     templateUrl: './projects.component.html',
     styleUrls: ['./projects.component.css']
 })
-export class ProjectsComponent implements OnInit {
+export class ProjectsComponent implements OnInit, OnDestroy {
     projects: any[] = [];
     isLoading = false;
 
@@ -65,7 +68,7 @@ export class ProjectsComponent implements OnInit {
     autoDispatchOverride = false;
 
     /** Usuarios disponibles para asignar como responsable de proyecto. */
-    users: Array<{ id: number; full_name: string; email: string; role: string; is_active: boolean }> = [];
+    users: Array<{ id: number; full_name: string; email: string; role: string; is_active: boolean; avatar_url?: string | null }> = [];
 
     editingProject: any = null;
     isCreating = false;
@@ -101,23 +104,73 @@ export class ProjectsComponent implements OnInit {
     isDeletingRoutingId: number | null = null;
     activeIntegrations: { id: string, name: string }[] = [];
 
+    private readonly destroy$ = new Subject<void>();
+
     constructor(
-        private http: HttpClient, 
-        private authService: AuthService, 
+        private http: HttpClient,
+        private authService: AuthService,
         private settingsService: SettingsService,
         private cdr: ChangeDetectorRef,
-        private route: ActivatedRoute
-    ) { }
+        private route: ActivatedRoute,
+        private userDirectory: UserDirectoryService,
+    ) {
+        // Re-render cuando el directorio resuelve más correos/nombres.
+        this.userDirectory.directory$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => this.cdr.markForCheck());
+
+        // Cuando el usuario logueado actualiza su foto/nombre en Mi Perfil,
+        // sincronizamos `this.users` (usado por los avatares de equipo y el
+        // tooltip del responsable) para que aparezca de inmediato.
+        this.authService.currentUser$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((u) => {
+                if (!u?.id) return;
+                const idx = this.users.findIndex(x => x.id === u.id);
+                if (idx >= 0) {
+                    const prev = this.users[idx];
+                    if (
+                        prev.avatar_url !== u.avatar_url ||
+                        prev.full_name !== u.full_name
+                    ) {
+                        this.users = [
+                            ...this.users.slice(0, idx),
+                            { ...prev, avatar_url: u.avatar_url, full_name: u.full_name || prev.full_name },
+                            ...this.users.slice(idx + 1),
+                        ];
+                        this.cdr.detectChanges();
+                    }
+                }
+            });
+    }
 
     loadUsers(): void {
         this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe({
             next: (data) => {
                 this.users = (data || []).filter(u => u.is_active);
+                // Pre-cargamos el directorio con los emails de los users del
+                // tenant — así cualquier chip que use estos emails encuentra
+                // foto y nombre actualizados sin un round-trip extra.
+                for (const u of this.users) {
+                    if (!u.email) continue;
+                    this.userDirectory.primeCache(u.email, {
+                        id: u.id,
+                        email: u.email,
+                        full_name: u.full_name,
+                        avatar_url: u.avatar_url || null,
+                        role: u.role || null,
+                        department: null,
+                        position: null,
+                        is_active: u.is_active,
+                    });
+                }
                 this.cdr.detectChanges();
             },
             error: () => { /* no rompe el flujo, solo deja el dropdown vacío */ }
         });
     }
+
+    ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
 
     ngOnInit() {
         this.loadProjects();
@@ -348,6 +401,12 @@ export class ProjectsComponent implements OnInit {
             next: (data) => {
                 this.projectContacts = data;
                 this.isLoadingContacts = false;
+                // Pre-cargamos SOLO emails al directorio. No usamos nombres
+                // como fallback porque dos personas pueden tener el mismo
+                // nombre con correos distintos — mostrar la foto equivocada
+                // es peor que no mostrar foto.
+                const emails = (data || []).map(c => c.email).filter(Boolean);
+                this.userDirectory.preload(emails);
                 this.cdr.detectChanges();
             },
             error: (err) => {
@@ -357,6 +416,29 @@ export class ProjectsComponent implements OnInit {
                 this.cdr.detectChanges();
             }
         });
+    }
+
+    /** Resuelve el contacto a un User del tenant ESTRICTAMENTE por email. */
+    private _contactUser(c: any) {
+        if (!c?.email) return null;
+        return this.userDirectory.peek(c.email) || null;
+    }
+
+    /** URL absoluta de la foto del User cuando el email coincide. */
+    contactAvatarUrl(c: any): string | null {
+        const u = this._contactUser(c);
+        if (!u || !u.avatar_url) return null;
+        const raw = u.avatar_url;
+        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+        return `${environment.apiUrl}${raw}`;
+    }
+
+    /** Nombre a mostrar (priorizando el editado del User del tenant cuando
+     *  el email coincide; si no, el nombre original del contacto). */
+    contactDisplayName(c: any): string {
+        const u = this._contactUser(c);
+        if (u?.full_name) return u.full_name;
+        return c?.name || '';
     }
 
     editContact(contact: any) {
@@ -750,11 +832,11 @@ export class ProjectsComponent implements OnInit {
         return { date, time: `${h12}:${mm} ${ampm}` };
     }
 
-    /** Lista de avatares del equipo (heurística sobre usuarios; los
-     *  contactos del proyecto vendrían de /contacts pero no los tenemos
-     *  cargados acá). Devuelve hasta 3 + extra count. Cada avatar incluye
-     *  name/role/company para el tooltip rico. */
-    teamAvatars(p: any): { initials: string; tone: number; name: string; role: string; company: string }[] {
+    /** Lista de avatares del equipo. Devuelve hasta 3 + extra count.
+     *  Incluye `email` y `avatarUrl` para que el template pueda pintar
+     *  la foto real del usuario cuando exista, y caer a las iniciales
+     *  con el tono asignado cuando no hay foto. */
+    teamAvatars(p: any): { initials: string; tone: number; name: string; role: string; company: string; email: string; avatarUrl: string | null }[] {
         const seed = p?.id ?? 1;
         const pool = (this.users || []).slice(0, 6);
         if (!pool.length) return [];
@@ -764,16 +846,22 @@ export class ProjectsComponent implements OnInit {
             validator: 'Validador',
             user: 'Usuario',
         };
-        const out: { initials: string; tone: number; name: string; role: string; company: string }[] = [];
+        const out: { initials: string; tone: number; name: string; role: string; company: string; email: string; avatarUrl: string | null }[] = [];
         for (let i = 0; i < Math.min(3, pool.length); i++) {
             const u = pool[(seed + i) % pool.length];
             const name = String(u.full_name || u.email || 'Sin nombre').trim();
+            const raw = u.avatar_url || null;
+            const avatarUrl = raw
+                ? (raw.startsWith('http') ? raw : `${environment.apiUrl}${raw}`)
+                : null;
             out.push({
                 initials: this._initialsFromName(name),
                 tone: (seed + i) % 5,
                 name,
                 role: roleMap[(u.role || '').toLowerCase()] || (u.role || ''),
                 company: tenantName,
+                email: u.email || '',
+                avatarUrl,
             });
         }
         return out;
@@ -799,13 +887,20 @@ export class ProjectsComponent implements OnInit {
     }
 
     /** Datos completos del responsable del proyecto para el tooltip. */
-    ownerInfo(p: any): { name: string; role: string; company: string } {
+    ownerInfo(p: any): { name: string; role: string; company: string; avatarUrl: string | null; email: string } {
         const name = this.ownerNameFor(p);
         const tenantName = (this.authService.currentUserValue?.tenant?.name) || '';
+        const u = p?.owner_user_id ? this.users.find(x => x.id === p.owner_user_id) : null;
+        const raw = u?.avatar_url || null;
+        const avatarUrl = raw
+            ? (raw.startsWith('http') ? raw : `${environment.apiUrl}${raw}`)
+            : null;
         return {
             name: name === '—' ? 'Sin asignar' : name,
             role: this.ownerRoleFor(p),
             company: tenantName,
+            avatarUrl,
+            email: u?.email || '',
         };
     }
 

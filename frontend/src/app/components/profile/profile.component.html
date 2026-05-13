@@ -1,172 +1,635 @@
-<div class="fade-in">
-    <div class="profile-header mb-4">
-        <h2>Mi Perfil</h2>
-        <p class="text-muted">Gestiona tu información personal y configuraciones de cuenta</p>
+<div class="pr-page">
+  <!-- ============================================================
+       Header
+       ============================================================ -->
+  <header class="pr-header">
+    <div class="pr-header-text">
+      <h1 class="pr-title">Mi perfil</h1>
+      <p class="pr-subtitle">Administra tu información personal, seguridad y preferencias de cuenta.</p>
     </div>
+    <div class="pr-header-actions">
+      <button type="button" class="pr-btn pr-btn--ghost"
+              [disabled]="!isDirty || isSavingProfile"
+              (click)="cancelChanges()">
+        Cancelar
+      </button>
+      <button type="button" class="pr-btn pr-btn--brand"
+              [disabled]="!isDirty || isSavingProfile"
+              (click)="saveProfile()">
+        <span class="pr-btn-spinner" *ngIf="isSavingProfile" aria-hidden="true"></span>
+        {{ isSavingProfile ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </header>
 
-    <div class="grid-layout">
-        <!-- Columna Izquierda: Avatar y Tarjeta Básica -->
-        <div class="flex-1">
-            <div class="card profile-card text-center">
-                <div class="card-body">
-                    <div class="avatar-lg mb-3">
-                        <div class="avatar-circle-lg mx-auto">{{ getInitials(user?.full_name) }}</div>
-                    </div>
-                    <h2 class="mb-1 text-dark" style="font-weight: 700;">{{ user?.full_name || 'System Admin' }}</h2>
-                    <p class="text-muted mb-0" style="font-size: 1rem;">{{ user?.role || 'Admin' | titlecase }}</p>
-                    <p class="text-muted mb-4" style="font-size: 0.95rem;">Administración General</p>
+  <!-- ============================================================
+       KPIs superiores — íconos redondos con colores sólidos
+       ============================================================ -->
+  <section class="pr-kpis" aria-label="Resumen rápido del perfil">
+    <!-- Perfil completo -->
+    <button type="button"
+            class="pr-kpi pr-kpi--interactive"
+            [attr.aria-label]="'Perfil completo ' + profileCompletePct + '%, ' + profileMissingHint"
+            (click)="focusFirstEmpty()">
+      <div class="pr-kpi-left">
+        <div class="pr-kpi-ring">
+          <svg class="pr-ring-svg" viewBox="0 0 60 60" aria-hidden="true">
+            <circle class="pr-ring-bg" cx="30" cy="30" r="26"></circle>
+            <circle class="pr-ring-fg" cx="30" cy="30" r="26"
+                    [attr.stroke-dasharray]="2 * 3.14159 * 26"
+                    [attr.stroke-dashoffset]="(2 * 3.14159 * 26) * (1 - profileCompletePct / 100)"></circle>
+          </svg>
+          <span class="pr-kpi-ring-label">{{ profileCompletePct }}%</span>
+        </div>
+        <div class="pr-kpi-body">
+          <span class="pr-kpi-eyebrow">Perfil completo</span>
+          <span class="pr-kpi-value">{{ profileCompleteLabel }}</span>
+          <span class="pr-kpi-hint">{{ profileMissingHint }}</span>
+        </div>
+      </div>
+    </button>
 
-                    <div class="profile-meta mb-4 mt-2">
-                        <div>
-                            <span class="detail-label">Correo Electrónico</span>
-                            <span class="detail-value text-muted" style="font-size: 0.95rem;">
-                            {{ user?.email || 'admin@notiva.com' }}
-                            </span>
-                        </div>
-                        <p>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mr-2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                <line x1="3" y1="10" x2="21" y2="10"></line>
-                            </svg>
-                            Último acceso: 07 de mar de 2026
-                        </p>
-                        <p>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mr-2">
-                                <path
-                                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
-                                </path>
-                            </svg>
-                            +57 300 123 4567
-                        </p>
-                    </div>
+    <!-- Seguridad -->
+    <button type="button"
+            class="pr-kpi pr-kpi--interactive"
+            (click)="scrollToSecurity()">
+      <div class="pr-kpi-left">
+        <span class="pr-kpi-icon pr-kpi-icon--security" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L4 6v6c0 5 3.5 9.4 8 10 4.5-.6 8-5 8-10V6l-8-4z"></path>
+          </svg>
+        </span>
+        <div class="pr-kpi-body">
+          <span class="pr-kpi-eyebrow">Seguridad de cuenta</span>
+          <span class="pr-kpi-value">{{ securityLevelLabel }}</span>
+          <span class="pr-kpi-hint">{{ securityHintLabel }}</span>
+        </div>
+      </div>
+    </button>
 
-                    <h4 class="mb-3 text-center" style="font-weight: 700; color: #1f2937;">Usuario FAC</h4>
+    <!-- Último acceso -->
+    <button type="button"
+            class="pr-kpi pr-kpi--interactive"
+            (click)="scrollToActivity()">
+      <div class="pr-kpi-left">
+        <span class="pr-kpi-icon pr-kpi-icon--access" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v5l3 2"></path>
+          </svg>
+        </span>
+        <div class="pr-kpi-body">
+          <span class="pr-kpi-eyebrow">Último acceso</span>
+          <span class="pr-kpi-value">{{ lastLoginAgo }}</span>
+          <span class="pr-kpi-hint">{{ lastLoginLabel }}</span>
+        </div>
+      </div>
+    </button>
 
-                    <button class="btn btn-primary mb-2 mx-auto"
-                        style="display:flex; margin: 0 auto; width: auto; min-width: 150px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
-                            </path>
-                            <circle cx="12" cy="13" r="4"></circle>
-                        </svg>
-                        Cambiar Foto
-                    </button>
+    <!-- Notificaciones -->
+    <button type="button"
+            class="pr-kpi pr-kpi--interactive"
+            (click)="scrollToNotifications()">
+      <div class="pr-kpi-left">
+        <span class="pr-kpi-icon pr-kpi-icon--notif" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2z"></path>
+            <path d="M10 21a2 2 0 0 0 4 0"></path>
+          </svg>
+          <span class="pr-kpi-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+        </span>
+        <div class="pr-kpi-body">
+          <span class="pr-kpi-eyebrow">Notificaciones</span>
+          <span class="pr-kpi-value">{{ activeNotifCount }} de {{ totalNotifCount }} activas</span>
+          <span class="pr-kpi-hint">
+            {{ unreadCount > 0 ? unreadCount + ' sin leer' : 'Todo al día' }}
+          </span>
+        </div>
+      </div>
+    </button>
+  </section>
 
-                    <div class="signature-area mt-4 pt-4 text-center">
-                        <h4 class="mb-3" style="font-weight: 700; color: #1f2937;">Firma Digital</h4>
-                        <div class="signature-box mb-3 mx-auto" style="max-width: 250px;">
-                            <span class="text-muted"
-                                style="font-family: 'Times New Roman', serif; font-size: 1.5rem; font-style: italic;">{{
-                                user?.full_name?.split(' ')[0] ||
-                                'System' }}</span>
-                        </div>
-                        <button class="btn btn-outline-secondary btn-sm mx-auto"
-                            style="display:flex; margin: 0 auto; background: #f3f4f6; color: #111827; box-shadow: none; border-radius: 8px;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mr-2">
-                                <path d="M12 20h9"></path>
-                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                            </svg>
-                            Cambiar Firma
-                        </button>
-                    </div>
-                </div>
+  <!-- ============================================================
+       Grid principal — izquierda contenido + identidad, derecha resumen
+       ============================================================ -->
+  <div class="pr-grid">
+
+    <main class="pr-main">
+
+      <!-- Identidad -->
+      <article class="pr-card pr-card--identity">
+        <header class="pr-identity-head">
+          <div class="pr-avatar-wrap">
+            <div class="pr-avatar" aria-hidden="true">
+              <span *ngIf="!avatarSrc">{{ getInitials(profile.full_name || user?.email || 'U') }}</span>
+              <img *ngIf="avatarSrc" [src]="avatarSrc" alt="Avatar">
             </div>
+            <button type="button"
+                    class="pr-avatar-camera"
+                    title="Cambiar foto"
+                    aria-label="Cambiar foto de perfil"
+                    [disabled]="isUploadingAvatar"
+                    (click)="openAvatarPicker()">
+              <svg *ngIf="!isUploadingAvatar" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+              <span class="pr-btn-spinner" *ngIf="isUploadingAvatar" aria-hidden="true"></span>
+            </button>
+            <input #avatarInput type="file" accept="image/png,image/jpeg,image/webp"
+                   (change)="onAvatarSelected($event)" hidden>
+          </div>
+          <div class="pr-identity-text">
+            <h2 class="pr-identity-name">{{ profile.full_name || 'Sin nombre' }}</h2>
+            <p class="pr-identity-role">{{ profile.position || (user?.role | titlecase) || 'Sin cargo' }}</p>
+            <span class="pr-identity-status" [class.pr-status--active]="user?.is_active !== false">
+              <span class="pr-dot"></span>
+              {{ user?.is_active === false ? 'Inactivo' : 'Cuenta activa' }}
+            </span>
+          </div>
+        </header>
+
+        <dl class="pr-identity-list">
+          <div class="pr-identity-row">
+            <dt>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              Correo
+            </dt>
+            <dd>{{ profile.email || '—' }}</dd>
+          </div>
+          <div class="pr-identity-row">
+            <dt>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              Teléfono
+            </dt>
+            <dd>{{ profile.phone || '—' }}</dd>
+          </div>
+          <div class="pr-identity-row">
+            <dt>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              Ubicación
+            </dt>
+            <dd>{{ profile.location || '—' }}</dd>
+          </div>
+          <div class="pr-identity-row">
+            <dt>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 21h18"></path>
+                <path d="M5 21V7l7-4 7 4v14"></path>
+                <path d="M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"></path>
+              </svg>
+              Empresa
+            </dt>
+            <dd>{{ user?.tenant?.name || '—' }}</dd>
+          </div>
+        </dl>
+        <button *ngIf="user?.avatar_url" type="button" class="pr-link pr-link--danger" (click)="removeAvatar()" style="margin-top: 12px;">
+          Quitar foto de perfil
+        </button>
+      </article>
+
+      <!-- Información personal -->
+      <article class="pr-card" id="pr-section-info">
+        <header class="pr-card-head">
+          <h3 class="pr-card-title">Información personal</h3>
+          <p class="pr-card-sub">Estos datos los ve tu equipo dentro de la plataforma.</p>
+        </header>
+        <form class="pr-form" (ngSubmit)="saveProfile()">
+          <div class="pr-form-grid">
+            <div class="pr-field">
+              <label for="pr-fullname">Nombre completo</label>
+              <input id="pr-fullname" type="text" [(ngModel)]="profile.full_name" name="full_name" autocomplete="name">
+            </div>
+            <div class="pr-field">
+              <label for="pr-email">Correo electrónico</label>
+              <input id="pr-email" type="email" [value]="profile.email" disabled readonly title="El correo no es editable directamente">
+              <span class="pr-field-hint">El correo se administra desde tu equipo.</span>
+            </div>
+            <div class="pr-field">
+              <label for="pr-phone">Teléfono</label>
+              <input id="pr-phone" type="tel" [(ngModel)]="profile.phone" name="phone" autocomplete="tel" placeholder="+57 300 000 0000">
+            </div>
+            <div class="pr-field">
+              <label for="pr-position">Cargo</label>
+              <input id="pr-position" type="text" [(ngModel)]="profile.position" name="position" placeholder="Project Manager, Analista…">
+            </div>
+            <div class="pr-field">
+              <label for="pr-department">Departamento</label>
+              <input id="pr-department" type="text" [(ngModel)]="profile.department" name="department" placeholder="Operaciones, IT, Comercial…">
+            </div>
+            <div class="pr-field">
+              <label for="pr-location">Ubicación</label>
+              <input id="pr-location" type="text" [(ngModel)]="profile.location" name="location" placeholder="Ciudad, país">
+            </div>
+            <div class="pr-field pr-field--full">
+              <label for="pr-bio">Biografía corta</label>
+              <textarea id="pr-bio" rows="3" maxlength="600" [(ngModel)]="profile.bio" name="bio"
+                        placeholder="Cuéntale al equipo en qué eres experto y cómo prefieres colaborar."></textarea>
+              <span class="pr-field-hint">{{ (profile.bio || '').length }}/600</span>
+            </div>
+          </div>
+        </form>
+      </article>
+
+      <!-- Preferencias de cuenta -->
+      <article class="pr-card">
+        <header class="pr-card-head">
+          <h3 class="pr-card-title">Preferencias de cuenta</h3>
+          <p class="pr-card-sub">Se aplican en toda la plataforma para tu usuario.</p>
+        </header>
+        <div class="pr-form-grid">
+          <div class="pr-field">
+            <label for="pr-language">Idioma</label>
+            <select id="pr-language"
+                    [ngModel]="uiPrefs.language"
+                    (ngModelChange)="onUiPrefChange('language', $event)"
+                    name="language">
+              <option value="es-CO">Español (Colombia)</option>
+              <option value="es-ES">Español (España)</option>
+              <option value="es-MX">Español (México)</option>
+              <option value="en-US">English (US)</option>
+            </select>
+          </div>
+          <div class="pr-field">
+            <label for="pr-timezone">Zona horaria</label>
+            <select id="pr-timezone"
+                    [ngModel]="uiPrefs.timeZone"
+                    (ngModelChange)="onUiPrefChange('timeZone', $event)"
+                    name="timeZone">
+              <option value="America/Bogota">América / Bogotá (GMT-5)</option>
+              <option value="America/Mexico_City">América / Ciudad de México (GMT-6)</option>
+              <option value="America/Lima">América / Lima (GMT-5)</option>
+              <option value="America/Santiago">América / Santiago (GMT-3)</option>
+              <option value="Europe/Madrid">Europa / Madrid (GMT+1)</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+          <div class="pr-field">
+            <label for="pr-date">Formato de fecha</label>
+            <select id="pr-date"
+                    [ngModel]="uiPrefs.dateFormat"
+                    (ngModelChange)="onUiPrefChange('dateFormat', $event)"
+                    name="dateFormat">
+              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              <option value="D MMM YYYY">D MMM YYYY</option>
+            </select>
+          </div>
+          <div class="pr-field">
+            <label for="pr-landing">Página de inicio al entrar</label>
+            <select id="pr-landing"
+                    [ngModel]="uiPrefs.landingPage"
+                    (ngModelChange)="onUiPrefChange('landingPage', $event)"
+                    name="landingPage">
+              <option value="/admin/dashboard">Resumen</option>
+              <option value="/admin/meetings">Reuniones</option>
+              <option value="/admin/projects">Proyectos</option>
+              <option value="/admin/calendar">Calendario</option>
+              <option value="/admin/pendientes">Pendientes</option>
+            </select>
+          </div>
+        </div>
+      </article>
+
+      <!-- Seguridad -->
+      <article class="pr-card" id="pr-section-security">
+        <header class="pr-card-head">
+          <h3 class="pr-card-title">Seguridad</h3>
+          <p class="pr-card-sub">Cambia tu contraseña y revisa tus protecciones.</p>
+        </header>
+
+        <form class="pr-form" (ngSubmit)="changePassword()">
+          <div class="pr-form-grid">
+            <div class="pr-field">
+              <label for="pr-pwd-current">Contraseña actual</label>
+              <div class="pr-pwd-wrap">
+                <input id="pr-pwd-current" [type]="showPwd.current ? 'text' : 'password'"
+                       [(ngModel)]="pwd.current" name="current" autocomplete="current-password">
+                <button type="button" class="pr-pwd-toggle" aria-label="Mostrar/ocultar contraseña"
+                        (click)="toggleShowPwd('current')">
+                  <!-- ojo abierto -->
+                  <svg *ngIf="!showPwd.current" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <!-- ojo tachado -->
+                  <svg *ngIf="showPwd.current" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.78 19.78 0 0 1 5.06-5.94"></path>
+                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.79 19.79 0 0 1-3.17 4.31"></path>
+                    <path d="M1 1l22 22"></path>
+                    <path d="M9.5 9.5a3 3 0 0 0 4.95 4.95"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="pr-field">
+              <label for="pr-pwd-new">Nueva contraseña</label>
+              <div class="pr-pwd-wrap">
+                <input id="pr-pwd-new" [type]="showPwd.new ? 'text' : 'password'"
+                       [(ngModel)]="pwd.new" name="new" autocomplete="new-password">
+                <button type="button" class="pr-pwd-toggle" (click)="toggleShowPwd('new')" aria-label="Mostrar/ocultar contraseña">
+                  <svg *ngIf="!showPwd.new" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg *ngIf="showPwd.new" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.78 19.78 0 0 1 5.06-5.94"></path>
+                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.79 19.79 0 0 1-3.17 4.31"></path>
+                    <path d="M1 1l22 22"></path>
+                    <path d="M9.5 9.5a3 3 0 0 0 4.95 4.95"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="pr-field">
+              <label for="pr-pwd-confirm">Confirmar nueva contraseña</label>
+              <div class="pr-pwd-wrap">
+                <input id="pr-pwd-confirm" [type]="showPwd.confirm ? 'text' : 'password'"
+                       [(ngModel)]="pwd.confirm" name="confirm" autocomplete="new-password">
+                <button type="button" class="pr-pwd-toggle" (click)="toggleShowPwd('confirm')" aria-label="Mostrar/ocultar contraseña">
+                  <svg *ngIf="!showPwd.confirm" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg *ngIf="showPwd.confirm" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.78 19.78 0 0 1 5.06-5.94"></path>
+                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.79 19.79 0 0 1-3.17 4.31"></path>
+                    <path d="M1 1l22 22"></path>
+                    <path d="M9.5 9.5a3 3 0 0 0 4.95 4.95"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="pr-msg" *ngIf="msg" [class.pr-msg--error]="isError">{{ msg }}</div>
+          <div class="pr-form-actions">
+            <button type="submit" class="pr-btn pr-btn--brand pr-btn--sm" [disabled]="isChangingPassword">
+              <span class="pr-btn-spinner" *ngIf="isChangingPassword" aria-hidden="true"></span>
+              {{ isChangingPassword ? 'Actualizando…' : 'Actualizar contraseña' }}
+            </button>
+          </div>
+        </form>
+
+        <!-- 2FA real -->
+        <div class="pr-sec-row" [class.pr-sec-row--on]="is2FAEnabled">
+          <div class="pr-sec-row-text">
+            <strong>
+              Autenticación en dos pasos
+              <span class="pr-pill pr-pill--on" *ngIf="is2FAEnabled">Activada</span>
+              <span class="pr-pill pr-pill--off" *ngIf="!is2FAEnabled">Inactiva</span>
+            </strong>
+            <span>
+              {{ is2FAEnabled
+                  ? 'Tu cuenta exige un código enviado por correo en cada inicio de sesión.'
+                  : 'Recibe un código por correo cada vez que inicies sesión.' }}
+            </span>
+          </div>
+          <button type="button" class="pr-btn pr-btn--sm"
+                  [class.pr-btn--brand]="!is2FAEnabled"
+                  [class.pr-btn--ghost]="is2FAEnabled"
+                  [disabled]="isProcessing2FA"
+                  (click)="openTwoFactorModal()">
+            {{ is2FAEnabled ? 'Desactivar' : 'Activar 2FA' }}
+          </button>
+        </div>
+      </article>
+
+      <!-- Notificaciones -->
+      <article class="pr-card" id="pr-section-notif">
+        <header class="pr-card-head">
+          <h3 class="pr-card-title">Notificaciones</h3>
+          <p class="pr-card-sub">Decide qué alertas recibirás dentro de la plataforma y por correo.</p>
+        </header>
+
+        <div class="pr-toggle-list">
+          <label class="pr-toggle-row">
+            <span class="pr-toggle-text">
+              <strong>Notificaciones por correo</strong>
+              <em>Recibe un correo cuando ocurra un evento clave.</em>
+            </span>
+            <input type="checkbox" class="pr-toggle"
+                   [checked]="notif.email_enabled"
+                   (change)="onNotifToggle('email_enabled', $any($event.target).checked)">
+          </label>
+
+          <label class="pr-toggle-row">
+            <span class="pr-toggle-text">
+              <strong>Notificaciones push</strong>
+              <em>Aparecerán en el centro de notificaciones de la plataforma.</em>
+            </span>
+            <input type="checkbox" class="pr-toggle"
+                   [checked]="notif.push_enabled"
+                   (change)="onNotifToggle('push_enabled', $any($event.target).checked)">
+          </label>
+
+          <label class="pr-toggle-row">
+            <span class="pr-toggle-text">
+              <strong>Recordatorios de reuniones</strong>
+              <em>Avisos antes de cada reunión agendada.</em>
+            </span>
+            <input type="checkbox" class="pr-toggle"
+                   [checked]="notif.meeting_reminders"
+                   (change)="onNotifToggle('meeting_reminders', $any($event.target).checked)">
+          </label>
+
+          <label class="pr-toggle-row">
+            <span class="pr-toggle-text">
+              <strong>Tareas asignadas</strong>
+              <em>Cuando alguien te asigne una tarea o pendiente.</em>
+            </span>
+            <input type="checkbox" class="pr-toggle"
+                   [checked]="notif.task_assigned"
+                   (change)="onNotifToggle('task_assigned', $any($event.target).checked)">
+          </label>
+
+          <label class="pr-toggle-row">
+            <span class="pr-toggle-text">
+              <strong>Reunión procesada</strong>
+              <em>Cuando termine el análisis IA de una reunión.</em>
+            </span>
+            <input type="checkbox" class="pr-toggle"
+                   [checked]="notif.session_processed"
+                   (change)="onNotifToggle('session_processed', $any($event.target).checked)">
+          </label>
+
+          <label class="pr-toggle-row">
+            <span class="pr-toggle-text">
+              <strong>Reporte semanal</strong>
+              <em>Resumen ejecutivo cada lunes por la mañana.</em>
+            </span>
+            <input type="checkbox" class="pr-toggle"
+                   [checked]="notif.weekly_report"
+                   (change)="onNotifToggle('weekly_report', $any($event.target).checked)">
+          </label>
+
+          <label class="pr-toggle-row">
+            <span class="pr-toggle-text">
+              <strong>Alertas de seguridad</strong>
+              <em>Inicios de sesión sospechosos y cambios de contraseña.</em>
+            </span>
+            <input type="checkbox" class="pr-toggle"
+                   [checked]="notif.security_alerts"
+                   (change)="onNotifToggle('security_alerts', $any($event.target).checked)">
+          </label>
         </div>
 
-        <!-- Columna Derecha: Formularios -->
-        <div class="flex-2">
-            <!-- Información Personal -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4>Información Personal</h4>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <div class="form-row flex mb-3 gap-2">
-                            <div class="form-group flex-1">
-                                <label>Nombre Completo *</label>
-                                <input type="text" [value]="user?.full_name || 'Administrador FAC'">
-                            </div>
-                            <div class="form-group flex-1">
-                                <label>Correo Electrónico</label>
-                                <input type="email" [value]="user?.email || 'admin@fac.mil.co'" disabled>
-                            </div>
-                        </div>
-
-                        <div class="form-row flex mb-3 gap-2">
-                            <div class="form-group flex-1">
-                                <label>Departamento</label>
-                                <input type="text" value="Administración General" disabled>
-                            </div>
-                            <div class="form-group flex-1">
-                                <label>Rol</label>
-                                <input type="text" [value]="user?.role || 'Administrador'" disabled>
-                            </div>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label>Teléfono</label>
-                            <input type="tel" value="+57 300 123 4567">
-                        </div>
-
-                        <div class="form-group mb-4">
-                            <label>Dirección</label>
-                            <textarea rows="3" placeholder="Dirección completa..."></textarea>
-                        </div>
-
-                        <div class="flex justify-end gap-2">
-                            <button type="button" class="btn btn-outline-secondary">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Configuración de Seguridad -->
-            <div class="card">
-                <div class="card-header">
-                    <h4>Configuración de Seguridad</h4>
-                </div>
-                <div class="card-body">
-                    <form (ngSubmit)="changePassword()">
-                        <div *ngIf="msg" class="alert mb-3" [ngClass]="{'alert-danger': isError, 'alert-success': !isError}" style="padding: 10px; border-radius: 4px; background: #fee2e2; color: #991b1b;" [style.background]="!isError ? '#dcfce3' : ''" [style.color]="!isError ? '#166534' : ''">
-                            {{ msg }}
-                        </div>
-                        <div class="form-group mb-4">
-                            <label><strong>Cambiar Contraseña</strong><br>Contraseña Actual *</label>
-                            <input type="password" name="currentPwd" [(ngModel)]="pwd.current" placeholder="••••••••" required>
-                        </div>
-                        <div class="form-group mb-3 position-relative">
-                            <label>Nueva Contraseña *</label>
-                            <input type="password" name="newPwd" [(ngModel)]="pwd.new" placeholder="••••••••" required>
-                        </div>
-                        <div class="form-group mb-4 position-relative">
-                            <label>Confirmar Nueva Contraseña *</label>
-                            <input type="password" name="confirmPwd" [(ngModel)]="pwd.confirm" placeholder="••••••••" required>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                            Actualizar Contraseña
-                        </button>
-                    </form>
-                </div>
-            </div>
-
+        <div class="pr-sec-row">
+          <div class="pr-sec-row-text">
+            <strong>Notificaciones pendientes</strong>
+            <span *ngIf="unreadCount > 0">{{ unreadCount }} sin leer en tu bandeja.</span>
+            <span *ngIf="unreadCount === 0">No tienes notificaciones pendientes.</span>
+          </div>
+          <button type="button" class="pr-btn pr-btn--ghost pr-btn--sm"
+                  [disabled]="unreadCount === 0"
+                  (click)="markAllNotificationsRead()">
+            Marcar todo leído
+          </button>
         </div>
+      </article>
+    </main>
+
+    <!-- ====================================================
+         Columna derecha — Resumen + Actividad + Ayuda
+         ==================================================== -->
+    <aside class="pr-side">
+      <article class="pr-card pr-card--summary">
+        <header class="pr-card-head">
+          <h3 class="pr-card-title">Resumen del perfil</h3>
+        </header>
+        <dl class="pr-summary-list">
+          <div class="pr-summary-row">
+            <dt>ID de usuario</dt>
+            <dd>#{{ user?.id || '—' }}</dd>
+          </div>
+          <div class="pr-summary-row">
+            <dt>Empresa</dt>
+            <dd>{{ user?.tenant?.name || '—' }}</dd>
+          </div>
+          <div class="pr-summary-row">
+            <dt>Rol asignado</dt>
+            <dd>{{ (user?.role | titlecase) || '—' }}</dd>
+          </div>
+          <div class="pr-summary-row">
+            <dt>Departamento</dt>
+            <dd>{{ profile.department || '—' }}</dd>
+          </div>
+          <div class="pr-summary-row">
+            <dt>Cuenta creada</dt>
+            <dd>{{ createdAtLabel }}</dd>
+          </div>
+          <div class="pr-summary-row">
+            <dt>Última actualización</dt>
+            <dd>{{ updatedAtLabel }}</dd>
+          </div>
+          <div class="pr-summary-row">
+            <dt>Último acceso</dt>
+            <dd>{{ lastLoginLabel }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="pr-card pr-card--activity" id="pr-section-activity">
+        <header class="pr-card-head pr-card-head--row">
+          <h3 class="pr-card-title">Actividad reciente</h3>
+          <button type="button" class="pr-link" (click)="refreshActivity()" [disabled]="isLoadingActivity">
+            {{ isLoadingActivity ? 'Cargando…' : 'Actualizar' }}
+          </button>
+        </header>
+        <ul class="pr-activity-list" *ngIf="activity.length > 0">
+          <li class="pr-activity-item" *ngFor="let a of activity">
+            <span class="pr-activity-icon" aria-hidden="true">{{ a.icon }}</span>
+            <div class="pr-activity-body">
+              <strong>{{ a.label }}</strong>
+              <span>{{ formatActivityDate(a.created_at) }}</span>
+            </div>
+          </li>
+        </ul>
+        <div class="pr-activity-empty" *ngIf="!isLoadingActivity && activity.length === 0">
+          Aún no hay actividad registrada para tu cuenta.
+        </div>
+      </article>
+
+      <article class="pr-card pr-card--help">
+        <header class="pr-card-head">
+          <h3 class="pr-card-title">¿Necesitas ayuda?</h3>
+        </header>
+        <p class="pr-help-text">
+          Encuentra guías de uso, atajos de teclado y respuestas a preguntas frecuentes en el centro de ayuda.
+        </p>
+        <button type="button" class="pr-btn pr-btn--brand pr-btn--block" (click)="onOpenHelp()">
+          Abrir centro de ayuda
+        </button>
+      </article>
+    </aside>
+  </div>
+</div>
+
+<!-- ============================================================
+     2FA modal
+     ============================================================ -->
+<div class="pr-modal-backdrop" *ngIf="twoFactorModalStep !== 'idle'" (click)="closeTwoFactorModal()">
+  <div class="pr-modal" (click)="$event.stopPropagation()">
+    <header class="pr-modal-head">
+      <h3 *ngIf="twoFactorModalStep === 'enable-code'">Activar autenticación en dos pasos</h3>
+      <h3 *ngIf="twoFactorModalStep === 'disable-password'">Desactivar autenticación en dos pasos</h3>
+      <button type="button" class="pr-modal-close" aria-label="Cerrar" (click)="closeTwoFactorModal()">×</button>
+    </header>
+
+    <!-- Activar -->
+    <div class="pr-modal-body" *ngIf="twoFactorModalStep === 'enable-code'">
+      <p>
+        Te enviamos un código de 6 dígitos a <strong>{{ twoFactorEmailSent }}</strong>. Introdúcelo aquí para activar
+        la verificación en dos pasos. A partir de ahora, cada inicio de sesión pedirá un código nuevo.
+      </p>
+      <div class="pr-field">
+        <label for="pr-2fa-code">Código de verificación</label>
+        <input id="pr-2fa-code" type="text" inputmode="numeric" maxlength="6"
+               autocomplete="one-time-code" [(ngModel)]="twoFactorCode"
+               placeholder="000000" style="letter-spacing: 0.4em; text-align: center; font-size: 18px; font-weight: 600;">
+      </div>
+      <div class="pr-msg pr-msg--error" *ngIf="twoFactorError">{{ twoFactorError }}</div>
+      <div class="pr-modal-actions">
+        <button type="button" class="pr-link" (click)="resend2FACode()" [disabled]="isProcessing2FA">Reenviar código</button>
+        <div class="pr-modal-actions-right">
+          <button type="button" class="pr-btn pr-btn--ghost pr-btn--sm" (click)="closeTwoFactorModal()" [disabled]="isProcessing2FA">Cancelar</button>
+          <button type="button" class="pr-btn pr-btn--brand pr-btn--sm" (click)="confirmTwoFactor()" [disabled]="isProcessing2FA">
+            <span class="pr-btn-spinner" *ngIf="isProcessing2FA" aria-hidden="true"></span>
+            {{ isProcessing2FA ? 'Verificando…' : 'Activar 2FA' }}
+          </button>
+        </div>
+      </div>
     </div>
+
+    <!-- Desactivar -->
+    <div class="pr-modal-body" *ngIf="twoFactorModalStep === 'disable-password'">
+      <p>
+        Desactivar 2FA reduce la seguridad de tu cuenta. Para confirmar, introduce tu contraseña actual.
+      </p>
+      <div class="pr-field">
+        <label for="pr-2fa-pwd">Contraseña actual</label>
+        <input id="pr-2fa-pwd" type="password" autocomplete="current-password"
+               [(ngModel)]="twoFactorPassword" placeholder="••••••••">
+      </div>
+      <div class="pr-msg pr-msg--error" *ngIf="twoFactorError">{{ twoFactorError }}</div>
+      <div class="pr-modal-actions">
+        <span></span>
+        <div class="pr-modal-actions-right">
+          <button type="button" class="pr-btn pr-btn--ghost pr-btn--sm" (click)="closeTwoFactorModal()" [disabled]="isProcessing2FA">Cancelar</button>
+          <button type="button" class="pr-btn pr-btn--danger pr-btn--sm" (click)="disableTwoFactor()" [disabled]="isProcessing2FA">
+            <span class="pr-btn-spinner" *ngIf="isProcessing2FA" aria-hidden="true"></span>
+            {{ isProcessing2FA ? 'Procesando…' : 'Desactivar 2FA' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

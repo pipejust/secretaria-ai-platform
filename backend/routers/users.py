@@ -41,7 +41,11 @@ def _serialize_user(u: User) -> dict:
         "phone": getattr(u, "phone", None),
         "department": getattr(u, "department", None),
         "position": getattr(u, "position", None),
+        "location": getattr(u, "location", None),
+        "bio": getattr(u, "bio", None),
+        "avatar_url": getattr(u, "avatar_url", None),
         "created_at": getattr(u, "created_at", None),
+        "updated_at": getattr(u, "updated_at", None),
         "last_login_at": getattr(u, "last_login_at", None),
         "is_superadmin": getattr(u, "is_superadmin", False),
     }

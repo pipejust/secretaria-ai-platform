@@ -144,9 +144,13 @@
                 <li *ngFor="let contact of projectContacts"
                     class="ap-contact-card"
                     [class.is-editing]="editingContactId === contact.id">
-                    <span class="ap-contact-avatar">{{ contactInitials(contact) }}</span>
+                    <span class="ap-contact-avatar" [class.has-photo]="!!contactAvatarUrl(contact)">
+                        <img *ngIf="contactAvatarUrl(contact)" class="avatar-img"
+                             [src]="contactAvatarUrl(contact)" [alt]="contactDisplayName(contact)">
+                        <span *ngIf="!contactAvatarUrl(contact)">{{ contactInitials(contact) }}</span>
+                    </span>
                     <div class="ap-contact-body">
-                        <strong class="ap-contact-name">{{ contact.name }}</strong>
+                        <strong class="ap-contact-name">{{ contactDisplayName(contact) }}</strong>
                         <span class="ap-contact-email">{{ contact.email }}</span>
                         <div class="ap-contact-meta">
                             <span class="ap-contact-meta-item" *ngIf="contact.role">
@@ -601,13 +605,17 @@
                                 <td>
                                     <div class="ap-owner-cell">
                                         <span class="ap-owner-avatar avatar-tip-host"
+                                              [class.has-photo]="!!ownerInfo(p).avatarUrl"
                                               [attr.data-tone]="projectTone(p)"
                                               tabindex="0">
-                                            {{ ownerInitials(p) }}
+                                            <img *ngIf="ownerInfo(p).avatarUrl" class="avatar-img"
+                                                 [src]="ownerInfo(p).avatarUrl" [alt]="ownerInfo(p).name">
+                                            <span *ngIf="!ownerInfo(p).avatarUrl">{{ ownerInitials(p) }}</span>
                                             <span class="avatar-tip" role="tooltip">
                                                 <strong class="avatar-tip-name">{{ ownerInfo(p).name }}</strong>
                                                 <span class="avatar-tip-meta" *ngIf="ownerInfo(p).role">{{ ownerInfo(p).role }}</span>
                                                 <span class="avatar-tip-meta" *ngIf="ownerInfo(p).company">{{ ownerInfo(p).company }}</span>
+                                                <span class="avatar-tip-meta" *ngIf="ownerInfo(p).email">{{ ownerInfo(p).email }}</span>
                                             </span>
                                         </span>
                                         <span class="ap-owner-text">
@@ -648,13 +656,17 @@
                                     <span class="ap-team-stack">
                                         <span class="ap-team-av avatar-tip-host"
                                               *ngFor="let a of teamAvatars(p)"
+                                              [class.has-photo]="!!a.avatarUrl"
                                               [attr.data-tone]="a.tone"
                                               tabindex="0">
-                                            {{ a.initials }}
+                                            <img *ngIf="a.avatarUrl" class="avatar-img"
+                                                 [src]="a.avatarUrl" [alt]="a.name">
+                                            <span *ngIf="!a.avatarUrl">{{ a.initials }}</span>
                                             <span class="avatar-tip" role="tooltip">
                                                 <strong class="avatar-tip-name">{{ a.name }}</strong>
                                                 <span class="avatar-tip-meta" *ngIf="a.role">{{ a.role }}</span>
                                                 <span class="avatar-tip-meta" *ngIf="a.company">{{ a.company }}</span>
+                                                <span class="avatar-tip-meta" *ngIf="a.email">{{ a.email }}</span>
                                             </span>
                                         </span>
                                         <span class="ap-team-extra avatar-tip-host"

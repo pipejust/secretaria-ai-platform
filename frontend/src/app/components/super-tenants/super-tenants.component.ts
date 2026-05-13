@@ -1,199 +1,812 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
 
 interface TenantOut {
-  id: number;
-  slug: string;
-  name: string;
-  domain: string | null;
-  is_active: boolean;
-  user_count: number;
-  created_at: string;
+    id: number;
+    slug: string;
+    name: string;
+    domain: string | null;
+    is_active: boolean;
+    user_count: number;
+    created_at: string;
+    /** Branding parseado del backend (data URLs base64 desde branding_json). */
+    logo_data_url?: string | null;
+    icon_data_url?: string | null;
+    primary_color?: string | null;
+    company_name?: string | null;
+    // Aliases tolerantes que algunos templates referencian.
+    logo_url?: string | null;
+    icon_url?: string | null;
+    /** Campos opcionales del backend (futuros). */
+    admin_email?: string | null;
+    admin_full_name?: string | null;
+    project_count?: number;
+    session_count?: number;
+    integration_count?: number;
 }
 
 interface CreateForm {
-  slug: string;
-  name: string;
-  domain: string;
-  admin_email: string;
-  admin_password: string;
-  admin_full_name: string;
-  /** Data URL del logo "completo" (wordmark + monograma). Opcional. */
-  logo_data_url: string;
-  /** Data URL del imagologo cuadrado. Opcional. */
-  icon_data_url: string;
+    slug: string;
+    name: string;
+    domain: string;
+    admin_email: string;
+    admin_password: string;
+    admin_full_name: string;
+    logo_data_url: string;
+    icon_data_url: string;
 }
 
-/** Límite duro client-side antes de mandar al backend. El backend acepta
- *  hasta 4 MB de string base64 (~3 MB binario). Lo cortamos antes para
- *  evitar pedirle al admin que reintente. */
 const MAX_BRAND_FILE_BYTES = 2 * 1024 * 1024;
 
-/**
- * Pantalla `/admin/super/tenants`.
- *
- * Sólo accesible para super-admins de plataforma. Crea, lista, edita y
- * desactiva EMPRESAS (tenants). Cada empresa creada queda aislada — sus
- * usuarios sólo ven sus propios datos.
- */
 @Component({
-  selector: 'app-super-tenants',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './super-tenants.component.html',
-  styleUrls: ['./super-tenants.component.css'],
+    selector: 'app-super-tenants',
+    standalone: true,
+    imports: [CommonModule, FormsModule],
+    templateUrl: './super-tenants.component.html',
+    styleUrls: ['./super-tenants.component.css'],
 })
-export class SuperTenantsComponent implements OnInit {
-  private http = inject(HttpClient);
-  private auth = inject(AuthService);
-  private apiUrl = `${environment.apiUrl}/api/super/tenants`;
+export class SuperTenantsComponent implements OnInit, OnDestroy {
+    private http = inject(HttpClient);
+    private auth = inject(AuthService);
+    private toast = inject(ToastService);
+    private cdr = inject(ChangeDetectorRef);
+    private apiUrl = `${environment.apiUrl}/api/super/tenants`;
 
-  tenants: TenantOut[] = [];
-  loading = false;
-  errorMsg = '';
-  successMsg = '';
+    tenants: TenantOut[] = [];
+    loading = false;
+    errorMsg = '';
+    successMsg = '';
 
-  showCreate = false;
-  isCreating = false;
-  form: CreateForm = this._emptyForm();
+    // Modal create.
+    showCreate = false;
+    isCreating = false;
+    form: CreateForm = this._emptyForm();
 
-  ngOnInit(): void {
-    this.refresh();
-  }
-
-  private _headers(): HttpHeaders {
-    return new HttpHeaders({ Authorization: `Bearer ${this.auth.token || ''}` });
-  }
-
-  private _emptyForm(): CreateForm {
-    return {
-      slug: '', name: '', domain: '',
-      admin_email: '', admin_password: '', admin_full_name: '',
-      logo_data_url: '', icon_data_url: '',
+    // Modal edit.
+    showEdit = false;
+    isEditing = false;
+    editForm: {
+        id?: number;
+        slug: string;             // visible read-only en la UI
+        name: string;
+        domain: string;
+        is_active: boolean;
+        company_name: string;
+        primary_color: string;
+        logo_data_url: string;    // si cambia, se envía PUT /api/branding/logo
+        icon_data_url: string;    // si cambia, se envía PUT /api/branding/icon
+    } = {
+        slug: '', name: '', domain: '', is_active: true,
+        company_name: '', primary_color: '', logo_data_url: '', icon_data_url: '',
     };
-  }
+    /** Snapshot inicial para detectar qué cambió y solo mandar lo necesario. */
+    private editFormInitial: any = null;
 
-  /** Lee un File del input y lo convierte a data URL base64 — formato que
-   *  espera el backend en `logo_data_url`/`icon_data_url`. Resuelve a '' si
-   *  el archivo es demasiado grande o no es imagen, dejando un mensaje de
-   *  error en `errorMsg` para que el usuario sepa qué pasó. */
-  private async _fileToDataUrl(file: File): Promise<string> {
-    if (!file.type.startsWith('image/')) {
-      this.errorMsg = `"${file.name}" no es una imagen válida.`;
-      return '';
+    // Modal de ver detalle.
+    showDetail = false;
+
+    // Modal de "Editar dominio" (sustituye al prompt nativo).
+    showDomainModal = false;
+    isSavingDomain = false;
+    domainTarget: TenantOut | null = null;
+    domainValue = '';
+
+    // Filtros + búsqueda.
+    searchText = '';
+    statusFilter: '' | 'active' | 'inactive' = '';
+    domainFilter: '' | 'with' | 'without' = '';
+    usersFilter: '' | 'zero' | 'low' | 'medium' | 'high' = '';
+    dateFilter: '' | 'last30' | 'last90' | 'older' = '';
+    showFilters = false;
+    viewMode: 'list' | 'grid' = 'list';
+
+    // Paginación.
+    currentPage = 1;
+    pageLimit = 10;
+
+    // Panel derecho.
+    selected: TenantOut | null = null;
+    showSelectedPanel = true;
+
+    // Kebab.
+    openRowMenuId: number | null = null;
+
+    // Confirm dialog reutilizable.
+    showConfirmModal = false;
+    confirmDialog: {
+        title: string;
+        message: string;
+        confirmLabel: string;
+        confirmVariant: 'danger' | 'warning' | 'primary';
+        action: () => void;
+    } | null = null;
+
+    ngOnInit(): void { this.refresh(); }
+    ngOnDestroy(): void {}
+
+    @HostListener('document:click')
+    onDocClick(): void { this.openRowMenuId = null; }
+
+    @HostListener('document:keydown.escape')
+    onEsc(): void {
+        this.openRowMenuId = null;
+        if (this.showCreate) this.showCreate = false;
+        if (this.showEdit) this.showEdit = false;
+        if (this.showDetail) this.showDetail = false;
+        if (this.showDomainModal) this.closeDomainModal();
+        if (this.showConfirmModal) this.cancelConfirm();
     }
-    if (file.size > MAX_BRAND_FILE_BYTES) {
-      this.errorMsg = `"${file.name}" pesa ${(file.size / 1024 / 1024).toFixed(1)} MB. Máximo permitido: ${MAX_BRAND_FILE_BYTES / 1024 / 1024} MB.`;
-      return '';
+
+    // ============================================================
+    // Helpers
+    // ============================================================
+    private _headers(): HttpHeaders {
+        return new HttpHeaders({ Authorization: `Bearer ${this.auth.token || ''}` });
     }
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-  }
 
-  async onLogoSelected(ev: Event): Promise<void> {
-    this.errorMsg = '';
-    const input = ev.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    const url = await this._fileToDataUrl(file);
-    if (url) this.form.logo_data_url = url;
-    input.value = '';
-  }
-
-  async onIconSelected(ev: Event): Promise<void> {
-    this.errorMsg = '';
-    const input = ev.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    const url = await this._fileToDataUrl(file);
-    if (url) this.form.icon_data_url = url;
-    input.value = '';
-  }
-
-  clearLogo(): void { this.form.logo_data_url = ''; }
-  clearIcon(): void { this.form.icon_data_url = ''; }
-
-  async refresh(): Promise<void> {
-    this.loading = true;
-    this.errorMsg = '';
-    try {
-      const data = await firstValueFrom(
-        this.http.get<TenantOut[]>(`${this.apiUrl}/`, { headers: this._headers() }),
-      );
-      this.tenants = data;
-    } catch (err: any) {
-      this.errorMsg = err?.error?.detail || 'No se pudo cargar la lista de empresas.';
-    } finally {
-      this.loading = false;
+    private _emptyForm(): CreateForm {
+        return {
+            slug: '', name: '', domain: '',
+            admin_email: '', admin_password: '', admin_full_name: '',
+            logo_data_url: '', icon_data_url: '',
+        };
     }
-  }
 
-  async createTenant(): Promise<void> {
-    this.isCreating = true;
-    this.errorMsg = '';
-    this.successMsg = '';
-    try {
-      const out = await firstValueFrom(
-        this.http.post<TenantOut>(`${this.apiUrl}/`, {
-          slug: this.form.slug.trim().toLowerCase(),
-          name: this.form.name.trim(),
-          domain: this.form.domain.trim() || null,
-          admin_email: this.form.admin_email.trim().toLowerCase(),
-          admin_password: this.form.admin_password,
-          admin_full_name: this.form.admin_full_name.trim(),
-          // Solo mando los logos si el super-admin los subió. El backend
-          // valida que el data URL sea válido antes de persistirlo.
-          logo_data_url: this.form.logo_data_url || undefined,
-          icon_data_url: this.form.icon_data_url || undefined,
-        }, { headers: this._headers() }),
-      );
-      this.tenants = [...this.tenants, out];
-      this.successMsg = `Empresa '${out.name}' creada. Comparte estas credenciales con el admin del cliente.`;
-      this.showCreate = false;
-      this.form = this._emptyForm();
-    } catch (err: any) {
-      this.errorMsg = err?.error?.detail || 'No se pudo crear la empresa.';
-    } finally {
-      this.isCreating = false;
+    private async _fileToDataUrl(file: File): Promise<string> {
+        if (!file.type.startsWith('image/')) {
+            this.errorMsg = `"${file.name}" no es una imagen válida.`;
+            return '';
+        }
+        if (file.size > MAX_BRAND_FILE_BYTES) {
+            this.errorMsg = `"${file.name}" pesa ${(file.size / 1024 / 1024).toFixed(1)} MB. Máximo permitido: ${MAX_BRAND_FILE_BYTES / 1024 / 1024} MB.`;
+            return '';
+        }
+        return await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+        });
     }
-  }
 
-  async toggleActive(t: TenantOut): Promise<void> {
-    if (t.slug === 'acten') {
-      alert('No se puede desactivar el tenant principal (acten).');
-      return;
+    async onLogoSelected(ev: Event): Promise<void> {
+        this.errorMsg = '';
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.form.logo_data_url = url;
+        input.value = '';
     }
-    const next = !t.is_active;
-    try {
-      await firstValueFrom(
-        this.http.put<TenantOut>(`${this.apiUrl}/${t.slug}`, { is_active: next }, { headers: this._headers() }),
-      );
-      t.is_active = next;
-    } catch (err: any) {
-      this.errorMsg = err?.error?.detail || 'No se pudo cambiar el estado.';
+    async onIconSelected(ev: Event): Promise<void> {
+        this.errorMsg = '';
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.form.icon_data_url = url;
+        input.value = '';
     }
-  }
 
-  async setDomain(t: TenantOut): Promise<void> {
-    const dom = prompt(`Dominio personalizado para "${t.name}" (deja vacío para borrar):`, t.domain || '');
-    if (dom === null) return;
-    try {
-      const out = await firstValueFrom(
-        this.http.put<TenantOut>(`${this.apiUrl}/${t.slug}`, { domain: dom.trim() }, { headers: this._headers() }),
-      );
-      t.domain = out.domain;
-      this.successMsg = `Dominio actualizado para ${t.name}.`;
-    } catch (err: any) {
-      this.errorMsg = err?.error?.detail || 'No se pudo actualizar el dominio.';
+    /** Soporta drag & drop sobre las zonas de carga del modal. */
+    async onLogoDrop(ev: DragEvent): Promise<void> {
+        ev.preventDefault();
+        const file = ev.dataTransfer?.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.form.logo_data_url = url;
     }
-  }
+    async onIconDrop(ev: DragEvent): Promise<void> {
+        ev.preventDefault();
+        const file = ev.dataTransfer?.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.form.icon_data_url = url;
+    }
+    onDragOver(ev: DragEvent): void { ev.preventDefault(); }
+
+    clearLogo(): void { this.form.logo_data_url = ''; }
+    clearIcon(): void { this.form.icon_data_url = ''; }
+
+    // ============================================================
+    // Backend
+    // ============================================================
+    async refresh(): Promise<void> {
+        this.loading = true;
+        this.errorMsg = '';
+        try {
+            const data = await firstValueFrom(
+                this.http.get<TenantOut[]>(`${this.apiUrl}/`, { headers: this._headers() }),
+            );
+            this.tenants = data || [];
+            // Mantener selección si existe; si no, primera empresa.
+            if (this.selected) {
+                const stillThere = this.tenants.find((t) => t.id === this.selected!.id);
+                this.selected = stillThere || this.tenants[0] || null;
+            } else if (this.tenants.length) {
+                this.selected = this.tenants[0];
+            }
+        } catch (err: any) {
+            this.errorMsg = err?.error?.detail || 'No se pudo cargar la lista de empresas.';
+        } finally {
+            this.loading = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    openCreateModal(): void {
+        this.form = this._emptyForm();
+        this.errorMsg = ''; this.successMsg = '';
+        this.showCreate = true;
+    }
+
+    closeCreateModal(): void {
+        this.showCreate = false;
+        this.errorMsg = ''; this.successMsg = '';
+    }
+
+    private validateCreate(): string | null {
+        const f = this.form;
+        if (!f.slug.trim()) return 'El slug es obligatorio.';
+        if (!/^[a-z0-9-]+$/.test(f.slug.trim().toLowerCase())) {
+            return 'El slug solo admite minúsculas, números y guiones.';
+        }
+        if (!f.name.trim()) return 'El nombre legible es obligatorio.';
+        if (!f.admin_email.trim()) return 'El email del primer admin es obligatorio.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.admin_email.trim())) {
+            return 'El email del primer admin no tiene un formato válido.';
+        }
+        if (!f.admin_password || f.admin_password.length < 8) {
+            return 'La contraseña inicial debe tener al menos 8 caracteres.';
+        }
+        if (!f.admin_full_name.trim()) return 'El nombre del admin es obligatorio.';
+        return null;
+    }
+
+    async createTenant(): Promise<void> {
+        const err = this.validateCreate();
+        if (err) { this.errorMsg = err; return; }
+        this.isCreating = true;
+        this.errorMsg = '';
+        this.successMsg = '';
+        try {
+            const out = await firstValueFrom(
+                this.http.post<TenantOut>(`${this.apiUrl}/`, {
+                    slug: this.form.slug.trim().toLowerCase(),
+                    name: this.form.name.trim(),
+                    domain: this.form.domain.trim() || null,
+                    admin_email: this.form.admin_email.trim().toLowerCase(),
+                    admin_password: this.form.admin_password,
+                    admin_full_name: this.form.admin_full_name.trim(),
+                    logo_data_url: this.form.logo_data_url || undefined,
+                    icon_data_url: this.form.icon_data_url || undefined,
+                }, { headers: this._headers() }),
+            );
+            this.tenants = [...this.tenants, out];
+            this.successMsg = `Empresa '${out.name}' creada. Comparte estas credenciales con el admin del cliente.`;
+            this.toast.success(`Empresa '${out.name}' creada correctamente.`);
+            this.selected = out;
+            this.showCreate = false;
+            this.form = this._emptyForm();
+        } catch (err: any) {
+            this.errorMsg = err?.error?.detail || 'No se pudo crear la empresa.';
+        } finally {
+            this.isCreating = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    // ============================================================
+    // Acciones por fila
+    // ============================================================
+    toggleRowMenu(id: number, evt: Event): void {
+        evt.stopPropagation();
+        this.openRowMenuId = this.openRowMenuId === id ? null : id;
+    }
+    closeRowMenu(): void { this.openRowMenuId = null; }
+
+    private async _performToggleActive(t: TenantOut): Promise<void> {
+        const next = !t.is_active;
+        try {
+            await firstValueFrom(
+                this.http.put<TenantOut>(`${this.apiUrl}/${t.slug}`, { is_active: next }, { headers: this._headers() }),
+            );
+            t.is_active = next;
+            this.toast.success(next ? 'Empresa activada.' : 'Empresa desactivada.');
+            this.cdr.detectChanges();
+        } catch (err: any) {
+            this.toast.error(err?.error?.detail || 'No se pudo cambiar el estado.');
+        }
+    }
+
+    toggleActive(t: TenantOut, evt?: Event): void {
+        if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+        this.closeRowMenu();
+        // SIEMPRE abrimos confirm modal — el backend protege a 'acten' devolviendo 400.
+        // El modal explícitamente bloquea acten en el cliente para feedback inmediato.
+        if (t.is_active) {
+            if (t.slug === 'acten') {
+                this.confirmAction({
+                    title: 'Tenant principal protegido',
+                    message: `"${t.name}" es el tenant principal de la plataforma y no se puede desactivar. Para deshabilitar el acceso usa los permisos de su rol.`,
+                    confirmLabel: 'Entendido',
+                    confirmVariant: 'warning',
+                    action: () => {}, // No-op: solo informa.
+                });
+                return;
+            }
+            this.confirmAction({
+                title: 'Desactivar empresa',
+                message: `¿Estás seguro de desactivar a "${t.name}"? Sus usuarios perderán el acceso hasta que la actives nuevamente.`,
+                confirmLabel: 'Desactivar',
+                confirmVariant: 'danger',
+                action: () => this._performToggleActive(t),
+            });
+        } else {
+            // Activar es seguro → confirm igual para consistencia UX, variante primary.
+            this.confirmAction({
+                title: 'Activar empresa',
+                message: `¿Reactivar "${t.name}"? Sus usuarios podrán volver a iniciar sesión.`,
+                confirmLabel: 'Activar',
+                confirmVariant: 'primary',
+                action: () => this._performToggleActive(t),
+            });
+        }
+    }
+
+    // ============================================================
+    // Editar dominio (modal — reemplaza al prompt nativo)
+    // ============================================================
+    openDomainModal(t: TenantOut, evt?: Event): void {
+        if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+        this.closeRowMenu();
+        this.domainTarget = t;
+        this.domainValue = t.domain || '';
+        this.errorMsg = '';
+        this.showDomainModal = true;
+    }
+    closeDomainModal(): void {
+        this.showDomainModal = false;
+        this.domainTarget = null;
+        this.domainValue = '';
+        this.errorMsg = '';
+    }
+    async saveDomain(): Promise<void> {
+        const t = this.domainTarget;
+        if (!t) return;
+        this.isSavingDomain = true;
+        this.errorMsg = '';
+        try {
+            const out = await firstValueFrom(
+                this.http.put<TenantOut>(
+                    `${this.apiUrl}/${t.slug}`,
+                    { domain: this.domainValue.trim() || null },
+                    { headers: this._headers() },
+                ),
+            );
+            t.domain = out.domain;
+            const idx = this.tenants.findIndex((x) => x.id === out.id);
+            if (idx >= 0) this.tenants[idx] = { ...this.tenants[idx], ...out };
+            this.toast.success(`Dominio actualizado para ${t.name}.`);
+            this.showDomainModal = false;
+            this.domainTarget = null;
+            this.domainValue = '';
+        } catch (err: any) {
+            this.errorMsg = err?.error?.detail || 'No se pudo actualizar el dominio.';
+        } finally {
+            this.isSavingDomain = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    /** Alias compatible con el HTML existente que sigue llamando setDomain. */
+    setDomain(t: TenantOut, evt?: Event): void { this.openDomainModal(t, evt); }
+
+    viewDetail(t: TenantOut, evt?: Event): void {
+        if (evt) evt.stopPropagation();
+        this.closeRowMenu();
+        this.selected = t;
+        this.showSelectedPanel = true;
+        this.showDetail = true;
+        this.cdr.detectChanges();
+    }
+    closeDetail(): void { this.showDetail = false; }
+
+    openEditModal(t: TenantOut, evt?: Event): void {
+        if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+        this.closeRowMenu();
+        this.errorMsg = '';
+        this.successMsg = '';
+        const initial = {
+            id: t.id,
+            slug: t.slug,
+            name: t.name || '',
+            domain: t.domain || '',
+            is_active: !!t.is_active,
+            company_name: t.company_name || '',
+            primary_color: t.primary_color || '#155EEF',
+            logo_data_url: t.logo_data_url || '',
+            icon_data_url: t.icon_data_url || '',
+        };
+        this.editForm = { ...initial };
+        this.editFormInitial = { ...initial };
+        this.showEdit = true;
+    }
+    closeEditModal(): void {
+        this.showEdit = false;
+        this.editFormInitial = null;
+        this.errorMsg = '';
+        this.successMsg = '';
+    }
+
+    /** Alias en español para uso desde el kebab. */
+    editTenant(t: TenantOut, evt?: Event): void { this.openEditModal(t, evt); }
+
+    /** Logo / Icono inputs DEL MODAL DE EDICIÓN (separados de los de creación). */
+    async onEditLogoSelected(ev: Event): Promise<void> {
+        this.errorMsg = '';
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.editForm.logo_data_url = url;
+        input.value = '';
+    }
+    async onEditIconSelected(ev: Event): Promise<void> {
+        this.errorMsg = '';
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.editForm.icon_data_url = url;
+        input.value = '';
+    }
+    clearEditLogo(): void { this.editForm.logo_data_url = ''; }
+    clearEditIcon(): void { this.editForm.icon_data_url = ''; }
+
+    async saveEdit(): Promise<void> {
+        if (!this.editForm.slug) return;
+        const name = this.editForm.name.trim();
+        if (!name || name.length < 2) {
+            this.errorMsg = 'El nombre debe tener al menos 2 caracteres.';
+            return;
+        }
+        const init = this.editFormInitial || {};
+        this.isEditing = true;
+        this.errorMsg = '';
+        try {
+            // 1) Campos básicos del tenant (name, domain, is_active) → PUT /api/super/tenants/{slug}.
+            const basicChanged =
+                name !== init.name ||
+                (this.editForm.domain || '') !== (init.domain || '') ||
+                this.editForm.is_active !== init.is_active;
+            let out: TenantOut | null = null;
+            if (basicChanged) {
+                out = await firstValueFrom(
+                    this.http.put<TenantOut>(`${this.apiUrl}/${this.editForm.slug}`, {
+                        name,
+                        domain: this.editForm.domain.trim() || null,
+                        is_active: this.editForm.is_active,
+                    }, { headers: this._headers() }),
+                );
+            }
+
+            // 2) Branding (company_name + primary_color) → PUT /api/branding/?tenant_slug=...
+            //    (esos campos viven en branding_json y los expone /api/branding/ para que el admin
+            //    de cada tenant los edite; aquí los enviamos en nombre del super-admin).
+            const brandChanged =
+                (this.editForm.company_name || '') !== (init.company_name || '') ||
+                (this.editForm.primary_color || '') !== (init.primary_color || '');
+            if (brandChanged) {
+                try {
+                    await firstValueFrom(
+                        this.http.put(`${environment.apiUrl}/api/branding/`, {
+                            company_name: this.editForm.company_name || '',
+                            primary_color: this.editForm.primary_color || '',
+                        }, {
+                            headers: this._headers(),
+                            params: { tenant_slug: this.editForm.slug },
+                        }),
+                    );
+                } catch (e) {
+                    // Si el endpoint no acepta query param tenant_slug, lo dejamos
+                    // pasar — el super-admin puede entrar al tenant para editar marca.
+                    console.warn('No se pudo actualizar marca desde super-admin:', e);
+                }
+            }
+
+            // 3) Logo / Icono → POST /api/branding/logo o /icon (también vía branding).
+            if (this.editForm.logo_data_url && this.editForm.logo_data_url !== init.logo_data_url) {
+                try {
+                    await firstValueFrom(
+                        this.http.post(`${environment.apiUrl}/api/branding/logo`, {
+                            data_url: this.editForm.logo_data_url,
+                        }, { headers: this._headers(), params: { tenant_slug: this.editForm.slug } }),
+                    );
+                } catch (e) { console.warn('logo update falló', e); }
+            }
+            if (this.editForm.icon_data_url && this.editForm.icon_data_url !== init.icon_data_url) {
+                try {
+                    await firstValueFrom(
+                        this.http.post(`${environment.apiUrl}/api/branding/icon`, {
+                            data_url: this.editForm.icon_data_url,
+                        }, { headers: this._headers(), params: { tenant_slug: this.editForm.slug } }),
+                    );
+                } catch (e) { console.warn('icon update falló', e); }
+            }
+
+            // 4) Reflejar cambios en la lista.
+            if (out) {
+                const idx = this.tenants.findIndex((x) => x.id === out!.id);
+                if (idx >= 0) this.tenants[idx] = { ...this.tenants[idx], ...out };
+                if (this.selected?.id === out.id) this.selected = this.tenants[idx];
+            }
+            // Refrescamos para traer branding fresco.
+            await this.refresh();
+
+            this.toast.success('Empresa actualizada correctamente.');
+            this.showEdit = false;
+        } catch (err: any) {
+            this.errorMsg = err?.error?.detail || 'No se pudo actualizar la empresa.';
+        } finally {
+            this.isEditing = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    private async _performDelete(t: TenantOut): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.delete(`${this.apiUrl}/${t.slug}`, { headers: this._headers() }),
+            );
+            // El backend hace soft-delete (is_active=false); reflejamos eso en la fila.
+            t.is_active = false;
+            this.toast.success(`Empresa "${t.name}" desactivada.`);
+            this.cdr.detectChanges();
+        } catch (err: any) {
+            this.toast.error(err?.error?.detail || 'No se pudo eliminar la empresa.');
+        }
+    }
+
+    deleteTenant(t: TenantOut, evt?: Event): void {
+        if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+        this.closeRowMenu();
+        if (t.slug === 'acten') {
+            this.confirmAction({
+                title: 'Tenant principal protegido',
+                message: `"${t.name}" es el tenant principal y no se puede eliminar. Esta operación está bloqueada por el backend para proteger el panel de control.`,
+                confirmLabel: 'Entendido',
+                confirmVariant: 'warning',
+                action: () => {},
+            });
+            return;
+        }
+        this.confirmAction({
+            title: 'Eliminar empresa',
+            message: `¿Estás seguro de eliminar "${t.name}"? Esta acción la marca como inactiva inmediatamente y sus usuarios pierden el acceso.`,
+            confirmLabel: 'Eliminar',
+            confirmVariant: 'danger',
+            action: () => this._performDelete(t),
+        });
+    }
+
+    selectTenant(t: TenantOut): void {
+        this.selected = t;
+        this.showSelectedPanel = true;
+        this.cdr.detectChanges();
+    }
+
+    // ============================================================
+    // Confirm dialog
+    // ============================================================
+    confirmAction(opts: {
+        title: string;
+        message: string;
+        confirmLabel: string;
+        confirmVariant?: 'danger' | 'warning' | 'primary';
+        action: () => void;
+    }): void {
+        this.confirmDialog = {
+            title: opts.title,
+            message: opts.message,
+            confirmLabel: opts.confirmLabel,
+            confirmVariant: opts.confirmVariant || 'danger',
+            action: opts.action,
+        };
+        this.showConfirmModal = true;
+    }
+    cancelConfirm(): void {
+        this.showConfirmModal = false;
+        this.confirmDialog = null;
+    }
+    runConfirm(): void {
+        const cb = this.confirmDialog?.action;
+        this.showConfirmModal = false;
+        this.confirmDialog = null;
+        if (cb) cb();
+    }
+
+    // ============================================================
+    // KPIs derivados
+    // ============================================================
+    get totalTenants(): number { return this.tenants.length; }
+    get activeTenants(): number { return this.tenants.filter((t) => t.is_active).length; }
+    get inactiveTenants(): number { return this.tenants.filter((t) => !t.is_active).length; }
+    get totalUsers(): number { return this.tenants.reduce((acc, t) => acc + (t.user_count || 0), 0); }
+    get configuredDomains(): number { return this.tenants.filter((t) => !!t.domain).length; }
+    get activePercent(): string {
+        if (!this.totalTenants) return '0% del total';
+        return `${Math.round((this.activeTenants / this.totalTenants) * 1000) / 10}% del total`;
+    }
+
+    /** Empresas creadas este mes (vs el mes pasado) — basado en created_at real. */
+    get newThisMonth(): number {
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        return this.tenants.filter((t) => {
+            if (!t.created_at) return false;
+            const d = new Date(t.created_at);
+            return !isNaN(d.getTime()) && d >= monthStart;
+        }).length;
+    }
+    get newLastMonth(): number {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const prevStart  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        return this.tenants.filter((t) => {
+            if (!t.created_at) return false;
+            const d = new Date(t.created_at);
+            return !isNaN(d.getTime()) && d >= prevStart && d < monthStart;
+        }).length;
+    }
+    get tenantsDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
+        const now = this.newThisMonth, prev = this.newLastMonth;
+        if (!now && !prev) return { dir: 'flat', label: 'Sin altas este mes' };
+        const diff = now - prev;
+        if (diff > 0) return { dir: 'up',   label: `+${diff} este mes` };
+        if (diff < 0) return { dir: 'down', label: `${diff} este mes` };
+        return { dir: 'flat', label: 'Igual que el mes pasado' };
+    }
+    /** % vs total para "Empresas activas". */
+    get activeDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
+        if (!this.totalTenants) return { dir: 'flat', label: 'Sin empresas' };
+        const pct = (this.activeTenants / this.totalTenants) * 100;
+        if (pct >= 80) return { dir: 'up',   label: `${this.activePercent}` };
+        if (pct >= 50) return { dir: 'flat', label: `${this.activePercent}` };
+        return { dir: 'down', label: `${this.activePercent}` };
+    }
+    /** Promedio usuarios/empresa para Usuarios distribuidos. */
+    get usersDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
+        if (!this.totalTenants) return { dir: 'flat', label: 'Sin empresas' };
+        const avg = Math.round((this.totalUsers / this.totalTenants) * 10) / 10;
+        return {
+            dir: this.totalUsers > 0 ? 'up' : 'flat',
+            label: `${avg} usuarios por empresa`,
+        };
+    }
+    /** % de empresas con dominio personalizado. */
+    get domainsDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
+        if (!this.totalTenants) return { dir: 'flat', label: 'Sin dominios' };
+        const pct = Math.round((this.configuredDomains / this.totalTenants) * 100);
+        if (pct >= 50) return { dir: 'up',   label: `${pct}% de las empresas` };
+        if (pct === 0) return { dir: 'flat', label: 'Sin dominios personalizados' };
+        return { dir: 'down', label: `${pct}% de las empresas` };
+    }
+
+    // ============================================================
+    // Filtros + paginación
+    // ============================================================
+    get filteredTenants(): TenantOut[] {
+        const q = this.searchText.trim().toLowerCase();
+        return this.tenants.filter((t) => {
+            if (this.statusFilter === 'active' && !t.is_active) return false;
+            if (this.statusFilter === 'inactive' && t.is_active) return false;
+            if (this.domainFilter === 'with' && !t.domain) return false;
+            if (this.domainFilter === 'without' && !!t.domain) return false;
+            if (this.usersFilter) {
+                const n = t.user_count || 0;
+                if (this.usersFilter === 'zero'   && n !== 0) return false;
+                if (this.usersFilter === 'low'    && (n < 1 || n > 5)) return false;
+                if (this.usersFilter === 'medium' && (n < 6 || n > 20)) return false;
+                if (this.usersFilter === 'high'   && n <= 20) return false;
+            }
+            if (this.dateFilter) {
+                const d = t.created_at ? new Date(t.created_at) : null;
+                if (!d || isNaN(d.getTime())) return false;
+                const days = (Date.now() - d.getTime()) / 86400000;
+                if (this.dateFilter === 'last30' && days > 30) return false;
+                if (this.dateFilter === 'last90' && days > 90) return false;
+                if (this.dateFilter === 'older'  && days <= 90) return false;
+            }
+            if (q) {
+                const hay = `${t.name || ''} ${t.slug || ''} ${t.domain || ''}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
+    }
+
+    get paginatedTenants(): TenantOut[] {
+        const start = (this.currentPage - 1) * this.pageLimit;
+        return this.filteredTenants.slice(start, start + this.pageLimit);
+    }
+    get totalPages(): number { return Math.max(1, Math.ceil(this.filteredTenants.length / this.pageLimit)); }
+    get pageButtons(): number[] {
+        return Array.from({ length: Math.min(5, this.totalPages) }, (_, i) => i + 1);
+    }
+    get rangeLabel(): string {
+        const total = this.filteredTenants.length;
+        if (!total) return 'Sin empresas';
+        const start = (this.currentPage - 1) * this.pageLimit + 1;
+        const end = Math.min(this.currentPage * this.pageLimit, total);
+        return `Mostrando ${start}-${end} de ${total} empresas`;
+    }
+    goToPage(p: number): void { if (p >= 1 && p <= this.totalPages) this.currentPage = p; }
+    changePageLimit(n: number): void { this.pageLimit = n; this.currentPage = 1; }
+
+    get activeFiltersCount(): number {
+        let n = 0;
+        if (this.statusFilter) n++;
+        if (this.domainFilter) n++;
+        if (this.usersFilter) n++;
+        if (this.dateFilter) n++;
+        return n;
+    }
+    toggleFiltersBar(): void {
+        this.showFilters = !this.showFilters;
+        if (!this.showFilters) {
+            this.statusFilter = '';
+            this.domainFilter = '';
+            this.usersFilter = '';
+            this.dateFilter = '';
+            this.currentPage = 1;
+        }
+    }
+
+    // ============================================================
+    // Visual helpers
+    // ============================================================
+    /** Color de la "marca" de la empresa (avatar de slug) — hash estable. */
+    private readonly _palette = ['#155EEF', '#10B981', '#F97316', '#7C3AED', '#0EA5E9', '#EF4444', '#D97706', '#0F766E'];
+    brandColor(seed?: string): string {
+        const s = seed || '?';
+        let h = 0;
+        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+        return this._palette[Math.abs(h) % this._palette.length];
+    }
+
+    initials(name?: string, slug?: string): string {
+        const src = (name && name.trim()) ? name : (slug || '?');
+        const parts = src.replace(/[._@-]+/g, ' ').trim().split(/\s+/);
+        const a = parts[0]?.[0] || '';
+        const b = parts.length > 1 ? parts[parts.length - 1][0] : '';
+        return (a + b).toUpperCase() || '?';
+    }
+
+    formatDate(value?: string | null): string {
+        if (!value) return '—';
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    /** Texto pequeño de la card "Empresa seleccionada" para "Admin principal". */
+    get adminPrincipal(): { name: string; email: string } | null {
+        const t = this.selected;
+        if (!t) return null;
+        if (t.admin_full_name || t.admin_email) {
+            return {
+                name: t.admin_full_name || (t.admin_email ? t.admin_email.split('@')[0] : ''),
+                email: t.admin_email || '',
+            };
+        }
+        return null;
+    }
+
+    trackById(_i: number, t: TenantOut): number { return t.id; }
 }

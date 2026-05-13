@@ -166,7 +166,7 @@
                     </p>
                 </header>
 
-                <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form" novalidate>
+                <form *ngIf="!awaiting2FA" (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form" novalidate>
                     <!-- Chip readonly que confirma el workspace activo. Sólo
                          visible cuando el slug vino por URL/subdominio. NO
                          hay forma de cambiarlo desde el form — para cambiar
@@ -222,6 +222,43 @@
                         </svg>
                     </button>
 
+                </form>
+
+                <!-- ════════ 2FA challenge ════════ -->
+                <form *ngIf="awaiting2FA" (ngSubmit)="verify2FA()" class="login-form" novalidate>
+                    <div class="tenant-chip" style="background: rgba(27, 127, 103, 0.08); color: #1B7F67; border-color: rgba(27, 127, 103, 0.18);">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 2L4 6v6c0 5 3.5 9.4 8 10 4.5-.6 8-5 8-10V6l-8-4z"></path>
+                        </svg>
+                        <span>Verificación en dos pasos</span>
+                    </div>
+
+                    <p style="margin: 0 0 4px 0; font-size: 14px; color: #475569;">
+                        Te enviamos un código de 6 dígitos a <strong>{{ emailMasked }}</strong>.
+                        Caduca en 10 minutos.
+                    </p>
+
+                    <div class="field">
+                        <label for="code2fa">Código de verificación</label>
+                        <input id="code2fa" name="code2fa" type="text" inputmode="numeric"
+                               maxlength="6" autocomplete="one-time-code"
+                               [(ngModel)]="code2FA" placeholder="000000"
+                               style="letter-spacing: 0.4em; text-align: center; font-size: 18px; font-weight: 600;" />
+                    </div>
+
+                    <div class="error-banner" *ngIf="errorMessage" role="alert">{{ errorMessage }}</div>
+
+                    <button type="submit" class="btn-signin" [disabled]="isVerifying2FA || !code2FA">
+                        <span class="btn-signin-label">{{ isVerifying2FA ? 'Verificando…' : 'Verificar y entrar' }}</span>
+                    </button>
+
+                    <div class="row-between" style="margin-top: 8px;">
+                        <button type="button" class="forgot-link" style="background:none;border:none;cursor:pointer;padding:0;"
+                                (click)="cancel2FA()">Volver al inicio de sesión</button>
+                        <button type="button" class="forgot-link" style="background:none;border:none;cursor:pointer;padding:0;"
+                                (click)="resend2FA()">Reenviar código</button>
+                    </div>
                 </form>
             </div>
         </section>

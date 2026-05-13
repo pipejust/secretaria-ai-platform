@@ -117,8 +117,8 @@
       <h2>Participantes</h2>
       <ul class="contact-list">
         <li *ngFor="let c of d.contacts; trackBy: trackById">
-          <strong>{{ c.name }}</strong>
-          <span class="contact-meta">{{ c.role }} · {{ c.email }}<span *ngIf="c.entity"> · {{ c.entity }}</span></span>
+          <app-user-chip [email]="c.email" [fallbackName]="c.name" size="sm" [showEmail]="false"></app-user-chip>
+          <span class="contact-meta">{{ c.role }}<span *ngIf="c.email"> · {{ c.email }}</span><span *ngIf="c.entity"> · {{ c.entity }}</span></span>
         </li>
       </ul>
     </section>

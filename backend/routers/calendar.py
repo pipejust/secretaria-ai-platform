@@ -280,7 +280,7 @@ async def sync_now(
 
 @router.get("/upcoming")
 def upcoming(
-    days: int = Query(7, ge=1, le=30),
+    days: int = Query(7, ge=1, le=180),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_session),
 ):

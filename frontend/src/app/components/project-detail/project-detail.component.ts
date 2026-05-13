@@ -7,6 +7,8 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
+import { UserChipComponent } from '../shared/user-chip/user-chip.component';
+import { UserDirectoryService } from '../../services/user-directory.service';
 
 interface ProjectDetail {
     id: number;
@@ -75,7 +77,7 @@ interface DashboardResponse {
 @Component({
     selector: 'app-project-detail',
     standalone: true,
-    imports: [CommonModule, RouterModule],
+    imports: [CommonModule, RouterModule, UserChipComponent],
     templateUrl: './project-detail.component.html',
     styleUrls: ['./project-detail.component.css'],
 })
@@ -90,6 +92,7 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
+        private userDirectory: UserDirectoryService,
     ) {}
 
     ngOnInit(): void {
@@ -116,6 +119,10 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
                 next: (res) => {
                     this.data = res;
                     this.isLoading = false;
+                    // Pre-cargamos SOLO los emails — el matching por nombre
+                    // es peligroso (colisiones).
+                    const contacts = res?.contacts || [];
+                    this.userDirectory.preload(contacts.map((c: any) => c.email).filter(Boolean));
                     this.cdr.detectChanges();
                 },
                 error: (err) => {

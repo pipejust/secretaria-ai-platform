@@ -68,3 +68,14 @@ dummy.docx
 !.vscode/extensions.json
 !.vscode/settings.json
 backups/
+
+# Backups y trabajo local (no van a producción)
+.user-backup-*/
+.claude/worktrees/
+backend/uploads/
+runs/
+PROMPT.md
+00-create-roles.sql
+rediseño/
+*.css-E
+*.bak

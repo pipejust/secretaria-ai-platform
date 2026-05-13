@@ -22,6 +22,12 @@ export class LoginComponent implements OnInit {
     /** Visual-only: el SSO real no está cableado todavía. */
     rememberMe = true;
 
+    // ─── 2FA challenge ───────────────────────────────────────────
+    awaiting2FA = false;
+    code2FA = '';
+    emailMasked = '';
+    isVerifying2FA = false;
+
     /** Multi-tenant: derivado SIEMPRE de la URL (TenantService).
      *  El usuario NUNCA edita esto desde el form — para cambiar de
      *  empresa tiene que navegar a /t/{otro}/login. */
@@ -84,7 +90,13 @@ export class LoginComponent implements OnInit {
         this.authService.login(this.email, this.password, this.tenantSlug).subscribe({
             next: (res) => {
                 this.isLoading = false;
-                // Refrescar marca con la del tenant en el que entró.
+                // El backend pide 2FA antes de emitir el token.
+                if (res?.two_factor_required) {
+                    this.awaiting2FA = true;
+                    this.emailMasked = res.email_masked || this.email;
+                    this.code2FA = '';
+                    return;
+                }
                 this.branding.loadFromServer();
                 this.router.navigate(['/admin/dashboard']);
             },
@@ -98,6 +110,41 @@ export class LoginComponent implements OnInit {
                     this.errorMessage = 'Error conectando al servidor. Inténtalo más tarde.';
                 }
             }
+        });
+    }
+
+    verify2FA() {
+        if (!this.code2FA || this.code2FA.trim().length < 6) {
+            this.errorMessage = 'Introduce el código de 6 dígitos que te enviamos por correo.';
+            return;
+        }
+        this.isVerifying2FA = true;
+        this.errorMessage = '';
+        this.authService.verifyLogin2FA(this.email, this.code2FA.trim(), this.tenantSlug).subscribe({
+            next: () => {
+                this.isVerifying2FA = false;
+                this.branding.loadFromServer();
+                this.router.navigate(['/admin/dashboard']);
+            },
+            error: (err) => {
+                this.isVerifying2FA = false;
+                this.errorMessage = err?.error?.detail || 'Código incorrecto. Inténtalo nuevamente.';
+            },
+        });
+    }
+
+    cancel2FA() {
+        this.awaiting2FA = false;
+        this.code2FA = '';
+        this.errorMessage = '';
+    }
+
+    resend2FA() {
+        // Para reenviar simplemente repetimos el login (genera nuevo código).
+        this.errorMessage = '';
+        this.authService.login(this.email, this.password, this.tenantSlug).subscribe({
+            next: () => { this.errorMessage = 'Se reenvió un nuevo código a tu correo.'; },
+            error: () => { this.errorMessage = 'No se pudo reenviar el código.'; },
         });
     }
 }

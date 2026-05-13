@@ -5,13 +5,13 @@
  * ============================================================================ */
 
 .acten-dashboard {
-    --acn-bg:           #F7F9FC;
-    --acn-card-bg:      #FFFFFF;
+    --acn-bg:           var(--color-bg-base);
+    --acn-card-bg:      var(--color-bg-panel);
     --acn-border:       #E5EAF2;
-    --acn-border-soft:  #EEF1F6;
-    --acn-text:         #0F172A;
-    --acn-text-muted:   #64748B;
-    --acn-text-soft:    #94A3B8;
+    --acn-border-soft:  var(--color-border-light);
+    --acn-text:         var(--color-fg-default);
+    --acn-text-muted:   var(--color-fg-muted);
+    --acn-text-soft:    var(--color-fg-soft);
     --acn-blue:         #2563EB;
     --acn-blue-soft:    #DBEAFE;
     --acn-blue-deep:    #1E3A8A;
@@ -202,7 +202,7 @@
     padding: 0 28px 0 10px;
     border: 1px solid var(--acn-border);
     border-radius: 8px;
-    background-color: #FFFFFF;
+    background-color: var(--color-bg-panel);
     color: var(--acn-text);
     font-size: 12px;
     font-weight: 500;
@@ -252,7 +252,7 @@
 
 .acn-chart-points circle {
     fill: var(--acn-blue);
-    stroke: #FFFFFF;
+    stroke: var(--color-bg-panel);
     stroke-width: 2;
     transition: r 120ms ease;
 }
@@ -329,7 +329,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     border: 1px solid var(--acn-border);
     border-radius: 8px;
     height: 32px;
@@ -475,7 +475,7 @@
     position: absolute;
     transform: translate(-50%, -100%);
     background: var(--acn-text);
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 11px;
@@ -600,7 +600,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -609,7 +609,7 @@
 }
 .acn-followup-cheer[data-tone="info"] { background: var(--acn-blue-soft); border-color: #BFDBFE; }
 .acn-followup-cheer[data-tone="info"] .cheer-icon { color: var(--acn-blue); }
-.acn-followup-cheer[data-tone="neutral"] { background: #F1F5F9; border-color: var(--acn-border); }
+.acn-followup-cheer[data-tone="neutral"] { background: var(--color-bg-muted); border-color: var(--acn-border); }
 .acn-followup-cheer[data-tone="neutral"] .cheer-icon { color: var(--acn-text-muted); }
 .cheer-title {
     margin: 0;
@@ -649,7 +649,7 @@
     width: 28px;
     height: 28px;
     border-radius: 6px;
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     font-size: 12px;
     font-weight: 700;
     display: inline-flex;
@@ -718,7 +718,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
-.acn-table-row:not(.acn-table-head):hover { background: #F8FAFC; }
+.acn-table-row:not(.acn-table-head):hover { background: var(--color-bg-elevated); }
 .acn-table-row:last-child { border-bottom: 0; }
 .acn-table-title { font-weight: 600; color: var(--acn-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .acn-table-cell.muted { color: var(--acn-text-muted); }
@@ -729,8 +729,8 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    border: 2px solid #FFFFFF;
-    color: #FFFFFF;
+    border: 2px solid var(--color-bg-panel);
+    color: var(--color-bg-panel);
     font-size: 10px;
     font-weight: 700;
     display: inline-flex;
@@ -747,14 +747,14 @@
 .avatar-mini[data-tone="4"] { background: #EC4899; }
 .avatar-extra {
     margin-left: -8px;
-    background: #F1F5F9;
+    background: var(--color-bg-muted);
     color: var(--acn-text-muted);
     font-size: 10px;
     font-weight: 700;
     border-radius: 50%;
     width: 26px;
     height: 26px;
-    border: 2px solid #FFFFFF;
+    border: 2px solid var(--color-bg-panel);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -907,7 +907,7 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     font-size: 10px;
     font-weight: 700;
     display: inline-flex;

@@ -1,99 +1,744 @@
-<div class="reportes-container">
-  <header class="header">
-    <div>
-      <h1>Reportes ejecutivos</h1>
-      <p class="subtitle">Resumen consolidado por período. Descargable en PDF para compartir con stakeholders.</p>
+<div class="rp-page">
+
+    <!-- ============================================================
+         Header
+         ============================================================ -->
+    <header class="rp-header">
+        <div class="rp-header-text">
+            <h1>Reportes</h1>
+            <p class="rp-subtitle">Haz seguimiento al rendimiento, progreso y resultados de tus proyectos y reuniones.</p>
+        </div>
+
+        <div class="rp-header-actions">
+            <!-- Selector de periodo. -->
+            <div class="rp-period" (click)="$event.stopPropagation()">
+                <button class="rp-btn rp-btn--ghost" (click)="togglePeriodMenu()"
+                        [class.is-active]="showPeriodMenu" aria-haspopup="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" class="rp-btn-ico">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    {{ periodLabels[period] }}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" class="rp-btn-chev">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="rp-period-menu" *ngIf="showPeriodMenu">
+                    <button [class.is-active]="period === 'week'"  (click)="pickPeriod('week')">Esta semana</button>
+                    <button [class.is-active]="period === 'month'" (click)="pickPeriod('month')">Este mes</button>
+                    <button [class.is-active]="period === 'all'"   (click)="pickPeriod('all')">Siempre</button>
+                    <div class="rp-period-divider"></div>
+                    <div class="rp-period-custom">
+                        <span class="rp-period-title">Rango personalizado</span>
+                        <label>Desde</label>
+                        <input type="date" name="rp_custom_start" [(ngModel)]="customStart"/>
+                        <label>Hasta</label>
+                        <input type="date" name="rp_custom_end"   [(ngModel)]="customEnd"/>
+                        <label>Proyecto</label>
+                        <!-- Sin (change) automático: el proyecto se aplica
+                             SOLO al pulsar "Aplicar rango" para que la
+                             llamada use el período custom y no recargue
+                             con el período viejo a medio camino. -->
+                        <select name="rp_custom_project" [(ngModel)]="projectId">
+                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
+                        </select>
+                        <button class="rp-btn rp-btn--primary rp-btn--block"
+                                (click)="applyCustomRange()">Aplicar rango</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exportar abre modal. -->
+            <button class="rp-btn rp-btn--ghost" (click)="openExportModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" class="rp-btn-ico">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Exportar
+            </button>
+        </div>
+    </header>
+
+    <!-- Loading -->
+    <div class="rp-loading" *ngIf="isLoading">
+        <span class="rp-spinner"></span>
+        <span>Cargando reportes…</span>
     </div>
-    <button class="btn btn-primary" [disabled]="isDownloading || isLoading" (click)="downloadPdf()">
-      <span *ngIf="!isDownloading">📄 Descargar PDF</span>
-      <span *ngIf="isDownloading">Generando…</span>
-    </button>
-  </header>
 
-  <section class="filters">
-    <div class="field">
-      <label>Período</label>
-      <select [(ngModel)]="period" (change)="load()">
-        <option value="week">Semanal</option>
-        <option value="month">Mensual</option>
-      </select>
+    <ng-container *ngIf="!isLoading && data">
+
+        <!-- ============================================================
+             KPI cards — icono REDONDO, flecha pequeña arriba.
+             ============================================================ -->
+        <section class="rp-kpis">
+            <article class="rp-kpi">
+                <div class="rp-kpi-ico rp-kpi-ico--blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </div>
+                <div class="rp-kpi-body">
+                    <span class="rp-kpi-label">Proyectos</span>
+                    <span class="rp-kpi-value">{{ metricProjects }}</span>
+                    <span class="rp-kpi-delta">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" class="rp-arrow-up">
+                            <line x1="12" y1="19" x2="12" y2="5"></line>
+                            <polyline points="6 12 12 5 18 12"></polyline>
+                        </svg>
+                        {{ metricProjects }} este mes
+                    </span>
+                </div>
+            </article>
+
+            <article class="rp-kpi">
+                <div class="rp-kpi-ico rp-kpi-ico--green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <div class="rp-kpi-body">
+                    <span class="rp-kpi-label">Tasa de finalización</span>
+                    <span class="rp-kpi-value">{{ metricCompletionRate }}%</span>
+                    <span class="rp-kpi-delta">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" class="rp-arrow-up">
+                            <line x1="12" y1="19" x2="12" y2="5"></line>
+                            <polyline points="6 12 12 5 18 12"></polyline>
+                        </svg>
+                        {{ data.metrics.action_items_by_status['done'] || 0 }} tareas hechas
+                    </span>
+                </div>
+            </article>
+
+            <article class="rp-kpi">
+                <div class="rp-kpi-ico rp-kpi-ico--purple">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <polyline points="9 14 11 16 15 12"></polyline>
+                    </svg>
+                </div>
+                <div class="rp-kpi-body">
+                    <span class="rp-kpi-label">Decisiones</span>
+                    <span class="rp-kpi-value">{{ metricDecisions }}</span>
+                    <span class="rp-kpi-delta">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" class="rp-arrow-up">
+                            <line x1="12" y1="19" x2="12" y2="5"></line>
+                            <polyline points="6 12 12 5 18 12"></polyline>
+                        </svg>
+                        {{ data.metrics.sessions_count }} reuniones
+                    </span>
+                </div>
+            </article>
+
+            <article class="rp-kpi">
+                <div class="rp-kpi-ico rp-kpi-ico--orange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="rp-kpi-body">
+                    <span class="rp-kpi-label">Tareas vencidas</span>
+                    <span class="rp-kpi-value">{{ metricOverdue }}</span>
+                    <span class="rp-kpi-delta rp-kpi-delta--bad">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" class="rp-arrow-down">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <polyline points="6 12 12 19 18 12"></polyline>
+                        </svg>
+                        Requieren atención
+                    </span>
+                </div>
+            </article>
+        </section>
+
+        <!-- ============================================================
+             Fila 1: Donut + Line chart
+             ============================================================ -->
+        <section class="rp-row rp-row--two">
+
+            <!-- Donut -->
+            <article class="rp-card">
+                <header class="rp-card-head">
+                    <div class="rp-card-title">
+                        <h2>Resumen de progreso de proyectos</h2>
+                    </div>
+                    <div class="rp-card-tools">
+                        <select class="rp-mini-select"
+                                [(ngModel)]="donutProjectId"
+                                (change)="onDonutProjectChange()">
+                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
+                        </select>
+                        <a class="rp-card-link" routerLink="/admin/projects">
+                            Ver todos
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </div>
+                </header>
+
+                <div class="rp-donut-wrap">
+                    <div class="rp-donut">
+                        <svg viewBox="0 0 160 160" class="rp-donut-svg">
+                            <circle cx="80" cy="80" r="60" fill="none" stroke="#F1F5F9" stroke-width="22"></circle>
+                            <g transform="rotate(-90 80 80)">
+                                <circle *ngFor="let s of donutSlices"
+                                        cx="80" cy="80" r="60"
+                                        fill="none"
+                                        [attr.stroke]="s.color"
+                                        stroke-width="22"
+                                        [attr.stroke-dasharray]="s.dashLength + ' ' + (377 - s.dashLength)"
+                                        [attr.stroke-dashoffset]="s.dashOffset"
+                                        class="rp-donut-seg"
+                                        [class.is-faded]="hoveredDonutKey && hoveredDonutKey !== s.key"
+                                        (mouseenter)="setHoveredDonut(s.key)"
+                                        (mouseleave)="setHoveredDonut(null)">
+                                </circle>
+                            </g>
+                        </svg>
+                        <div class="rp-donut-center">
+                            <ng-container *ngIf="!hoveredDonutKey">
+                                <span class="rp-donut-value">{{ donutTotal }}</span>
+                                <span class="rp-donut-label">{{ donutModeLabel }}</span>
+                            </ng-container>
+                            <ng-container *ngIf="hoveredDonutKey">
+                                <ng-container *ngFor="let s of donutSlices">
+                                    <ng-container *ngIf="s.key === hoveredDonutKey">
+                                        <span class="rp-donut-value" [style.color]="s.color">{{ s.value }}</span>
+                                        <span class="rp-donut-label">{{ s.label }} ({{ s.pct }}%)</span>
+                                    </ng-container>
+                                </ng-container>
+                            </ng-container>
+                        </div>
+                    </div>
+
+                    <ul class="rp-donut-legend">
+                        <li *ngFor="let s of donutLegend"
+                            (mouseenter)="setHoveredDonut(s.key)"
+                            (mouseleave)="setHoveredDonut(null)"
+                            [class.is-hover]="hoveredDonutKey === s.key">
+                            <span class="rp-legend-dot" [style.background]="s.color"></span>
+                            <span class="rp-legend-label">{{ s.label }}</span>
+                            <span class="rp-legend-value">{{ s.value }} ({{ s.pct }}%)</span>
+                        </li>
+                    </ul>
+                </div>
+            </article>
+
+            <!-- Line chart -->
+            <article class="rp-card">
+                <header class="rp-card-head">
+                    <div class="rp-card-title">
+                        <h2>Decisiones en el tiempo</h2>
+                    </div>
+                    <div class="rp-card-tools">
+                        <select class="rp-mini-select"
+                                [(ngModel)]="decisionsProjectId"
+                                (change)="onDecisionsProjectChange()">
+                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
+                        </select>
+                        <button class="rp-card-link rp-card-link--btn" (click)="onDecisionsViewDetails()">
+                            Ver detalles
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="rp-line-wrap">
+                    <svg viewBox="0 0 600 240" class="rp-line-svg" preserveAspectRatio="xMidYMid meet"
+                         (mousemove)="onLineMove($event)"
+                         (mouseleave)="setHoveredLine(null)">
+                        <!-- Grid Y -->
+                        <g class="rp-line-grid">
+                            <ng-container *ngFor="let t of lineYTicks">
+                                <line [attr.x1]="36" [attr.x2]="584"
+                                      [attr.y1]="yTickPos(t)"
+                                      [attr.y2]="yTickPos(t)"></line>
+                                <text [attr.x]="28" [attr.y]="yTickPos(t) + 4"
+                                      text-anchor="end" class="rp-axis-label">{{ t }}</text>
+                            </ng-container>
+                        </g>
+                        <!-- Área + línea -->
+                        <path [attr.d]="lineAreaD" class="rp-line-area"></path>
+                        <path [attr.d]="linePathD" class="rp-line-stroke"></path>
+                        <!-- Puntos interactivos -->
+                        <g>
+                            <circle *ngFor="let p of linePoints; let i = index"
+                                    [attr.cx]="p.x" [attr.cy]="p.y" r="5"
+                                    class="rp-line-dot"
+                                    [class.is-hover]="hoveredLineIdx === i"
+                                    (mouseenter)="setHoveredLine(i)"
+                                    (mouseleave)="setHoveredLine(null)"></circle>
+                        </g>
+                        <!-- Vertical guide al hover -->
+                        <line *ngIf="hoveredLinePoint"
+                              [attr.x1]="hoveredLinePoint.x"
+                              [attr.x2]="hoveredLinePoint.x"
+                              [attr.y1]="12" [attr.y2]="212"
+                              class="rp-line-guide"></line>
+                        <!-- Labels X -->
+                        <g class="rp-x-labels">
+                            <text *ngFor="let p of linePoints"
+                                  [attr.x]="p.x" y="232" text-anchor="middle"
+                                  class="rp-axis-label">{{ p.label }}</text>
+                        </g>
+                    </svg>
+
+                    <!-- Tooltip enriquecido dinámico -->
+                    <div class="rp-line-tooltip" *ngIf="hoveredLinePoint"
+                         [style.left.px]="hoveredLinePoint.x"
+                         [style.top.px]="hoveredLinePoint.y">
+                        <div class="rp-line-tooltip-head">
+                            <span class="rp-legend-dot" style="background:#155EEF"></span>
+                            <strong>{{ hoveredLinePoint.label }}</strong>
+                        </div>
+                        <span class="rp-line-tooltip-value">{{ hoveredLinePoint.value }}</span>
+                        <span class="rp-line-tooltip-sub">decisiones acumuladas</span>
+                        <span class="rp-line-tooltip-delta"
+                              *ngIf="hoveredLineDelta"
+                              [class.is-up]="hoveredLineDelta.sign === '+'"
+                              [class.is-down]="hoveredLineDelta.sign === '−'">
+                            {{ hoveredLineDelta.sign }}{{ hoveredLineDelta.pct }}% vs anterior
+                        </span>
+                    </div>
+                    <div class="rp-line-tooltip rp-line-tooltip--static"
+                         *ngIf="!hoveredLinePoint && linePoints.length">
+                        <div class="rp-line-tooltip-head">
+                            <span class="rp-legend-dot" style="background:#155EEF"></span>
+                            <strong>{{ linePoints[linePoints.length-1].label }}</strong>
+                        </div>
+                        <span class="rp-line-tooltip-value">{{ linePoints[linePoints.length-1].value }}</span>
+                        <span class="rp-line-tooltip-sub">decisiones</span>
+                    </div>
+
+                    <div class="rp-line-legend">
+                        <span class="rp-legend-dot" style="background:#155EEF"></span>
+                        Decisiones
+                    </div>
+                </div>
+
+                <!-- Drawer "Ver detalles" -->
+                <div class="rp-decisions-detail" id="rp-decisions-detail">
+                    <div class="rp-detail-grid">
+                        <span class="rp-detail-label">Total acumulado</span>
+                        <span class="rp-detail-value">{{ linePoints.length ? linePoints[linePoints.length-1].value : 0 }}</span>
+                        <span class="rp-detail-label">Periodo</span>
+                        <span class="rp-detail-value">{{ data.label }}</span>
+                        <span class="rp-detail-label">Proyecto</span>
+                        <span class="rp-detail-value">{{ data.project_name }}</span>
+                        <span class="rp-detail-label">Reuniones</span>
+                        <span class="rp-detail-value">{{ data.metrics.sessions_count }}</span>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <!-- ============================================================
+             Fila intermedia: Carga de trabajo — donut grande + tabla por
+             persona con filtros propios. Reemplaza el card chico que vive
+             en /admin/pendientes con una versión más rica e interactiva.
+             ============================================================ -->
+        <section class="rp-row rp-row--one">
+            <article class="rp-card rp-card--wide">
+                <header class="rp-card-head">
+                    <div class="rp-card-title">
+                        <h2>Carga de trabajo</h2>
+                    </div>
+                    <div class="rp-card-tools">
+                        <select class="rp-mini-select"
+                                [(ngModel)]="workloadProjectId"
+                                (change)="onWorkloadProjectChange()">
+                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
+                        </select>
+                        <select class="rp-mini-select"
+                                [(ngModel)]="workloadStatus">
+                            <option value="all">Todos los estados</option>
+                            <option value="pending">Pendientes</option>
+                            <option value="done">Completadas</option>
+                            <option value="blocked">Bloqueadas</option>
+                            <option value="overdue">Vencidas</option>
+                        </select>
+                        <select class="rp-mini-select" [(ngModel)]="workloadSortBy">
+                            <option value="total">Más tareas</option>
+                            <option value="overdue">Más vencidas</option>
+                            <option value="meetings">Más reuniones</option>
+                        </select>
+                    </div>
+                </header>
+
+                <div class="rp-workload-wrap" *ngIf="workloadFiltered.length; else workloadEmpty">
+                    <!-- Donut: cada persona es un segmento, hash-colored. -->
+                    <div class="rp-workload-donut">
+                        <svg viewBox="0 0 160 160" class="rp-donut-svg">
+                            <circle cx="80" cy="80" r="60" fill="none" stroke="#F1F5F9" stroke-width="22"></circle>
+                            <g transform="rotate(-90 80 80)">
+                                <circle *ngFor="let s of workloadDonutSlices; let i = index"
+                                        cx="80" cy="80" r="60"
+                                        fill="none"
+                                        [attr.stroke]="s.color"
+                                        stroke-width="22"
+                                        [attr.stroke-dasharray]="s.dashLength + ' ' + (377 - s.dashLength)"
+                                        [attr.stroke-dashoffset]="s.dashOffset"
+                                        class="rp-donut-seg"
+                                        [class.is-faded]="hoveredWorkloadIdx !== null && hoveredWorkloadIdx !== i"
+                                        (mouseenter)="setHoveredWorkload(i)"
+                                        (mouseleave)="setHoveredWorkload(null)">
+                                </circle>
+                            </g>
+                        </svg>
+                        <div class="rp-donut-center">
+                            <ng-container *ngIf="workloadHoveredRow as hr; else donutTotal">
+                                <span class="rp-donut-value" [style.color]="avatarColor(hr.owner)">{{ hr.total }}</span>
+                                <span class="rp-donut-label">{{ hr.owner }}</span>
+                            </ng-container>
+                            <ng-template #donutTotal>
+                                <span class="rp-donut-value">{{ workloadTotal }}</span>
+                                <span class="rp-donut-label">
+                                    {{ workloadStatus === 'all' ? 'Tareas activas' : 'Tareas filtradas' }}
+                                </span>
+                            </ng-template>
+                        </div>
+                    </div>
+
+                    <!-- KPIs + leyenda interactiva. -->
+                    <div class="rp-workload-side">
+                        <div class="rp-workload-summary">
+                            <div class="rp-workload-kpi">
+                                <span class="rp-workload-kpi-num">{{ workloadFiltered.length }}</span>
+                                <span class="rp-workload-kpi-lbl">Responsables</span>
+                            </div>
+                            <div class="rp-workload-kpi rp-workload-kpi--bad">
+                                <span class="rp-workload-kpi-num">{{ metricOverdue }}</span>
+                                <span class="rp-workload-kpi-lbl">Vencidas</span>
+                            </div>
+                            <div class="rp-workload-kpi rp-workload-kpi--ok">
+                                <span class="rp-workload-kpi-num">{{ metricTasksCompleted }}</span>
+                                <span class="rp-workload-kpi-lbl">Completadas</span>
+                            </div>
+                        </div>
+
+                        <ul class="rp-workload-list">
+                            <li *ngFor="let r of workloadFiltered; let i = index"
+                                class="rp-workload-row"
+                                (mouseenter)="setHoveredWorkload(i)"
+                                (mouseleave)="setHoveredWorkload(null)"
+                                [class.is-hover]="hoveredWorkloadIdx === i">
+                                <span class="rp-legend-dot rp-legend-dot--lg"
+                                      [style.background]="workloadAvatarColor(r.owner)"></span>
+                                <div class="rp-workload-body">
+                                    <div class="rp-workload-top">
+                                        <span class="rp-workload-name" [title]="r.email">{{ r.owner }}</span>
+                                        <span class="rp-workload-total">
+                                            <strong>{{ r.total }}</strong>
+                                            <span class="rp-workload-pct">
+                                                {{ workloadDonutSlices[i]?.pct || 0 }}%
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div class="rp-workload-counts">
+                                        <span class="rp-workload-chip rp-workload-chip--pending"   *ngIf="r.by_status.pending">{{ r.by_status.pending }} pend.</span>
+                                        <span class="rp-workload-chip rp-workload-chip--done"      *ngIf="r.by_status.done">{{ r.by_status.done }} hechas</span>
+                                        <span class="rp-workload-chip rp-workload-chip--blocked"   *ngIf="r.by_status.blocked">{{ r.by_status.blocked }} bloq.</span>
+                                        <span class="rp-workload-chip rp-workload-chip--overdue"   *ngIf="r.by_status.overdue">{{ r.by_status.overdue }} vencidas</span>
+                                        <span class="rp-workload-chip rp-workload-chip--cancelled" *ngIf="r.by_status.cancelled">{{ r.by_status.cancelled }} canc.</span>
+                                        <span class="rp-workload-chip rp-workload-chip--meetings"  *ngIf="r.meetings">{{ r.meetings }} reuniones</span>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <ng-template #workloadEmpty>
+                    <div class="rp-table-empty">Sin carga de trabajo en el periodo seleccionado.</div>
+                </ng-template>
+            </article>
+        </section>
+
+        <!-- ============================================================
+             Fila 2: Bar chart + Tabla
+             ============================================================ -->
+        <section class="rp-row rp-row--two">
+
+            <!-- Actividad del equipo — vista de FILAS con avatar, dos barras
+                 horizontales (reuniones + acciones) por persona, y tooltip
+                 interactivo al hover sobre cualquier punto de la fila. -->
+            <article class="rp-card">
+                <header class="rp-card-head">
+                    <div class="rp-card-title">
+                        <h2>Actividad del equipo</h2>
+                    </div>
+                    <div class="rp-card-tools">
+                        <select class="rp-mini-select"
+                                [(ngModel)]="teamProjectId"
+                                (change)="onTeamProjectChange()">
+                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
+                        </select>
+                        <select class="rp-mini-select"
+                                [(ngModel)]="teamActivitySort"
+                                (change)="setTeamSort(teamActivitySort)">
+                            <option value="combined">Más activos</option>
+                            <option value="actions">Más tareas</option>
+                            <option value="meetings">Más reuniones</option>
+                        </select>
+                    </div>
+                </header>
+
+                <div class="rp-team-rows" *ngIf="teamRows.length; else teamEmpty">
+                    <div class="rp-team-row"
+                         *ngFor="let r of teamRows; let i = index"
+                         (mouseenter)="setHoveredTeam(i)"
+                         (mouseleave)="setHoveredTeam(null)"
+                         [class.is-hover]="hoveredTeamIdx === i">
+                        <div class="rp-team-id">
+                            <span class="rp-avatar" [style.background]="avatarColor(r.owner)">
+                                {{ initials(r.owner) }}
+                            </span>
+                            <span class="rp-team-name">{{ r.owner }}</span>
+                        </div>
+                        <div class="rp-team-bars">
+                            <div class="rp-team-bar">
+                                <span class="rp-team-bar-label">Reuniones</span>
+                                <span class="rp-team-bar-track">
+                                    <span class="rp-team-bar-fill rp-team-bar-fill--blue"
+                                          [style.width.%]="teamMeetingsPct(r.meetings)"></span>
+                                </span>
+                                <span class="rp-team-bar-num">{{ r.meetings }}</span>
+                            </div>
+                            <div class="rp-team-bar">
+                                <span class="rp-team-bar-label">Tareas</span>
+                                <span class="rp-team-bar-track">
+                                    <span class="rp-team-bar-fill rp-team-bar-fill--violet"
+                                          [style.width.%]="teamActionsPct(r.actions)"></span>
+                                </span>
+                                <span class="rp-team-bar-num">{{ r.actions }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ng-template #teamEmpty>
+                    <div class="rp-table-empty">Sin actividad del equipo en el periodo.</div>
+                </ng-template>
+                <div class="rp-team-legend">
+                    <span class="rp-legend-pair">
+                        <span class="rp-legend-dot" style="background:#155EEF"></span>
+                        Reuniones aportadas
+                    </span>
+                    <span class="rp-legend-pair">
+                        <span class="rp-legend-dot" style="background:#7C3AED"></span>
+                        Tareas aportadas
+                    </span>
+                </div>
+            </article>
+
+            <!-- Top Projects -->
+            <article class="rp-card">
+                <header class="rp-card-head">
+                    <div class="rp-card-title">
+                        <h2>Principales proyectos por progreso</h2>
+                    </div>
+                    <div class="rp-card-tools">
+                        <select class="rp-mini-select"
+                                [(ngModel)]="topProjectId"
+                                (change)="onTopProjectChange()">
+                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
+                        </select>
+                        <a class="rp-card-link" routerLink="/admin/projects">
+                            Ver todos
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </div>
+                </header>
+
+                <div class="rp-table-wrap">
+                    <div class="rp-table">
+                        <div class="rp-tr rp-th">
+                            <span>Proyecto</span>
+                            <span>Responsable</span>
+                            <span>Progreso</span>
+                            <span>Estado</span>
+                        </div>
+                        <ng-container *ngIf="topProjectsPaged.length; else emptyProjects">
+                            <div class="rp-tr" *ngFor="let r of topProjectsPaged">
+                                <span class="rp-td rp-td--project">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round" class="rp-td-ico">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                    {{ r.name }}
+                                </span>
+                                <span class="rp-td rp-td--owner">
+                                    <span class="rp-avatar" [style.background]="avatarColor(r.owner)">
+                                        {{ initials(r.owner) }}
+                                    </span>
+                                    {{ r.owner }}
+                                </span>
+                                <span class="rp-td rp-td--progress">
+                                    <span class="rp-progress-num">{{ r.progress }}%</span>
+                                    <span class="rp-progress-bar">
+                                        <span class="rp-progress-fill" [style.width.%]="r.progress"></span>
+                                    </span>
+                                </span>
+                                <span class="rp-td">
+                                    <span class="rp-status rp-status--{{ statusBadge(r.status).key }}">
+                                        {{ statusBadge(r.status).label }}
+                                    </span>
+                                </span>
+                            </div>
+                        </ng-container>
+                        <ng-template #emptyProjects>
+                            <div class="rp-table-empty">No hay proyectos para mostrar con los filtros actuales.</div>
+                        </ng-template>
+                    </div>
+
+                    <div class="rp-pagination" *ngIf="topProjectsFiltered.length">
+                        <span class="rp-pg-info">{{ topProjectsRangeLabel }}</span>
+                        <div class="rp-pg-controls">
+                            <button class="rp-pg-btn"
+                                    [disabled]="topProjectsPage === 1"
+                                    (click)="goToTopProjectsPage(topProjectsPage - 1)" aria-label="Anterior">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
+                            <button *ngFor="let p of topProjectsPageButtons"
+                                    class="rp-pg-btn rp-pg-num"
+                                    [class.is-active]="topProjectsPage === p"
+                                    (click)="goToTopProjectsPage(p)">{{ p }}</button>
+                            <button class="rp-pg-btn"
+                                    [disabled]="topProjectsPage === topProjectsPages"
+                                    (click)="goToTopProjectsPage(topProjectsPage + 1)" aria-label="Siguiente">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </ng-container>
+</div>
+
+<!-- ============================================================
+     Export modal
+     ============================================================ -->
+<div class="rp-modal-backdrop" *ngIf="showExportModal" (click)="closeExportModal()">
+    <div class="rp-modal" (click)="$event.stopPropagation()">
+        <header class="rp-modal-head">
+            <h3>Exportar reporte</h3>
+            <button class="rp-modal-close" (click)="closeExportModal()" aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+        <div class="rp-modal-body">
+            <div class="rp-modal-field">
+                <label>Formato</label>
+                <div class="rp-format-options">
+                    <button [class.is-active]="exportFormat === 'pdf'"
+                            (click)="exportFormat = 'pdf'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        PDF
+                    </button>
+                    <button [class.is-active]="exportFormat === 'excel'"
+                            (click)="exportFormat = 'excel'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                            <line x1="3" y1="15" x2="21" y2="15"></line>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                            <line x1="15" y1="3" x2="15" y2="21"></line>
+                        </svg>
+                        Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="rp-modal-field">
+                <label>Periodo</label>
+                <div class="rp-format-options rp-format-options--four">
+                    <button [class.is-active]="exportPeriod === 'week'"   (click)="exportPeriod = 'week'">Semana</button>
+                    <button [class.is-active]="exportPeriod === 'month'"  (click)="exportPeriod = 'month'">Mes</button>
+                    <button [class.is-active]="exportPeriod === 'all'"    (click)="exportPeriod = 'all'">Siempre</button>
+                    <button [class.is-active]="exportPeriod === 'custom'" (click)="exportPeriod = 'custom'">Personalizado</button>
+                </div>
+            </div>
+
+            <div class="rp-modal-field rp-modal-field--row" *ngIf="exportPeriod === 'custom'">
+                <div>
+                    <label>Desde</label>
+                    <input type="date" [(ngModel)]="exportStartDate"/>
+                </div>
+                <div>
+                    <label>Hasta</label>
+                    <input type="date" [(ngModel)]="exportEndDate"/>
+                </div>
+            </div>
+
+            <div class="rp-modal-field">
+                <label>Proyecto</label>
+                <select [(ngModel)]="exportProjectId">
+                    <option [ngValue]="null">Todos los proyectos</option>
+                    <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
+                </select>
+            </div>
+        </div>
+        <footer class="rp-modal-foot">
+            <button class="rp-btn rp-btn--ghost" (click)="closeExportModal()">Cancelar</button>
+            <button class="rp-btn rp-btn--primary" [disabled]="isExporting" (click)="confirmExport()">
+                <svg *ngIf="!isExporting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" class="rp-btn-ico">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span class="rp-spinner rp-spinner--sm" *ngIf="isExporting"></span>
+                {{ isExporting ? 'Generando…' : 'Descargar' }}
+            </button>
+        </footer>
     </div>
-    <div class="field">
-      <label>Fecha de referencia</label>
-      <input type="date" [(ngModel)]="refDate" (change)="load()" />
-      <small>Vacío = usar hoy.</small>
-    </div>
-    <div class="field">
-      <label>Proyecto</label>
-      <select [(ngModel)]="projectId" (change)="load()">
-        <option [ngValue]="null">— Todos los proyectos —</option>
-        <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
-      </select>
-    </div>
-  </section>
-
-  <div *ngIf="isLoading" class="loading">Cargando reporte…</div>
-
-  <ng-container *ngIf="!isLoading && data as d">
-    <section class="period-banner">
-      <strong>{{ d.label }}</strong> · {{ d.project_name }}
-    </section>
-
-    <section class="metrics">
-      <article class="metric">
-        <span class="num">{{ d.metrics.sessions_count }}</span>
-        <span class="lbl">Reuniones</span>
-      </article>
-      <article class="metric">
-        <span class="num">{{ d.metrics.action_items_total }}</span>
-        <span class="lbl">Tareas totales</span>
-      </article>
-      <article class="metric metric--green">
-        <span class="num">{{ d.metrics.action_items_by_status['done'] || 0 }}</span>
-        <span class="lbl">Completadas</span>
-      </article>
-      <article class="metric metric--blue">
-        <span class="num">{{ d.metrics.action_items_by_status['pending'] || 0 }}</span>
-        <span class="lbl">Pendientes</span>
-      </article>
-      <article class="metric metric--purple">
-        <span class="num">{{ d.metrics.action_items_by_status['blocked'] || 0 }}</span>
-        <span class="lbl">Bloqueadas</span>
-      </article>
-      <article class="metric">
-        <span class="num">{{ d.metrics.completed_in_window }}</span>
-        <span class="lbl">Cerradas en ventana</span>
-      </article>
-      <article class="metric">
-        <span class="num">{{ d.metrics.auto_dispatched }}</span>
-        <span class="lbl">Auto-despachadas</span>
-      </article>
-    </section>
-
-    <div class="grid">
-      <section class="panel">
-        <h2>Reuniones del período</h2>
-        <p class="hint" *ngIf="!d.sessions.length">Sin reuniones en este rango.</p>
-        <ul *ngIf="d.sessions.length" class="session-list">
-          <li *ngFor="let s of d.sessions">
-            <a [routerLink]="['/admin/curation', s.id]" class="link">{{ s.title }}</a>
-            <span class="meta">
-              {{ formatDate(s.date) }} · {{ s.project_name }} · {{ statusLabel(s.status) }}
-            </span>
-          </li>
-        </ul>
-      </section>
-
-      <section class="panel">
-        <h2>Top responsables</h2>
-        <p class="hint" *ngIf="!d.top_owners.length">Sin tareas asignadas en el período.</p>
-        <ol class="ranking">
-          <li *ngFor="let o of d.top_owners">
-            <span>{{ o.owner }}</span>
-            <span class="badge">{{ o.count }}</span>
-          </li>
-        </ol>
-      </section>
-    </div>
-  </ng-container>
 </div>

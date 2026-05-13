@@ -108,6 +108,29 @@ class User(SQLModel, table=True):
     created_at: Optional[str] = Field(default_factory=lambda: datetime.now().isoformat())
     last_login_at: Optional[str] = Field(default=None, index=True)
 
+    # Campos extendidos de perfil (Mi Perfil).
+    location: Optional[str] = Field(default=None, description="Ciudad / país libre")
+    bio: Optional[str] = Field(default=None, description="Bio corta del usuario")
+    avatar_url: Optional[str] = Field(default=None, description="URL del avatar (opcional)")
+    updated_at: Optional[str] = Field(default=None, description="Última edición del perfil")
+
+    # Preferencias de notificación granulares (canales + categorías).
+    notif_email_enabled:           bool = Field(default=True)
+    notif_push_enabled:            bool = Field(default=True)
+    notif_meeting_reminders:       bool = Field(default=True)
+    notif_task_assigned:           bool = Field(default=True)
+    notif_session_processed:       bool = Field(default=True)
+    notif_weekly_report:           bool = Field(default=False)
+    notif_security_alerts:         bool = Field(default=True)
+
+    # Autenticación en dos pasos (2FA) — método email-OTP.
+    two_factor_enabled: bool = Field(default=False, description="Si True, el login exige verificación adicional por email.")
+    two_factor_method: Optional[str] = Field(default="email", description="'email' por ahora; reservado para TOTP futuro.")
+    two_factor_code_hash: Optional[str] = Field(default=None, description="Hash del último código OTP emitido.")
+    two_factor_code_expires_at: Optional[str] = Field(default=None, description="ISO-8601 de expiración del código.")
+    two_factor_code_purpose: Optional[str] = Field(default=None, description="'enable' (activación inicial) | 'login' (challenge).")
+    two_factor_attempts: int = Field(default=0, description="Intentos fallidos del código actual; tras 5 → invalida.")
+
     role: Optional[Role] = Relationship(back_populates="users")
 
 class Project(SQLModel, table=True):

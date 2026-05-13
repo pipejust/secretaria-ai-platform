@@ -13,12 +13,12 @@
        cualquier modal herede la misma paleta sin necesidad de un wrapper
        padre específico. */
     --ap-bg:           #F7F9FC;
-    --ap-card-bg:      #FFFFFF;
+    --ap-card-bg:      var(--color-bg-panel);
     --ap-border:       #E5E7EB;
-    --ap-border-soft:  #EEF1F6;
-    --ap-text:         #0F172A;
-    --ap-text-muted:   #64748B;
-    --ap-text-soft:    #94A3B8;
+    --ap-border-soft:  var(--color-border-light);
+    --ap-text:         var(--color-fg-default);
+    --ap-text-muted:   var(--color-fg-muted);
+    --ap-text-soft:    var(--color-fg-soft);
     --ap-blue:         #2563EB;
     --ap-blue-soft:    #DBEAFE;
     --ap-green:        #10B981;
@@ -29,7 +29,7 @@
     --ap-red-soft:     #FEE2E2;
     --ap-purple:       #7C3AED;
     --ap-purple-soft:  #EDE9FE;
-    --ap-grey-soft:    #F1F5F9;
+    --ap-grey-soft:    var(--color-bg-muted);
 
     position: fixed;
     inset: 0;
@@ -47,7 +47,7 @@
 @keyframes ap-overlay-in { from { opacity: 0; } to { opacity: 1; } }
 
 .ap-modal {
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     border: 1px solid var(--ap-border);
     border-radius: 24px;
     box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25),
@@ -74,7 +74,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    background: #F8FAFC;
+    background: var(--color-bg-elevated);
     flex-shrink: 0;
 }
 .ap-modal-title {
@@ -90,8 +90,8 @@
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    background: #FFFFFF;
-    border: 1px solid #CBD5E1;
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border-strong);
     color: var(--ap-text-muted);
     cursor: pointer;
     display: inline-flex;
@@ -114,7 +114,7 @@
     flex-direction: column;
     gap: 24px;
     flex: 1 1 auto;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
 }
 
 /* Footer */
@@ -125,7 +125,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     flex-shrink: 0;
 }
 
@@ -148,13 +148,13 @@
 .ap-input,
 .ap-textarea {
     width: 100%;
-    border: 1px solid #CBD5E1;
+    border: 1px solid var(--color-border-strong);
     border-radius: 12px;
     padding: 14px 18px;
     font-family: inherit;
     font-size: 15px;
     color: var(--ap-text);
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .ap-input { height: 52px; }
@@ -164,7 +164,7 @@
     line-height: 1.5;
 }
 .ap-input::placeholder,
-.ap-textarea::placeholder { color: #94A3B8; }
+.ap-textarea::placeholder { color: var(--color-fg-soft); }
 .ap-input:focus,
 .ap-textarea:focus,
 .ap-select:focus {
@@ -182,10 +182,10 @@
 .ap-select {
     width: 100%;
     height: 52px;
-    border: 1px solid #CBD5E1;
+    border: 1px solid var(--color-border-strong);
     border-radius: 12px;
     padding: 0 44px 0 18px;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     font-family: inherit;
     font-size: 15px;
     color: var(--ap-text);
@@ -232,7 +232,7 @@
    del fondo del modal. Ver imagen de referencia: cada card es un
    contenedor cuadrado claro con bordes definidos. */
 .ap-inner-card {
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     border: 1px solid #E5E7EB;
     border-radius: 16px;
     padding: 22px 24px;
@@ -315,7 +315,7 @@
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     cursor: pointer;
     color: var(--ap-text);
     font-size: 14px;
@@ -401,7 +401,7 @@
 .ap-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .ap-btn-primary {
     background: var(--ap-blue);
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     border: 1px solid var(--ap-blue);
 }
 .ap-btn-primary:hover:not(:disabled) {
@@ -410,9 +410,9 @@
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.20);
 }
 .ap-btn-secondary {
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     color: var(--ap-text);
-    border: 1px solid #CBD5E1;
+    border: 1px solid var(--color-border-strong);
 }
 .ap-btn-secondary:hover:not(:disabled) {
     background: var(--ap-grey-soft);
@@ -445,7 +445,7 @@
     color: var(--ap-red);
     border: 1px solid #FCA5A5;
 }
-.ap-btn-delete:hover:not(:disabled) { background: #FCA5A5; color: #FFFFFF; }
+.ap-btn-delete:hover:not(:disabled) { background: #FCA5A5; color: var(--color-bg-panel); }
 .ap-btn-edit:disabled,
 .ap-btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -495,7 +495,7 @@
     grid-template-columns: 56px minmax(0, 1fr) auto;
     gap: 16px;
     align-items: center;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     border: 1px solid #E5E7EB;
     border-radius: 16px;
     padding: 16px 20px;
@@ -516,6 +516,18 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+}
+.ap-contact-avatar.has-photo { background: transparent; }
+.ap-contact-avatar .avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
 }
 .ap-contact-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .ap-contact-name {
@@ -564,10 +576,10 @@
     padding-right: 4px;
     /* Scrollbar sutil */
     scrollbar-width: thin;
-    scrollbar-color: #CBD5E1 transparent;
+    scrollbar-color: var(--color-border-strong) transparent;
 }
 .ap-routing-list::-webkit-scrollbar { width: 6px; }
-.ap-routing-list::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+.ap-routing-list::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
 .ap-routing-list::-webkit-scrollbar-track { background: transparent; }
 
 .ap-routing-card {
@@ -575,7 +587,7 @@
     grid-template-columns: 48px minmax(0, 1fr) auto auto;
     gap: 16px;
     align-items: center;
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     border: 1px solid #E5E7EB;
     border-radius: 14px;
     padding: 14px 18px;
@@ -682,7 +694,7 @@
 /* Botón danger (rojo) para acciones destructivas. */
 .ap-btn-danger {
     background: var(--ap-red);
-    color: #FFFFFF;
+    color: var(--color-bg-panel);
     border: 1px solid var(--ap-red);
 }
 .ap-btn-danger:hover:not(:disabled) {
@@ -721,7 +733,7 @@
 }
 .ap-tab:hover { color: var(--ap-text); }
 .ap-tab.is-active {
-    background: #FFFFFF;
+    background: var(--color-bg-panel);
     color: var(--ap-blue);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
@@ -730,8 +742,8 @@
 
 /* ====== Dropzone para archivo de audio ====== */
 .ap-dropzone {
-    border: 1.5px dashed #CBD5E1;
-    background: #F8FAFC;
+    border: 1.5px dashed var(--color-border-strong);
+    background: var(--color-bg-elevated);
     border-radius: 16px;
     padding: 32px 24px;
     text-align: center;
@@ -741,7 +753,7 @@
     gap: 8px;
     transition: border-color 120ms ease, background 120ms ease;
 }
-.ap-dropzone:hover { border-color: var(--ap-blue); background: #F1F5F9; }
+.ap-dropzone:hover { border-color: var(--ap-blue); background: var(--color-bg-muted); }
 .ap-dropzone-icon {
     color: var(--ap-blue);
     background: var(--ap-blue-soft);

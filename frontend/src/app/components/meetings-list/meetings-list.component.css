@@ -10,6 +10,8 @@
     gap: var(--space-20);
     align-items: start;
     min-height: calc(100vh - 64px);
+    padding: 32px;
+    box-sizing: border-box;
 }
 .meetings-page.has-detail {
     grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
@@ -56,7 +58,7 @@
     height: 40px;
     padding: 0 var(--space-16);
     background: var(--color-accent);
-    color: #fff;
+    color: var(--color-fg-on-dark);
     border: 1px solid var(--color-accent);
     border-radius: var(--radius-md);
     font-family: var(--font-sans);
@@ -287,7 +289,7 @@
     height: 18px;
     padding: 0 6px;
     background: var(--color-accent);
-    color: #fff;
+    color: var(--color-fg-on-dark);
     border-radius: var(--radius-full);
     font-size: var(--text-11);
     font-weight: var(--fw-bold);
@@ -457,7 +459,7 @@
     height: 26px;
     border-radius: var(--radius-full);
     background: var(--color-fg-muted);
-    color: #fff;
+    color: var(--color-fg-on-dark);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -468,8 +470,43 @@
     margin-left: -8px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     cursor: default;
+    /* IMPORTANTE: NO usar overflow:hidden aquí porque corta el .avatar-tip
+       (que es absolute fuera del círculo). El recorte del avatar viene
+       del border-radius + img.avatar-img que usa border-radius:50% propio. */
 }
 .avatar:first-child { margin-left: 0; }
+
+/* Cuando el participante matchea un User del tenant, mostramos su foto real
+   en lugar del fondo de color con iniciales. */
+.avatar.has-photo { background: transparent !important; }
+.avatar .avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;       /* recorta SOLO la imagen, no el avatar */
+    display: block;
+    /* Bajo el tooltip; el .avatar-tip queda por encima. */
+    z-index: 0;
+}
+/* El .avatar-tip es absoluto/above; lo dejamos por encima del img. */
+.avatar .avatar-tip { z-index: 2; }
+
+/* Modal de participantes: misma lógica para `.ap-contact-avatar`. */
+.ap-contact-avatar {
+    position: relative;
+}
+.ap-contact-avatar.has-photo { background: transparent !important; }
+.ap-contact-avatar .avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
 
 /* Texto interno: las INICIALES (ej. "FC"). El tooltip se renderiza
    aparte para que no se confunda con el contenido visible del avatar. */
@@ -494,7 +531,7 @@
     max-width: 240px;
     padding: 8px 10px;
     background: var(--color-fg-default);
-    color: #fff;
+    color: var(--color-fg-on-dark);
     border-radius: var(--radius-md);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     font-family: var(--font-sans);
@@ -522,7 +559,7 @@
 }
 .avatar-tip-name {
     font-weight: var(--fw-bold);
-    color: #fff;
+    color: var(--color-fg-on-dark);
     font-size: var(--text-13);
 }
 .avatar-tip-meta {
@@ -713,7 +750,7 @@
 }
 .pg-num.active {
     background: var(--color-accent);
-    color: #fff;
+    color: var(--color-fg-on-dark);
     border-color: var(--color-accent);
 }
 .pg-arrow:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -807,6 +844,40 @@
 .dt-meta-source[data-source="manual"] { color: #B8862E; }
 .dt-meta-source[data-source="web"]    { color: #155EEF; }
 .dt-meta-source .source-dot { width: 6px; height: 6px; }
+
+.dt-head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* CTA primario "Ver reunión" en el header del panel detalle.
+   Lleva al usuario al detalle completo (vista de curación). */
+.dt-cta-open {
+    appearance: none;
+    border: 1px solid var(--color-accent, #155EEF);
+    background: var(--color-accent, #155EEF);
+    color: #FFFFFF;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+.dt-cta-open:hover {
+    background: var(--color-accent-hover, #0B5CFF);
+    border-color: var(--color-accent-hover, #0B5CFF);
+    box-shadow: 0 2px 6px rgba(21, 94, 239, 0.28);
+}
+.dt-cta-open svg { flex-shrink: 0; }
 
 .dt-close {
     appearance: none;

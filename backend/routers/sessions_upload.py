@@ -80,9 +80,67 @@ def get_sessions(
         .offset((page - 1) * limit)
         .limit(limit)
     ).all()
-    
+
+    # Enriquecemos `processed_attendees`: a cada attendee que solo tenga
+    # nombre (Fireflies no manda email) le inyectamos el email del usuario
+    # del tenant cuyo `full_name` coincide EXACTAMENTE. Solo cuando el
+    # match es unambiguo (un único usuario con ese nombre activo). Así el
+    # frontend puede resolver por email sin riesgo de colisión.
+    import json as _json
+    from services import user_resolver
+
+    # 1) Recolectamos todos los nombres de attendees sin email
+    all_names: list[str] = []
+    parsed_per_session: dict[int, list] = {}
+    for s in sessions:
+        if not s.processed_attendees:
+            parsed_per_session[s.id] = []
+            continue
+        try:
+            data = _json.loads(s.processed_attendees)
+            if not isinstance(data, list):
+                parsed_per_session[s.id] = []
+                continue
+            parsed_per_session[s.id] = data
+            for a in data:
+                if isinstance(a, dict) and not (a.get("email") or "").strip():
+                    name = a.get("name") or a.get("full_name") or ""
+                    if name:
+                        all_names.append(name)
+                elif isinstance(a, str) and "@" not in a:
+                    all_names.append(a)
+        except Exception:
+            parsed_per_session[s.id] = []
+
+    # 2) Un solo query batched para resolver todos los nombres.
+    name_map = user_resolver.resolve_names_unambiguous(db, tenant.id, all_names) if all_names else {}
+
+    # 3) Re-emit las sesiones con los attendees enriquecidos. NO mutamos la
+    #    BD — solo enriquecemos la respuesta.
+    def _serialize(s):
+        d = s.model_dump() if hasattr(s, "model_dump") else s.dict()
+        attendees = parsed_per_session.get(s.id, [])
+        if attendees:
+            enriched: list = []
+            for a in attendees:
+                if isinstance(a, dict):
+                    a_copy = dict(a)
+                    if not (a_copy.get("email") or "").strip():
+                        nm = user_resolver._normalize_name(a_copy.get("name") or a_copy.get("full_name"))
+                        if nm and nm in name_map:
+                            a_copy["email"] = name_map[nm]["email"]
+                    enriched.append(a_copy)
+                elif isinstance(a, str):
+                    nm = user_resolver._normalize_name(a)
+                    if nm and nm in name_map:
+                        enriched.append({"name": a, "email": name_map[nm]["email"]})
+                    else:
+                        enriched.append(a)
+            d["processed_attendees"] = _json.dumps(enriched, ensure_ascii=False)
+        return d
+
     return {
-        "items": sessions,
+        "items": [_serialize(s) for s in sessions],
         "total": total_items,
         "page": page,
         "limit": limit,
@@ -95,20 +153,117 @@ def get_session_details(
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Detail de una sesión — sólo si pertenece al tenant del usuario."""
+    """Detail de una sesión — sólo si pertenece al tenant del usuario.
+
+    Devuelve también `attendees_resolved` — cada participante con su user_id,
+    full_name (editado en el perfil) y avatar_url si matchea un User del tenant.
+    Idem `action_items`: cada owner_email se resuelve a un User si existe.
+    """
     from sqlmodel import select
     from models import ActionItem
+    import json as _json
+    from services import user_resolver
 
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj or session_obj.tenant_id != tenant.id:
         # 404 (no 403) para no filtrar la existencia entre empresas.
         raise HTTPException(status_code=404, detail="Session not found")
-        
+
     action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
-    # Podríamos crear un Pydantic model response, pero dict/jsonable encoder lo maneja bien
+
+    # ── Resolver participantes y owners de tareas a Users del tenant ──
+    def _parse_attendees(blob: str) -> list:
+        if not blob: return []
+        try:
+            data = _json.loads(blob)
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    attendees_raw = _parse_attendees(session_obj.processed_attendees or "")
+
+    # Recolectamos emails Y nombres (sin email) para resolver en batched.
+    candidate_emails: list[str] = []
+    candidate_names: list[str] = []
+    for a in attendees_raw:
+        if isinstance(a, dict):
+            em = (a.get("email") or a.get("mail") or "").strip()
+            if em:
+                candidate_emails.append(em)
+            else:
+                nm = a.get("name") or a.get("full_name") or ""
+                if nm:
+                    candidate_names.append(nm)
+        elif isinstance(a, str):
+            if "@" in a:
+                candidate_emails.append(a)
+            else:
+                candidate_names.append(a)
+    for it in action_items:
+        if it.owner_email:
+            candidate_emails.append(it.owner_email)
+        elif it.owner_name:
+            candidate_names.append(it.owner_name)
+
+    resolved = user_resolver.resolve_emails(db, tenant.id, candidate_emails)
+    # Solo añadimos resolución por nombre cuando el match es UNAMBIGUO
+    # (un único usuario activo en el tenant con ese nombre completo).
+    resolved_by_name = user_resolver.resolve_names_unambiguous(db, tenant.id, candidate_names)
+
+    def _resolved_for_attendee(att) -> dict:
+        # Normaliza attendee → {name, email, user}
+        if isinstance(att, dict):
+            email = (att.get("email") or att.get("mail") or "").strip().lower()
+            name = att.get("name") or att.get("displayName") or (email.split("@")[0] if email else "")
+        else:
+            text = str(att).strip()
+            if "@" in text:
+                email = text.lower()
+                name = text.split("@")[0]
+            else:
+                email = ""
+                name = text
+        u = resolved.get(email) if email else None
+        # Si no resolvió por email pero el nombre matchea unívocamente a un
+        # user del tenant → usamos ese y tageamos el email del user.
+        if not u and name:
+            nm = user_resolver._normalize_name(name)
+            if nm and nm in resolved_by_name:
+                u = resolved_by_name[nm]
+                email = u["email"]
+        return {
+            "email": email or None,
+            "name": (u or {}).get("full_name") or name,
+            "user": u,  # None si es contacto externo
+        }
+
+    attendees_resolved = [_resolved_for_attendee(a) for a in attendees_raw]
+
+    # Enriquecer action_items con el user resuelto. Prioridad:
+    #   1) match por email exacto (lo más confiable)
+    #   2) match por nombre solo si es UNÍVOCO en el tenant (fallback seguro)
+    # Si matcheó por nombre, tageamos `owner_email` con el email real del
+    # user para que el frontend siga siendo email-only.
+    enriched_items: list[dict] = []
+    for it in action_items:
+        d = it.model_dump() if hasattr(it, "model_dump") else it.dict()
+        email_key = (it.owner_email or "").strip().lower()
+        u = resolved.get(email_key) if email_key else None
+        if not u and it.owner_name:
+            nm = user_resolver._normalize_name(it.owner_name)
+            if nm and nm in resolved_by_name:
+                u = resolved_by_name[nm]
+                d["owner_email"] = u["email"]  # exponemos el email real
+        d["owner_user_id"]    = (u or {}).get("id")
+        d["owner_full_name"]  = (u or {}).get("full_name") or it.owner_name or ""
+        d["owner_avatar_url"] = (u or {}).get("avatar_url")
+        d["owner_is_user"]    = bool(u)
+        enriched_items.append(d)
+
     return {
         "session": session_obj,
-        "action_items": action_items
+        "action_items": enriched_items,
+        "attendees_resolved": attendees_resolved,
     }
 
 @router.post("/{session_id}/fetch_summary")

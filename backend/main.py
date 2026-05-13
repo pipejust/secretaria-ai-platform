@@ -3,6 +3,7 @@ import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from database import create_db_and_tables
 from routers import auth, fireflies, projects, templates, users
@@ -59,6 +60,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Static mount para servir avatares subidos por usuarios (Mi Perfil).
+_UPLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+os.makedirs(os.path.join(_UPLOADS_DIR, "avatars"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=_UPLOADS_DIR), name="static-uploads")
+
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
@@ -79,11 +85,12 @@ def on_startup():
                 len(stuck_sessions),
             )
 
-    # Migración ligera: marcar roles canónicos como `is_system=True` y
-    # rellenar `created_at`/`updated_at` para filas viejas que no los
-    # tuvieran. Idempotente.
+    # Migración ligera: marcar roles canónicos como `is_system=True`,
+    # rellenar timestamps y SIEMPRE garantizar que admin tenga TODOS los
+    # permisos del catálogo. Idempotente.
     try:
-        from models import Role
+        from models import Role, RolePermission, RoleActivity
+        from routers.auth import ROLE_CATALOG, VALID_MODULES
         from datetime import datetime as _dt
         with Session(engine) as session:
             roles = session.exec(select(Role)).all()
@@ -100,8 +107,50 @@ def on_startup():
             if changed:
                 session.commit()
                 logger.info("Migración de roles: campos system/timestamps normalizados.")
+
+            # Garantizar permisos para el rol admin: todo (module × action).
+            admin_role = session.exec(select(Role).where(Role.name == "admin")).first()
+            if admin_role and admin_role.id:
+                existing = session.exec(
+                    select(RolePermission).where(RolePermission.role_id == admin_role.id)
+                ).all()
+                existing_pairs = {(p.module_key, p.action) for p in existing}
+                added = 0
+                for module_key, actions in VALID_MODULES.items():
+                    for action in actions:
+                        if (module_key, action) not in existing_pairs:
+                            session.add(RolePermission(
+                                role_id=admin_role.id,
+                                module_key=module_key,
+                                action=action,
+                                is_granted=True,
+                            ))
+                            added += 1
+                if added:
+                    session.commit()
+                    logger.info("Seed admin: %d permisos agregados al rol admin.", added)
+
+            # Sembrar entrada inicial de actividad para roles sin historial,
+            # así "Actividad reciente" no se ve vacía la primera vez.
+            for r in roles:
+                if not r.id:
+                    continue
+                already = session.exec(
+                    select(RoleActivity).where(RoleActivity.role_id == r.id)
+                ).first()
+                if already:
+                    continue
+                session.add(RoleActivity(
+                    role_id=r.id,
+                    action="created",
+                    actor_user_id=None,
+                    actor_name="Sistema",
+                    note=f"Rol '{r.name}' inicializado por el sistema.",
+                    created_at=getattr(r, "created_at", None) or now_iso,
+                ))
+            session.commit()
     except Exception:
-        logger.exception("Migración de roles falló (no bloquea startup).")
+        logger.exception("Seed de roles/permisos falló (no bloquea startup).")
 
     # Seed automático en development (admin@notiva.local / notiva)
     if os.getenv("ENVIRONMENT", "").lower() in ("dev", "development"):
@@ -164,6 +213,8 @@ from routers import notifications  # Notifications in-app (bell del topbar)
 app.include_router(notifications.router)
 from routers import search  # Búsqueda global (search del topbar)
 app.include_router(search.router)
+from routers import users_directory  # Directorio: resolve email → User del tenant
+app.include_router(users_directory.router)
 
 
 @app.get("/")

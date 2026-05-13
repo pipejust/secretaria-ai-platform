@@ -1,0 +1,35 @@
+{% extends "email_base.html" %}
+
+{% block content %}
+  <h2>Hola, {{ user_name }}</h2>
+
+  <p>
+    {% if purpose == 'enable' %}
+      Estás activando la <strong>autenticación en dos pasos</strong> en tu cuenta
+      de <strong>{{ brand.company_name | default('Acten') }}</strong>. Introduce
+      el siguiente código para finalizar la configuración.
+    {% else %}
+      Estás iniciando sesión en <strong>{{ brand.company_name | default('Acten') }}</strong>
+      y solicitamos un código adicional de verificación. Introdúcelo en la pantalla
+      de inicio para continuar.
+    {% endif %}
+  </p>
+
+  <div class="box" style="text-align: center; padding: 30px 24px;">
+    <p class="box-title" style="margin-bottom: 6px;">Tu código de verificación</p>
+    <p style="margin: 12px 0 0 0; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; font-size: 36px; font-weight: 700; letter-spacing: 0.5em; color: {{ brand.primary_color | default('#223148') }};">
+      {{ code }}
+    </p>
+    <p style="margin: 14px 0 0 0; font-size: 13px; color: #6b7280;">
+      Caduca en {{ ttl_minutes | default(10) }} minutos · {{ max_attempts | default(5) }} intentos máx.
+    </p>
+  </div>
+
+  <p style="font-size: 14px; color: #6b7280;">
+    Si no solicitaste este código, ignora este correo y revisa la actividad
+    reciente de tu cuenta.
+    {% if brand.company_email %}
+      Para cualquier inquietud, contacta a <a href="mailto:{{ brand.company_email }}">{{ brand.company_email }}</a>.
+    {% endif %}
+  </p>
+{% endblock %}

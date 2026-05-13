@@ -9,6 +9,8 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
+import { UserChipComponent } from '../shared/user-chip/user-chip.component';
+import { UserDirectoryService } from '../../services/user-directory.service';
 
 /** Sub-tab de la card del header (filtro rápido por status). */
 type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
@@ -19,24 +21,34 @@ interface ActionItemDTO {
     id: number;
     title: string;
     owner_name?: string;
+    owner_email?: string;
+    /** Resolución a User del tenant inyectada por el backend (
+     *  GET /api/sessions/{id}). Si owner_user_id está presente, el chip
+     *  pinta el avatar real del usuario y su nombre editado. */
+    owner_user_id?: number | null;
+    owner_full_name?: string;
+    owner_avatar_url?: string | null;
+    owner_is_user?: boolean;
     due_date?: string;
     status?: string;
-    priority?: string;          // si el backend lo expone (low/medium/high)
+    priority?: string;
 }
 
 /** Participante normalizado para avatares + tooltip. El backend persiste
- *  `processed_attendees` como JSON array de objetos {name, role, entity}.
- *  Lo tipamos acá para no perder rol/empresa en la UI. */
+ *  `processed_attendees` como JSON array de objetos {name, role, entity, email}.
+ *  Lo tipamos acá para no perder rol/empresa/email en la UI. El email
+ *  permite que el <app-user-chip> resuelva al User real del tenant. */
 interface Attendee {
     name: string;
     role?: string;
     company?: string;
+    email?: string;
 }
 
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, MdRenderPipe],
+    imports: [CommonModule, FormsModule, MdRenderPipe, UserChipComponent],
     templateUrl: './meetings-list.component.html',
     styleUrls: ['./meetings-list.component.css']
 })
@@ -113,7 +125,15 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         private cdr: ChangeDetectorRef,
         private router: Router,
         private toast: ToastService,
-    ) { }
+        private userDirectory: UserDirectoryService,
+    ) {
+        // Cuando el directorio resuelve nuevos emails (porque otra vista los
+        // pidió o porque preload llegó), forzamos re-render para que los
+        // avatares de participantes aparezcan.
+        this.userDirectory.directory$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => this.cdr.markForCheck());
+    }
 
     ngOnInit(): void {
         this.loadSessions();
@@ -148,10 +168,30 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     /** Carga la página actual de sesiones del backend. Status server-side
      *  cuando hay filtro explícito; el sub-tab del header se aplica
      *  client-side encima del resultado para evitar refetches. */
+    /** Mapea el sub-tab del header al `status` que entiende el backend.
+     *  Devuelve null cuando el tab no debe forzar un filtro en API (caso `all`). */
+    private tabToBackendStatus(): string | null {
+        switch (this.statusTab) {
+            case 'analyzed': return 'completed';
+            case 'drafts':   return 'pending';
+            case 'archived': return 'archived';
+            default:         return null;
+        }
+    }
+
     loadSessions() {
         this.isLoading = true;
         let params = `?page=${this.currentPage}&limit=${this.limit}`;
-        if (this.statusFilter) params += `&status=${this.statusFilter}`;
+        // Prioridad: si el dropdown manual fija un estado, gana. Si no, miramos
+        // el sub-tab del header. Sin status el backend devuelve TODO MENOS
+        // archivadas — comportamiento por defecto.
+        const tabStatus = this.tabToBackendStatus();
+        const effectiveStatus = this.statusFilter || tabStatus;
+        if (effectiveStatus) params += `&status=${effectiveStatus}`;
+        // Para la tab "Archivadas" el backend igual filtra por status=archived,
+        // pero si el usuario combinara filtros (statusFilter !== 'archived') el
+        // include_archived garantiza que no oculte filas reales.
+        if (this.statusTab === 'archived') params += `&include_archived=true`;
         if (this.searchText.trim()) params += `&search=${encodeURIComponent(this.searchText.trim())}`;
         if (this.filterProjectId) params += `&project_id=${this.filterProjectId}`;
 
@@ -176,6 +216,17 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                         this.sessions = parsed;
                         this.currentPage = data.page || 1;
                     }
+                    // Pre-cargamos los emails de participantes en una sola
+                    // llamada batched. Solo matcheamos por email: si un
+                    // attendee no trae email, no podemos resolverlo a un
+                    // user (y eso es correcto — el nombre puede colisionar).
+                    const allEmails: string[] = [];
+                    for (const s of this.sessions) {
+                        for (const a of this.attendeesOf(s)) {
+                            if (a.email) allEmails.push(a.email);
+                        }
+                    }
+                    this.preloadAttendeeEmails(allEmails);
                     // Auto-seleccionar la primera fila para mostrar el panel
                     // lateral con datos reales en lugar de un placeholder
                     // vacío. Sólo si nada está seleccionado todavía.
@@ -261,9 +312,13 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     }
 
     setStatusTab(tab: StatusTab): void {
+        if (this.statusTab === tab) return;
         this.statusTab = tab;
         this.currentPage = 1;
-        this.cdr.detectChanges();
+        // Cada tab corresponde a un filtro real en el backend (analyzed →
+        // 'completed', drafts → 'pending', archived → 'archived', all → sin
+        // filtro). Re-cargamos para no quedar mostrando un lote viejo.
+        this.loadSessions();
     }
 
     changePage(page: number) {
@@ -521,6 +576,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                     name: String(name).trim(),
                     role: x.role || x.position || x.job_title || x.jobTitle || undefined,
                     company: x.entity || x.company || x.organization || x.org || undefined,
+                    email: (x.email || x.mail || '').trim().toLowerCase() || undefined,
                 };
             })
             .filter((a): a is Attendee => !!a);
@@ -607,6 +663,40 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         let h = 0;
         for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
         return palette[Math.abs(h) % palette.length];
+    }
+
+    /** Resuelve un attendee a un User del tenant ESTRICTAMENTE por email.
+     *  No usamos nombre como fallback: dos personas distintas pueden tener
+     *  el mismo nombre, y mostrar la foto equivocada es peor que no mostrar
+     *  ninguna foto. */
+    private _attendeeUser(email?: string) {
+        if (!email) return null;
+        return this.userDirectory.peek(email) || null;
+    }
+
+    /** URL absoluta de la foto del User solo cuando el email matchea.
+     *  null → fallback a iniciales (correcto cuando no hay email o el
+     *  email corresponde a un contacto externo). */
+    attendeeAvatarUrl(email?: string, _name?: string): string | null {
+        const user = this._attendeeUser(email);
+        if (!user || !user.avatar_url) return null;
+        const raw = user.avatar_url;
+        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+        return `${environment.apiUrl}${raw}`;
+    }
+
+    /** Nombre a mostrar: el `full_name` editado del User solo si el email
+     *  matchea; si no hay email o el email no corresponde a un user del
+     *  tenant, usamos el texto original que vino con la reunión. */
+    attendeeDisplayName(email: string | undefined, fallback: string): string {
+        const user = this._attendeeUser(email);
+        if (user?.full_name) return user.full_name;
+        return fallback;
+    }
+
+    /** Pre-carga emails contra el directorio. Una sola llamada batched. */
+    preloadAttendeeEmails(emails: Array<string | undefined>): void {
+        this.userDirectory.preload(emails || []);
     }
 
     /** Origen real de la sesión.
@@ -767,6 +857,45 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         if (evt) { evt.stopPropagation(); }
         this.sessionToDelete = session;
         this.showDeleteModal = true;
+    }
+
+    /** Archiva o desarchiva una reunión sin pedir confirmación adicional.
+     *  Usa el endpoint genérico PUT /api/sessions/:id con `{status: ...}`. */
+    archiveSession(session: any, evt?: Event): void {
+        this.setSessionStatus(session, 'archived', 'archivada', evt);
+    }
+
+    unarchiveSession(session: any, evt?: Event): void {
+        this.setSessionStatus(session, 'pending', 'restaurada a Pendientes', evt);
+    }
+
+    private setSessionStatus(session: any, newStatus: string, humanLabel: string, evt?: Event): void {
+        if (evt) { evt.stopPropagation(); }
+        if (!session?.id) return;
+        const headers = this.authService.getAuthHeaders();
+        // Snapshot por si necesitamos rollback en caso de error.
+        const prevStatus = session.status;
+        session.status = newStatus;
+        this.cdr.detectChanges();
+        this.http.put(
+            `${environment.apiUrl}/api/sessions/${session.id}`,
+            { status: newStatus },
+            { headers },
+        )
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: () => {
+                    this.toast.success(`Reunión ${humanLabel}.`);
+                    // Re-fetch para que la sesión salga (o entre) del tab actual
+                    // sin esperar a que el usuario cambie de página.
+                    this.loadSessions();
+                },
+                error: () => {
+                    session.status = prevStatus;
+                    this.cdr.detectChanges();
+                    this.toast.error('No pude actualizar el estado de la reunión.');
+                },
+            });
     }
 
     cancelDeleteSession() { this.showDeleteModal = false; this.sessionToDelete = null; }

@@ -34,7 +34,7 @@
 }
 .metric-card {
     padding: 1rem; border-radius: 12px;
-    background: #fff; border: 1px solid #e5e7eb;
+    background: var(--color-bg-panel); border: 1px solid #e5e7eb;
     display: flex; flex-direction: column; gap: 0.2rem;
 }
 .metric-num { font-size: 1.7rem; font-weight: 700; line-height: 1; }
@@ -52,7 +52,7 @@
 @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 
 .panel {
-    background: #fff; border: 1px solid #e5e7eb;
+    background: var(--color-bg-panel); border: 1px solid #e5e7eb;
     border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem;
 }
 .panel h2 { margin: 0 0 0.85rem 0; font-size: 1.05rem; color: #0f172a; }

@@ -4,6 +4,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { Subject } from 'rxjs';
 import { filter, map, mergeMap, takeUntil } from 'rxjs/operators';
 import { ToastComponent } from './components/toast/toast.component';
+import { PreferencesService } from './services/preferences.service';
 
 @Component({
     selector: 'app-root',
@@ -21,6 +22,12 @@ export class App implements OnInit, OnDestroy {
         private activatedRoute: ActivatedRoute,
         private titleService: Title,
         private metaService: Meta,
+        // Inyectamos PreferencesService aquí (root) para que su constructor
+        // se ejecute al boot de la app y aplique side-effects (body.acten-dark,
+        // data-week-start, lang) ANTES de que se monten los componentes hijos.
+        // Sin esto, dark mode solo se "ve" después de visitar Settings —
+        // tras un reload en otra vista, la clase no se aplicaba.
+        private preferences: PreferencesService,
     ) {}
 
     ngOnInit(): void {

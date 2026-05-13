@@ -209,7 +209,7 @@
         <nav class="mt-tabs" aria-label="Filtro rápido por estado">
             <button [class.active]="statusTab === 'all'"      (click)="setStatusTab('all')">Todas</button>
             <button [class.active]="statusTab === 'analyzed'" (click)="setStatusTab('analyzed')">Analizadas</button>
-            <button [class.active]="statusTab === 'drafts'"   (click)="setStatusTab('drafts')">Borradores</button>
+            <button [class.active]="statusTab === 'drafts'"   (click)="setStatusTab('drafts')">Pendientes</button>
             <button [class.active]="statusTab === 'archived'" (click)="setStatusTab('archived')">Archivadas</button>
         </nav>
 
@@ -287,19 +287,26 @@
                         <span class="cell-date-time">{{ formatTimeLine(s) }}</span>
                     </div>
 
-                    <!-- Participantes: avatar con SOLO las iniciales del nombre.
-                         Tooltip rico al hover (nombre + rol + empresa). -->
+                    <!-- Participantes: si el email matchea un User del tenant
+                         renderizamos su avatar real; si no, iniciales con
+                         color hash. Tooltip rico al hover (nombre + rol + empresa). -->
                     <div class="cell-participants">
                         <ng-container *ngIf="attendeesOf(s).length as attCount">
                             <span class="avatar avatar-tip-host"
                                   *ngFor="let a of attendeesOf(s).slice(0, 3); let i = index"
-                                  [style.background]="initialsColor(a.name)"
+                                  [class.has-photo]="!!attendeeAvatarUrl(a.email, a.name)"
+                                  [style.background]="attendeeAvatarUrl(a.email, a.name) ? 'transparent' : initialsColor(a.name)"
                                   [style.zIndex]="3 - i">
-                                <span class="avatar-text">{{ initials(a.name) }}</span>
+                                <img *ngIf="attendeeAvatarUrl(a.email, a.name)"
+                                     class="avatar-img"
+                                     [src]="attendeeAvatarUrl(a.email, a.name)"
+                                     [alt]="attendeeDisplayName(a.email, a.name)">
+                                <span class="avatar-text" *ngIf="!attendeeAvatarUrl(a.email, a.name)">{{ initials(attendeeDisplayName(a.email, a.name)) }}</span>
                                 <span class="avatar-tip" role="tooltip">
-                                    <strong class="avatar-tip-name">{{ a.name }}</strong>
+                                    <strong class="avatar-tip-name">{{ attendeeDisplayName(a.email, a.name) }}</strong>
                                     <span class="avatar-tip-meta" *ngIf="a.role">{{ a.role }}</span>
                                     <span class="avatar-tip-meta" *ngIf="a.company">{{ a.company }}</span>
+                                    <span class="avatar-tip-meta" *ngIf="a.email">{{ a.email }}</span>
                                 </span>
                             </span>
                             <span class="avatar-more" *ngIf="attCount > 3">+{{ attCount - 3 }}</span>
@@ -363,6 +370,29 @@
                                 Descargar PDF
                             </button>
                             <div class="kebab-divider"></div>
+                            <!-- Archivar / Desarchivar según el estado actual.
+                                 Si está archivada permitimos restaurarla a "pending"
+                                 para que vuelva al tab "Pendientes". -->
+                            <button *ngIf="s.status !== 'archived'"
+                                    (click)="archiveSession(s, $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                                    <rect x="1" y="3" width="22" height="5"></rect>
+                                    <line x1="10" y1="12" x2="14" y2="12"></line>
+                                </svg>
+                                Archivar
+                            </button>
+                            <button *ngIf="s.status === 'archived'"
+                                    (click)="unarchiveSession(s, $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 12 5 10 12 17 19 10 21 12"></polyline>
+                                    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                                    <rect x="1" y="3" width="22" height="5"></rect>
+                                </svg>
+                                Restaurar a Pendientes
+                            </button>
                             <button class="kebab-danger" (click)="deleteSession(s, $event); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -463,27 +493,47 @@
                     </span>
                 </div>
             </div>
-            <button class="dt-close" (click)="closeDetailPanel()" title="Cerrar">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+            <div class="dt-head-actions">
+                <button class="dt-cta-open" type="button"
+                        (click)="viewCuration(selectedSession.id)"
+                        title="Abrir el detalle completo de la reunión">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 3h7v7"></path>
+                        <path d="M10 14L21 3"></path>
+                        <path d="M21 14v7H3V3h7"></path>
+                    </svg>
+                    Ver reunión
+                </button>
+                <button class="dt-close" (click)="closeDetailPanel()" title="Cerrar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
         </header>
 
-        <!-- Participantes: mismo patrón de tooltip enriquecido del listado. -->
+        <!-- Participantes: mismo patrón de tooltip enriquecido del listado.
+             Si el email matchea un User del tenant, muestra su avatar real. -->
         <div class="dt-participants" *ngIf="selectedAttendees.length">
             <div class="participants-avatars">
                 <span class="avatar avatar-lg avatar-tip-host"
                       *ngFor="let a of selectedAttendees.slice(0, 4); let i = index"
-                      [style.background]="initialsColor(a.name)"
+                      [class.has-photo]="!!attendeeAvatarUrl(a.email, a.name)"
+                      [style.background]="attendeeAvatarUrl(a.email, a.name) ? 'transparent' : initialsColor(a.name)"
                       [style.zIndex]="4 - i">
-                    <span class="avatar-text">{{ initials(a.name) }}</span>
+                    <img *ngIf="attendeeAvatarUrl(a.email, a.name)"
+                         class="avatar-img"
+                         [src]="attendeeAvatarUrl(a.email, a.name)"
+                         [alt]="attendeeDisplayName(a.email, a.name)">
+                    <span class="avatar-text" *ngIf="!attendeeAvatarUrl(a.email, a.name)">{{ initials(attendeeDisplayName(a.email, a.name)) }}</span>
                     <span class="avatar-tip" role="tooltip">
-                        <strong class="avatar-tip-name">{{ a.name }}</strong>
+                        <strong class="avatar-tip-name">{{ attendeeDisplayName(a.email, a.name) }}</strong>
                         <span class="avatar-tip-meta" *ngIf="a.role">{{ a.role }}</span>
                         <span class="avatar-tip-meta" *ngIf="a.company">{{ a.company }}</span>
+                        <span class="avatar-tip-meta" *ngIf="a.email">{{ a.email }}</span>
                     </span>
                 </span>
                 <span class="avatar-more avatar-more-lg" *ngIf="selectedAttendees.length > 4">
@@ -583,7 +633,11 @@
                                      para que se lea bien. -->
                                 <span class="task-title md-inline" [innerHTML]="a.title | mdRender"></span>
                                 <span class="task-meta">
-                                    {{ a.owner_name || 'Sin asignar' }}
+                                    <app-user-chip
+                                        [email]="a.owner_email"
+                                        [fallbackName]="a.owner_full_name || a.owner_name"
+                                        size="xs">
+                                    </app-user-chip>
                                     <span *ngIf="a.due_date" class="task-due">· {{ formatDueDate(a.due_date) }}</span>
                                 </span>
                             </div>
@@ -848,10 +902,15 @@
             <ul class="ap-contact-list" *ngIf="selectedAttendees.length">
                 <li *ngFor="let a of selectedAttendees" class="ap-contact-card">
                     <span class="ap-contact-avatar"
-                          [style.background]="initialsColor(a.name)"
-                          [style.color]="'#FFFFFF'">{{ initials(a.name) }}</span>
+                          [class.has-photo]="!!attendeeAvatarUrl(a.email, a.name)"
+                          [style.background]="attendeeAvatarUrl(a.email, a.name) ? 'transparent' : initialsColor(a.name)"
+                          [style.color]="'#FFFFFF'">
+                        <img *ngIf="attendeeAvatarUrl(a.email, a.name)" class="avatar-img"
+                             [src]="attendeeAvatarUrl(a.email, a.name)" [alt]="attendeeDisplayName(a.email, a.name)">
+                        <span *ngIf="!attendeeAvatarUrl(a.email, a.name)">{{ initials(attendeeDisplayName(a.email, a.name)) }}</span>
+                    </span>
                     <div class="ap-contact-body">
-                        <strong class="ap-contact-name">{{ a.name }}</strong>
+                        <strong class="ap-contact-name">{{ attendeeDisplayName(a.email, a.name) }}</strong>
                         <div class="ap-contact-meta">
                             <span class="ap-contact-meta-item" *ngIf="a.role">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"

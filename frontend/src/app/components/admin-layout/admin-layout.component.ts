@@ -7,13 +7,16 @@ import { debounceTime, distinctUntilChanged, filter, switchMap, takeUntil } from
 import { AuthService } from '../../services/auth.service';
 import { BrandingService } from '../../services/branding.service';
 import { NotificationService, AcnNotification } from '../../services/notification.service';
+import { PermissionsService } from '../../services/permissions.service';
 import { SearchService, SearchGroup } from '../../services/search.service';
+import { environment } from '../../../environments/environment';
 
 interface CurrentUser {
     email?: string;
     full_name?: string;
     role?: string | null;
     is_superadmin?: boolean;
+    avatar_url?: string | null;
     tenant?: { id: number; slug: string; name: string };
 }
 
@@ -58,6 +61,14 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
 
+    /** Permisos efectivos del usuario actual. El template los consulta vía
+     *  `canSee(module)` para mostrar/ocultar items del menú lateral. */
+    private readonly perms = inject(PermissionsService);
+    canSee(module: string): boolean { return this.perms.canSeeModule(module); }
+    can(module: string, action: 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'export' = 'view'): boolean {
+        return this.perms.can(module, action);
+    }
+
     private readonly destroy$ = new Subject<void>();
 
     constructor(
@@ -87,6 +98,14 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
                 this.user = u;
                 this.isAdmin = u?.role === 'admin';
                 this.isSuperAdmin = !!u?.is_superadmin;
+                // Refrescar permisos cuando cambia el usuario en sesión.
+                if (u) {
+                    this.perms.load()
+                        .pipe(takeUntil(this.destroy$))
+                        .subscribe(() => this.cdr.detectChanges());
+                } else {
+                    this.perms.clear();
+                }
                 this.cdr.detectChanges();
             });
 
@@ -318,6 +337,16 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
             return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
         }
         return name.substring(0, 2).toUpperCase();
+    }
+
+    /** URL absoluta del avatar del usuario logueado. El backend devuelve la
+     *  ruta relativa (`/static/avatars/...`); la prefijamos con apiUrl para
+     *  que el `<img>` la cargue correctamente independiente del host. */
+    get userAvatarSrc(): string | null {
+        const raw = this.user?.avatar_url;
+        if (!raw) return null;
+        if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+        return `${environment.apiUrl}${raw}`;
     }
 
     /** "12 may 2026" — etiqueta que renderiza el date selector del topbar. */

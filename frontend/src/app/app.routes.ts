@@ -178,7 +178,25 @@ export const routes: Routes = [
                 title: 'Artefactos | Acten',
                 data: { description: 'Genera artefactos role-específicos a partir del acta.', robots: 'noindex, nofollow' }
             },
-            { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+            // El landing-page por defecto se lee de las preferencias del usuario
+            // (PreferencesService → localStorage). Si no hay valor o el path
+            // guardado no apunta a /admin/*, caemos a /admin/dashboard.
+            {
+                path: '',
+                pathMatch: 'full',
+                redirectTo: (() => {
+                    try {
+                        const raw = localStorage.getItem('acten:ui-prefs:v1');
+                        const lp = raw ? (JSON.parse(raw)?.landingPage as string) : '';
+                        if (lp && lp.startsWith('/admin/')) {
+                            // Devolvemos el segmento sin el prefijo `/admin/` porque
+                            // este redirect es relativo a la ruta padre `admin`.
+                            return lp.replace(/^\/admin\//, '');
+                        }
+                    } catch { /* ignore */ }
+                    return 'dashboard';
+                })(),
+            },
         ]
     },
     /* ──────────────────────────────────────────────────────────────────────
