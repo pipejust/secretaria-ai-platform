@@ -734,6 +734,130 @@
     border-radius: var(--radius-md);
 }
 
+/* ====== Vista previa (iframe Office Online Viewer) ====== */
+.tpl-preview-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 8.5 / 11;        /* tamaño tipo hoja carta */
+    max-height: 540px;
+    background: var(--brand-cream-50);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.tpl-preview-frame iframe {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: 0;
+    background: #fff;
+}
+.tpl-preview-expand {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 28px; height: 28px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--color-border);
+    color: var(--color-fg-default);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+    transition: var(--transition);
+}
+.tpl-preview-expand:hover { background: #fff; color: var(--color-accent); border-color: var(--color-accent); }
+.tpl-preview-empty {
+    padding: var(--space-32) var(--space-16);
+    background: var(--brand-cream-50);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-fg-muted);
+    text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-8);
+}
+.tpl-preview-empty p { margin: 0; font-size: var(--text-13); }
+.tpl-preview-empty svg { color: var(--color-fg-soft); }
+
+/* ====== Historial de versiones (timeline) ====== */
+.tpl-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+    position: relative;
+}
+/* Línea vertical que conecta los bullets */
+.tpl-history-list::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--color-border);
+}
+.tpl-history-item {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: var(--space-12);
+    align-items: flex-start;
+    position: relative;
+}
+.tpl-history-bullet {
+    width: 22px; height: 22px;
+    border-radius: var(--radius-full);
+    background: var(--brand-cream-100);
+    color: var(--color-fg-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    border: 2px solid var(--color-bg-panel);
+    box-shadow: 0 0 0 1px var(--color-border);
+    z-index: 1;
+}
+.tpl-history-item.is-latest .tpl-history-bullet {
+    background: rgba(0, 34, 115, 0.10);
+    color: var(--color-accent);
+    box-shadow: 0 0 0 1px var(--color-accent);
+}
+.tpl-history-bullet[data-action="created"]        { background: rgba(16,185,129,.12);  color: #047857; box-shadow: 0 0 0 1px rgba(16,185,129,.32); }
+.tpl-history-bullet[data-action="file_replaced"]  { background: rgba(245,158,11,.14);  color: #B45309; box-shadow: 0 0 0 1px rgba(245,158,11,.32); }
+.tpl-history-bullet[data-action="configured"]     { background: rgba(0,34,115,.10);    color: var(--color-accent); }
+.tpl-history-bullet[data-action="status_changed"] { background: rgba(124,58,237,.10);  color: #7C3AED; box-shadow: 0 0 0 1px rgba(124,58,237,.32); }
+.tpl-history-bullet[data-action="archived"]       { background: rgba(100,116,139,.12); color: #475569; box-shadow: 0 0 0 1px rgba(100,116,139,.32); }
+.tpl-history-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
+.tpl-history-action {
+    font-family: var(--font-sans);
+    font-size: var(--text-13);
+    font-weight: var(--fw-semibold);
+    color: var(--color-fg-default);
+}
+.tpl-history-meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-12);
+    color: var(--color-fg-muted);
+}
+
+/* ====== Modal Vista Previa (Office Online) ====== */
+.tpl-modal-preview { max-width: 1100px; width: 100%; }
+.tpl-modal-preview .tpl-preview-body {
+    padding: 0;
+    background: var(--brand-cream-50);
+    overflow: hidden;
+    min-height: 60vh;
+}
+.tpl-modal-preview .tpl-preview-body iframe {
+    width: 100%;
+    height: 70vh;
+    min-height: 480px;
+    border: 0;
+    background: #fff;
+    display: block;
+}
+
 /* ============================================================
  *  MODAL OVERLAY
  * ============================================================ */

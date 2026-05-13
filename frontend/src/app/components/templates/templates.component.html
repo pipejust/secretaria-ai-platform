@@ -317,35 +317,36 @@
             </nav>
 
             <div *ngIf="detailTab === 'preview'" class="tpl-detail-body">
-                <article class="tpl-doc-preview">
-                    <header class="tpl-doc-head">
-                        <span class="tpl-doc-brand">A · Acten</span>
-                        <h3 class="tpl-doc-title">{{ selectedTemplate.name }}</h3>
-                    </header>
-                    <div class="tpl-doc-line tpl-doc-line-row"><span>Título de la reunión</span><span>Fecha</span></div>
-                    <div class="tpl-doc-line tpl-doc-line-row"><span>Hora</span><span>Ubicación / enlace</span></div>
-                    <div class="tpl-doc-line"><span>Asistentes</span></div>
-                    <div class="tpl-doc-section">
-                        <span class="tpl-doc-label">Agenda</span>
-                        <div class="tpl-doc-skel" style="width: 92%"></div>
-                        <div class="tpl-doc-skel" style="width: 78%"></div>
+                <!-- Vista previa real del .docx vía Microsoft Office Online
+                     Viewer. Requiere que el archivo sea accesible públicamente
+                     (las plantillas viven en Supabase Storage público). -->
+                <div class="tpl-preview-frame" *ngIf="officePreviewUrl(selectedTemplate) as previewUrl; else previewUnavailable">
+                    <iframe [src]="previewUrl"
+                            title="Vista previa de la plantilla"
+                            frameborder="0"
+                            allowfullscreen></iframe>
+                    <button type="button" class="tpl-preview-expand"
+                            (click)="openPreviewModal(selectedTemplate)"
+                            title="Abrir en grande">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <polyline points="9 21 3 21 3 15"></polyline>
+                            <line x1="21" y1="3" x2="14" y2="10"></line>
+                            <line x1="3" y1="21" x2="10" y2="14"></line>
+                        </svg>
+                    </button>
+                </div>
+                <ng-template #previewUnavailable>
+                    <div class="tpl-preview-empty">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <p>Esta plantilla no tiene archivo cargado todavía.</p>
                     </div>
-                    <div class="tpl-doc-section">
-                        <span class="tpl-doc-label">Puntos clave</span>
-                        <div class="tpl-doc-skel" style="width: 84%"></div>
-                    </div>
-                    <div class="tpl-doc-section">
-                        <span class="tpl-doc-label">Decisiones tomadas</span>
-                        <div class="tpl-doc-skel" style="width: 70%"></div>
-                    </div>
-                    <table class="tpl-doc-table">
-                        <thead><tr><th>Acción</th><th>Responsable</th><th>Vence</th><th>Estado</th></tr></thead>
-                        <tbody>
-                            <tr><td></td><td></td><td></td><td></td></tr>
-                            <tr><td></td><td></td><td></td><td></td></tr>
-                        </tbody>
-                    </table>
-                </article>
+                </ng-template>
 
                 <section class="tpl-detail-section">
                     <h4>Casos de uso</h4>
@@ -452,7 +453,56 @@
             </div>
 
             <div *ngIf="detailTab === 'history'" class="tpl-detail-body">
-                <p class="tpl-detail-empty">El historial de versiones estará disponible próximamente.</p>
+                <section class="tpl-detail-section" *ngIf="historyOf(selectedTemplate).length; else noHistory">
+                    <h4>Historial de cambios</h4>
+                    <ul class="tpl-history-list">
+                        <li *ngFor="let h of historyOf(selectedTemplate); let i = index"
+                            class="tpl-history-item"
+                            [class.is-latest]="i === 0">
+                            <span class="tpl-history-bullet"
+                                  [attr.data-action]="h.action">
+                                <svg *ngIf="h.action === 'created'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                <svg *ngIf="h.action === 'file_replaced'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                                </svg>
+                                <svg *ngIf="h.action === 'configured'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg *ngIf="h.action === 'status_changed'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <svg *ngIf="h.action === 'archived'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                                    <rect x="1" y="3" width="22" height="5"></rect>
+                                </svg>
+                                <svg *ngIf="h.action === 'updated'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </span>
+                            <div class="tpl-history-body">
+                                <span class="tpl-history-action">{{ historyLabel(h) }}</span>
+                                <span class="tpl-history-meta">
+                                    {{ historyDate(h) }}
+                                    <span class="tpl-meta-dot">·</span>
+                                    <span>{{ historyAgo(h) }}</span>
+                                    <ng-container *ngIf="h.by">
+                                        <span class="tpl-meta-dot">·</span>
+                                        <span>{{ h.by }}</span>
+                                    </ng-container>
+                                </span>
+                            </div>
+                        </li>
+                    </ul>
+                </section>
+                <ng-template #noHistory>
+                    <p class="tpl-detail-empty">Aún no hay cambios registrados para esta plantilla.</p>
+                </ng-template>
             </div>
         </aside>
 
@@ -758,6 +808,59 @@
                         <polyline points="7 3 7 8 15 8"></polyline>
                     </svg>
                     {{ isSavingMapping ? 'Guardando…' : 'Guardar cambios' }}
+                </button>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<!-- ===================================================================
+     Modal: Vista previa del documento (Office Online Viewer)
+     =================================================================== -->
+<div class="tpl-modal-overlay" *ngIf="showPreviewModal" (click)="closePreviewModal()">
+    <div class="tpl-modal tpl-modal-preview" (click)="$event.stopPropagation()">
+        <header class="tpl-modal-head">
+            <div>
+                <h2 class="tpl-modal-title">{{ previewTemplate?.name || 'Vista previa' }}</h2>
+                <p class="tpl-modal-sub">Documento Word rendereado por Microsoft Office Online Viewer.</p>
+            </div>
+            <button class="tpl-modal-close" (click)="closePreviewModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+        <div class="tpl-modal-body tpl-preview-body" *ngIf="officePreviewUrl(previewTemplate) as url">
+            <iframe [src]="url"
+                    title="Vista previa de la plantilla"
+                    frameborder="0"
+                    allowfullscreen></iframe>
+        </div>
+        <footer class="tpl-modal-foot">
+            <a class="tpl-btn tpl-btn-outline"
+               *ngIf="officePreviewUrlString(previewTemplate) as urlStr"
+               [href]="urlStr"
+               target="_blank" rel="noopener">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Abrir en pestaña nueva
+            </a>
+            <div class="tpl-modal-foot-right">
+                <button type="button" class="tpl-btn tpl-btn-outline" (click)="closePreviewModal()">Cerrar</button>
+                <button type="button" class="tpl-btn tpl-btn-primary" (click)="downloadTemplate(previewTemplate)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Descargar
                 </button>
             </div>
         </footer>

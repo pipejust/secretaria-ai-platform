@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -16,6 +17,14 @@ interface CategoryDef {
     label: string;
 }
 
+/** Entrada del historial de cambios de una plantilla. */
+interface HistoryEntry {
+    at: string;              // ISO timestamp
+    action: 'created' | 'updated' | 'file_replaced' | 'configured' | 'status_changed' | 'archived';
+    label?: string;          // texto descriptivo libre
+    by?: string;             // email del usuario que hizo el cambio (si lo capturamos)
+}
+
 /** Metadata adicional que vive DENTRO de styleConfig (JSON) porque el
  *  backend no tiene columnas dedicadas. Persiste con cada save de la
  *  plantilla y la UI la lee al cargar. */
@@ -25,6 +34,7 @@ interface TemplateMeta {
     description?: string;
     updated_at?: string;     // ISO timestamp
     version?: string;        // ej. "v1.6"
+    history?: HistoryEntry[];
 }
 
 @Component({
@@ -237,6 +247,7 @@ export class TemplatesComponent implements OnInit {
         private authService: AuthService,
         private cdr: ChangeDetectorRef,
         private router: Router,
+        private sanitizer: DomSanitizer,
     ) { }
 
     ngOnInit() { this.loadData(); }
@@ -251,11 +262,13 @@ export class TemplatesComponent implements OnInit {
                 if (!this.selectedTemplate && this.templates.length) {
                     this.selectedTemplate = this.templates[0];
                 } else if (this.selectedTemplate) {
-                    // Sincronizar el selected con la versión fresca del backend
                     const fresh = this.templates.find((t) => t.id === this.selectedTemplate.id);
                     if (fresh) this.selectedTemplate = fresh;
                 }
                 this.isLoading = false;
+                // Garantizar que toda plantilla tenga timestamp persistido —
+                // resuelve el "—" en plantillas legacy del backend antiguo.
+                this.backfillLegacyMeta();
                 this.cdr.detectChanges();
             },
             error: () => {
@@ -299,13 +312,11 @@ export class TemplatesComponent implements OnInit {
         document.body.removeChild(a);
     }
 
-    /** Abre el archivo en nueva pestaña para vista previa. */
+    /** Abre el modal de vista previa con el Office Online Viewer
+     *  embebido. Más confiable que window.open(.docx) porque el
+     *  browser no sabe cómo renderizar Word nativo. */
     previewFile(t: any): void {
-        if (!t?.file_path) {
-            this.errorMsg = 'Esta plantilla no tiene archivo para previsualizar.';
-            return;
-        }
-        window.open(t.file_path, '_blank', 'noopener');
+        this.openPreviewModal(t);
     }
 
     /** Duplica la plantilla creando un nuevo registro que apunta al mismo
@@ -335,20 +346,28 @@ export class TemplatesComponent implements OnInit {
     toggleActive(t: any): void {
         const current = this.statusOf(t).key;
         const next: TemplateStatus = current === 'active' ? 'inactive' : 'active';
-        this.persistMeta(t, { status: next });
+        const label = next === 'active' ? 'Plantilla activada' : 'Plantilla inactivada';
+        this.persistMeta(t, { status: next }, 'status_changed', label);
     }
 
     /** Archiva la plantilla — distinto de eliminar: queda oculta del listado
      *  default pero recuperable filtrando por archivadas. */
     archiveTemplate(t: any): void {
         if (!confirm('¿Archivar esta plantilla? No se eliminará del backend.')) return;
-        this.persistMeta(t, { status: 'archived' });
+        this.persistMeta(t, { status: 'archived' }, 'archived', 'Plantilla archivada');
     }
 
     /** Persiste cambios de metadata en style_config (PUT /templates/:id/mapping)
-     *  sin tocar el archivo ni el mapping_config existente. */
-    private persistMeta(t: any, patch: Partial<TemplateMeta>): void {
-        const meta = { ...this.metaOf(t), ...patch, updated_at: new Date().toISOString() };
+     *  sin tocar el archivo ni el mapping_config existente. Cada llamada
+     *  agrega una entrada al historial. */
+    private persistMeta(t: any, patch: Partial<TemplateMeta>, historyAction?: HistoryEntry['action'], historyLabel?: string): void {
+        const prev = this.metaOf(t);
+        const meta: TemplateMeta = {
+            ...prev,
+            ...patch,
+            updated_at: new Date().toISOString(),
+            history: this._appendHistory(prev.history, historyAction || 'updated', historyLabel),
+        };
         // Reconstruimos style_config: preservamos las claves de estilo
         // existentes y embebemos __meta.
         let styleObj: any = {};
@@ -367,7 +386,6 @@ export class TemplatesComponent implements OnInit {
             headers: this.authService.getAuthHeaders()
         }).subscribe({
             next: () => {
-                // Mutación local optimista para UI snappy
                 t.style_config = payload.style_config;
                 if (this.selectedTemplate?.id === t.id) this.selectedTemplate = { ...t };
                 this.successMsg = 'Cambios guardados.';
@@ -379,6 +397,144 @@ export class TemplatesComponent implements OnInit {
                 this.cdr.detectChanges();
             }
         });
+    }
+
+    /** Agrega una nueva entrada al historial preservando las anteriores
+     *  (cap a 50 para no inflar style_config indefinidamente). */
+    private _appendHistory(prev: HistoryEntry[] | undefined, action: HistoryEntry['action'], label?: string): HistoryEntry[] {
+        const list = Array.isArray(prev) ? [...prev] : [];
+        const entry: HistoryEntry = {
+            at: new Date().toISOString(),
+            action,
+            label,
+            by: (this.authService as any).currentUserValue?.email,
+        };
+        list.unshift(entry);
+        return list.slice(0, 50);
+    }
+
+    /** Backfill automático: para plantillas sin __meta.updated_at, persiste
+     *  un baseline silencioso para que la columna "Actualizado" deje de
+     *  mostrar "—" en plantillas legacy. Una sola pasada por carga. */
+    private backfillLegacyMeta(): void {
+        const legacy = (this.templates || []).filter((t) => {
+            const meta = this.metaOf(t);
+            return !meta.updated_at;
+        });
+        if (!legacy.length) return;
+        for (const t of legacy) {
+            const meta: TemplateMeta = {
+                type: this.typeOf(t).id,
+                status: 'active',
+                updated_at: new Date().toISOString(),
+                history: [{
+                    at: new Date().toISOString(),
+                    action: 'created',
+                    label: 'Plantilla importada al historial',
+                }],
+            };
+            let styleObj: any = {};
+            if (t.style_config) {
+                try { styleObj = JSON.parse(String(t.style_config)) || {}; }
+                catch {}
+            }
+            styleObj.__meta = meta;
+            const payload = {
+                mapping_config: t.mapping_config || '[]',
+                style_config: JSON.stringify(styleObj),
+            };
+            // Mutación local inmediata para que la UI no espere el round-trip.
+            t.style_config = payload.style_config;
+            this.http.put(`${environment.apiUrl}/templates/${t.id}/mapping`, payload, {
+                headers: this.authService.getAuthHeaders()
+            }).subscribe({ next: () => {}, error: () => {} });
+        }
+        this.cdr.detectChanges();
+    }
+
+    // ============================================================
+    // HISTORIAL DE VERSIONES
+    // ============================================================
+
+    /** Lista de entradas del historial (más reciente primero) para el tab. */
+    historyOf(t: any): HistoryEntry[] {
+        return this.metaOf(t).history || [];
+    }
+
+    /** Label legible para una acción del historial. */
+    historyLabel(e: HistoryEntry): string {
+        if (e.label) return e.label;
+        switch (e.action) {
+            case 'created':         return 'Plantilla creada';
+            case 'updated':         return 'Plantilla actualizada';
+            case 'file_replaced':   return 'Archivo Word reemplazado';
+            case 'configured':      return 'Bloques y estilos configurados';
+            case 'status_changed':  return 'Cambio de estado';
+            case 'archived':        return 'Plantilla archivada';
+            default:                return 'Cambio guardado';
+        }
+    }
+
+    /** Fecha + hora corta para la entrada. */
+    historyDate(e: HistoryEntry): string {
+        const d = new Date(e.at);
+        if (isNaN(d.getTime())) return '';
+        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        const dd = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${dd} · ${hh}:${mm}`;
+    }
+
+    historyAgo(e: HistoryEntry): string {
+        const d = new Date(e.at);
+        if (isNaN(d.getTime())) return '';
+        const days = Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
+        if (days === 0) return 'hoy';
+        if (days === 1) return 'ayer';
+        if (days < 30) return `hace ${days} días`;
+        const months = Math.floor(days / 30);
+        return months === 1 ? 'hace 1 mes' : `hace ${months} meses`;
+    }
+
+    // ============================================================
+    // VISTA PREVIA — Office Online Viewer
+    // ============================================================
+
+    /** URL del Office Online embed viewer para un .docx público.
+     *  Microsoft hostea un viewer gratuito que renderiza Word docs
+     *  cuando se le pasa el URL del archivo encoded. Funciona con
+     *  cualquier URL accesible públicamente (Supabase Storage lo es). */
+    officePreviewUrl(t: any): SafeResourceUrl | null {
+        if (!t?.file_path) return null;
+        const encoded = encodeURIComponent(t.file_path);
+        const url = `https://view.officeapps.live.com/op/embed.aspx?src=${encoded}`;
+        // Angular bloquea <iframe [src]> sin sanitizar como SafeResourceUrl.
+        return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    }
+
+    /** Misma URL pero como string plano — útil para abrir en nueva pestaña. */
+    officePreviewUrlString(t: any): string | null {
+        if (!t?.file_path) return null;
+        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(t.file_path)}`;
+    }
+
+    /** Modal de vista previa: rompemos del tab cuando el user hace click
+     *  en el botón principal del panel. Permite ver el documento en
+     *  grande sin perder el contexto. */
+    showPreviewModal = false;
+    previewTemplate: any = null;
+    openPreviewModal(t: any): void {
+        if (!t?.file_path) {
+            this.errorMsg = 'Esta plantilla no tiene archivo para previsualizar.';
+            return;
+        }
+        this.previewTemplate = t;
+        this.showPreviewModal = true;
+    }
+    closePreviewModal(): void {
+        this.showPreviewModal = false;
+        this.previewTemplate = null;
     }
 
     // ============================================================
@@ -454,11 +610,21 @@ export class TemplatesComponent implements OnInit {
 
                 // Persistir metadata (type/description/updated_at) en el
                 // style_config inmediatamente después de la subida.
+                const existing = this.templates.find((tx) => tx.id === newId);
+                const prevMeta = existing ? this.metaOf(existing) : {};
+                const action: HistoryEntry['action'] = this.editingTemplateId
+                    ? (this.selectedFile ? 'file_replaced' : 'updated')
+                    : 'created';
+                const historyLabel = this.editingTemplateId
+                    ? (this.selectedFile ? 'Archivo Word reemplazado' : 'Plantilla actualizada')
+                    : 'Plantilla creada';
+                const newHistory = this._appendHistory(prevMeta.history, action, historyLabel);
                 const meta: TemplateMeta = {
                     type: this.templateType,
                     status: 'active',
                     description: this.templateDescription || undefined,
                     updated_at: new Date().toISOString(),
+                    history: newHistory,
                 };
                 this.persistMetaById(newId, meta).subscribe({
                     next: () => {
@@ -600,8 +766,10 @@ export class TemplatesComponent implements OnInit {
 
         // Re-injectamos __meta para no perderla al guardar estilos.
         const existing = this.templates.find((t) => t.id === this.lastUploadedTemplateId);
-        const meta = existing ? this.metaOf(existing) : {};
+        const meta: TemplateMeta = existing ? this.metaOf(existing) : {};
         meta.updated_at = new Date().toISOString();
+        meta.history = this._appendHistory(meta.history, 'configured',
+            `Configurados ${this.activeTokens.length} bloque(s) y estilos del documento`);
 
         const mappingPayload = {
             mapping_config: JSON.stringify(this.activeTokens.map(t => t.id)),
