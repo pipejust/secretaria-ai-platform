@@ -463,6 +463,15 @@ export class AskComponent implements OnInit, OnDestroy {
         return m?.title || `Sesión #${sid}`;
     }
 
+    /** Versión truncada del nombre de la sesión para usar en chips/badges
+     *  donde el espacio es limitado. Si no hay título, devuelve "#N". */
+    sessionShortName(sid: number, maxLen: number = 28): string {
+        const m = this.sessionMeta.get(sid);
+        const title = m?.title;
+        if (!title) return `#${sid}`;
+        return title.length > maxLen ? title.slice(0, maxLen - 1).trimEnd() + '…' : title;
+    }
+
     // ============================================================
     // Helpers de presentación
     // ============================================================

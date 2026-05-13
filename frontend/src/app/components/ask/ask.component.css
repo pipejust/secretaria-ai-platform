@@ -603,23 +603,28 @@
 .aa-decision-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .aa-decision-text { flex: 1; min-width: 0; }
 
-/* Chips de fuente: cada decisión/tarea muestra de qué sesión proviene */
-.aa-source-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+/* Chips de fuente: cada decisión/tarea muestra de qué sesión proviene.
+   Muestra ICONO + nombre corto de la sesión (no solo "#N"). */
+.aa-source-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; max-width: 100%; }
 .aa-source-chip {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
+    gap: 4px;
+    padding: 2px 8px 2px 6px;
     border-radius: 999px;
     background: var(--aa-blue-soft);
     color: var(--aa-blue);
-    font-size: 10.5px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     text-decoration: none;
     border: 1px solid transparent;
     transition: background 120ms ease, border-color 120ms ease;
+    max-width: 100%;
+    white-space: nowrap;
 }
+.aa-source-chip svg { flex-shrink: 0; opacity: 0.85; }
 .aa-source-chip:hover { background: #BFDBFE; border-color: var(--aa-blue); }
-.aa-source-chip--sm { padding: 1px 6px; font-size: 10px; }
+.aa-source-chip--sm { padding: 1px 6px; font-size: 10.5px; }
 
 /* Tareas pendientes — tabla con badges */
 .aa-table-wrap {

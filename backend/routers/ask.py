@@ -32,7 +32,7 @@ from sqlmodel import Session, select
 
 from config import settings
 from database import get_session
-from models import AskHistory, Tenant, User
+from models import ActionItem as ActionItemRow, AskHistory, MeetingSession, Tenant, User
 from routers.auth import get_current_tenant, get_current_user
 from services.embedding_service import search_similar
 
@@ -172,6 +172,109 @@ def _build_context(chunks: list[dict]) -> str:
         snippet = (c["content"] or "")[:1200]
         blocks.append(f"[Sesión #{c['session_id']} · {c['kind']}]\n{snippet}")
     return "\n\n---\n\n".join(blocks)
+
+
+def _normalize_for_match(s: str) -> str:
+    """Normaliza un título para comparar (lower, sin signos ni espacios extra)."""
+    import re as _re
+    s = (s or "").lower()
+    s = _re.sub(r"[^\w\s]+", " ", s)
+    s = _re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def _stem_word(w: str) -> str:
+    """Stem ligero para español: quita plurales obvios para que 'cuentas'
+    matchee 'cuenta', 'sociales' matchee 'social'. Conservador — sólo
+    reglas que casi nunca producen falsos positivos."""
+    if len(w) >= 6 and w.endswith("es"):
+        # 'sociales' → 'social', 'redes' (5 chars, no aplica)
+        return w[:-2]
+    if len(w) >= 5 and w.endswith("s"):
+        # 'cuentas' → 'cuenta', 'tareas' → 'tarea'
+        return w[:-1]
+    return w
+
+
+def _significant_words(text: str) -> set:
+    """Palabras útiles para matching: >=4 letras + stemmed."""
+    return {_stem_word(w) for w in _normalize_for_match(text).split() if len(w) >= 4}
+
+
+def _best_action_item_match(
+    title: str, candidates: list[ActionItemRow]
+) -> Optional[ActionItemRow]:
+    """Match heurístico: la fila DB cuyo título tenga mayor solapamiento
+    Jaccard de palabras significativas (>=4 letras, stemmed) con el
+    título propuesto por el LLM. Umbral 0.25 es generoso pero seguro."""
+    q_words = _significant_words(title)
+    if not q_words:
+        return None
+
+    best_score, best_row = 0.0, None
+    for row in candidates:
+        t_words = _significant_words(row.title or "")
+        if not t_words:
+            continue
+        inter = q_words & t_words
+        union = q_words | t_words
+        score = len(inter) / max(len(union), 1)
+        if score > best_score:
+            best_score, best_row = score, row
+    return best_row if best_score >= 0.25 else None
+
+
+def _enrich_action_items_from_db(
+    db: Session,
+    tenant_id: int,
+    items: list,  # list[ActionItemDTO]
+) -> None:
+    """Para cada action_item devuelto por el LLM, busca el ActionItem
+    correspondiente en la DB (por session_id + similitud de título) y
+    completa owner/due_date/status si están vacíos en la versión LLM.
+
+    La DB es la fuente de verdad; la del LLM es síntesis.
+    Mutación in-place sobre la lista.
+    """
+    if not items:
+        return
+
+    cited_sessions = {sid for it in items for sid in (it.source_sessions or [])}
+    if not cited_sessions:
+        return
+
+    rows = list(
+        db.exec(
+            select(ActionItemRow)
+            .where(ActionItemRow.tenant_id == tenant_id)
+            .where(ActionItemRow.session_id.in_(cited_sessions))
+        ).all()
+    )
+    by_session: dict[int, list[ActionItemRow]] = {}
+    for r in rows:
+        by_session.setdefault(r.session_id, []).append(r)
+
+    if not by_session:
+        return
+
+    for it in items:
+        for sid in (it.source_sessions or []):
+            candidates = by_session.get(sid, [])
+            if not candidates:
+                continue
+            match = _best_action_item_match(it.title, candidates)
+            if not match:
+                continue
+            # Enriquecer SOLO los campos vacíos: respetamos lo que el LLM ya
+            # extrajo (puede ser más sintético/legible) y rellenamos huecos.
+            if not (it.owner or "").strip() and (match.owner_name or "").strip():
+                it.owner = match.owner_name
+            if not (it.due_date or "").strip() and (match.due_date or "").strip():
+                it.due_date = match.due_date
+            # Status: si LLM dijo 'pending' (default), confiamos en la DB.
+            if (it.status or "pending") == "pending" and (match.status or ""):
+                it.status = match.status
+            break  # primera sesión con match basta
 
 
 def _coerce_int_list(raw) -> list[int]:
@@ -372,6 +475,12 @@ async def ask(
                         source_sessions=sids,
                     )
                 )
+
+            # Enriquecimiento desde DB: la tabla `actionitem` tiene los
+            # owner/due_date/status estructurados que el LLM no siempre
+            # encuentra en los chunks de summary/decisions/transcript.
+            # La DB es la fuente de verdad; sólo rellenamos campos vacíos.
+            _enrich_action_items_from_db(db, tenant.id, action_items)
 
             structured = StructuredAnswer(
                 intro=str(parsed.get("intro") or ""),
