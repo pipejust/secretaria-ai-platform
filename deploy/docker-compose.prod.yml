@@ -63,7 +63,7 @@ services:
   # --------------------------------------------------------------------------
   backend:
     build:
-      context: ../backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: acten-backend
     restart: unless-stopped
@@ -119,7 +119,7 @@ services:
   # --------------------------------------------------------------------------
   frontend:
     build:
-      context: ../frontend
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         # ⚠️ Coolify resolverá esta variable a la URL pública del backend.
