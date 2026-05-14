@@ -225,7 +225,30 @@ def _resolve_admin_recipients(db, tenant_id: int) -> list[tuple[str, str]]:
     return out
 
 
-async def _send_session_ready_email(session_id: int, tenant_id: int) -> None:
+# Cuántas horas esperamos a que Fireflies entregue el summary nativo
+# (cuentas paid) antes de mandar el correo igual con la nota "summary
+# pendiente". Pasado este umbral asumimos que Fireflies no va a entregar.
+_PAID_SUMMARY_GRACE_HOURS = 4
+
+
+def _hours_since_iso(value: str) -> Optional[float]:
+    """Diferencia en horas entre `now()` y un ISO timestamp. None si invalid."""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    now = datetime.now(timezone.utc) if dt.tzinfo else datetime.now()
+    return max(0.0, (now - dt).total_seconds() / 3600.0)
+
+
+async def _send_session_ready_email(
+    session_id: int,
+    tenant_id: int,
+    *,
+    force: bool = False,
+) -> bool:
     """Envía el correo POST-pipeline al/los admin/s del tenant.
 
     Se llama desde `process_transcript_background` DESPUÉS de que la IA
@@ -237,10 +260,23 @@ async def _send_session_ready_email(session_id: int, tenant_id: int) -> None:
       - Participantes sin correo registrado.
       - Modo de envío (automático con timeout o manual).
 
-    Idempotente: si `session_ready_email_sent_at` ya está set en la sesión,
-    NO reenvía. Esto evita spam si el pipeline se reintenta.
+    Returns True si envió, False si fue skipeado (idempotencia, gating o
+    sin destinatarios).
+
+    Gating:
+      - Pipeline OK + summary vacío + tier paid/unknown + age < 4h →
+        SKIP. Esperamos al cron `check_pending_summaries` que lo
+        reintentará y disparará el correo cuando llegue el summary
+        (o cuando se venza el grace period).
+      - Pipeline OK + summary vacío + tier=free → no debería ocurrir
+        (Groq genera siempre), pero igual enviamos.
+      - Pipeline failed → enviar siempre (avisar del error).
+      - `force=True` → bypassa el gating (lo usa el cron al vencer grace).
+
+    Idempotente: si `session_ready_email_sent_at` ya está set, NO reenvía.
     """
     import os
+    from datetime import datetime
     from sqlmodel import Session
     from database import engine
     from services.email_service import EmailService
@@ -249,7 +285,7 @@ async def _send_session_ready_email(session_id: int, tenant_id: int) -> None:
         with Session(engine) as db:
             ms = db.get(MeetingSession, session_id)
             if not ms:
-                return
+                return False
 
             # Idempotencia: ya se envió antes → no reenviar.
             if (ms.session_ready_email_sent_at or "").strip():
@@ -257,7 +293,35 @@ async def _send_session_ready_email(session_id: int, tenant_id: int) -> None:
                     "Sesión %s: session_ready_email ya fue enviado el %s. Skip.",
                     session_id, ms.session_ready_email_sent_at,
                 )
-                return
+                return False
+
+            pipeline_failed_check = bool((ms.processing_error or "").strip())
+            summary_present = bool((ms.raw_summary or "").strip())
+
+            # GATING: si el pipeline OK pero el summary aún no llegó y el
+            # tenant es paid/unknown, esperamos al cron de refetch antes
+            # de mandar el correo. Excepción: pasados N horas, lo
+            # mandamos igual con la nota "summary pendiente".
+            if not force and not pipeline_failed_check and not summary_present:
+                from services.fireflies_service import get_or_detect_fireflies_tier
+                tier = await get_or_detect_fireflies_tier(
+                    db, tenant_id, None, transcript_id_for_probe=None,
+                )
+                if tier in ("paid", "unknown"):
+                    age_hours = _hours_since_iso(ms.created_at)
+                    if age_hours is None or age_hours < _PAID_SUMMARY_GRACE_HOURS:
+                        logger.info(
+                            "Sesión %s: pipeline OK pero summary aún vacío "
+                            "(tier=%s, age=%.1fh). Esperando al cron de refetch — "
+                            "correo NO enviado aún.",
+                            session_id, tier, age_hours or 0.0,
+                        )
+                        return False
+                    logger.info(
+                        "Sesión %s: agotada grace de %sh sin summary (tier=%s). "
+                        "Enviando correo con nota de summary pendiente.",
+                        session_id, _PAID_SUMMARY_GRACE_HOURS, tier,
+                    )
 
             project_name = "General"
             if ms.project_id:
@@ -288,7 +352,7 @@ async def _send_session_ready_email(session_id: int, tenant_id: int) -> None:
                     "Sesión %s: no hay admins activos en tenant %s para correo post-pipeline.",
                     session_id, tenant_id,
                 )
-                return
+                return False
 
             frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip("/")
             session_url = f"{frontend_url}/admin/curation/{session_id}"
@@ -342,10 +406,12 @@ async def _send_session_ready_email(session_id: int, tenant_id: int) -> None:
                 logger.exception(
                     "Falló notificación in-app post-pipeline para sesión %s", session_id,
                 )
+            return ok_any
     except Exception:
         logger.exception(
             "_send_session_ready_email crash inesperado para sesión %s", session_id,
         )
+        return False
 
 
 # Alias retrocompat — algunos imports legacy todavía usan el nombre viejo.
