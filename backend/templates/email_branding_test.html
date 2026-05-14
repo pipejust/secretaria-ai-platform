@@ -1,0 +1,44 @@
+{% extends "email_base.html" %}
+
+{# ──────────────────────────────────────────────────────────────────────────
+   Email de PRUEBA disparado desde /admin/branding → "Probar envío de
+   correos". Sirve para que el admin confirme que el branding (logo,
+   colores, dominio, footer de contacto) llega correcto a una bandeja
+   real antes de que dispare correos reales.
+
+   Hereda del email_base.html para que el admin vea EXACTAMENTE el mismo
+   tratamiento visual que reciben los usuarios finales (welcome,
+   action_items, session_received, etc.). Si esto se ve bien, todos los
+   correos del sistema se ven bien — esa es la garantía.
+   ────────────────────────────────────────────────────────────────────────── #}
+
+{% block content %}
+  <h2>✅ Correo de prueba</h2>
+
+  <p>Hola <strong>{{ actor_name | default('') }}</strong>,</p>
+
+  <p>
+    Este es un correo de prueba enviado desde la sección
+    <strong>Marca</strong> de
+    {{ brand.platform_name | default('Acten') }} para confirmar que tu
+    configuración SMTP y branding funcionan correctamente.
+  </p>
+
+  <div class="box">
+    <p class="box-title">¿Qué deberías estar viendo?</p>
+    <p class="box-text">
+      Header con el gradiente de tus colores principales, el logo de
+      <strong>{{ brand.company_name | default('Acten') }}</strong> arriba,
+      este recuadro con borde izquierdo en tu color de acento, y un footer
+      con los datos de contacto de tu empresa. Si TODO se ve, tu marca está
+      llegando correctamente a tus usuarios.
+    </p>
+  </div>
+
+  <p style="color: #6b7280; font-size: 13px; line-height: 1.55;">
+    💡 <strong>Tip:</strong> abrí este correo en Gmail web, Gmail app móvil
+    y Outlook desktop para verificar que el render es consistente. Algunos
+    clientes (sobre todo Outlook desktop) renderizan gradientes y bordes
+    redondeados de forma distinta.
+  </p>
+{% endblock %}

@@ -301,35 +301,22 @@ async def test_email(
 
     brand = branding_service.get_branding(db, tenant.id)
     company = brand.get("company_name") or brand.get("platform_name") or "Acten"
-    primary = brand.get("primary_color") or "#223148"
-    secondary = brand.get("secondary_color") or "#1B7F67"
-    accent = brand.get("accent_color") or "#D9A441"
-    tagline = brand.get("company_tagline") or "Inteligencia para tus reuniones"
     actor_name = admin.full_name or admin.email
 
-    html_content = f"""
-    <div style="font-family: 'Inter', Arial, sans-serif; color: #0F172A; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, {primary}, {secondary}); padding: 24px; color: #fff; border-radius: 12px 12px 0 0;">
-        <h1 style="margin: 0; font-size: 22px;">{company}</h1>
-        <p style="margin: 4px 0 0; opacity: 0.85; font-size: 13px;">{tagline}</p>
-      </div>
-      <div style="background: #FFFFFF; padding: 24px; border: 1px solid #E2E8F0; border-top: 0; border-radius: 0 0 12px 12px;">
-        <p>Hola <strong>{actor_name}</strong>,</p>
-        <p>Este es un correo de prueba enviado desde la sección de <strong>Marca</strong>
-           de Acten para confirmar que tu configuración SMTP y branding funcionan correctamente.</p>
-        <div style="margin: 18px 0; padding: 14px 16px; background: #F8FAFC;
-                    border-left: 3px solid {accent}; border-radius: 6px; font-size: 14px;">
-          Si recibiste este correo, tu integración de correos está operativa y la marca se ve como
-          esperas.
-        </div>
-        <p style="margin-top: 24px; font-size: 12px; color: #64748B;">
-          © {company} · Enviado desde la plataforma Acten.
-        </p>
-      </div>
-    </div>
-    """
-
+    # Usamos el template branded `email_branding_test.html` que extiende
+    # `email_base.html` — mismo header, logo, footer y .box que todos los
+    # demás correos del sistema. Si esto se ve OK, el admin tiene la
+    # garantía de que TODOS los correos van a verse OK (welcome,
+    # action_items, session_received, 2fa, forgot_password). Antes el
+    # test_email tenía un layout inline propio que NO coincidía con los
+    # reales, así que "ver bien la prueba" no garantizaba nada.
     email_service = EmailService(db=db, tenant_id=tenant.id)
+    template = email_service.jinja_env.get_template('email_branding_test.html')
+    html_content = template.render(
+        actor_name=actor_name,
+        current_year=2026,
+        brand=email_service.branding,  # ya tiene logo_data_url resuelto a URL HTTPS
+    )
     try:
         ok = await email_service._send_html_email(
             to_email=target,
