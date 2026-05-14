@@ -935,29 +935,116 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             });
     }
 
+    /** Set de IDs de sesiones con un retry en vuelo (para mostrar spinner
+     *  y deshabilitar el botón). El template lo consulta como
+     *  `retryingIds.has(s.id)`. */
+    retryingIds = new Set<number>();
+
     /** Reintenta el pipeline IA de una sesión que quedó incompleta.
      *  Si `rehydrate=true`, vuelve a tirar Fireflies para re-traer transcript
      *  + summary nativo y luego correr la IA. Si false, solo re-corre la IA
-     *  con lo que ya está en DB (más rápido, menos consumo de tokens). */
+     *  con lo que ya está en DB (más rápido, menos consumo de tokens).
+     *
+     *  Polling persistente cada 5 s hasta 120 s para refrescar la fila
+     *  cuando el backend termine. */
     retrySessionPipeline(session: any, rehydrate: boolean, evt?: Event): void {
-        if (evt) { evt.stopPropagation(); }
-        if (!session?.id) return;
+        // PreventDefault + stopPropagation para que el click NO burbujee al
+        // (click)="selectSession(s)" del row, ni navegue por accidente.
+        if (evt) {
+            evt.stopPropagation();
+            evt.preventDefault();
+        }
+        if (!session?.id) {
+            this.toast.error('No puedo identificar la sesión.');
+            return;
+        }
+        if (this.retryingIds.has(session.id)) {
+            return;  // ya hay uno corriendo
+        }
+        this.retryingIds.add(session.id);
+        // Marcamos visualmente el row como "en proceso" sin esperar el server.
+        session.status = 'processing';
+        session.processing_error = '';
+        this.cdr.detectChanges();
+
         const headers = this.authService.getAuthHeaders();
         const url =
             `${environment.apiUrl}/api/webhook/fireflies/sessions/${session.id}/retry` +
             (rehydrate ? '?rehydrate_from_fireflies=true' : '');
-        this.toast.info('Reintento encolado. Tarda unos segundos…');
+        this.toast.info(
+            rehydrate
+                ? 'Re-trayendo de Fireflies y reanalizando con IA. Tarda 30 s a 2 min.'
+                : 'Reanalizando con IA. Tarda 30-60 segundos.',
+        );
         this.http.post(url, {}, { headers })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: () => {
-                    // Refrescamos pasados unos segundos para mostrar el resultado.
-                    setTimeout(() => this.loadSessions(), 4000);
+                    this.startRetryPolling(session.id);
                 },
-                error: () => {
-                    this.toast.error('No pude encolar el reintento.');
+                error: (err) => {
+                    this.retryingIds.delete(session.id);
+                    const status = err?.status;
+                    const detail = err?.error?.detail || err?.message || '';
+                    this.toast.error(
+                        status
+                            ? `No pude encolar el reintento (HTTP ${status}). ${detail}`
+                            : 'No pude encolar el reintento. Verificá tu conexión.',
+                    );
+                    this.cdr.detectChanges();
                 },
             });
+    }
+
+    /** Polling discreto: GET la sesión cada 5 s hasta 120 s. Cuando el
+     *  backend marca processing_completed_at o un nuevo processing_error,
+     *  refrescamos toda la lista. */
+    private startRetryPolling(sessionId: number): void {
+        const headers = this.authService.getAuthHeaders();
+        const MAX = 24;
+        const pollMs = 5000;
+        let attempts = 0;
+        const tick = () => {
+            attempts += 1;
+            this.http.get<any>(
+                `${environment.apiUrl}/api/sessions/${sessionId}`,
+                { headers },
+            )
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                    next: (res) => {
+                        const session = res?.session ?? res;
+                        const completedAt = (session?.processing_completed_at || '').trim();
+                        const errorMsg = (session?.processing_error || '').trim();
+                        const stillRunning = (session?.status || '').toLowerCase() === 'processing';
+                        const finished = !!completedAt || (!!errorMsg && !stillRunning);
+                        if (finished || attempts >= MAX) {
+                            this.retryingIds.delete(sessionId);
+                            if (completedAt) {
+                                this.toast.success('Pipeline IA completado.');
+                            } else if (errorMsg) {
+                                this.toast.error('El reintento falló: ' + errorMsg.slice(0, 200));
+                            } else {
+                                this.toast.warning(
+                                    'El pipeline sigue en proceso. Refrescá en unos segundos.',
+                                );
+                            }
+                            this.loadSessions();
+                            return;
+                        }
+                        setTimeout(tick, pollMs);
+                    },
+                    error: () => {
+                        if (attempts < MAX) {
+                            setTimeout(tick, pollMs);
+                        } else {
+                            this.retryingIds.delete(sessionId);
+                            this.cdr.detectChanges();
+                        }
+                    },
+                });
+        };
+        setTimeout(tick, 1500);
     }
 
     cancelDeleteSession() { this.showDeleteModal = false; this.sessionToDelete = null; }

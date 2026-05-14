@@ -327,33 +327,42 @@
 
                     <!-- Estado -->
                     <div class="cell-status">
-                        <ng-container *ngIf="isSessionFailing(s); else okStatus">
-                            <!-- Estado "fallando": REEMPLAZA el badge normal. Se
-                                 dispara cuando processing_error está set O cuando
-                                 la sesión está visualmente vacía (legacy).
-                                 Mientras tanto no se envía data a integraciones. -->
-                            <span class="status-badge status-failing"
-                                  data-status="failing"
-                                  [title]="failingReason(s)">
-                                ⚠ Fallando
+                        <!-- 1) Retry en vuelo: muestra spinner azul. -->
+                        <ng-container *ngIf="retryingIds.has(s.id); else notRetrying">
+                            <span class="status-badge status-processing-retry"
+                                  data-status="processing"
+                                  title="Pipeline IA en ejecución…">
+                                <span class="retry-spinner" aria-hidden="true"></span>
+                                Procesando…
                             </span>
-                            <button type="button"
-                                    class="retry-inline-btn"
-                                    (click)="retrySessionPipeline(s, !!s.fireflies_id, $event)"
-                                    [title]="s.fireflies_id ? 'Re-traer de Fireflies + reanalizar con IA' : 'Reintentar análisis IA con la data ya guardada'">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="23 4 23 10 17 10"></polyline>
-                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                                </svg>
-                                Reintentar
-                            </button>
                         </ng-container>
-                        <ng-template #okStatus>
-                            <span class="status-badge"
-                                  [attr.data-status]="statusBadge(s.status).key">
-                                {{ statusBadge(s.status).label }}
-                            </span>
+                        <ng-template #notRetrying>
+                            <ng-container *ngIf="isSessionFailing(s); else okStatus">
+                                <!-- 2) Fallando: rojo + botón Reintentar inline. -->
+                                <span class="status-badge status-failing"
+                                      data-status="failing"
+                                      [title]="failingReason(s)">
+                                    ⚠ Fallando
+                                </span>
+                                <button type="button"
+                                        class="retry-inline-btn"
+                                        (mousedown)="$event.stopPropagation()"
+                                        (click)="retrySessionPipeline(s, !!s.fireflies_id, $event)"
+                                        [title]="s.fireflies_id ? 'Re-traer de Fireflies + reanalizar con IA' : 'Reintentar análisis IA con la data ya guardada'">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                    </svg>
+                                    Reintentar
+                                </button>
+                            </ng-container>
+                            <ng-template #okStatus>
+                                <span class="status-badge"
+                                      [attr.data-status]="statusBadge(s.status).key">
+                                    {{ statusBadge(s.status).label }}
+                                </span>
+                            </ng-template>
                         </ng-template>
                     </div>
 

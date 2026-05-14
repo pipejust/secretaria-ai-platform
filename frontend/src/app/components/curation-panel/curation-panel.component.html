@@ -44,12 +44,45 @@
 
     <ng-container *ngIf="!isLoading">
 
-        <!-- Banner de pipeline incompleto: bloquea visualmente la página y
-             expone el botón de reintento. Mientras esté presente, el backend
-             NO despachará nada a integraciones (Trello/Jira/email a owners).
-             Se muestra cuando processing_error está set O cuando la sesión
-             está visualmente vacía (caso legacy / fallo silencioso anterior). -->
-        <div *ngIf="isSessionFailing()"
+        <!-- Banner "Procesando…" — visible mientras el pipeline IA está
+             corriendo (status='processing' en backend o retry local activo).
+             Reemplaza al banner rojo durante todo el ciclo de retry. -->
+        <div *ngIf="isPipelineInFlight() && !isSessionFailing()"
+             class="cp-failing-banner cp-processing-banner"
+             role="status">
+            <div class="cp-failing-banner-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                     class="cp-spin">
+                    <line x1="12" y1="2" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="22"></line>
+                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                    <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                    <line x1="2" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="22" y2="12"></line>
+                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                    <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                </svg>
+            </div>
+            <div class="cp-failing-banner-body">
+                <strong>Procesando análisis IA…</strong>
+                <p>
+                    El pipeline IA está corriendo. Esto puede tardar entre 30 segundos
+                    y 2 minutos dependiendo del tamaño de la transcripción y de si
+                    hay que volver a consultar a Fireflies.
+                </p>
+                <p class="cp-failing-detail" *ngIf="retryProgress.total">
+                    <span class="cp-failing-detail-label">Estado:</span>
+                    Verificando ({{ retryProgress.current }}/{{ retryProgress.total }})…
+                </p>
+            </div>
+        </div>
+
+        <!-- Banner de pipeline incompleto (rojo): se muestra cuando
+             processing_error está set O cuando la sesión está vacía y NO
+             hay un retry en vuelo. Mientras esté presente, el backend
+             NO despachará nada a integraciones (Trello/Jira/email a owners). -->
+        <div *ngIf="isSessionFailing() && !isPipelineInFlight()"
              class="cp-failing-banner"
              role="alert">
             <div class="cp-failing-banner-icon" aria-hidden="true">

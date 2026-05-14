@@ -677,6 +677,27 @@
 .retry-inline-btn:active { background: #881337; }
 .retry-inline-btn svg { stroke: #fff; }
 
+/* Badge azul "Procesando…" — solo visible mientras hay un retry en vuelo. */
+.status-badge.status-processing-retry {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.retry-spinner {
+    width: 10px;
+    height: 10px;
+    border: 2px solid rgba(29, 78, 216, 0.25);
+    border-top-color: #1d4ed8;
+    border-radius: 50%;
+    animation: retry-spin 0.7s linear infinite;
+}
+@keyframes retry-spin {
+    to { transform: rotate(360deg); }
+}
+
 /* Cell: actions */
 .cell-actions { position: relative; display: flex; justify-content: flex-end; }
 .kebab {

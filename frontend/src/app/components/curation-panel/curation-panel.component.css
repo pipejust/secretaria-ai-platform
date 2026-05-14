@@ -298,6 +298,32 @@
     border-color: #fda4af;
 }
 
+/* Variante azul "Procesando…" — se muestra mientras el pipeline IA está
+   ejecutándose (después de presionar Reintentar y antes de que termine). */
+.cp-processing-banner {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #bfdbfe;
+    box-shadow: 0 1px 2px rgba(29, 78, 216, 0.08);
+}
+.cp-processing-banner .cp-failing-banner-icon {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+.cp-processing-banner .cp-failing-banner-body strong { color: #1e3a8a; }
+.cp-processing-banner .cp-failing-banner-body p { color: #1e40af; }
+.cp-processing-banner .cp-failing-detail {
+    background: rgba(255, 255, 255, 0.55);
+    border-color: rgba(29, 78, 216, 0.18);
+    color: #1e3a8a !important;
+}
+.cp-spin {
+    transform-origin: 50% 50%;
+    animation: cp-rotate 1.4s linear infinite;
+}
+@keyframes cp-rotate {
+    to { transform: rotate(360deg); }
+}
+
 @media (max-width: 720px) {
     .cp-failing-banner {
         flex-direction: column;

@@ -157,14 +157,36 @@
                 </p>
             </div>
 
-            <!-- Loading state -->
-            <div class="aa-chat-loading" *ngIf="isAsking">
-                <div class="aa-loading-bubble">
-                    <span class="aa-loading-dot"></span>
-                    <span class="aa-loading-dot"></span>
-                    <span class="aa-loading-dot"></span>
+            <!-- Loading state — skeleton "burbuja Acten" con shimmer.
+                 Reemplaza el spinner viejo por un esqueleto que respeta
+                 la forma real de una respuesta (header + 3 líneas + chips
+                 de fuentes), para que el "cargando" sea informativo. -->
+            <div class="aa-chat-loading" *ngIf="isAsking" aria-live="polite" aria-busy="true">
+                <div class="aa-a-row" style="width: 100%">
+                    <span class="aa-a-avatar" aria-hidden="true">
+                        <img src="brand/imagologo.png" alt="" />
+                    </span>
+                    <div class="aa-a-card" style="flex: 1">
+                        <header class="aa-a-card-head" style="display:flex; gap:10px; align-items:center">
+                            <span class="skeleton skeleton-line is-sm" style="width: 140px"></span>
+                            <span class="skeleton skeleton-line is-sm" style="width: 80px; margin-left:auto"></span>
+                        </header>
+                        <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 14px">
+                            <span class="skeleton skeleton-line is-full"></span>
+                            <span class="skeleton skeleton-line is-full"></span>
+                            <span class="skeleton skeleton-line" style="width: 78%"></span>
+                            <span class="skeleton skeleton-line" style="width: 64%"></span>
+                        </div>
+                        <div style="display:flex; gap: 10px; margin-top: 18px">
+                            <span class="skeleton skeleton-line is-sm" style="width: 90px; border-radius: 999px"></span>
+                            <span class="skeleton skeleton-line is-sm" style="width: 110px; border-radius: 999px"></span>
+                            <span class="skeleton skeleton-line is-sm" style="width: 80px; border-radius: 999px"></span>
+                        </div>
+                    </div>
                 </div>
-                <p>Acten está consultando el contexto…</p>
+                <p class="aa-loading-caption" style="margin-top: 10px; opacity: 0.75; font-size: 13px">
+                    Acten está consultando el contexto…
+                </p>
             </div>
 
             <!-- Lista de turns: pregunta usuario + respuesta Acten -->

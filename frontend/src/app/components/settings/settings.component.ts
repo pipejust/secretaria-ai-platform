@@ -79,6 +79,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   workspaceActive = true;
 
   isSaving = false;
+  /** True mientras `getSettings()` está cargando la configuración del tenant.
+   *  Se gatea el render de la card principal con esto para mostrar un skeleton
+   *  shimmer en vez de inputs vacíos con valores por defecto. */
+  isLoading = true;
   successMessage = '';
   errorMessage = '';
 
@@ -293,9 +297,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
         if (data.microsoft_calendar) {
             this.microsoftCalendarSettings = { ...this.microsoftCalendarSettings, ...data.microsoft_calendar };
         }
+        this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Failed to load settings', err)
+      error: (err) => {
+        console.error('Failed to load settings', err);
+        // Aún en error apagamos el skeleton para no dejar la pantalla vacía
+        // permanente; los inputs caen a defaults razonables.
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
     });
   }
 

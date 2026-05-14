@@ -419,9 +419,16 @@ async def process_transcript_background(
                 if isinstance(payload_data.get("data"), dict)
                 else {}
             )
+            # Precedencia para el título:
+            # 1. Lo que diga el payload del webhook / el caller (retry).
+            # 2. Lo que ya tenía la sesión en DB (preserve en retries cuando
+            #    el caller no manda nada explícito).
+            # 3. Lo que devuelva Fireflies más adelante (línea ~466).
+            # 4. Default genérico solo si ninguna fuente trajo nada.
             title = (
                 payload_data.get("title")
                 or data_obj.get("title")
+                or (new_session.title if new_session else "")
                 or "Reunión Sin Título"
             )
 
@@ -598,11 +605,30 @@ async def process_transcript_background(
                             if not routing.is_active:
                                 continue
                             await _dispatch_routing(db, routing, items)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
             logger.exception(
                 "Error procesando transcript %s en background", transcript_id
             )
             logger.debug(traceback.format_exc())
+            # NUNCA dejar la sesión colgada en status='processing' si algo se
+            # cayó arriba del pipeline. Marcamos error explícito y volvemos a
+            # 'pending' para que el frontend pueda mostrar el banner rojo +
+            # botón de reintentar otra vez.
+            try:
+                stuck = db.get(MeetingSession, session_id)
+                if stuck:
+                    stuck.processing_error = (
+                        f"background_task_crashed: {type(exc).__name__}: {str(exc)[:300]}"
+                    )
+                    if stuck.status == "processing":
+                        stuck.status = "pending"
+                    db.add(stuck)
+                    db.commit()
+            except Exception:
+                logger.exception(
+                    "No pude marcar la sesión %s como fallida tras crash.",
+                    session_id,
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -764,6 +790,17 @@ async def retry_session_pipeline(
     if not session_obj or session_obj.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
 
+    # Marcamos la sesión como "en proceso" para que el frontend pueda
+    # distinguir "estoy esperando que termine el retry" vs "retry terminó".
+    # status='processing' es el signal de in-flight; processing_error y
+    # processing_completed_at se limpian para que el resultado del pipeline
+    # quede inequívoco.
+    session_obj.status = "processing"
+    session_obj.processing_error = ""
+    session_obj.processing_completed_at = ""
+    db.add(session_obj)
+    db.commit()
+
     if rehydrate_from_fireflies:
         if not session_obj.fireflies_id:
             raise HTTPException(
@@ -771,12 +808,14 @@ async def retry_session_pipeline(
                 detail="La sesión no tiene fireflies_id; no se puede rehidratar.",
             )
         # Reusamos exactamente el mismo flujo del webhook (background task)
-        # con un payload mínimo. Force re-pull desde Fireflies.
+        # con un payload que preserva el título actual (para no clobbearlo
+        # si Fireflies devuelve algo distinto o vacío).
+        preserve_payload = {"title": session_obj.title} if session_obj.title else {}
         background_tasks.add_task(
             process_transcript_background,
             session_obj.id,
             session_obj.fireflies_id,
-            {},  # payload vacío — todo se trae de Fireflies
+            preserve_payload,
         )
         return {
             "status": "queued",
@@ -847,7 +886,24 @@ async def _run_ai_pipeline_in_background(session_id: int) -> None:
     with Session(engine) as db:
         try:
             await process_session_with_ai(db, session_id)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
             logger.exception(
                 "Retry de pipeline IA falló para sesión %s", session_id,
             )
+            # Igual que en process_transcript_background: nunca dejar la
+            # sesión colgada en status='processing'.
+            try:
+                stuck = db.get(MeetingSession, session_id)
+                if stuck:
+                    stuck.processing_error = (
+                        f"pipeline_crashed: {type(exc).__name__}: {str(exc)[:300]}"
+                    )
+                    if stuck.status == "processing":
+                        stuck.status = "pending"
+                    db.add(stuck)
+                    db.commit()
+            except Exception:
+                logger.exception(
+                    "No pude marcar la sesión %s como fallida tras crash.",
+                    session_id,
+                )

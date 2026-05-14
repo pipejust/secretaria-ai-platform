@@ -64,8 +64,37 @@
         <!-- ===== Contenido ===== -->
         <section class="st-content">
 
+            <!-- Skeleton mientras carga la configuración del tenant.
+                 Evita que los toggles parpadeen entre "default" y el valor
+                 real guardado por el admin. -->
+            <article class="st-card" *ngIf="isLoading" aria-busy="true">
+                <header class="st-card-head">
+                    <div style="flex: 1">
+                        <span class="skeleton skeleton-line is-lg"></span>
+                        <span class="skeleton skeleton-line is-sm" style="margin-top: 10px"></span>
+                    </div>
+                </header>
+                <div class="st-card-body">
+                    <div class="st-grid st-grid-2" style="gap: 16px">
+                        <div *ngFor="let _ of [1,2,3,4]" style="display:flex; flex-direction:column; gap:8px">
+                            <span class="skeleton skeleton-line is-sm" style="width: 40%"></span>
+                            <span class="skeleton" style="height: 42px; border-radius: 8px; display:block"></span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 24px; display:flex; flex-direction:column; gap: 12px">
+                        <div *ngFor="let _ of [1,2,3]" style="display:flex; gap: 16px; align-items:center; padding: 12px; border: 1px solid var(--color-border, #e5e7eb); border-radius: 10px">
+                            <div style="flex: 1; display:flex; flex-direction:column; gap: 6px">
+                                <span class="skeleton skeleton-line is-lg" style="width: 60%"></span>
+                                <span class="skeleton skeleton-line is-sm" style="width: 90%"></span>
+                            </div>
+                            <span class="skeleton" style="width: 44px; height: 24px; border-radius: 999px"></span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
             <!-- ============= GENERAL ============= -->
-            <ng-container *ngIf="activeSection === 'general'">
+            <ng-container *ngIf="!isLoading && activeSection === 'general'">
 
                 <!-- Preferencias generales -->
                 <article class="st-card">
@@ -191,7 +220,7 @@
             </ng-container>
 
             <!-- ============= INTEGRACIONES ============= -->
-            <ng-container *ngIf="activeSection === 'integrations'">
+            <ng-container *ngIf="!isLoading && activeSection === 'integrations'">
 
                 <article class="st-card">
                     <header class="st-card-head">
@@ -475,7 +504,7 @@
             </ng-container>
 
             <!-- ============= EMAIL ============= -->
-            <ng-container *ngIf="activeSection === 'email'">
+            <ng-container *ngIf="!isLoading && activeSection === 'email'">
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
@@ -554,7 +583,7 @@
             </ng-container>
 
             <!-- ============= TASK SYNC ============= -->
-            <ng-container *ngIf="activeSection === 'task-sync'">
+            <ng-container *ngIf="!isLoading && activeSection === 'task-sync'">
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
@@ -612,7 +641,7 @@
             </ng-container>
 
             <!-- ============= API & WEBHOOKS ============= -->
-            <ng-container *ngIf="activeSection === 'api'">
+            <ng-container *ngIf="!isLoading && activeSection === 'api'">
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>

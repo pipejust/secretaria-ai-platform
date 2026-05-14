@@ -544,7 +544,17 @@
             {{ isLoadingActivity ? 'Cargando…' : 'Actualizar' }}
           </button>
         </header>
-        <ul class="pr-activity-list" *ngIf="activity.length > 0">
+        <!-- Skeleton mientras carga la actividad reciente -->
+        <ul class="pr-activity-list" *ngIf="isLoadingActivity" aria-busy="true">
+          <li class="pr-activity-item" *ngFor="let _ of [1,2,3,4]">
+            <span class="skeleton skeleton-circle is-sm"></span>
+            <div class="pr-activity-body" style="display:flex; flex-direction:column; gap: 6px; flex: 1">
+              <span class="skeleton skeleton-line is-full"></span>
+              <span class="skeleton skeleton-line is-sm"></span>
+            </div>
+          </li>
+        </ul>
+        <ul class="pr-activity-list" *ngIf="!isLoadingActivity && activity.length > 0">
           <li class="pr-activity-item" *ngFor="let a of activity">
             <span class="pr-activity-icon" aria-hidden="true">{{ a.icon }}</span>
             <div class="pr-activity-body">

@@ -171,6 +171,15 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** ¿La sesión tiene un retry en vuelo en este momento?
+   *  status === 'processing' es el signal del backend de "background task
+   *  trabajando". Mientras esté en ese estado, mostramos un banner azul
+   *  "Procesando…" en lugar del rojo "Fallando". */
+  isPipelineInFlight(): boolean {
+    const status = ((this.meetingData?.status || '') as string).toLowerCase();
+    return status === 'processing' || this.isRetryingPipeline;
+  }
+
   /** Mensaje humano del por qué está fallando. */
   failingReason(): string {
     const m = this.meetingData;
@@ -513,30 +522,49 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Progreso visible del retry en curso: "X / N intentos". */
+  retryProgress = { current: 0, total: 0 };
+
   /** Reintenta el pipeline IA completo desde la curación. Lo dispara el
-   *  banner rojo "Análisis IA incompleto". Mientras corre, el banner queda
-   *  en estado "Reintentando…" y el botón deshabilitado. Al terminar, se
-   *  refresca la sesión para ver el resultado (banner desaparece si OK,
-   *  permanece con nuevo error si volvió a fallar). */
+   *  banner azul/rojo. Mientras corre:
+   *   - status del session pasa a 'processing' (signal backend)
+   *   - isRetryingPipeline = true (signal frontend)
+   *   - el banner muestra "Procesando…" con contador
+   *   - el botón queda deshabilitado
+   *  Al terminar:
+   *   - si processing_completed_at está set → success, refresco
+   *   - si processing_error está set → mostramos el nuevo error
+   *   - si timeout (>120s) → toast warning + refresco igual */
   retryPipelineFromCuration(rehydrate: boolean): void {
     if (this.isRetryingPipeline || !this.sessionId) return;
     this.isRetryingPipeline = true;
+    // Marcamos status='processing' en local de inmediato para que el banner
+    // cambie a "Procesando…" sin esperar la primera vuelta del polling.
+    this.meetingData.status = 'processing';
+    this.meetingData.processing_error = '';
     const headers = this.authService.getAuthHeaders();
     const url =
       `${environment.apiUrl}/api/webhook/fireflies/sessions/${this.sessionId}/retry` +
       (rehydrate ? '?rehydrate_from_fireflies=true' : '');
-    this.toast.info('Reintento encolado. Tarda unos segundos…');
+    this.toast.info(
+      rehydrate
+        ? 'Volviendo a traer datos de Fireflies y reanalizando con IA. Tarda hasta 1-2 min.'
+        : 'Reanalizando con IA. Tarda 30-60 segundos.',
+    );
     this.http.post<any>(url, {}, { headers })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          // Polling suave: re-cargamos la sesión cada 4 s hasta 5 intentos
-          // o hasta que processing_error se vacíe.
-          let attempts = 0;
-          const MAX = 5;
-          const pollMs = 4000;
+          // Polling: 24 intentos × 5s = 120 s (cubre el caso peor de
+          // pipeline + Fireflies API). Para stops en cuanto el backend
+          // emite señal clara: processing_completed_at set, o
+          // processing_error set (real, no in-flight).
+          const MAX = 24;
+          const pollMs = 5000;
+          this.retryProgress = { current: 0, total: MAX };
           const tick = () => {
-            attempts += 1;
+            this.retryProgress.current += 1;
+            this.cdr.detectChanges();
             this.http.get<any>(
               `${environment.apiUrl}/api/sessions/${this.sessionId}`,
               { headers },
@@ -546,9 +574,10 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
                 next: (res) => {
                   const session = res?.session ?? res;
                   if (session) {
-                    // Sincronizamos solo los campos de salud para que el banner
-                    // / badge se re-renderice. NO tocamos las cards de
-                    // contenido todavía — eso lo hace loadSessionDetails().
+                    // Sincronizamos health fields + content para que el
+                    // banner / contenido reaccione en cuanto el backend
+                    // commitea cambios.
+                    this.meetingData.status = session.status ?? this.meetingData.status;
                     this.meetingData.processing_error = session.processing_error || '';
                     this.meetingData.processing_completed_at = session.processing_completed_at || '';
                     this.meetingData.raw_transcript = session.raw_transcript ?? this.meetingData.raw_transcript;
@@ -558,34 +587,59 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
                     this.meetingData.processed_agreements = session.processed_agreements ?? this.meetingData.processed_agreements;
                     this.meetingData.action_items = res?.action_items || this.meetingData.action_items || [];
                   }
-                  // Usamos la MISMA heurística del banner para decidir cuándo
-                  // dejar de polleal: ya no estamos fallando si el flag está
-                  // limpio Y hay contenido.
-                  const stillFailing = this.isSessionFailing();
-                  if (!stillFailing || attempts >= MAX) {
+                  // Señales del backend (en orden de prioridad):
+                  const completedAt = (session?.processing_completed_at || '').trim();
+                  const errorMsg = (session?.processing_error || '').trim();
+                  const stillRunning = (session?.status || '').toLowerCase() === 'processing';
+
+                  const finished = !!completedAt || (!!errorMsg && !stillRunning);
+                  if (finished || this.retryProgress.current >= MAX) {
                     this.isRetryingPipeline = false;
-                    if (!stillFailing) {
+                    if (completedAt) {
                       this.toast.success('Pipeline IA completado correctamente.');
-                      this.loadSessionDetails();  // refresco completo
-                    } else if (attempts >= MAX) {
-                      this.toast.warning('El reintento sigue en curso. Refrescá la página en unos segundos.');
+                      this.loadSessionDetails();
+                    } else if (errorMsg) {
+                      this.toast.error('El reintento falló: ' + errorMsg.slice(0, 200));
+                      this.loadSessionDetails();
+                    } else {
+                      // Timeout sin señal definitiva — refrescamos igual
+                      // para mostrar el último estado conocido.
+                      this.toast.warning(
+                        'El pipeline sigue en proceso. Refrescá la página en unos segundos para ver el resultado.',
+                      );
+                      this.loadSessionDetails();
                     }
+                    this.retryProgress = { current: 0, total: 0 };
                     this.cdr.detectChanges();
                     return;
                   }
                   setTimeout(tick, pollMs);
                 },
                 error: () => {
-                  this.isRetryingPipeline = false;
-                  this.cdr.detectChanges();
+                  // Un GET fallido no debe romper el polling — reintentamos.
+                  if (this.retryProgress.current < MAX) {
+                    setTimeout(tick, pollMs);
+                  } else {
+                    this.isRetryingPipeline = false;
+                    this.retryProgress = { current: 0, total: 0 };
+                    this.cdr.detectChanges();
+                  }
                 },
               });
           };
-          setTimeout(tick, pollMs);
+          // Primer tick inmediato (no esperamos 5s para mostrar 1/24).
+          setTimeout(tick, 1000);
         },
-        error: () => {
+        error: (err) => {
           this.isRetryingPipeline = false;
-          this.toast.error('No pude encolar el reintento.');
+          this.retryProgress = { current: 0, total: 0 };
+          const status = err?.status;
+          const detail = err?.error?.detail || err?.message || 'Error desconocido';
+          this.toast.error(
+            status
+              ? `No pude encolar el reintento (HTTP ${status}): ${detail}`
+              : 'No pude encolar el reintento. Verificá tu conexión.',
+          );
           this.cdr.detectChanges();
         },
       });

@@ -14,8 +14,63 @@
         <p class="acn-greeting-sub">Esto es lo que está pasando en tus reuniones y proyectos.</p>
     </header>
 
+    <!-- ============= SKELETON OVERLAY (carga inicial del overview) =============
+         Se muestra mientras `isLoadingOverview` está true. Reemplaza KPIs +
+         grids analíticas + insights con bloques shimmer para que la vista
+         no quede "vacía con ceros" en la primera carga. -->
+    <ng-container *ngIf="isLoadingOverview">
+        <section class="acn-kpis" aria-label="Cargando métricas">
+            <article class="acn-kpi" *ngFor="let _ of [1,2,3,4]">
+                <div class="acn-kpi-head">
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                    <span class="skeleton skeleton-line is-sm" style="width: 110px"></span>
+                </div>
+                <div class="acn-kpi-body">
+                    <span class="skeleton skeleton-line is-xl" style="width: 70%; height: 28px"></span>
+                </div>
+            </article>
+        </section>
+
+        <section class="acn-analytics-grid" aria-label="Cargando análisis">
+            <article class="acn-card">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <span class="skeleton" style="display:block; height: 220px; margin-top: 20px; border-radius: 10px"></span>
+            </article>
+            <article class="acn-card">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <div style="display:flex; align-items:center; justify-content:center; padding: 24px 0">
+                    <span class="skeleton skeleton-circle" style="width: 140px; height: 140px"></span>
+                </div>
+            </article>
+            <article class="acn-card">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <div style="display:flex; flex-direction:column; gap:12px; margin-top: 16px">
+                    <div *ngFor="let _ of [1,2,3,4]" style="display:flex; gap:12px; align-items:center">
+                        <span class="skeleton skeleton-circle is-sm"></span>
+                        <span class="skeleton skeleton-line is-full"></span>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="acn-insights-grid" aria-label="Cargando insights">
+            <article class="acn-card" *ngFor="let _ of [1,2,3]">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <div style="display:flex; flex-direction:column; gap:14px; margin-top: 16px">
+                    <div *ngFor="let _ of [1,2,3,4]" class="skeleton-stack">
+                        <span class="skeleton skeleton-circle is-sm"></span>
+                        <div class="skeleton-stack-body">
+                            <span class="skeleton skeleton-line is-full"></span>
+                            <span class="skeleton skeleton-line is-sm"></span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </ng-container>
+
     <!-- ============= KPI TILES ============= -->
-    <section class="acn-kpis" aria-label="Métricas principales">
+    <section class="acn-kpis" aria-label="Métricas principales" *ngIf="!isLoadingOverview">
         <article class="acn-kpi" *ngFor="let k of kpiTiles" [attr.data-tone]="k.tone">
             <div class="acn-kpi-head">
                 <div class="acn-kpi-icon" [attr.data-tone]="k.tone" [ngSwitch]="k.icon">
@@ -67,7 +122,7 @@
     </section>
 
     <!-- ============= ANALYTICS ROW: Activity · Follow-up · Sync Health ============= -->
-    <section class="acn-analytics-grid">
+    <section class="acn-analytics-grid" *ngIf="!isLoadingOverview">
 
         <!-- Meeting Activity -->
         <article class="acn-card acn-card-activity">
@@ -347,7 +402,7 @@
     </section>
 
     <!-- ============= INSIGHTS ROW: Recently Analyzed · Top Risks · Top Actions ============= -->
-    <section class="acn-insights-grid">
+    <section class="acn-insights-grid" *ngIf="!isLoadingOverview">
 
         <!-- Recently Analyzed Meetings -->
         <article class="acn-card acn-card-meetings">
