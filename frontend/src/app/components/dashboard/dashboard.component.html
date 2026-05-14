@@ -1,16 +1,22 @@
 <!-- ============================================================================
-     Dashboard Overview — réplica visual del handoff "Good morning, Karan".
+     Dashboard Overview.
      Layout: 4 KPI tiles → Activity (chart) + Follow-up (donut) + Sync Health
               → Recently Analyzed Meetings + Top Risks + Top Action Items
               → Quick Actions horizontal
-     Toda la lógica/datos viene del DashboardComponent existente; aquí sólo
-     re-estilamos para parecernos al mockup.
+     Toda la lógica/datos viene del DashboardComponent existente.
      ============================================================================ -->
 <div class="acten-dashboard">
 
-    <!-- ============= HERO ============= -->
+    <!-- ============= HERO =============
+         El nombre se renderiza condicionalmente para evitar el flicker
+         que ocurría cuando AuthService aún no había resuelto el usuario:
+         antes mostraba "Buenos días, Karan" (placeholder) y luego saltaba
+         al nombre real. Ahora muestra solo "Buenos días" hasta que el
+         nombre está listo, y entonces lo concatena en un solo render. -->
     <header class="acn-hero">
-        <h1 class="acn-greeting">{{ greeting }}, {{ userFirstName }}</h1>
+        <h1 class="acn-greeting">
+            {{ greeting }}<ng-container *ngIf="userFirstName">, {{ userFirstName }}</ng-container>
+        </h1>
         <p class="acn-greeting-sub">Esto es lo que está pasando en tus reuniones y proyectos.</p>
     </header>
 

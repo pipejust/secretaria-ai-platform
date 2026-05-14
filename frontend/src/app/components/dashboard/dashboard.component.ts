@@ -421,7 +421,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     get userFirstName(): string {
         const fn = this.authService.currentUserValue?.full_name || '';
-        return (fn.split(' ')[0] || fn || '').trim() || 'Karan';
+        return (fn.split(' ')[0] || fn || '').trim();
     }
 
     get todayLabel(): string {
