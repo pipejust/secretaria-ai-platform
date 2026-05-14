@@ -64,61 +64,58 @@ class FirefliesService:
                 "Las requests a Fireflies van a fallar con 401."
             )
 
-    async def get_transcript_data(self, transcript_id: str) -> Dict[str, Any]:
-        """Consulta la API de Fireflies para obtener datos detallados de una reunión."""
-        query = """
-        query MeetingRichOutput($transcriptId: String!) {
-            transcript(id: $transcriptId) {
-                id
-                title
-                dateString
-                duration
-                summary {
-                    overview
-                    short_summary
-                    notes
-                    action_items
-                    topics_discussed
-                    keywords
-                    outline
-                    bullet_gist
-                }
-                sentences {
-                    text
-                    speaker_name
-                }
-                analytics {
-                    sentiments {
-                        positive_pct
-                        neutral_pct
-                        negative_pct
-                    }
-                    speakers {
-                        speaker_id
-                        name
-                        duration
-                        word_count
-                    }
-                }
+    # Query "core" — los campos que SI usamos en el pipeline (transcript,
+    # summary, sentences). Compatible con Fireflies free tier.
+    _QUERY_CORE = """
+    query MeetingCore($transcriptId: String!) {
+        transcript(id: $transcriptId) {
+            id
+            title
+            dateString
+            duration
+            summary {
+                overview
+                short_summary
+                notes
+                action_items
+                topics_discussed
+                keywords
+                outline
+                bullet_gist
             }
-            apps(transcript_id: $transcriptId, limit: 10) {
-                outputs {
-                    title
-                    response
-                    created_at
-                }
+            sentences {
+                text
+                speaker_name
             }
         }
+        apps(transcript_id: $transcriptId, limit: 10) {
+            outputs {
+                title
+                response
+                created_at
+            }
+        }
+    }
+    """
+
+    async def get_transcript_data(self, transcript_id: str) -> Dict[str, Any]:
+        """Consulta la API de Fireflies para obtener datos de una reunión.
+
+        Solo pide los campos que el pipeline IA realmente consume:
+        title, dateString, duration, summary, sentences, apps.
+
+        ANTES pedíamos también `analytics { sentiments, speakers }` pero ese
+        campo es PAGO en Fireflies — devuelve `paid_required` y rompe la
+        query entera para usuarios free tier. Como nunca usamos analytics
+        en el resto del código, lo removí del query.
         """
-        
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
         payload = {
-            "query": query,
-            "variables": {"transcriptId": transcript_id}
+            "query": self._QUERY_CORE,
+            "variables": {"transcriptId": transcript_id},
         }
 
         async with httpx.AsyncClient(timeout=None) as client:
@@ -126,24 +123,51 @@ class FirefliesService:
                 response = await client.post(self.BASE_URL, json=payload, headers=headers)
                 response.raise_for_status()
             except httpx.ReadTimeout:
-                print(f"Fireflies API ReadTimeout fetching transcript {transcript_id}")
+                logger.warning("Fireflies ReadTimeout fetching transcript %s", transcript_id)
                 raise
-            except Exception as e:
+            except Exception:
                 import traceback
-                print(f"Fireflies API Error fetching transcript:")
-                print(traceback.format_exc())
+                logger.error("Fireflies API HTTP error: %s", traceback.format_exc())
                 raise
-                
+
             data = response.json()
-            
-            # Manejo de errores de GraphQL
+
+            # Manejo de errores de GraphQL.
             if "errors" in data:
-                # Retornamos el error para que la ruta pueda atraparlo si es object_not_found
-                raise Exception(data["errors"])
-                
+                errors = data["errors"]
+                # Caso especial: si el ÚNICO error es paid_required en algún
+                # campo opcional y `transcript` igual vino con datos, los
+                # devolvemos. Fireflies a veces devuelve datos parciales +
+                # errors[].
+                transcript_data = (data.get("data") or {}).get("transcript")
+                if transcript_data and self._all_errors_are_paid_required(errors):
+                    logger.info(
+                        "Fireflies devolvió datos parciales para %s (algunos "
+                        "campos paid-only ignorados).",
+                        transcript_id,
+                    )
+                    transcript_data["apps_layer"] = (data.get("data") or {}).get("apps", {})
+                    return transcript_data
+                # Si no hay datos utilizables, propagamos el error.
+                raise Exception(errors)
+
             result = data["data"].get("transcript") or {}
             result["apps_layer"] = data["data"].get("apps", {})
             return result
+
+    @staticmethod
+    def _all_errors_are_paid_required(errors: list) -> bool:
+        """True si TODOS los errores devueltos son por feature paga.
+        Permite degradar gracefully: si solo se cae el campo paid-only,
+        igual devolvemos los datos free-tier que sí trajeron."""
+        if not errors:
+            return False
+        for e in errors:
+            ext = (e.get("extensions") or {}) if isinstance(e, dict) else {}
+            code = ext.get("code") or e.get("code") if isinstance(e, dict) else ""
+            if code != "paid_required":
+                return False
+        return True
 
 
 # ---------------------------------------------------------------------------
