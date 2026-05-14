@@ -710,8 +710,12 @@ def check_pending_summaries() -> None:
                         len(ms.raw_transcript or ""),
                     )
                     try:
+                        # suppress_email=True: process_transcript_background no
+                        # llamará a _send_session_ready_email. El cron decide
+                        # si manda correo después según el resultado.
                         await process_transcript_background(
                             ms.id, ms.fireflies_id, {"title": ms.title or ""},
+                            suppress_email=True,
                         )
                     except Exception:
                         logger.exception(
@@ -725,18 +729,20 @@ def check_pending_summaries() -> None:
                         not (ms.processing_error or "").strip()
                         and bool((ms.raw_transcript or "").strip())
                     )
-                    if succeeded and (ms.session_ready_email_sent_at or "").strip():
-                        # Pipeline OK ahora. Reemplazar el correo de error
-                        # viejo con uno nuevo que tenga la sesión completa.
+                    if succeeded:
+                        # Pipeline OK ahora. Si ya había sent_at del correo
+                        # de error original, lo limpiamos para mandar uno
+                        # nuevo con la sesión completa.
                         logger.info(
-                            "Sesión %s: retry exitoso. Reenviando correo (esta vez OK).",
+                            "Sesión %s: retry exitoso. Mando correo final (sesión completa).",
                             ms.id,
                         )
-                        ms_ok = db.get(MeetingSession, ms.id)
-                        if ms_ok:
-                            ms_ok.session_ready_email_sent_at = ""
-                            db.add(ms_ok)
-                            db.commit()
+                        if (ms.session_ready_email_sent_at or "").strip():
+                            ms_ok = db.get(MeetingSession, ms.id)
+                            if ms_ok:
+                                ms_ok.session_ready_email_sent_at = ""
+                                db.add(ms_ok)
+                                db.commit()
                         try:
                             await _send_session_ready_email(
                                 ms.id, ms.tenant_id, force=True,
@@ -746,10 +752,10 @@ def check_pending_summaries() -> None:
                                 "check_pending_summaries: send_email post-retry falló para sesión %s",
                                 ms.id,
                             )
-                    elif not succeeded:
+                    else:
                         logger.info(
-                            "Sesión %s: retry falló otra vez (%s). NO mando correo "
-                            "(idempotencia preserva el envío original).",
+                            "Sesión %s: retry falló otra vez (%s). "
+                            "NO mando correo (suppress_email=True garantiza no spam).",
                             ms.id, (ms.processing_error or "")[:60],
                         )
                     continue

@@ -590,10 +590,20 @@ async def _dispatch_routing(
 
 
 async def process_transcript_background(
-    session_id: int, transcript_id: str, payload_data: dict
+    session_id: int,
+    transcript_id: str,
+    payload_data: dict,
+    *,
+    suppress_email: bool = False,
 ) -> None:
     """Llamado vía BackgroundTask. Trae datos nativos de Fireflies, los
-    persiste en la sesión y luego invoca el pipeline IA común."""
+    persiste en la sesión y luego invoca el pipeline IA común.
+
+    `suppress_email=True` evita que esta función llame a
+    _send_session_ready_email al terminar. Usado por el cron de retry
+    para que solo se mande UN correo cuando el cron determine éxito,
+    en lugar de potencialmente uno por cada retry fallido.
+    """
     from database import engine
 
     with Session(engine) as db:
@@ -907,6 +917,18 @@ async def process_transcript_background(
     # Se ejecuta SIEMPRE: con pipeline OK avisa "lista para enviar/curar",
     # con pipeline fallido avisa "hubo un error, entrá a reintentar". El
     # método es idempotente (no reenvía si ya se envió antes).
+    #
+    # `suppress_email=True` desactiva esto cuando el cron retry nos llama
+    # — el cron se encarga del email post-success por su cuenta para evitar
+    # races entre procesamiento y idempotencia.
+    if suppress_email:
+        logger.debug(
+            "Sesión %s: suppress_email=True, no se llama a _send_session_ready_email "
+            "desde process_transcript_background.",
+            session_id,
+        )
+        return
+
     try:
         # tenant_id real puede no estar en scope si crasheó muy temprano —
         # lo resolvemos desde la sesión.
