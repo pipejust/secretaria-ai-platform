@@ -688,9 +688,20 @@ def check_pending_summaries() -> None:
 
                 # Caso B: la sesión quedó vacía por error transitorio en el
                 # primer intento (rate limit, timeout). Re-corremos TODO el
-                # pipeline (vuelve a tirar Fireflies + Groq + OpenAI). Si
-                # Fireflies sigue rate-limited, va a fallar de nuevo y el
-                # próximo ciclo del cron lo reintenta.
+                # pipeline (vuelve a tirar Fireflies + Groq + OpenAI).
+                #
+                # IMPORTANTE: NO limpiamos session_ready_email_sent_at antes
+                # de re-correr. Si Fireflies sigue rate-limited, el pipeline
+                # va a fallar de nuevo y mandar otro correo de error → spam.
+                # En cambio:
+                # 1. Dejamos session_ready_email_sent_at intacto (el correo
+                #    de error del primer intento ya salió).
+                # 2. Re-corremos el pipeline. Su llamada interna a
+                #    _send_session_ready_email queda bloqueada por
+                #    idempotencia.
+                # 3. SI el retry tuvo éxito (transcript llegó), recién ahí
+                #    limpiamos sent_at y mandamos UN correo nuevo con la
+                #    sesión completa.
                 if needs_full_retry:
                     logger.info(
                         "Sesión %s: tiene processing_error transitorio (%s) y "
@@ -698,15 +709,6 @@ def check_pending_summaries() -> None:
                         ms.id, (ms.processing_error or "")[:60],
                         len(ms.raw_transcript or ""),
                     )
-                    # Limpiamos session_ready_email_sent_at para que cuando
-                    # el pipeline termine OK pueda mandarse el correo bueno
-                    # (sin la nota de error del primer envío).
-                    if (ms.session_ready_email_sent_at or "").strip():
-                        ms_clear = db.get(MeetingSession, ms.id)
-                        if ms_clear:
-                            ms_clear.session_ready_email_sent_at = ""
-                            db.add(ms_clear)
-                            db.commit()
                     try:
                         await process_transcript_background(
                             ms.id, ms.fireflies_id, {"title": ms.title or ""},
@@ -716,7 +718,41 @@ def check_pending_summaries() -> None:
                             "check_pending_summaries: full retry falló para sesión %s",
                             ms.id,
                         )
-                    continue  # el process_transcript_background ya manda correo si OK
+
+                    # Verificar si el retry tuvo éxito.
+                    db.refresh(ms)
+                    succeeded = (
+                        not (ms.processing_error or "").strip()
+                        and bool((ms.raw_transcript or "").strip())
+                    )
+                    if succeeded and (ms.session_ready_email_sent_at or "").strip():
+                        # Pipeline OK ahora. Reemplazar el correo de error
+                        # viejo con uno nuevo que tenga la sesión completa.
+                        logger.info(
+                            "Sesión %s: retry exitoso. Reenviando correo (esta vez OK).",
+                            ms.id,
+                        )
+                        ms_ok = db.get(MeetingSession, ms.id)
+                        if ms_ok:
+                            ms_ok.session_ready_email_sent_at = ""
+                            db.add(ms_ok)
+                            db.commit()
+                        try:
+                            await _send_session_ready_email(
+                                ms.id, ms.tenant_id, force=True,
+                            )
+                        except Exception:
+                            logger.exception(
+                                "check_pending_summaries: send_email post-retry falló para sesión %s",
+                                ms.id,
+                            )
+                    elif not succeeded:
+                        logger.info(
+                            "Sesión %s: retry falló otra vez (%s). NO mando correo "
+                            "(idempotencia preserva el envío original).",
+                            ms.id, (ms.processing_error or "")[:60],
+                        )
+                    continue
 
                 # Caso A: tiene transcript pero le falta summary.
                 tier = await get_or_detect_fireflies_tier(
@@ -777,12 +813,13 @@ scheduler.add_job(
 scheduler.add_job(
     check_overdue_action_items, "interval", hours=1, max_instances=1
 )
-# Refetch periódico de summaries de Fireflies para tenants paid donde el
-# webhook llegó antes que Fireflies terminara de generar el summary.
-# Cada 1 min porque la ventana de espera es corta (30 min) y el summary
-# normalmente llega en menos de 5 min.
+# Refetch periódico de summaries / retry de errores transitorios de
+# Fireflies. Corre cada 5 min con offset de 2 min después de la hora
+# exacta (XX:02, XX:07, XX:12, ...). Esto evita martillar la API de
+# Fireflies justo en la hora exacta cuando la cuota se resetea.
 scheduler.add_job(
-    check_pending_summaries, "interval", minutes=1, max_instances=1
+    check_pending_summaries, "cron", minute="2,7,12,17,22,27,32,37,42,47,52,57",
+    max_instances=1,
 )
 
 
