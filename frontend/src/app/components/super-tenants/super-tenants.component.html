@@ -954,3 +954,55 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================================
+     Modal de eliminación PERMANENTE — pide tipear el slug exacto
+     antes de habilitar el botón. Acción irreversible.
+     ============================================================ -->
+<div class="tn-modal-overlay" *ngIf="hardDeleteConfirm.tenant" (click)="cancelHardDelete()">
+    <div class="tn-modal tn-modal--narrow tn-confirm" (click)="$event.stopPropagation()">
+        <div class="tn-confirm-head tn-confirm-head--danger">
+            <span class="tn-confirm-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                </svg>
+            </span>
+            <div>
+                <h3>Eliminar empresa permanentemente</h3>
+                <p class="tn-confirm-msg">
+                    Vas a eliminar <strong>{{ hardDeleteConfirm.tenant?.name }}</strong> y
+                    <strong>TODOS</strong> sus datos asociados:
+                    usuarios, proyectos, sesiones, tareas, integraciones, plantillas,
+                    embeddings, notificaciones y logs de auditoría.
+                </p>
+                <p class="tn-confirm-msg" style="margin-top: 8px; color: #be123c;">
+                    <strong>Esta acción es IRREVERSIBLE.</strong> No hay forma de recuperar la información.
+                </p>
+                <div style="margin-top: 16px;">
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">
+                        Para confirmar, tipeá el slug exacto:
+                        <code style="background:#fef2f2; padding:2px 6px; border-radius:4px; color:#991b1b;">{{ hardDeleteConfirm.tenant?.slug }}</code>
+                    </label>
+                    <input type="text"
+                           [(ngModel)]="hardDeleteConfirm.typedSlug"
+                           [placeholder]="hardDeleteConfirm.tenant?.slug"
+                           autocomplete="off"
+                           style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-family:monospace; font-size:14px;"
+                           (keyup.enter)="confirmHardDelete()" />
+                </div>
+            </div>
+        </div>
+        <div class="tn-confirm-foot">
+            <button type="button" class="tn-btn" (click)="cancelHardDelete()">Cancelar</button>
+            <button type="button"
+                    class="tn-btn tn-confirm-btn tn-confirm-btn--danger"
+                    [disabled]="(hardDeleteConfirm.typedSlug || '').toLowerCase().trim() !== hardDeleteConfirm.tenant?.slug?.toLowerCase()"
+                    (click)="confirmHardDelete()">
+                Eliminar permanentemente
+            </button>
+        </div>
+    </div>
+</div>

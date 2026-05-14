@@ -560,41 +560,82 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         }
     }
 
-    private async _performDelete(t: TenantOut): Promise<void> {
+    /** Hard delete: borra físicamente la empresa Y TODOS sus datos asociados.
+     *  IRREVERSIBLE — el backend valida con `?hard=true` y hace cascada manual. */
+    private async _performHardDelete(t: TenantOut): Promise<void> {
         try {
-            await firstValueFrom(
-                this.http.delete(`${this.apiUrl}/${t.slug}`, { headers: this._headers() }),
+            const res: any = await firstValueFrom(
+                this.http.delete(
+                    `${this.apiUrl}/${t.slug}?hard=true`,
+                    { headers: this._headers() },
+                ),
             );
-            // El backend hace soft-delete (is_active=false); reflejamos eso en la fila.
-            t.is_active = false;
-            this.toast.success(`Empresa "${t.name}" desactivada.`);
+            // Removemos la fila del listado en memoria.
+            this.tenants = this.tenants.filter(x => x.slug !== t.slug);
+            const summary = res?.rows_deleted
+                ? Object.entries(res.rows_deleted)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(', ')
+                : '';
+            this.toast.success(
+                `Empresa "${t.name}" eliminada permanentemente.` +
+                (summary ? ` Filas borradas → ${summary}` : ''),
+            );
             this.cdr.detectChanges();
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo eliminar la empresa.');
+            this.toast.error(
+                err?.error?.detail
+                || 'No se pudo eliminar la empresa. Revisá los logs del backend.',
+            );
         }
     }
 
+    /** Estado del confirm modal de hard-delete: pide tipear el slug exacto. */
+    hardDeleteConfirm: {
+        tenant: TenantOut | null;
+        typedSlug: string;
+    } = { tenant: null, typedSlug: '' };
+
+    /** Acción "Eliminar" del menu — hard delete con confirmación fuerte. */
     deleteTenant(t: TenantOut, evt?: Event): void {
         if (evt) { evt.stopPropagation(); evt.preventDefault(); }
         this.closeRowMenu();
         if (t.slug === 'acten') {
             this.confirmAction({
                 title: 'Tenant principal protegido',
-                message: `"${t.name}" es el tenant principal y no se puede eliminar. Esta operación está bloqueada por el backend para proteger el panel de control.`,
+                message: `"${t.name}" es el tenant principal y no se puede eliminar. Esta operación está bloqueada por el backend.`,
                 confirmLabel: 'Entendido',
                 confirmVariant: 'warning',
                 action: () => {},
             });
             return;
         }
-        this.confirmAction({
-            title: 'Eliminar empresa',
-            message: `¿Estás seguro de eliminar "${t.name}"? Esta acción la marca como inactiva inmediatamente y sus usuarios pierden el acceso.`,
-            confirmLabel: 'Eliminar',
-            confirmVariant: 'danger',
-            action: () => this._performDelete(t),
-        });
+        // Abrimos el modal especializado que requiere tipear el slug.
+        this.hardDeleteConfirm = { tenant: t, typedSlug: '' };
+        this.cdr.detectChanges();
     }
+
+    /** Cancela el modal de hard-delete. */
+    cancelHardDelete(): void {
+        this.hardDeleteConfirm = { tenant: null, typedSlug: '' };
+        this.cdr.detectChanges();
+    }
+
+    /** Ejecuta el hard-delete cuando el slug tipeado coincide. */
+    confirmHardDelete(): void {
+        const t = this.hardDeleteConfirm.tenant;
+        if (!t) return;
+        const typed = (this.hardDeleteConfirm.typedSlug || '').trim().toLowerCase();
+        if (typed !== t.slug.toLowerCase()) {
+            this.toast.warning('El slug tipeado no coincide.');
+            return;
+        }
+        const tenant = t;
+        this.hardDeleteConfirm = { tenant: null, typedSlug: '' };
+        this.cdr.detectChanges();
+        this._performHardDelete(tenant);
+    }
+
 
     selectTenant(t: TenantOut): void {
         this.selected = t;

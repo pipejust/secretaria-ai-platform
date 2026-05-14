@@ -345,18 +345,160 @@ def update_tenant(
 @router.delete("/{slug}")
 def delete_tenant(
     slug: str,
+    hard: bool = False,
     db: Session = Depends(get_session),
     _su: User = Depends(require_superadmin),
 ):
-    """Soft-delete: marca como inactivo. Los usuarios del tenant ya no podrán
-    loguear (login chequea is_active). Para borrado físico — manualmente vía SQL.
+    """Borra una empresa. Por defecto soft (is_active=False); con `?hard=true`
+    elimina físicamente la empresa Y TODOS sus datos asociados (usuarios,
+    proyectos, sesiones, tareas, integraciones, logs, embeddings, etc.).
+
+    El borrado físico es IRREVERSIBLE — no hay undo. La UI debe pedir
+    confirmación explícita antes de invocarlo con hard=true.
     """
     t = db.exec(select(Tenant).where(Tenant.slug == slug.lower())).first()
     if not t:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     if t.slug == "acten":
-        raise HTTPException(status_code=400, detail="No se puede desactivar el tenant principal 'acten'.")
-    t.is_active = False
-    db.add(t)
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede eliminar el tenant principal 'acten'.",
+        )
+
+    if not hard:
+        t.is_active = False
+        db.add(t)
+        db.commit()
+        return {"status": "deactivated", "slug": slug}
+
+    # Hard delete: cascada manual respetando FKs.
+    deleted = _hard_delete_tenant_cascade(db, t.id)
+    return {
+        "status": "deleted",
+        "slug": slug,
+        "rows_deleted": deleted,
+    }
+
+
+def _hard_delete_tenant_cascade(db: Session, tenant_id: int) -> dict:
+    """Elimina TODO lo que pertenece a un tenant en orden topológico (de
+    hijos a padres) para no violar foreign keys. Usa SQL crudo porque es
+    significativamente más rápido y predecible que cargar relaciones via ORM.
+    """
+    from sqlalchemy import text
+
+    counts: dict = {}
+
+    def _exec(sql: str, params: dict | None = None, key: str | None = None) -> int:
+        result = db.execute(text(sql), params or {})
+        affected = result.rowcount or 0
+        if key:
+            counts[key] = counts.get(key, 0) + affected
+        return affected
+
+    # 1) IDs de sesiones, proyectos, usuarios del tenant — los necesitamos
+    #    para limpiar tablas que NO tienen tenant_id directo.
+    sess_ids = [r[0] for r in db.execute(
+        text("SELECT id FROM meetingsession WHERE tenant_id = :t"),
+        {"t": tenant_id},
+    ).fetchall()]
+    proj_ids = [r[0] for r in db.execute(
+        text("SELECT id FROM project WHERE tenant_id = :t"),
+        {"t": tenant_id},
+    ).fetchall()]
+    user_ids = [r[0] for r in db.execute(
+        text('SELECT id FROM "user" WHERE tenant_id = :t'),
+        {"t": tenant_id},
+    ).fetchall()]
+
+    sess_clause = (
+        "session_id = ANY(:sess_ids)" if sess_ids else "FALSE"
+    )
+    proj_clause = (
+        "project_id = ANY(:proj_ids)" if proj_ids else "FALSE"
+    )
+    user_clause = (
+        "user_id = ANY(:user_ids)" if user_ids else "FALSE"
+    )
+
+    # 2) Tablas dependientes de meetingsession (cascada por session_id).
+    if sess_ids:
+        for table_key, sql in [
+            ("embeddingchunk",       f"DELETE FROM embeddingchunk       WHERE {sess_clause}"),
+            ("sessionoutput",        f"DELETE FROM sessionoutput        WHERE {sess_clause}"),
+            ("meetingsessionversion",f"DELETE FROM meetingsessionversion WHERE {sess_clause}"),
+            ("comment",              f"DELETE FROM comment              WHERE {sess_clause}"),
+            ("sessionpermission",    f"DELETE FROM sessionpermission    WHERE {sess_clause}"),
+            ("calendarevent",        f"DELETE FROM calendarevent        WHERE {sess_clause}"),
+        ]:
+            try:
+                _exec(sql, {"sess_ids": sess_ids}, key=table_key)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Skip %s (probablemente no existe): %s", table_key, exc)
+
+    # 3) Tablas dependientes de project.
+    if proj_ids:
+        for table_key, sql in [
+            ("routing",        f"DELETE FROM routing        WHERE {proj_clause}"),
+            ("projectcontact", f"DELETE FROM projectcontact WHERE {proj_clause}"),
+            ("template",       f"DELETE FROM template       WHERE {proj_clause}"),
+        ]:
+            try:
+                _exec(sql, {"proj_ids": proj_ids}, key=table_key)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Skip %s: %s", table_key, exc)
+
+    # 4) Tablas dependientes de user.
+    if user_ids:
+        for table_key, sql in [
+            ("calendaraccount", f"DELETE FROM calendaraccount WHERE {user_clause}"),
+        ]:
+            try:
+                _exec(sql, {"user_ids": user_ids}, key=table_key)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Skip %s: %s", table_key, exc)
+
+    # 5) Tablas con tenant_id directo. ORDEN IMPORTA — primero las que
+    #    referencian users/projects/sessions, después las independientes.
+    for table_key, sql in [
+        ("actionitem",        "DELETE FROM actionitem        WHERE tenant_id = :t"),
+        ("meetingsession",    "DELETE FROM meetingsession    WHERE tenant_id = :t"),
+        ("notification",      "DELETE FROM notification      WHERE tenant_id = :t"),
+        ("askhistory",        "DELETE FROM askhistory        WHERE tenant_id = :t"),
+        ("project",           "DELETE FROM project           WHERE tenant_id = :t"),
+        ("outputtemplate",    "DELETE FROM outputtemplate    WHERE tenant_id = :t"),
+        ("integrationsetting","DELETE FROM integrationsetting WHERE tenant_id = :t"),
+        ("apikey",            "DELETE FROM apikey            WHERE tenant_id = :t"),
+        ("auditlog",          "DELETE FROM auditlog          WHERE tenant_id = :t"),
+        ("user",              'DELETE FROM "user"            WHERE tenant_id = :t'),
+    ]:
+        try:
+            _exec(sql, {"t": tenant_id}, key=table_key)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Hard-delete FALLÓ en %s para tenant %s: %s — abortando.",
+                table_key, tenant_id, exc,
+            )
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    f"Error eliminando datos de la tabla '{table_key}'. "
+                    f"Operación abortada — la empresa NO fue eliminada. "
+                    f"Detalle: {exc}"
+                ),
+            ) from exc
+
+    # 6) Finalmente la empresa.
+    try:
+        _exec("DELETE FROM tenant WHERE id = :t", {"t": tenant_id}, key="tenant")
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo eliminar la fila tenant: {exc}",
+        ) from exc
+
     db.commit()
-    return {"status": "deactivated", "slug": slug}
+    logger.info("Hard-delete tenant %s OK. Filas borradas: %s", tenant_id, counts)
+    return counts
