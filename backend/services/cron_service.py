@@ -595,25 +595,23 @@ def check_pending_summaries() -> None:
     Política:
     - Aplica a sesiones con `raw_summary == ''` que vinieron de Fireflies
       (tienen `fireflies_id` válido, no `manual_*`).
-    - Solo dentro de las primeras 24h desde `created_at` (no perseguir
-      sesiones viejas para siempre).
+    - Solo dentro de las primeras `_PAID_SUMMARY_RETRY_WINDOW_HOURS` (24h)
+      desde `created_at`. Pasada esa ventana asumimos que Fireflies ya no
+      va a entregar y el cron deja de molestar.
     - Si el tier del tenant es 'free' → ya debería tener summary generado
-      por Groq al procesarse, NO insistimos (ya pasó el chance).
-    - Para tier 'paid' o 'unknown' → pull de Fireflies. Si trae summary →
-      lo guarda y dispara `_send_session_ready_email` (que sí va a salir
-      ahora porque el summary existe).
-    - Si la sesión ya superó `_PAID_SUMMARY_GRACE_HOURS` (4h) sin summary
-      y aún no se mandó el correo → fuerza el envío con la nota
-      "summary aún no disponible" (la próxima ejecución del cron seguirá
-      intentando pull a Fireflies por si llega más tarde).
+      por Groq al procesarse, NO insistimos.
+    - Para tier 'paid' o 'unknown' → pull de Fireflies. Si trae summary,
+      lo guarda Y dispara `_send_session_ready_email` (que pasa el gating
+      porque ahora summary está presente).
+    - Si Fireflies sigue devolviendo vacío, NO se manda correo. La regla
+      del producto es: no se notifica a medias.
 
     Frecuencia: cada 5 minutos. No usamos 1 min para no martillar la API
     de Fireflies (free tier rate-limita rápido).
     """
-    import asyncio
     from routers.fireflies import (
         _send_session_ready_email,
-        _PAID_SUMMARY_GRACE_HOURS,
+        _PAID_SUMMARY_RETRY_WINDOW_HOURS,
         _hours_since_iso,
     )
     from services.fireflies_service import (
@@ -628,14 +626,14 @@ def check_pending_summaries() -> None:
             .where(MeetingSession.raw_summary == "")
             .where(MeetingSession.fireflies_id != "")
         ).all()
-        # Filtramos en Python: que no sean uploads manuales y que tengan
-        # menos de 24h de creación.
+        # Filtramos: que no sean uploads manuales y que tengan menos de
+        # _PAID_SUMMARY_RETRY_WINDOW_HOURS de creación.
         ages = []
         for ms in candidates:
             if (ms.fireflies_id or "").startswith("manual_"):
                 continue
             age_h = _hours_since_iso(ms.created_at)
-            if age_h is None or age_h > 24:
+            if age_h is None or age_h > _PAID_SUMMARY_RETRY_WINDOW_HOURS:
                 continue
             ages.append((ms, age_h))
 
@@ -658,14 +656,13 @@ def check_pending_summaries() -> None:
                     transcript_id_for_probe=ms.fireflies_id,
                 )
                 if tier == "free":
-                    # Ya pasó su chance al procesarse (Groq debió generar).
-                    # No reintentamos para no quemar tokens innecesarios.
+                    # Su chance ya pasó al procesarse (Groq debió generar).
                     continue
 
                 # Tier paid o unknown → pull de Fireflies sin Groq fallback.
                 try:
                     db.refresh(ms)
-                    pulled = await refetch_summary_for_session(
+                    await refetch_summary_for_session(
                         db, ms,
                         api_key=api_key,
                         clean_with_groq=True,
@@ -678,7 +675,6 @@ def check_pending_summaries() -> None:
                         "check_pending_summaries: refetch falló para sesión %s",
                         ms.id,
                     )
-                    pulled = False
 
                 summary_now = bool((ms.raw_summary or "").strip())
 
@@ -689,28 +685,19 @@ def check_pending_summaries() -> None:
                         ms.id, len(ms.raw_summary or ""),
                     )
                     try:
-                        await _send_session_ready_email(ms.id, ms.tenant_id)
+                        # force=True para bypassar el gating del summary
+                        # (que justo acabamos de validar; pasamos la doble
+                        # verificación dentro del send también).
+                        await _send_session_ready_email(
+                            ms.id, ms.tenant_id, force=True,
+                        )
                     except Exception:
                         logger.exception(
                             "check_pending_summaries: send_email falló para sesión %s",
                             ms.id,
                         )
-                elif age_h >= _PAID_SUMMARY_GRACE_HOURS and not (ms.session_ready_email_sent_at or "").strip():
-                    # Grace agotada y sin summary → mandamos el correo igual
-                    # con flag de "summary pendiente" (force=True bypassa
-                    # el gating).
-                    logger.info(
-                        "Sesión %s: %.1fh sin summary (>= %sh grace). "
-                        "Enviando correo con nota 'summary pendiente'.",
-                        ms.id, age_h, _PAID_SUMMARY_GRACE_HOURS,
-                    )
-                    try:
-                        await _send_session_ready_email(ms.id, ms.tenant_id, force=True)
-                    except Exception:
-                        logger.exception(
-                            "check_pending_summaries: send_email (force) falló para sesión %s",
-                            ms.id,
-                        )
+                # Else: summary aún vacío → NO mandamos correo, próximo
+                # ciclo del cron lo intentará otra vez.
 
         try:
             _run_async(_process())

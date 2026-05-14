@@ -225,10 +225,12 @@ def _resolve_admin_recipients(db, tenant_id: int) -> list[tuple[str, str]]:
     return out
 
 
-# Cuántas horas esperamos a que Fireflies entregue el summary nativo
-# (cuentas paid) antes de mandar el correo igual con la nota "summary
-# pendiente". Pasado este umbral asumimos que Fireflies no va a entregar.
-_PAID_SUMMARY_GRACE_HOURS = 4
+# Hasta cuánto sigue intentando el cron pull de summary desde Fireflies
+# para una sesión recién creada. Pasado este umbral, el cron deja de
+# probar (Fireflies casi seguro nunca va a entregar). El correo NO se
+# manda por gracia: la regla del producto es "no se notifica si el summary
+# no está listo". Si tras 24h sigue vacío, queda como caso para el admin.
+_PAID_SUMMARY_RETRY_WINDOW_HOURS = 24
 
 
 def _hours_since_iso(value: str) -> Optional[float]:
@@ -264,14 +266,14 @@ async def _send_session_ready_email(
     sin destinatarios).
 
     Gating:
-      - Pipeline OK + summary vacío + tier paid/unknown + age < 4h →
-        SKIP. Esperamos al cron `check_pending_summaries` que lo
-        reintentará y disparará el correo cuando llegue el summary
-        (o cuando se venza el grace period).
-      - Pipeline OK + summary vacío + tier=free → no debería ocurrir
-        (Groq genera siempre), pero igual enviamos.
-      - Pipeline failed → enviar siempre (avisar del error).
-      - `force=True` → bypassa el gating (lo usa el cron al vencer grace).
+      - Pipeline failed → enviar siempre (avisar del error al admin).
+      - Pipeline OK + summary presente → enviar (caso normal).
+      - Pipeline OK + summary vacío → SKIP. NUNCA mandar correo sin
+        summary. El cron `check_pending_summaries` reintentará y disparará
+        el correo cuando Fireflies entregue. Si nunca entrega, el correo
+        nunca sale (la regla del producto es: no notificar a medias).
+      - `force=True` → bypassa el gating de summary (uso interno: cron
+        cuando confirmó que summary llegó).
 
     Idempotente: si `session_ready_email_sent_at` ya está set, NO reenvía.
     """
@@ -298,30 +300,20 @@ async def _send_session_ready_email(
             pipeline_failed_check = bool((ms.processing_error or "").strip())
             summary_present = bool((ms.raw_summary or "").strip())
 
-            # GATING: si el pipeline OK pero el summary aún no llegó y el
-            # tenant es paid/unknown, esperamos al cron de refetch antes
-            # de mandar el correo. Excepción: pasados N horas, lo
-            # mandamos igual con la nota "summary pendiente".
+            # GATING: si el pipeline está OK pero el summary aún no llegó,
+            # NO enviamos el correo. Punto. La regla del producto es no
+            # notificar a medias: el admin recibirá el correo cuando el
+            # summary esté completo (vía el cron `check_pending_summaries`
+            # que dispara este mismo método con force=True al confirmar
+            # llegada). Si Fireflies nunca entrega, el correo nunca sale.
             if not force and not pipeline_failed_check and not summary_present:
-                from services.fireflies_service import get_or_detect_fireflies_tier
-                tier = await get_or_detect_fireflies_tier(
-                    db, tenant_id, None, transcript_id_for_probe=None,
+                logger.info(
+                    "Sesión %s: pipeline OK pero summary aún vacío. "
+                    "Correo NO enviado — esperando que el cron confirme "
+                    "summary nativo desde Fireflies.",
+                    session_id,
                 )
-                if tier in ("paid", "unknown"):
-                    age_hours = _hours_since_iso(ms.created_at)
-                    if age_hours is None or age_hours < _PAID_SUMMARY_GRACE_HOURS:
-                        logger.info(
-                            "Sesión %s: pipeline OK pero summary aún vacío "
-                            "(tier=%s, age=%.1fh). Esperando al cron de refetch — "
-                            "correo NO enviado aún.",
-                            session_id, tier, age_hours or 0.0,
-                        )
-                        return False
-                    logger.info(
-                        "Sesión %s: agotada grace de %sh sin summary (tier=%s). "
-                        "Enviando correo con nota de summary pendiente.",
-                        session_id, _PAID_SUMMARY_GRACE_HOURS, tier,
-                    )
+                return False
 
             project_name = "General"
             if ms.project_id:
