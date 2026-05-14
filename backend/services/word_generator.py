@@ -112,11 +112,12 @@ class WordGeneratorService:
         existing_doc = Document(doc_path)
 
         # Trick: instanciar CorporateDocxGenerator pero reemplazar su `self.doc`
-        # con el documento existente. Como `__init__` ya registró estilos en
-        # el documento nuevo, los re-registramos en el existente.
+        # con el documento existente. Re-registramos los estilos `act_*` en el
+        # documento del cliente, PERO sin sobrescribir Normal — eso destruiría
+        # la tipografía corporativa que el cliente puso en su plantilla.
         gen = CorporateDocxGenerator(meeting_data)
         gen.doc = existing_doc
-        gen._register_styles()
+        gen._register_styles(override_normal=False)
 
         # Page break ANTES de empezar las secciones agregadas para que el
         # contenido pro empiece en su propia página y no choque con lo que

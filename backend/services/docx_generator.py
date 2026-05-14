@@ -260,20 +260,29 @@ class CorporateDocxGenerator:
         section.header_distance = Cm(1.0)
         section.footer_distance = Cm(1.0)
 
-    def _register_styles(self) -> None:
+    def _register_styles(self, override_normal: bool = True) -> None:
+        """Registra los estilos `act_*` que usa el generador.
+
+        Si `override_normal=False`, NO toca el estilo `Normal` del documento
+        — esto preserva la tipografía corporativa del cliente cuando este
+        generador se reusa sobre una plantilla custom (ver word_generator.py).
+        """
         font_family = self.theme["fontFamily"]
         text_rgb = RGBColor(*_hex_to_rgb(self.theme["textColor"], (17, 24, 39)))
         muted_rgb = RGBColor(*_hex_to_rgb(self.theme["mutedColor"], (100, 116, 139)))
 
-        # Body por defecto
-        normal = self.doc.styles["Normal"]
-        normal.font.name = font_family
-        normal.font.size = Pt(10)
-        normal.font.color.rgb = text_rgb
-        pf = normal.paragraph_format
-        pf.space_after = Pt(4)
-        pf.space_before = Pt(0)
-        pf.line_spacing = 1.25
+        if override_normal:
+            # Solo cuando construimos desde cero (CorporateDocxGenerator standalone).
+            # Sobrescribir Normal en una plantilla del cliente romperia su
+            # tipografía corporativa.
+            normal = self.doc.styles["Normal"]
+            normal.font.name = font_family
+            normal.font.size = Pt(10)
+            normal.font.color.rgb = text_rgb
+            pf = normal.paragraph_format
+            pf.space_after = Pt(4)
+            pf.space_before = Pt(0)
+            pf.line_spacing = 1.25
 
         # Estilos custom
         from docx.enum.style import WD_STYLE_TYPE
