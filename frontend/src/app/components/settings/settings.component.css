@@ -592,3 +592,58 @@ select.st-input::-ms-expand { display: none; }
 }
 
 :host { display: block; height: 100%; }
+
+/* ============================================================
+   Probar envío de correo — bloque dentro de la card "Correo electrónico"
+   ============================================================ */
+.st-test-email {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.st-test-email-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.st-test-email-head svg {
+    color: var(--brand-action, #155EEF);
+    flex-shrink: 0;
+}
+.st-test-email-head div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.st-test-email-head strong {
+    font-size: 0.875rem;
+    color: #0F172A;
+    font-weight: 600;
+}
+.st-test-email-head span {
+    font-size: 0.75rem;
+    color: #64748B;
+    line-height: 1.4;
+}
+.st-test-email-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+.st-test-email-row .st-input {
+    flex: 1;
+    min-width: 220px;
+}
+.st-test-email-row .st-btn { flex-shrink: 0; }
+.st-test-email-row .st-input:disabled {
+    background: #F1F5F9;
+    color: #94A3B8;
+    cursor: not-allowed;
+}

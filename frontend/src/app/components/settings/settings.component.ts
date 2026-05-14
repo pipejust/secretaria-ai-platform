@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -50,7 +50,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
   jiraSettings = { email: '', apiToken: '', domain: '', isActive: false };
   azureSettings = { organization: '', project: '', pat: '', isActive: false };
   clickupSettings = { apiToken: '', teamId: '', isActive: false };
-  autoCurationSettings = { isEnabled: false, timeoutHours: 1 };
+  // El campo timeoutMinutes es el "nuevo" (granularidad real). Conservamos
+  // timeoutHours para compatibilidad con datos viejos: si el backend trae
+  // sólo timeoutHours, lo convertimos a minutos al cargar; y al guardar
+  // siempre escribimos AMBOS para que cron/back tradicional siga leyendo.
+  autoCurationSettings: { isEnabled: boolean; timeoutMinutes: number; timeoutHours: number } =
+    { isEnabled: false, timeoutMinutes: 60, timeoutHours: 1 };
   googleCalendarSettings: OAuthCfg = {
     client_id: '', client_secret: '', redirect_uri: '', isActive: true,
   };
@@ -76,6 +81,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   isSaving = false;
   successMessage = '';
   errorMessage = '';
+
+  // Probar envío de correo (POST /api/branding/test_email)
+  testEmailTo = '';
+  isSendingTest = false;
 
   /** Catálogo de modelos / opciones para los selects. */
   readonly dateFormats = [
@@ -135,7 +144,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     { key: 'general',      label: 'General',                  icon: 'general' },
     { key: 'integrations', label: 'Integraciones',            icon: 'plug' },
     { key: 'email',        label: 'Correo electrónico',       icon: 'mail' },
-    { key: 'task-sync',    label: 'Sincronización de tareas', icon: 'sync' },
+    { key: 'task-sync',    label: 'Sincronización de tareas y correos', icon: 'sync' },
     { key: 'api',          label: 'API y Webhooks',           icon: 'code' },
   ];
 
@@ -154,7 +163,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private auth: AuthService,
     private preferences: PreferencesService,
-  ) { }
+    private route: ActivatedRoute,
+  ) {
+    // Deep-link: si entran con `?section=task-sync` (p.ej. desde el modal
+    // de Proyectos > Auto-Curación), abrimos esa sección directamente.
+    const seg = this.route.snapshot.queryParamMap.get('section');
+    const valid: SectionKey[] = ['general', 'integrations', 'email', 'task-sync', 'api'];
+    if (seg && (valid as string[]).includes(seg)) {
+      this.activeSection = seg as SectionKey;
+    }
+  }
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -256,7 +274,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
         if (data.jira) this.jiraSettings = { ...this.jiraSettings, ...data.jira };
         if (data.azure) this.azureSettings = { ...this.azureSettings, ...data.azure };
         if (data.clickup) this.clickupSettings = { ...this.clickupSettings, ...data.clickup };
-        if (data.autoCuration) this.autoCurationSettings = { ...this.autoCurationSettings, ...data.autoCuration };
+        if (data.autoCuration) {
+            this.autoCurationSettings = { ...this.autoCurationSettings, ...data.autoCuration };
+            // Migración legacy: si vino sólo timeoutHours, derivamos minutos.
+            if (!data.autoCuration.timeoutMinutes && data.autoCuration.timeoutHours) {
+                this.autoCurationSettings.timeoutMinutes =
+                    Math.max(1, Math.round(Number(data.autoCuration.timeoutHours) * 60));
+            }
+            // Y al revés: si vino sólo minutos, derivamos horas para legacy.
+            if (!data.autoCuration.timeoutHours && data.autoCuration.timeoutMinutes) {
+                this.autoCurationSettings.timeoutHours =
+                    Math.max(1 / 60, Number(data.autoCuration.timeoutMinutes) / 60);
+            }
+        }
         if (data.google_calendar) {
             this.googleCalendarSettings = { ...this.googleCalendarSettings, ...data.google_calendar };
         }
@@ -279,7 +309,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
     //    success global para evitar toasts duplicados.
     this.preferences.setAll(this.prefs);
 
-    // 2) Guardar settings reales en backend (preserva la API existente).
+    // 2) Sincronizar minutos ↔ horas antes de guardar: el cron lee minutos
+    //    si están, pero conservamos `timeoutHours` para compatibilidad con
+    //    código viejo y el override per-proyecto que aún usa horas.
+    const minutes = Math.max(1, Math.round(Number(this.autoCurationSettings.timeoutMinutes) || 60));
+    this.autoCurationSettings.timeoutMinutes = minutes;
+    this.autoCurationSettings.timeoutHours = +(minutes / 60).toFixed(4);
+
+    // 3) Guardar settings reales en backend (preserva la API existente).
     const payload = {
       smtp: this.smtpSettings,
       fireflies: this.firefliesSettings,
@@ -316,4 +353,39 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   /** trackBy helpers para los *ngFor del template. */
   trackBySection(_i: number, s: { key: SectionKey }): SectionKey { return s.key; }
+
+  /**
+   * Probar envío de correo: POST /api/branding/test_email.
+   * Si el campo `testEmailTo` está vacío el backend envía al admin actual.
+   */
+  sendTestEmail(): void {
+    if (this.isSendingTest) return;
+    const target = (this.testEmailTo || '').trim();
+    this.isSendingTest = true;
+    const headers = this.auth.getAuthHeaders();
+    this.http.post<{ status: string; to: string; smtp_configured: boolean }>(
+      `${environment.apiUrl}/api/branding/test_email`,
+      { to_email: target || null },
+      { headers },
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isSendingTest = false;
+          if (!res?.smtp_configured) {
+            this.toast.warning(
+              `Correo simulado a ${res?.to} (sin SMTP real). Configura la API Key arriba para envío real.`,
+            );
+          } else {
+            this.toast.success(`Correo de prueba enviado a ${res.to}.`);
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isSendingTest = false;
+          this.toast.error(err?.error?.detail || 'No pude enviar el correo de prueba.');
+          this.cdr.detectChanges();
+        },
+      });
+  }
 }

@@ -266,27 +266,44 @@ export class AskComponent implements OnInit, OnDestroy {
         // búsqueda RAG a ella (evita contaminación de otras reuniones).
         if (this.pinnedSession) body.session_ids = [this.pinnedSession.id];
 
+        // Contexto conversacional: enviamos los últimos N turnos del hilo
+        // actual para que el LLM pueda resolver referencias como "eso",
+        // "lo anterior", o seguir hablando del mismo tema.
+        // `history` está en orden cronológico (más antiguo arriba, más
+        // reciente abajo) tras el fix del append.
+        if (this.history.length > 0) {
+            body.prior_turns = this.history.slice(-8).map(t => ({
+                question: t.question,
+                // El backend espera answer como string. Compactamos intro +
+                // primeras decisiones para que el LLM tenga el "qué dijiste"
+                // sin inflar tokens.
+                answer: this._compactAnswer(t),
+            }));
+        }
+
         this.http.post<AskResponse>(`${environment.apiUrl}/api/ask`, body, { headers })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (res) => {
-                    // Insertamos el nuevo turn al tope de AMBAS listas:
-                    // - `history` (vista del chat actual)
-                    // - `historyList` (dropdown de Historial)
-                    // El id queda en 0 momentáneamente; lo sincronizamos
-                    // con un refresh del historial para que delete funcione.
+                    // APPEND al final del chat (no prepend). Así el último
+                    // turno queda visualmente abajo y el scroll natural
+                    // baja al nuevo mensaje, como en cualquier chat.
                     const newTurn: ChatTurn = {
                         id: 0,
                         question: q,
                         ...res,
                         timestamp: Date.now(),
                     };
-                    this.history = [newTurn, ...this.history];
+                    this.history = [...this.history, newTurn];
+                    // El historial-dropdown (lista lateral) mantiene orden
+                    // descendente por timestamp para que lo más nuevo aparezca
+                    // primero al desplegarlo — uso distinto al chat.
                     this.historyList = [newTurn, ...this.historyList];
                     this.question = '';
                     this.isAsking = false;
                     this.cdr.detectChanges();
                     this._refreshHistoryIds();
+                    this._scrollToBottom();
                 },
                 error: (err) => {
                     this.isAsking = false;
@@ -295,6 +312,42 @@ export class AskComponent implements OnInit, OnDestroy {
                     this.cdr.detectChanges();
                 },
             });
+    }
+
+    /** Compacta una respuesta del turno previo para mandarla como contexto
+     *  al LLM. Usa la respuesta plana + extracto de las decisiones/tareas
+     *  del payload `structured` si existen. Limita a ~600 chars. */
+    private _compactAnswer(t: ChatTurn): string {
+        const parts: string[] = [];
+        if (t.answer) parts.push(t.answer);
+        const s = t.structured;
+        if (s) {
+            if (s.intro && !parts.length) parts.push(s.intro);
+            if (s.decisions && s.decisions.length) {
+                parts.push('Decisiones: ' + s.decisions.slice(0, 3)
+                    .map((d: any) => typeof d === 'string' ? d : (d.text || '')).join('; '));
+            }
+            if (s.action_items && s.action_items.length) {
+                parts.push('Tareas: ' + s.action_items.slice(0, 3)
+                    .map((a: any) => a.title || '').join('; '));
+            }
+        }
+        return parts.join('\n').slice(0, 600);
+    }
+
+    /** Scroll al final del contenedor del chat tras agregar un nuevo turn.
+     *  Se ejecuta en doble RAF para asegurar que el DOM ya pintó la card. */
+    private _scrollToBottom(): void {
+        const tryScroll = () => {
+            const el = document.querySelector('.acten-ask .ask-chat-scroll')
+                    || document.querySelector('.acten-ask .ask-thread')
+                    || document.querySelector('.acten-ask main')
+                    || document.scrollingElement;
+            if (el) {
+                (el as HTMLElement).scrollTop = (el as HTMLElement).scrollHeight;
+            }
+        };
+        requestAnimationFrame(() => requestAnimationFrame(tryScroll));
     }
 
     /** Tras un submit exitoso, recargamos el historial para sincronizar
@@ -312,12 +365,17 @@ export class AskComponent implements OnInit, OnDestroy {
                     this.historyList = fromBE.map(e => this._entryToTurn(e));
                     // Para `history` (vista actual), parchamos sólo el id
                     // del turn más reciente sin pisar el resto del estado.
+                    // Ahora `history` está en orden cronológico (más nuevo
+                    // al FINAL), así que el último elemento es el recién
+                    // creado. El backend siempre devuelve más reciente primero.
                     if (this.history.length && fromBE.length) {
                         const top = fromBE[0];
-                        if (top.question === this.history[0].question && !this.history[0].id) {
+                        const lastIdx = this.history.length - 1;
+                        const last = this.history[lastIdx];
+                        if (top.question === last.question && !last.id) {
                             this.history = [
-                                { ...this.history[0], id: top.id },
-                                ...this.history.slice(1),
+                                ...this.history.slice(0, lastIdx),
+                                { ...last, id: top.id },
                             ];
                         }
                     }

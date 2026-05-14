@@ -640,6 +640,43 @@
 .status-badge[data-status="draft"]     { background: var(--brand-cream-100); color: var(--color-fg-muted); border-color: var(--color-border); }
 .status-badge[data-status="archived"]  { background: rgba(100, 116, 139, 0.10); color: #475569; border-color: rgba(100, 116, 139, 0.22); }
 
+/* "Fallando" — gana visual frente a cualquier otro estado para que el admin
+   no se confunda. Pulsación sutil para reforzar que requiere atención. */
+.status-badge[data-status="failing"],
+.status-badge.status-failing {
+    background: #fff1f2;
+    color: #be123c;
+    border-color: #fecdd3;
+    box-shadow: 0 0 0 0 rgba(190, 18, 60, 0.45);
+    animation: failing-pulse 2.4s ease-in-out infinite;
+}
+@keyframes failing-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(190, 18, 60, 0.30); }
+    50%      { box-shadow: 0 0 0 6px rgba(190, 18, 60, 0); }
+}
+
+/* Botón inline "Reintentar" pegado al badge de estado. */
+.retry-inline-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    padding: 0 10px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    font-family: var(--font-sans);
+    font-size: var(--text-12);
+    font-weight: var(--fw-semibold);
+    background: #be123c;
+    color: #fff;
+    border: 1px solid #9f1239;
+    cursor: pointer;
+    transition: background var(--duration-fast, 150ms) ease;
+}
+.retry-inline-btn:hover { background: #9f1239; }
+.retry-inline-btn:active { background: #881337; }
+.retry-inline-btn svg { stroke: #fff; }
+
 /* Cell: actions */
 .cell-actions { position: relative; display: flex; justify-content: flex-end; }
 .kebab {

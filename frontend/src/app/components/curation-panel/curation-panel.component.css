@@ -186,6 +186,127 @@
 .cp-badge-status[data-status="completed"]  { background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.22); }
 .cp-badge-status[data-status="error"]      { background: rgba(224, 61, 61, 0.10);  color: var(--color-danger); border-color: rgba(224, 61, 61, 0.22); }
 .cp-badge-status[data-status="approved"]   { background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.22); }
+.cp-badge-status[data-status="failing"],
+.cp-badge-status.cp-status-failing {
+    background: #fff1f2;
+    color: #be123c;
+    border-color: #fecdd3;
+    animation: cp-failing-pulse 2.4s ease-in-out infinite;
+}
+@keyframes cp-failing-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(190, 18, 60, 0.30); }
+    50%      { box-shadow: 0 0 0 5px rgba(190, 18, 60, 0); }
+}
+
+/* ===== Banner "Análisis IA incompleto" ===================================
+   Aparece arriba de todo el detalle cuando processing_error está set.
+   Mientras esté visible, el backend NO despacha nada por integraciones
+   ni notifica a owners de tareas. Es la única forma de re-disparar el
+   pipeline. */
+.cp-failing-banner {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 18px 20px;
+    margin: 0 0 20px 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    border: 1px solid #fecdd3;
+    box-shadow: 0 1px 2px rgba(190, 18, 60, 0.08);
+}
+.cp-failing-banner-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #fee2e2;
+    color: #be123c;
+}
+.cp-failing-banner-body {
+    flex: 1;
+    min-width: 0;
+}
+.cp-failing-banner-body strong {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--text-15, 15px);
+    font-weight: var(--fw-semibold, 600);
+    color: #881337;
+    margin-bottom: 4px;
+}
+.cp-failing-banner-body p {
+    margin: 0 0 6px 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-13, 13px);
+    line-height: 1.45;
+    color: #7f1d1d;
+}
+.cp-failing-detail {
+    margin-top: 8px !important;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(190, 18, 60, 0.18);
+    border-radius: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-12, 12px) !important;
+    color: #6b1d1d !important;
+    word-break: break-word;
+}
+.cp-failing-detail-label {
+    font-weight: var(--fw-semibold, 600);
+    margin-right: 4px;
+}
+.cp-failing-banner-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.cp-failing-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-family: var(--font-sans);
+    font-size: var(--text-13, 13px);
+    font-weight: var(--fw-semibold, 600);
+    cursor: pointer;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    transition: background var(--duration-fast, 150ms) ease,
+                box-shadow var(--duration-fast, 150ms) ease;
+}
+.cp-failing-btn:disabled { opacity: 0.6; cursor: wait; }
+.cp-failing-btn-primary {
+    background: #be123c;
+    color: #fff;
+    border-color: #9f1239;
+}
+.cp-failing-btn-primary:not(:disabled):hover { background: #9f1239; }
+.cp-failing-btn-primary:not(:disabled):active { background: #881337; }
+.cp-failing-btn-secondary {
+    background: #fff;
+    color: #9f1239;
+    border-color: #fecdd3;
+}
+.cp-failing-btn-secondary:not(:disabled):hover {
+    background: #fff1f2;
+    border-color: #fda4af;
+}
+
+@media (max-width: 720px) {
+    .cp-failing-banner {
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+    }
+    .cp-failing-banner-actions { flex-direction: row; flex-wrap: wrap; }
+    .cp-failing-btn { flex: 1 1 auto; justify-content: center; }
+}
 
 .cp-badge-lang {
     background: #F3E8FF;

@@ -317,10 +317,11 @@
         </div>
       </ng-container>
 
-      <!-- Loading overlay -->
-      <div class="cal-loading" *ngIf="isLoading">
-        <span class="cal-spinner"></span>
-        <span>Cargando reuniones…</span>
+      <!-- Loading overlay: skeleton grid sutil sobre la grilla del calendario -->
+      <div class="cal-loading" *ngIf="isLoading" style="background: transparent;">
+        <div class="skeleton-grid" style="grid-template-columns: repeat(7, 1fr); width: 90%; max-width: 1100px;">
+          <span class="skeleton" style="height: 70px;" *ngFor="let _ of [1,2,3,4,5,6,7,8,9,10,11,12,13,14]"></span>
+        </div>
       </div>
     </div>
 

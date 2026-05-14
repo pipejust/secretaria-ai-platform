@@ -898,6 +898,31 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             });
     }
 
+    /** Reintenta el pipeline IA de una sesión que quedó incompleta.
+     *  Si `rehydrate=true`, vuelve a tirar Fireflies para re-traer transcript
+     *  + summary nativo y luego correr la IA. Si false, solo re-corre la IA
+     *  con lo que ya está en DB (más rápido, menos consumo de tokens). */
+    retrySessionPipeline(session: any, rehydrate: boolean, evt?: Event): void {
+        if (evt) { evt.stopPropagation(); }
+        if (!session?.id) return;
+        const headers = this.authService.getAuthHeaders();
+        const url =
+            `${environment.apiUrl}/api/webhook/fireflies/sessions/${session.id}/retry` +
+            (rehydrate ? '?rehydrate_from_fireflies=true' : '');
+        this.toast.info('Reintento encolado. Tarda unos segundos…');
+        this.http.post(url, {}, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: () => {
+                    // Refrescamos pasados unos segundos para mostrar el resultado.
+                    setTimeout(() => this.loadSessions(), 4000);
+                },
+                error: () => {
+                    this.toast.error('No pude encolar el reintento.');
+                },
+            });
+    }
+
     cancelDeleteSession() { this.showDeleteModal = false; this.sessionToDelete = null; }
 
     confirmDeleteSession() {

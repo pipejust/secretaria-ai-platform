@@ -132,7 +132,14 @@
                     <span class="t-right">Acciones</span>
                 </div>
 
-                <div *ngIf="isLoading" class="tpl-empty">Cargando…</div>
+                <div class="tpl-tr" *ngFor="let _ of (isLoading ? [1,2,3,4,5] : [])"
+                     style="padding: 14px 16px; border-bottom: 1px solid var(--color-border);">
+                    <span class="skeleton skeleton-line"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-line is-sm" style="width:80px"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                </div>
 
                 <div *ngFor="let t of filteredTemplates"
                      class="tpl-tr tpl-row"

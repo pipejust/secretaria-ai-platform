@@ -270,16 +270,23 @@ class CorporateDocxGenerator:
             self.agregar_barra_seccion("5. RIESGOS Y ALERTAS CLAVE")
             self._parsear_texto_markdown(riesgos)
 
+        # Acuerdos — sección NUEVA que faltaba en el documento generado.
+        # Antes la data incluía `agreements` pero el doc no lo renderizaba.
+        acuerdos = self.data.get("acuerdos", "") or self.data.get("agreements", "")
+        if acuerdos:
+            self.agregar_barra_seccion("6. ACUERDOS")
+            self._parsear_texto_markdown(acuerdos)
+
         # Compromisos / Tareas (Action Items)
         action_items = self.data.get("compromisos", [])
         if action_items:
-            self.agregar_barra_seccion("6. COMPROMISOS Y TAREAS")
+            self.agregar_barra_seccion("7. COMPROMISOS Y TAREAS DETECTADAS")
             filas_tareas = []
             for ai in action_items:
                 filas_tareas.append(["", ai.get("title", ""), ai.get("owner_email", ""), ai.get("due_date", ""), ai.get("status", "")])
             self.construir_tabla_estandar(["No", "Descripción de la Tarea", "Responsable", "Fecha Límite", "Estado"], filas_tareas, [1.0, 7.5, 4.0, 2.5, 1.5])
 
-        self.agregar_barra_seccion("7. APROBACIÓN")
+        self.agregar_barra_seccion("8. APROBACIÓN")
         self.doc.add_paragraph("Los registros arriba mencionados constituyen el cuerpo del acta inteligenciada automáticamente.", style='estilo_texto_base')
 
     def generar_buffer(self) -> io.BytesIO:

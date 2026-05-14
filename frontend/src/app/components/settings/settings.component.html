@@ -518,6 +518,37 @@
                                        placeholder="notificaciones@tuempresa.com" />
                             </label>
                         </div>
+
+                        <!-- Probar envío de correo — usa la configuración SMTP
+                             actual y aplica la marca del tenant. -->
+                        <div class="st-test-email">
+                            <div class="st-test-email-head">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                                </svg>
+                                <div>
+                                    <strong>Probar envío de correo</strong>
+                                    <span>Verifica que tu configuración SMTP y el branding funcionan correctamente.</span>
+                                </div>
+                            </div>
+                            <div class="st-test-email-row">
+                                <input type="email" class="st-input"
+                                       [(ngModel)]="testEmailTo"
+                                       placeholder="destinatario@empresa.com (vacío = enviar a ti)"
+                                       [disabled]="isSendingTest"/>
+                                <button type="button" class="st-btn st-btn-primary"
+                                        (click)="sendTestEmail()"
+                                        [disabled]="isSendingTest">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                    {{ isSendingTest ? 'Enviando…' : 'Probar envío de correos' }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </article>
             </ng-container>
@@ -527,34 +558,54 @@
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">Sincronización de tareas</h2>
-                            <p class="st-card-sub">Configura cómo se procesan automáticamente las tareas detectadas por IA.</p>
+                            <h2 class="st-card-title">Sincronización de tareas y correos</h2>
+                            <p class="st-card-sub">
+                                Configura cómo y cuándo se envían automáticamente los correos a los
+                                responsables y las tareas a las plataformas conectadas (Trello, Jira,
+                                ClickUp, Azure DevOps) cuando Fireflies entrega una nueva reunión.
+                            </p>
                         </div>
                     </header>
                     <div class="st-card-body">
                         <div class="st-toggle-card">
                             <div>
-                                <strong>Curación automática</strong>
-                                <small>Despacha automáticamente las tareas a las plataformas conectadas tras un período sin edición humana.</small>
+                                <strong>Envío automático de tareas y correos</strong>
+                                <small>
+                                    Cuando llega una reunión nueva vía Fireflies, la IA cura el contenido
+                                    al instante. Si activas esta opción, el correo con las tareas se
+                                    envía a los responsables y se crean los tickets externos
+                                    automáticamente al cumplirse el tiempo definido — sin esperar
+                                    confirmación manual. El admin del proyecto siempre recibe primero
+                                    un correo de aviso con el enlace para curar/editar.
+                                </small>
                             </div>
                             <label class="st-toggle-pill" [class.is-on]="autoCurationSettings.isEnabled">
                                 <span class="st-switch" [class.is-on]="autoCurationSettings.isEnabled">
                                     <span class="st-switch-thumb"></span>
                                 </span>
                                 <input type="checkbox" hidden [(ngModel)]="autoCurationSettings.isEnabled" />
-                                <span>{{ autoCurationSettings.isEnabled ? 'Activa' : 'Inactiva' }}</span>
+                                <span>{{ autoCurationSettings.isEnabled ? 'Activo' : 'Inactivo' }}</span>
                             </label>
                         </div>
 
                         <div class="st-grid st-grid-2 st-mt-16" *ngIf="autoCurationSettings.isEnabled">
                             <label class="st-field">
-                                <span class="st-field-label">Esperar antes de despachar (horas)</span>
-                                <input type="number" min="1" max="168" class="st-input"
-                                       [(ngModel)]="autoCurationSettings.timeoutHours" />
+                                <span class="st-field-label">Tiempo de espera antes del envío (minutos)</span>
+                                <input type="number" min="1" max="10080" class="st-input"
+                                       [(ngModel)]="autoCurationSettings.timeoutMinutes" />
                                 <small class="st-help">
-                                    Tiempo desde que se procesa una sesión hasta que se despachan las tareas. Da margen al humano para curar.
+                                    Minutos desde que llega la reunión hasta que se envían los correos
+                                    y se crean las tareas en las plataformas. Sugerencia: usa 60 (1 hora)
+                                    o más para dar margen a editar correos y nombres de participantes.
+                                    El job revisa pendientes cada 1 minuto.
                                 </small>
                             </label>
+                        </div>
+
+                        <div class="st-help st-mt-16">
+                            <strong>Modo manual</strong>: si esta opción está inactiva, el correo y las
+                            tareas externas no salen hasta que el curador las dispare desde el detalle
+                            de la reunión. La reunión queda en el listado de Reuniones esperando acción.
                         </div>
                     </div>
                 </article>

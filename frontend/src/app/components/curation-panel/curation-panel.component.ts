@@ -39,6 +39,10 @@ interface MeetingData {
   status: string;
   ai_fields_regenerated: boolean;
   ai_tasks_regenerated: boolean;
+  fireflies_id?: string;
+  processing_error?: string;
+  processing_attempts?: number;
+  processing_completed_at?: string;
 }
 
 @Component({
@@ -71,6 +75,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   isDispatchingEmails = false;
   isDispatchingPlatforms = false;
   isRegeneratingFields = false;
+  isRetryingPipeline = false;
   saveStatusMessage = '';
   projects: any[] = [];
 
@@ -463,6 +468,72 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
             const detail = err?.error?.detail || 'Error al regenerar las tareas.';
             this.toast.error(detail);
           }
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  /** Reintenta el pipeline IA completo desde la curación. Lo dispara el
+   *  banner rojo "Análisis IA incompleto". Mientras corre, el banner queda
+   *  en estado "Reintentando…" y el botón deshabilitado. Al terminar, se
+   *  refresca la sesión para ver el resultado (banner desaparece si OK,
+   *  permanece con nuevo error si volvió a fallar). */
+  retryPipelineFromCuration(rehydrate: boolean): void {
+    if (this.isRetryingPipeline || !this.sessionId) return;
+    this.isRetryingPipeline = true;
+    const headers = this.authService.getAuthHeaders();
+    const url =
+      `${environment.apiUrl}/api/webhook/fireflies/sessions/${this.sessionId}/retry` +
+      (rehydrate ? '?rehydrate_from_fireflies=true' : '');
+    this.toast.info('Reintento encolado. Tarda unos segundos…');
+    this.http.post<any>(url, {}, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // Polling suave: re-cargamos la sesión cada 4 s hasta 5 intentos
+          // o hasta que processing_error se vacíe.
+          let attempts = 0;
+          const MAX = 5;
+          const pollMs = 4000;
+          const tick = () => {
+            attempts += 1;
+            this.http.get<any>(
+              `${environment.apiUrl}/api/sessions/${this.sessionId}`,
+              { headers },
+            )
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (res) => {
+                  const session = res?.session ?? res;
+                  if (session) {
+                    this.meetingData.processing_error = session.processing_error || '';
+                    this.meetingData.processing_completed_at = session.processing_completed_at || '';
+                  }
+                  const stillFailing = !!(session?.processing_error || '').trim();
+                  if (!stillFailing || attempts >= MAX) {
+                    this.isRetryingPipeline = false;
+                    if (!stillFailing) {
+                      this.toast.success('Pipeline IA completado correctamente.');
+                      this.loadSessionDetails();  // refresco completo
+                    } else if (attempts >= MAX) {
+                      this.toast.warning('El reintento sigue en curso. Refrescá la página en unos segundos.');
+                    }
+                    this.cdr.detectChanges();
+                    return;
+                  }
+                  setTimeout(tick, pollMs);
+                },
+                error: () => {
+                  this.isRetryingPipeline = false;
+                  this.cdr.detectChanges();
+                },
+              });
+          };
+          setTimeout(tick, pollMs);
+        },
+        error: () => {
+          this.isRetryingPipeline = false;
+          this.toast.error('No pude encolar el reintento.');
           this.cdr.detectChanges();
         },
       });

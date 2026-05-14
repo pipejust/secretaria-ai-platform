@@ -303,6 +303,29 @@ async def search_similar(
     all_rows.sort(key=lambda r: r[4])
     final = all_rows[:top_k]
 
+    # ─────── 4. Enriquecer con metadatos de sesión ───────
+    # Los chunks vectoriales por sí solos no traen título/fecha/proyecto.
+    # El LLM necesita esa información cuando la pregunta es "meta" sobre
+    # las reuniones (qué sitios, qué clientes, qué fechas…). Hacemos un
+    # único query batched para todos los session_ids únicos.
+    final_session_ids = list({r[0] for r in final})
+    sess_meta: dict[int, dict] = {}
+    if final_session_ids:
+        meta_sql = sa_text(
+            """
+            SELECT ms.id, ms.title, ms.date, p.name AS project_name
+            FROM meetingsession ms
+            LEFT JOIN project p ON p.id = ms.project_id
+            WHERE ms.id IN :sids
+            """
+        ).bindparams(sa_bindparam("sids", expanding=True)).bindparams(sids=tuple(final_session_ids))
+        for row in db.exec(meta_sql).all():
+            sess_meta[row[0]] = {
+                "title": row[1] or "",
+                "date": row[2] or "",
+                "project_name": row[3] or "",
+            }
+
     return [
         {
             "session_id": r[0],
@@ -310,6 +333,9 @@ async def search_similar(
             "chunk_index": r[2],
             "content": r[3],
             "distance": float(r[4]),
+            "session_title":  sess_meta.get(r[0], {}).get("title", ""),
+            "session_date":   sess_meta.get(r[0], {}).get("date", ""),
+            "project_name":   sess_meta.get(r[0], {}).get("project_name", ""),
         }
         for r in final
     ]

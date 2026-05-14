@@ -275,3 +275,77 @@ async def upload_favicon(
     b64 = base64.b64encode(data).decode("ascii")
     data_url = f"data:{file.content_type};base64,{b64}"
     return branding_service.update_branding(db, tenant.id, {"favicon_data_url": data_url})
+
+
+class TestEmailPayload(BaseModel):
+    to_email: str | None = Field(default=None, description="Si no se pasa, usa el email del usuario actual.")
+
+
+@router.post("/test_email")
+async def test_email(
+    payload: TestEmailPayload,
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    """Envía un correo de prueba con la marca actual del tenant.
+
+    Útil para que el admin verifique que el branding (logo, colores, dominio)
+    se ve correcto en bandejas reales sin tener que esperar a un evento real.
+    """
+    from services.email_service import EmailService
+
+    target = (payload.to_email or admin.email or "").strip()
+    if not target or "@" not in target:
+        raise HTTPException(status_code=400, detail="Email destino inválido.")
+
+    brand = branding_service.get_branding(db, tenant.id)
+    company = brand.get("company_name") or brand.get("platform_name") or "Acten"
+    primary = brand.get("primary_color") or "#223148"
+    secondary = brand.get("secondary_color") or "#1B7F67"
+    accent = brand.get("accent_color") or "#D9A441"
+    tagline = brand.get("company_tagline") or "Inteligencia para tus reuniones"
+    actor_name = admin.full_name or admin.email
+
+    html_content = f"""
+    <div style="font-family: 'Inter', Arial, sans-serif; color: #0F172A; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, {primary}, {secondary}); padding: 24px; color: #fff; border-radius: 12px 12px 0 0;">
+        <h1 style="margin: 0; font-size: 22px;">{company}</h1>
+        <p style="margin: 4px 0 0; opacity: 0.85; font-size: 13px;">{tagline}</p>
+      </div>
+      <div style="background: #FFFFFF; padding: 24px; border: 1px solid #E2E8F0; border-top: 0; border-radius: 0 0 12px 12px;">
+        <p>Hola <strong>{actor_name}</strong>,</p>
+        <p>Este es un correo de prueba enviado desde la sección de <strong>Marca</strong>
+           de Acten para confirmar que tu configuración SMTP y branding funcionan correctamente.</p>
+        <div style="margin: 18px 0; padding: 14px 16px; background: #F8FAFC;
+                    border-left: 3px solid {accent}; border-radius: 6px; font-size: 14px;">
+          Si recibiste este correo, tu integración de correos está operativa y la marca se ve como
+          esperas.
+        </div>
+        <p style="margin-top: 24px; font-size: 12px; color: #64748B;">
+          © {company} · Enviado desde la plataforma Acten.
+        </p>
+      </div>
+    </div>
+    """
+
+    email_service = EmailService(db=db, tenant_id=tenant.id)
+    try:
+        ok = await email_service._send_html_email(
+            to_email=target,
+            subject=f"[Prueba] Correo desde {company}",
+            html_content=html_content,
+        )
+    except Exception as exc:
+        logger.exception("Falló el envío del correo de prueba")
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo enviar el correo de prueba: {exc}",
+        )
+
+    return {
+        "status": "ok" if ok else "queued",
+        "to": target,
+        "company": company,
+        "smtp_configured": bool(email_service.api_key),
+    }

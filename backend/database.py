@@ -59,6 +59,9 @@ def _apply_lightweight_migrations() -> None:
         statements = [
             'ALTER TABLE meetingsession ADD COLUMN ai_fields_regenerated BOOLEAN DEFAULT 0 NOT NULL',
             'ALTER TABLE meetingsession ADD COLUMN ai_tasks_regenerated  BOOLEAN DEFAULT 0 NOT NULL',
+            "ALTER TABLE meetingsession ADD COLUMN processing_error TEXT NOT NULL DEFAULT ''",
+            'ALTER TABLE meetingsession ADD COLUMN processing_attempts INTEGER NOT NULL DEFAULT 0',
+            "ALTER TABLE meetingsession ADD COLUMN processing_completed_at TEXT NOT NULL DEFAULT ''",
             'ALTER TABLE project ADD COLUMN auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN auto_dispatch_timeout_hours REAL',
             'ALTER TABLE project ADD COLUMN owner_user_id INTEGER REFERENCES "user"(id)',
@@ -80,6 +83,11 @@ def _apply_lightweight_migrations() -> None:
         statements = [
             'ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ai_fields_regenerated BOOLEAN DEFAULT FALSE NOT NULL',
             'ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ai_tasks_regenerated  BOOLEAN DEFAULT FALSE NOT NULL',
+            # Salud del pipeline IA — Sprint Estabilidad
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS processing_error TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS processing_attempts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS processing_completed_at VARCHAR(64) NOT NULL DEFAULT ''",
+            "CREATE INDEX IF NOT EXISTS idx_meetingsession_proc_error ON meetingsession((CASE WHEN processing_error = '' THEN 0 ELSE 1 END))",
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_timeout_hours DOUBLE PRECISION',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES "user"(id)',

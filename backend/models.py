@@ -255,6 +255,24 @@ class MeetingSession(SQLModel, table=True):
     
     status: str = Field(default="pending", description="'pending', 'approved', 'processed'")
 
+    # Salud del pipeline IA (Sprint Estabilidad — fix 'procesos a medias').
+    # Cuando el webhook llega y termina el pipeline IA, estos campos cuentan
+    # qué se logró y qué quedó pendiente. Si processing_error != "", la
+    # sesión NO está completa y debe reintentarse — manualmente desde la UI
+    # o automáticamente por el cron de retry.
+    processing_error: str = Field(
+        default="",
+        description="Mensaje del último error en el pipeline IA. Vacío = OK.",
+    )
+    processing_attempts: int = Field(
+        default=0,
+        description="Cuántas veces se ha ejecutado el pipeline IA completo.",
+    )
+    processing_completed_at: str = Field(
+        default="",
+        description="ISO timestamp cuando el pipeline terminó SIN errores.",
+    )
+
     # Flags de uso único de los botones de IA en la curación.
     # Se setean a True después de que el usuario los presiona la primera vez.
     ai_fields_regenerated: bool = Field(

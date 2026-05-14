@@ -22,7 +22,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session, select
 
 from database import get_session
-from models import ActionItem, MeetingSession, Routing
+from models import ActionItem, MeetingSession, Routing, Tenant, User
+from routers.auth import get_current_tenant, require_admin
 from services.fireflies_service import FirefliesService
 from services.integrations import (
     IntegrationConfigError,
@@ -118,6 +119,107 @@ def _pick_first_date(*candidates) -> Optional[str]:
         if norm:
             return norm
     return None
+
+
+async def _send_initial_admin_email(session_id: int, tenant_id: int) -> None:
+    """Envía el correo inicial al/los admin/s del tenant en cuanto Fireflies
+    deja una sesión nueva. Informa el modo (automático con timeout en minutos
+    o manual) para que sepan cuánto tiempo tienen para curar.
+    """
+    import os
+    from sqlmodel import Session
+    from database import engine
+    from models import MeetingSession, Project, User, Role, IntegrationSetting
+    from services.email_service import EmailService
+
+    try:
+        with Session(engine) as db:
+            ms = db.get(MeetingSession, session_id)
+            if not ms:
+                return
+            project_name = "General"
+            if ms.project_id:
+                p = db.get(Project, ms.project_id)
+                if p:
+                    project_name = p.name
+
+            # Cargar config de envío automático del tenant.
+            ac_setting = db.exec(
+                select(IntegrationSetting)
+                .where(IntegrationSetting.tenant_id == tenant_id)
+                .where(IntegrationSetting.provider_name == "autoCuration")
+            ).first()
+            auto_enabled = False
+            timeout_minutes = 60
+            if ac_setting:
+                try:
+                    cfg = json.loads(ac_setting.config_json or "{}")
+                    auto_enabled = bool(cfg.get("isEnabled", False))
+                    # Prioridad: minutos > horas legacy
+                    if cfg.get("timeoutMinutes") is not None:
+                        timeout_minutes = int(float(cfg.get("timeoutMinutes")))
+                    elif cfg.get("timeoutHours") is not None:
+                        timeout_minutes = int(float(cfg.get("timeoutHours")) * 60)
+                except Exception:
+                    pass
+
+            # Override por proyecto (mismo patrón que cron_service).
+            if ms.project_id:
+                p = db.get(Project, ms.project_id)
+                if p:
+                    if p.auto_dispatch_enabled is not None:
+                        auto_enabled = bool(p.auto_dispatch_enabled)
+                    if p.auto_dispatch_timeout_hours is not None:
+                        timeout_minutes = int(float(p.auto_dispatch_timeout_hours) * 60)
+
+            # Buscar admins activos del tenant — usuarios con role "admin"
+            # (por nombre o por flag is_platform_admin).
+            admins = db.exec(
+                select(User)
+                .where(User.tenant_id == tenant_id)
+                .where(User.is_active == True)
+            ).all()
+            admin_recipients: list[tuple[str, str]] = []
+            for u in admins:
+                role_name = ""
+                if u.role_id:
+                    r = db.get(Role, u.role_id)
+                    role_name = (r.name if r else "").lower()
+                # Heurística: cualquier rol que contenga "admin" o el flag de plataforma.
+                if "admin" in role_name or getattr(u, "is_platform_admin", False):
+                    if u.email:
+                        admin_recipients.append((u.email, u.full_name or ""))
+            if not admin_recipients:
+                logger.info(
+                    "Sesión %s: no se encontraron admins activos en tenant %s para correo inicial.",
+                    session_id, tenant_id,
+                )
+                return
+
+            frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip("/")
+            session_url = f"{frontend_url}/admin/curation/{session_id}"
+
+            email_svc = EmailService(db=db, tenant_id=tenant_id)
+            for email, name in admin_recipients:
+                try:
+                    await email_svc.send_session_received_email(
+                        to_email=email,
+                        admin_name=name,
+                        session_title=ms.title or "Sin título",
+                        project_name=project_name,
+                        session_url=session_url,
+                        auto_dispatch_enabled=auto_enabled,
+                        timeout_minutes=timeout_minutes,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Falló envío de correo inicial a %s para sesión %s",
+                        email, session_id,
+                    )
+    except Exception:
+        logger.exception(
+            "_send_initial_admin_email crash inesperado para sesión %s", session_id,
+        )
 
 
 def _extract_native_summary(summary_obj) -> str:
@@ -354,12 +456,14 @@ async def process_transcript_background(
                     new_session.tenant_id, transcript_id,
                 )
             fireflies = FirefliesService(api_key=ff_api_key)
+            ff_fetch_error = ""
             try:
                 ff_data = await fireflies.get_transcript_data(transcript_id)
-            except Exception:
-                logger.exception(
-                    "Fireflies API falló al traer transcript %s", transcript_id
+            except Exception as exc:  # noqa: BLE001
+                ff_fetch_error = (
+                    f"Fireflies API falló al traer transcript {transcript_id}: {exc}"
                 )
+                logger.exception(ff_fetch_error)
                 ff_data = {}
 
             title = ff_data.get("title") or title
@@ -397,10 +501,19 @@ async def process_transcript_background(
             raw_summary = _extract_native_summary(ff_data.get("summary"))
 
             # Limpieza cosmética del summary con Groq (traduce headers, quita
-            # asteriscos, elimina referencias tipo [Fuente: ...]).
+            # asteriscos, elimina referencias tipo [Fuente: ...]). Si Groq
+            # falla, NO perdemos el summary original — preferimos mostrarlo
+            # crudo a perderlo.
             groq = GroqLLMService()
+            summary_clean_error = ""
             if raw_summary:
-                raw_summary = await groq.clean_native_summary(raw_summary)
+                try:
+                    raw_summary = await groq.clean_native_summary(raw_summary)
+                except Exception as exc:  # noqa: BLE001
+                    summary_clean_error = (
+                        f"Groq clean_native_summary falló (se mantiene crudo): {exc}"
+                    )
+                    logger.warning(summary_clean_error)
 
             # Doble-check: el valor que estamos a punto de persistir DEBE
             # poder leerse de vuelta. Si por algún motivo se rompió, lo
@@ -421,30 +534,70 @@ async def process_transcript_background(
             new_session.raw_transcript = raw_transcript
             new_session.raw_summary = raw_summary
             new_session.status = "pending"
+
+            # Si Fireflies o el cleanup del summary fallaron, lo dejamos
+            # registrado en la sesión para que el admin lo vea y/o el cron
+            # de retry lo pueda reintentar después. NO bloquea el pipeline IA
+            # porque puede que el transcript ya venga en el payload del
+            # webhook (caso común para tests / re-envíos).
+            pre_pipeline_errors = []
+            if ff_fetch_error:
+                pre_pipeline_errors.append(f"fireflies_api: {ff_fetch_error[:300]}")
+            if summary_clean_error:
+                pre_pipeline_errors.append(
+                    f"summary_clean: {summary_clean_error[:300]}"
+                )
+            if not raw_transcript or len(raw_transcript) < 10:
+                pre_pipeline_errors.append(
+                    "transcript: vacío tras pull de Fireflies y payload"
+                )
+            if pre_pipeline_errors:
+                new_session.processing_error = "; ".join(pre_pipeline_errors)[:2000]
+
             db.add(new_session)
             db.commit()
             db.refresh(new_session)
 
             # ---------- 2. Pipeline IA común (Groq insights + OpenAI tareas) ----------
+            # process_session_with_ai sobreescribe processing_error con el
+            # resultado de SUS pasos, así que cualquier error pre-pipeline
+            # solo cuenta si la sesión no llega a ejecutar IA (ej. transcript
+            # vacío). Eso es lo que queremos: el estado final refleja el
+            # estado más reciente del pipeline.
             await process_session_with_ai(db, new_session.id)
 
             # ---------- 3. Routing externo (Trello/Jira/ClickUp/Azure) ----------
+            # Política de seguridad: si el pipeline IA dejó algún error
+            # (`processing_error` no vacío), NO despachamos automáticamente
+            # nada. El admin tiene que entrar, presionar el botón de
+            # "Reintentar análisis IA" y, sólo cuando todo termine OK, podrá
+            # aprobar manualmente el envío desde la curación o esperar al
+            # cron de auto-dispatch (que también respeta este flag).
             db.refresh(new_session)
-            matched_project_id = new_session.project_id
-            if matched_project_id:
-                routings = db.exec(
-                    select(Routing).where(Routing.project_id == matched_project_id)
-                ).all()
-                if routings:
-                    items = db.exec(
-                        select(ActionItem).where(
-                            ActionItem.session_id == new_session.id
-                        )
+            if (new_session.processing_error or "").strip():
+                logger.warning(
+                    "Sesión %s incompleta (processing_error='%s'). "
+                    "Bloqueando auto-dispatch — el admin debe reintentar el "
+                    "pipeline antes de que se envíe la data a integraciones.",
+                    new_session.id,
+                    new_session.processing_error[:200],
+                )
+            else:
+                matched_project_id = new_session.project_id
+                if matched_project_id:
+                    routings = db.exec(
+                        select(Routing).where(Routing.project_id == matched_project_id)
                     ).all()
-                    for routing in routings:
-                        if not routing.is_active:
-                            continue
-                        await _dispatch_routing(db, routing, items)
+                    if routings:
+                        items = db.exec(
+                            select(ActionItem).where(
+                                ActionItem.session_id == new_session.id
+                            )
+                        ).all()
+                        for routing in routings:
+                            if not routing.is_active:
+                                continue
+                            await _dispatch_routing(db, routing, items)
         except Exception:
             logger.exception(
                 "Error procesando transcript %s en background", transcript_id
@@ -563,6 +716,13 @@ async def receive_fireflies_webhook(
     except Exception:
         logger.exception("No se pudo emitir notif de session_received para %s", new_session.id)
 
+    # Correo INICIAL al admin del proyecto/tenant: "Sesión recibida, tienes
+    # N minutos para curarla antes del envío automático". Se hace en background
+    # para no bloquear el ack del webhook.
+    background_tasks.add_task(
+        _send_initial_admin_email, new_session.id, tenant_id,
+    )
+
     background_tasks.add_task(
         process_transcript_background, new_session.id, transcript_id, payload
     )
@@ -573,3 +733,121 @@ async def receive_fireflies_webhook(
             f"Transcript/Meeting {transcript_id} programado para procesar en background."
         ),
     }
+
+
+# ---------------------------------------------------------------------------
+# Retry / recovery endpoints (Sprint Estabilidad — fix 'procesos a medias')
+# ---------------------------------------------------------------------------
+
+
+@router.post("/sessions/{session_id}/retry")
+async def retry_session_pipeline(
+    session_id: int,
+    background_tasks: BackgroundTasks,
+    rehydrate_from_fireflies: bool = False,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+    _admin: User = Depends(require_admin),
+):
+    """Reintenta el pipeline IA sobre una sesión existente.
+
+    Modos:
+      - default (`rehydrate_from_fireflies=false`): re-ejecuta solo
+        `process_session_with_ai` con lo que ya hay en DB. Útil cuando solo
+        falló la extracción de tareas (OpenAI) y no queremos volver a
+        consultar Fireflies.
+      - `rehydrate_from_fireflies=true`: vuelve a traer transcript +
+        summary nativo desde Fireflies y luego re-ejecuta IA. Útil cuando
+        la sesión llegó incompleta (ej. el transcript estaba vacío).
+    """
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj or session_obj.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
+    if rehydrate_from_fireflies:
+        if not session_obj.fireflies_id:
+            raise HTTPException(
+                status_code=400,
+                detail="La sesión no tiene fireflies_id; no se puede rehidratar.",
+            )
+        # Reusamos exactamente el mismo flujo del webhook (background task)
+        # con un payload mínimo. Force re-pull desde Fireflies.
+        background_tasks.add_task(
+            process_transcript_background,
+            session_obj.id,
+            session_obj.fireflies_id,
+            {},  # payload vacío — todo se trae de Fireflies
+        )
+        return {
+            "status": "queued",
+            "mode": "rehydrate_from_fireflies",
+            "session_id": session_obj.id,
+        }
+
+    # Re-ejecutar solo el pipeline IA con lo que ya hay en DB.
+    background_tasks.add_task(_run_ai_pipeline_in_background, session_obj.id)
+    return {
+        "status": "queued",
+        "mode": "ai_only",
+        "session_id": session_obj.id,
+    }
+
+
+@router.get("/sessions/incomplete")
+async def list_incomplete_sessions(
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+    _admin: User = Depends(require_admin),
+):
+    """Lista las sesiones del tenant que el pipeline NO terminó OK.
+
+    Una sesión se considera incompleta si:
+      - `processing_error` no está vacío, O
+      - `processing_completed_at` está vacío (el pipeline nunca terminó).
+    """
+    q = (
+        select(MeetingSession)
+        .where(MeetingSession.tenant_id == tenant.id)
+        .order_by(MeetingSession.id.desc())
+    )
+    rows = db.exec(q).all()
+    incomplete_rows = [
+        s for s in rows
+        if (s.processing_error or "") or not (s.processing_completed_at or "")
+    ]
+    incomplete = []
+    for s in incomplete_rows:
+        tasks = db.exec(
+            select(ActionItem).where(ActionItem.session_id == s.id)
+        ).all()
+        incomplete.append({
+            "id": s.id,
+            "title": s.title,
+            "date": s.date,
+            "fireflies_id": s.fireflies_id,
+            "status": s.status,
+            "processing_error": s.processing_error or "",
+            "processing_attempts": s.processing_attempts or 0,
+            "processing_completed_at": s.processing_completed_at or "",
+            "has_transcript": bool((s.raw_transcript or "").strip()),
+            "has_summary": bool((s.raw_summary or "").strip()),
+            "has_decisions": bool((s.processed_decisions or "").strip()),
+            "tasks_count": len(tasks),
+        })
+    return {"count": len(incomplete), "sessions": incomplete}
+
+
+async def _run_ai_pipeline_in_background(session_id: int) -> None:
+    """Wrapper para correr `process_session_with_ai` con su propio Session.
+
+    Necesario porque BackgroundTasks no comparte el Session de la request.
+    """
+    from database import engine
+
+    with Session(engine) as db:
+        try:
+            await process_session_with_ai(db, session_id)
+        except Exception:
+            logger.exception(
+                "Retry de pipeline IA falló para sesión %s", session_id,
+            )

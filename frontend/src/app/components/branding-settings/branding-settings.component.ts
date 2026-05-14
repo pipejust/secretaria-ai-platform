@@ -1,9 +1,12 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { BrandingService, Branding } from '../../services/branding.service';
 import { ToastService } from '../../services/toast.service';
+import { environment } from '../../../environments/environment';
 
 interface BrandActivityItem {
     id: number;
@@ -28,6 +31,11 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     private readonly auth = inject(AuthService);
     private readonly toast = inject(ToastService);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly http = inject(HttpClient);
+
+    // Prueba de envío de correo
+    testEmailTo = '';
+    isSendingTest = false;
 
     /** Modelo local para edición — copiado de la marca actual al entrar. */
     form: Branding = {
@@ -345,6 +353,38 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
             this.toast.error(err?.error?.detail || 'No se pudo eliminar el imagologo.');
         } finally {
             this.isUploadingIcon = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    // ============================================================
+    // Probar envío de correo (POST /api/branding/test_email)
+    // ============================================================
+    async sendTestEmail(): Promise<void> {
+        const target = (this.testEmailTo || '').trim();
+        if (this.isSendingTest) return;
+        this.isSendingTest = true;
+        try {
+            const headers = this.auth.getAuthHeaders();
+            const res = await firstValueFrom(
+                this.http.post<{ status: string; to: string; smtp_configured: boolean }>(
+                    `${environment.apiUrl}/api/branding/test_email`,
+                    { to_email: target || null },
+                    { headers },
+                ),
+            );
+            if (!res?.smtp_configured) {
+                this.toast.warning(
+                    `Correo de prueba simulado a ${res?.to} (revisa logs del backend). Configura SMTP en /admin/settings para envío real.`,
+                );
+            } else {
+                this.toast.success(`Correo de prueba enviado a ${res.to}.`);
+            }
+        } catch (err: any) {
+            const msg = err?.error?.detail || 'No pude enviar el correo de prueba.';
+            this.toast.error(msg);
+        } finally {
+            this.isSendingTest = false;
             this.cdr.detectChanges();
         }
     }

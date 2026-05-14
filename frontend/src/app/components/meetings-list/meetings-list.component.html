@@ -327,10 +327,33 @@
 
                     <!-- Estado -->
                     <div class="cell-status">
-                        <span class="status-badge"
-                              [attr.data-status]="statusBadge(s.status).key">
-                            {{ statusBadge(s.status).label }}
-                        </span>
+                        <ng-container *ngIf="s.processing_error; else okStatus">
+                            <!-- Estado "fallando": REEMPLAZA el badge normal y NO se
+                                 envía nada por integraciones hasta que el admin
+                                 reintente y termine sin errores. -->
+                            <span class="status-badge status-failing"
+                                  data-status="failing"
+                                  [title]="'Pipeline incompleto: ' + s.processing_error">
+                                ⚠ Fallando
+                            </span>
+                            <button type="button"
+                                    class="retry-inline-btn"
+                                    (click)="retrySessionPipeline(s, false, $event)"
+                                    title="Reintentar análisis IA con la data ya guardada">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                Reintentar
+                            </button>
+                        </ng-container>
+                        <ng-template #okStatus>
+                            <span class="status-badge"
+                                  [attr.data-status]="statusBadge(s.status).key">
+                                {{ statusBadge(s.status).label }}
+                            </span>
+                        </ng-template>
                     </div>
 
                     <!-- Acciones (kebab) -->
@@ -370,6 +393,30 @@
                                 Descargar PDF
                             </button>
                             <div class="kebab-divider"></div>
+                            <!-- Reintentar pipeline IA — solo visible si la sesión
+                                 quedó incompleta (Groq/OpenAI fallaron tras los
+                                 reintentos automáticos). -->
+                            <button *ngIf="s.processing_error"
+                                    (click)="retrySessionPipeline(s, false, $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                Reintentar análisis IA
+                            </button>
+                            <button *ngIf="s.processing_error && s.fireflies_id"
+                                    (click)="retrySessionPipeline(s, true, $event); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                                    <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+                                </svg>
+                                Re-traer de Fireflies + IA
+                            </button>
+                            <div class="kebab-divider" *ngIf="s.processing_error"></div>
                             <!-- Archivar / Desarchivar según el estado actual.
                                  Si está archivada permitimos restaurarla a "pending"
                                  para que vuelva al tab "Pendientes". -->
@@ -585,7 +632,11 @@
                     <p class="dt-card-empty" *ngIf="!selectedExecutiveSummary && !isLoadingDetail">
                         Esta sesión aún no tiene resumen ejecutivo generado.
                     </p>
-                    <p class="dt-card-empty" *ngIf="isLoadingDetail">Cargando…</p>
+                    <div class="dt-card-skeleton" *ngIf="isLoadingDetail">
+                        <span class="skeleton skeleton-line is-full"></span>
+                        <span class="skeleton skeleton-line is-full"></span>
+                        <span class="skeleton skeleton-line is-lg"></span>
+                    </div>
                 </article>
 
                 <!-- Decisiones clave -->

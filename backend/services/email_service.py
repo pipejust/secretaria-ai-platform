@@ -1,6 +1,7 @@
 import os
 import resend
 import json
+from typing import Optional
 from jinja2 import Environment, FileSystemLoader
 from sqlmodel import Session, select
 from models import IntegrationSetting
@@ -235,28 +236,94 @@ class EmailService:
         await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content, attachments=attachments)
 
     async def send_action_items_batch_email(
-        self, 
-        to_email: str, 
-        owner_name: str, 
-        tasks: list, 
-        project_name: str, 
+        self,
+        to_email: str,
+        owner_name: str,
+        tasks: list,
+        project_name: str,
         attachments: list = None,
         summary: str = None,
         decisions: str = None,
         risks: str = None,
-        agreements: str = None
+        agreements: str = None,
+        raw_transcript: str = None,
+        session_title: str = None,
     ):
+        """Email completo al responsable. Incluye:
+          - Sus tareas (sólo las suyas, no de otros responsables)
+          - Botones "Añadir al calendario" por tarea (Google + Outlook + .ics)
+          - Resumen ejecutivo, decisiones, riesgos y acuerdos del acta
+          - Transcripción completa de la reunión (en el cuerpo del correo)
+          - PDF/Word del acta adjunto (sin transcripción)
+        """
+        from urllib.parse import quote
+        import datetime as _dt
+
         template = self.jinja_env.get_template('email_action_items_batch.html')
-        
-        # Prepare tasks for rendering
+
+        def _to_ics_date(due: str) -> Optional[str]:
+            """Devuelve `YYYYMMDD` si la fecha es válida, si no None."""
+            if not due:
+                return None
+            s = str(due).strip()
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y-%m-%dT%H:%M:%S"):
+                try:
+                    return _dt.datetime.strptime(s[:len(fmt)+2 if 'T' in fmt else 10], fmt).strftime("%Y%m%d")
+                except (ValueError, TypeError):
+                    continue
+            # ISO con timezone
+            try:
+                return _dt.datetime.fromisoformat(s.replace("Z", "+00:00")).strftime("%Y%m%d")
+            except (ValueError, TypeError):
+                return None
+
+        # Prepare tasks for rendering with calendar URLs
         rendered_tasks = []
         for t in tasks:
+            title = getattr(t, 'title', '') or ''
+            description = getattr(t, 'description', '') or ''
+            due_date = getattr(t, 'due_date', None)
+            ics_date = _to_ics_date(due_date) if due_date else None
+
+            # Google Calendar quick-add — fechas all-day si tenemos due_date.
+            gcal_url = ""
+            outlook_url = ""
+            if ics_date:
+                gcal_url = (
+                    "https://calendar.google.com/calendar/render?action=TEMPLATE"
+                    f"&text={quote(title)}"
+                    f"&dates={ics_date}/{ics_date}"
+                    f"&details={quote((description + chr(10) + chr(10) + 'Proyecto: ' + project_name)[:1500])}"
+                )
+                # Outlook web — usa formato ISO yyyy-MM-ddT00:00:00.
+                iso_day = f"{ics_date[:4]}-{ics_date[4:6]}-{ics_date[6:8]}"
+                outlook_url = (
+                    "https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose"
+                    "&rru=addevent"
+                    f"&subject={quote(title)}"
+                    f"&startdt={iso_day}T09:00:00"
+                    f"&enddt={iso_day}T10:00:00"
+                    f"&body={quote(description[:1500])}"
+                    "&allday=false"
+                )
+            else:
+                # Sin fecha: igual creamos un evento "ahora" para que el clic
+                # abra el form pre-rellenado y el usuario fije la fecha.
+                gcal_url = (
+                    "https://calendar.google.com/calendar/render?action=TEMPLATE"
+                    f"&text={quote(title)}"
+                    f"&details={quote((description + chr(10) + 'Proyecto: ' + project_name)[:1500])}"
+                )
+
             rendered_tasks.append({
-                "title": getattr(t, 'title', ''),
-                "description": getattr(t, 'description', ''),
-                "due_date": getattr(t, 'due_date', None)
+                "title": title,
+                "description": description,
+                "due_date": due_date,
+                "gcal_url": gcal_url,
+                "outlook_url": outlook_url,
+                "has_date": bool(ics_date),
             })
-            
+
         task_count = len(rendered_tasks)
         plural = "s" if task_count > 1 else ""
 
@@ -265,14 +332,72 @@ class EmailService:
             tasks=rendered_tasks,
             task_count=task_count,
             project_name=project_name,
+            session_title=session_title or project_name,
             summary=summary,
             decisions=decisions,
             risks=risks,
             agreements=agreements,
+            raw_transcript=raw_transcript or "",
             current_year=2026,
             brand=self.branding,
         )
         await self._send_html_email(to_email, f"Tienes {task_count} nueva{plural} tarea{plural} asignada{plural} en: {project_name}", html_content, attachments=attachments)
+
+    async def send_session_received_email(
+        self,
+        to_email: str,
+        admin_name: str,
+        session_title: str,
+        project_name: str,
+        session_url: str,
+        auto_dispatch_enabled: bool,
+        timeout_minutes: int,
+    ):
+        """Email INICIAL al admin del proyecto en cuanto Fireflies entrega una
+        sesión. Le avisa que la sesión está en el sistema y, dependiendo del
+        modo de envío, le da N minutos para curar antes del despacho automático.
+        """
+        subject = f"Nueva sesión en Acten: {session_title or 'Sin título'}"
+        body_lines = [
+            f"<p>Hola {admin_name or ''},</p>",
+            f"<p>Se acaba de recibir una nueva sesión de <strong>Fireflies</strong> "
+            f"en el proyecto <strong>{project_name}</strong>:</p>",
+            f"<p style='font-size:1.1rem;font-weight:600;margin:18px 0;'>{session_title or 'Sin título'}</p>",
+        ]
+        if auto_dispatch_enabled:
+            body_lines.append(
+                f"<p>El <strong>envío automático de tareas y correos</strong> está activo. "
+                f"Tienes <strong>{timeout_minutes} minutos</strong> para revisar la sesión, "
+                f"agregar los correos y nombres de los participantes faltantes y editar las "
+                f"tareas detectadas. Si no editas en ese tiempo, las tareas y correos se "
+                f"enviarán automáticamente con la información actual.</p>"
+            )
+        else:
+            body_lines.append(
+                f"<p>El envío automático <strong>NO está activo</strong>. La sesión queda en "
+                f"el listado de reuniones esperando que la cures y dispares manualmente los "
+                f"correos y tareas a las plataformas conectadas.</p>"
+            )
+        body_lines.append(
+            f"<p style='margin-top:18px;'>"
+            f"<a href='{session_url}' style='background:#155EEF;color:#fff;padding:10px 18px;"
+            f"border-radius:8px;text-decoration:none;font-weight:600;'>Abrir la sesión en Acten</a>"
+            f"</p>"
+        )
+        body_lines.append(
+            "<p style='color:#6b7280;font-size:0.85rem;margin-top:24px;'>"
+            "Recuerda que si la sesión no tiene todos los correos de los participantes, "
+            "esos correos no recibirán las tareas detectadas hasta que los agregues."
+            "</p>"
+        )
+        html_content = (
+            f"<!doctype html><html><body style='font-family:Helvetica,Arial,sans-serif;"
+            f"color:#0F172A;line-height:1.55;max-width:600px;margin:0 auto;padding:24px;'>"
+            f"<h2 style='font-size:1.25rem;margin-bottom:16px;'>Acten</h2>"
+            + "".join(body_lines)
+            + "</body></html>"
+        )
+        await self._send_html_email(to_email, subject, html_content)
 
     async def send_welcome_email(self, to_email: str, user_name: str, role: str, login_url: str = ""):
         template = self.jinja_env.get_template('email_welcome.html')

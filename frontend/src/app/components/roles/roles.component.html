@@ -197,10 +197,17 @@
                 <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">Limpiar</button>
             </section>
 
-            <!-- Loading -->
-            <div class="rl-loading" *ngIf="isLoading">
-                <span class="rl-spinner"></span>
-                <span>Cargando roles…</span>
+            <!-- Loading skeleton -->
+            <div class="skeleton-table" *ngIf="isLoading">
+                <div class="skeleton-row" style="grid-template-columns: 60px 2fr 3fr 1fr 1fr 80px;"
+                     *ngFor="let _ of [1,2,3,4,5,6]">
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-line"></span>
+                    <span class="skeleton skeleton-line"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                </div>
             </div>
 
             <!-- Tabla -->

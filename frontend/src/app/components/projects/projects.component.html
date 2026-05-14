@@ -72,7 +72,9 @@
                                 </svg>
                                 <p>
                                     Este proyecto sigue el ajuste global de
-                                    <a routerLink="/admin/settings" (click)="cancelEdit()">Configuración &gt; Auto-Curación</a>.
+                                    <a routerLink="/admin/settings"
+                                       [queryParams]="{ section: 'task-sync' }"
+                                       (click)="cancelEdit()">Configuración &gt; Sincronización de tareas y correos</a>.
                                 </p>
                             </div>
                         </div>
@@ -135,7 +137,16 @@
             <div class="ap-alert ap-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
 
             <!-- Lista de contactos como cards -->
-            <div *ngIf="isLoadingContacts" class="ap-modal-loading">Cargando…</div>
+            <div *ngIf="isLoadingContacts" class="ap-modal-loading"
+                 style="display:flex; flex-direction:column; gap:10px; padding: 12px 0;">
+                <div class="skeleton-stack" *ngFor="let _ of [1,2,3]">
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                    <div class="skeleton-stack-body">
+                        <span class="skeleton skeleton-line is-full"></span>
+                        <span class="skeleton skeleton-line is-sm"></span>
+                    </div>
+                </div>
+            </div>
             <div *ngIf="!isLoadingContacts && projectContacts.length === 0" class="ap-modal-empty">
                 Sin participantes guardados para este proyecto.
             </div>

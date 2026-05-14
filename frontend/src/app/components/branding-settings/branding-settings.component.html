@@ -369,6 +369,40 @@
                         </svg>
                         Estos colores se aplicarán a la plataforma y a las comunicaciones.
                     </footer>
+
+                    <!-- Probar envío de correo — usa la configuración SMTP del tenant
+                         y los colores actuales de la marca para enviar un correo de
+                         prueba a la dirección indicada (o al admin si está vacía). -->
+                    <div class="br-test-email">
+                        <div class="br-test-email-head">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            <div>
+                                <strong>Probar envío de correo</strong>
+                                <span>Manda un correo de prueba con esta marca para verificar que tu SMTP funciona.</span>
+                            </div>
+                        </div>
+                        <div class="br-test-email-row">
+                            <input type="email"
+                                   [(ngModel)]="testEmailTo"
+                                   placeholder="destinatario@empresa.com (vacío = enviar a ti)"
+                                   class="br-test-email-input"
+                                   [disabled]="isSendingTest"/>
+                            <button class="br-btn br-btn--primary"
+                                    (click)="sendTestEmail()"
+                                    [disabled]="isSendingTest">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" class="br-btn-ico">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                                {{ isSendingTest ? 'Enviando…' : 'Probar envío de correos' }}
+                            </button>
+                        </div>
+                    </div>
                 </article>
 
                 <!-- Vista previa del email -->

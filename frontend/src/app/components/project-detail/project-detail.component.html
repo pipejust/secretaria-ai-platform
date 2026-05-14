@@ -1,5 +1,28 @@
 <div class="project-detail-container">
-  <div *ngIf="isLoading" class="loading">Cargando detalle del proyecto…</div>
+  <div *ngIf="isLoading" class="pd-skeleton" style="display:flex; flex-direction:column; gap:16px; padding:24px;">
+    <span class="skeleton skeleton-line is-xl"></span>
+    <span class="skeleton skeleton-line is-lg"></span>
+    <div class="skeleton-grid">
+      <div class="skeleton-card" *ngFor="let _ of [1,2,3,4]">
+        <div class="skeleton-stack">
+          <span class="skeleton skeleton-circle"></span>
+          <div class="skeleton-stack-body">
+            <span class="skeleton skeleton-line is-sm"></span>
+            <span class="skeleton skeleton-line is-lg"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="skeleton-card" style="min-height: 240px;">
+      <span class="skeleton skeleton-line is-lg"></span>
+      <div class="skeleton-stack" *ngFor="let _ of [1,2,3,4]" style="margin-top: 8px;">
+        <span class="skeleton skeleton-circle is-sm"></span>
+        <div class="skeleton-stack-body">
+          <span class="skeleton skeleton-line is-full"></span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <ng-container *ngIf="!isLoading && data as d">
     <header class="header">

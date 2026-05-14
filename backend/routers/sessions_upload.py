@@ -971,6 +971,8 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
         "contexto_antecedentes": clean_summary,
         "decisiones": session_obj.processed_decisions or "",
         "riesgos": session_obj.processed_risks or "",
+        "acuerdos":   session_obj.processed_agreements or "",
+        # Alias legacy para no romper consumidores viejos.
         "agreements": session_obj.processed_agreements or "",
         "compromisos": formatted_items,
         "theme": theme,
@@ -1204,11 +1206,15 @@ async def dispatch_emails(
                 owner_name=data["owner_name"],
                 tasks=data["items"],
                 project_name=session_obj.title,
+                session_title=session_obj.title,
                 attachments=attachments,
                 summary=session_obj.raw_summary,
                 decisions=session_obj.processed_decisions,
                 risks=session_obj.processed_risks,
-                agreements=session_obj.processed_agreements
+                agreements=session_obj.processed_agreements,
+                # Transcripción completa al cuerpo del correo. El PDF/Word
+                # adjunto NO la incluye (esto se ve solo dentro del email).
+                raw_transcript=session_obj.raw_transcript,
             )
             for item in data["items"]:
                 results.append({"id": item.id, "status": "success"})

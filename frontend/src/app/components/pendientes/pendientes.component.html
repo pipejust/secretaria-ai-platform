@@ -306,8 +306,17 @@
                                     No hay tareas que coincidan con los filtros aplicados.
                                 </td>
                             </tr>
-                            <tr *ngIf="isLoading">
-                                <td colspan="8" class="tk-empty">Cargando tareas…</td>
+                            <tr *ngFor="let _ of (isLoading ? [1,2,3,4,5,6] : [])" class="tk-skeleton-row">
+                                <td colspan="8" style="padding: 14px 16px;">
+                                    <div class="skeleton-stack">
+                                        <span class="skeleton skeleton-circle is-sm"></span>
+                                        <div class="skeleton-stack-body">
+                                            <span class="skeleton skeleton-line is-full"></span>
+                                            <span class="skeleton skeleton-line is-sm"></span>
+                                        </div>
+                                        <span class="skeleton skeleton-line is-sm" style="width:80px"></span>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>

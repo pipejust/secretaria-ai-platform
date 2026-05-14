@@ -213,9 +213,18 @@
 
         <!-- Tabla -->
         <section class="tn-table-card">
-            <div class="tn-table-loading" *ngIf="loading">
-                <span class="tn-spinner"></span>
-                <span>Cargando empresas…</span>
+            <div class="skeleton-table" *ngIf="loading">
+                <div class="skeleton-row"
+                     style="grid-template-columns: 60px 2fr 3fr 1fr 1fr 1fr 80px;"
+                     *ngFor="let _ of [1,2,3,4,5,6]">
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-line"></span>
+                    <span class="skeleton skeleton-line"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                </div>
             </div>
 
             <ng-container *ngIf="!loading && viewMode === 'list'">

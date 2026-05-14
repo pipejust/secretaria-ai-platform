@@ -8,13 +8,98 @@
      =================================================================== -->
 <div class="curation-page fade-in" (click)="closeTaskMenu()">
 
-    <!-- Loading -->
-    <div *ngIf="isLoading" class="cp-loading">
-        <div class="spinner"></div>
-        <p>Cargando sesión…</p>
+    <!-- Loading: skeleton del detalle de sesión -->
+    <div *ngIf="isLoading" class="cp-skeleton" style="display:flex; flex-direction:column; gap:16px; padding:24px;">
+        <span class="skeleton skeleton-line is-sm" style="width:240px"></span>
+        <span class="skeleton skeleton-line is-xl"></span>
+        <span class="skeleton skeleton-line is-lg"></span>
+        <div class="skeleton-grid" style="grid-template-columns: 2fr 1fr; gap:16px; margin-top: 8px;">
+            <div class="skeleton-card" style="min-height: 200px;">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <span class="skeleton skeleton-line is-full"></span>
+                <span class="skeleton skeleton-line is-full"></span>
+                <span class="skeleton skeleton-line"></span>
+            </div>
+            <div class="skeleton-card" style="min-height: 200px;">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <div class="skeleton-stack" *ngFor="let _ of [1,2,3]" style="margin-top: 8px;">
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                    <div class="skeleton-stack-body">
+                        <span class="skeleton skeleton-line is-full"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="skeleton-card" style="min-height: 180px;">
+            <span class="skeleton skeleton-line is-lg"></span>
+            <div class="skeleton-stack" *ngFor="let _ of [1,2,3,4]" style="margin-top: 8px;">
+                <span class="skeleton skeleton-circle is-sm"></span>
+                <div class="skeleton-stack-body">
+                    <span class="skeleton skeleton-line is-full"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <ng-container *ngIf="!isLoading">
+
+        <!-- Banner de pipeline incompleto: bloquea visualmente la página y
+             expone el botón de reintento. Mientras esté presente, el backend
+             NO despachará nada a integraciones (Trello/Jira/email a owners). -->
+        <div *ngIf="meetingData.processing_error"
+             class="cp-failing-banner"
+             role="alert">
+            <div class="cp-failing-banner-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <div class="cp-failing-banner-body">
+                <strong>Análisis IA incompleto</strong>
+                <p>
+                    No se pudo terminar de procesar la sesión. Mientras esté en
+                    este estado, no se enviará información a integraciones ni
+                    se notificará a los responsables. Presiona <strong>Reintentar</strong>
+                    para volver a ejecutar el proceso completo.
+                </p>
+                <p class="cp-failing-detail" *ngIf="meetingData.processing_error">
+                    <span class="cp-failing-detail-label">Detalle técnico:</span>
+                    {{ meetingData.processing_error }}
+                </p>
+            </div>
+            <div class="cp-failing-banner-actions">
+                <!-- Primario: re-ejecuta SOLO la IA con lo que ya está en DB.
+                     Cubre el caso del 90% (Groq/OpenAI fallaron pero el
+                     transcript+summary llegaron bien). Sin segunda llamada
+                     a la API de Fireflies. -->
+                <button type="button"
+                        class="cp-failing-btn cp-failing-btn-primary"
+                        [disabled]="isRetryingPipeline"
+                        (click)="retryPipelineFromCuration(false)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    {{ isRetryingPipeline ? 'Reintentando…' : 'Reintentar análisis IA' }}
+                </button>
+                <!-- Secundario: vuelve a Fireflies a traer transcript+summary
+                     y luego re-corre IA. Útil sólo si el transcript llegó
+                     vacío o roto. -->
+                <button type="button"
+                        class="cp-failing-btn cp-failing-btn-secondary"
+                        *ngIf="meetingData.fireflies_id"
+                        [disabled]="isRetryingPipeline"
+                        (click)="retryPipelineFromCuration(true)"
+                        title="Vuelve a consultar Fireflies y reanaliza desde cero">
+                    Re-traer de Fireflies + IA
+                </button>
+            </div>
+        </div>
 
         <!-- Breadcrumb superior -->
         <nav class="cp-breadcrumb" aria-label="Navegación">
@@ -62,10 +147,19 @@
                     </li>
                     <li>
                         <span class="cp-meta-label">Estado:</span>
-                        <span class="cp-badge cp-badge-status"
-                              [attr.data-status]="(meetingData.status || 'pending').toLowerCase()">
-                            {{ getTranslatedStatus(meetingData.status) }}
-                        </span>
+                        <ng-container *ngIf="meetingData.processing_error; else cpStatusOk">
+                            <span class="cp-badge cp-badge-status cp-status-failing"
+                                  data-status="failing"
+                                  [title]="meetingData.processing_error">
+                                ⚠ Fallando
+                            </span>
+                        </ng-container>
+                        <ng-template #cpStatusOk>
+                            <span class="cp-badge cp-badge-status"
+                                  [attr.data-status]="(meetingData.status || 'pending').toLowerCase()">
+                                {{ getTranslatedStatus(meetingData.status) }}
+                            </span>
+                        </ng-template>
                     </li>
                     <li>
                         <span class="cp-meta-label">Idioma:</span>

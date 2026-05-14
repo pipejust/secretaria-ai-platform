@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 def _load_auto_curation_config(session: Session, tenant_id: int) -> Optional[tuple[bool, float]]:
     """Devuelve (is_enabled, timeout_hours) del autoCuration setting del tenant
     indicado, o None si la configuración no existe/es inválida.
+
+    Soporta tanto `timeoutMinutes` (nuevo, preferido) como `timeoutHours`
+    (legacy, convertido). Si ambos existen, gana minutos.
     """
     setting = session.exec(
         select(IntegrationSetting)
@@ -47,11 +50,19 @@ def _load_auto_curation_config(session: Session, tenant_id: int) -> Optional[tup
         logger.error("autoCuration: config_json inválido")
         return None
     is_enabled = bool(config.get("isEnabled", False))
+    # Prioridad: minutos nuevo > horas legacy.
+    timeout_minutes = config.get("timeoutMinutes")
+    if timeout_minutes is None:
+        try:
+            timeout_hours = float(config.get("timeoutHours", 1))
+        except (TypeError, ValueError):
+            timeout_hours = 1.0
+        timeout_minutes = timeout_hours * 60
     try:
-        timeout_hours = float(config.get("timeoutHours", 1))
+        timeout_minutes = float(timeout_minutes)
     except (TypeError, ValueError):
-        timeout_hours = 1.0
-    return is_enabled, max(timeout_hours, 0.0)
+        timeout_minutes = 60.0
+    return is_enabled, max(timeout_minutes / 60.0, 0.0)  # devolvemos horas para no romper firmas existentes
 
 
 def _hours_since(created_at_iso: str) -> Optional[float]:
@@ -234,6 +245,17 @@ def check_and_dispatch_pending_sessions() -> None:
         config_cache: dict[int, tuple[bool, float]] = {}
 
         for ms in pending_sessions:
+            # GATE de seguridad: si el pipeline IA dejó error, la sesión
+            # NO se auto-despacha hasta que el admin reintente y termine OK.
+            # Esto evita mandar tareas/decisiones incompletas a Trello/Jira
+            # o disparar correos a owners con info parcial.
+            if (ms.processing_error or "").strip():
+                logger.debug(
+                    "Auto-dispatch SKIP sesión %s: processing_error='%s'",
+                    ms.id, ms.processing_error[:120],
+                )
+                continue
+
             tid = ms.tenant_id
             if tid not in config_cache:
                 cfg = _load_auto_curation_config(session, tid)
@@ -296,8 +318,10 @@ def check_overdue_action_items() -> None:
 
 
 scheduler = BackgroundScheduler()
+# Cada 1 minuto — el usuario configura el delay en MINUTOS, así que el cron
+# debe poder actuar en granularidad de minutos.
 scheduler.add_job(
-    check_and_dispatch_pending_sessions, "interval", minutes=5, max_instances=1
+    check_and_dispatch_pending_sessions, "interval", minutes=1, max_instances=1
 )
 # Sprint 10 — alertas de vencimiento (cada 1 hora)
 scheduler.add_job(
@@ -307,7 +331,7 @@ scheduler.add_job(
 
 def start_cron() -> None:
     scheduler.start()
-    logger.info("Cron iniciado: auto-curación cada 5 min + overdue check cada 1h.")
+    logger.info("Cron iniciado: envío automático cada 1 min + overdue check cada 1h.")
 
 
 def stop_cron() -> None:

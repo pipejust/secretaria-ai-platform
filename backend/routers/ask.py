@@ -104,6 +104,15 @@ def _filter_relevant(raw_chunks: list[dict], override: Optional[float] = None) -
     return filtered
 
 
+class PriorTurn(BaseModel):
+    """Turno previo del hilo de conversación (pregunta + respuesta del modelo).
+
+    Permite que las preguntas de seguimiento ("Y de eso, ¿qué dijo Juan?")
+    tengan contexto del turno anterior sin recargar todo el RAG."""
+    question: str
+    answer: str
+
+
 class AskRequest(BaseModel):
     question: str
     project_id: Optional[int] = None
@@ -115,6 +124,9 @@ class AskRequest(BaseModel):
     # menú de adjuntar para no mezclar con otras actas. La validación
     # de pertenencia al tenant ocurre dentro del endpoint.
     session_ids: Optional[list[int]] = None
+    # Turns previos del MISMO hilo de chat — para que el LLM tenga contexto
+    # conversacional. La UI envía los últimos N turnos cronológicos.
+    prior_turns: Optional[list[PriorTurn]] = None
 
 
 class Citation(BaseModel):
@@ -122,6 +134,11 @@ class Citation(BaseModel):
     kind: str
     snippet: str
     distance: float
+    # Metadatos opcionales — útiles para que el frontend muestre el
+    # título de la sesión sin tener que hacer un segundo fetch.
+    session_title: Optional[str] = None
+    session_date: Optional[str] = None
+    project_name: Optional[str] = None
 
 
 class Decision(BaseModel):
@@ -180,11 +197,52 @@ class AskHistoryEntry(BaseModel):
 
 
 def _build_context(chunks: list[dict]) -> str:
+    """Construye el contexto que recibe el LLM. Cada bloque incluye el
+    metadato de la sesión (id, título, fecha, proyecto) Y el contenido
+    del chunk. Esto es crítico para preguntas "meta" como "qué sitios se
+    visitaron" o "qué clientes hubo este mes" — la respuesta vive en los
+    TÍTULOS, no en los chunks de summary/decisions."""
     blocks = []
     for c in chunks:
-        snippet = (c["content"] or "")[:1200]
-        blocks.append(f"[Sesión #{c['session_id']} · {c['kind']}]\n{snippet}")
+        snippet = (c.get("content") or "")[:1200]
+        title = c.get("session_title") or ""
+        date = c.get("session_date") or ""
+        proj = c.get("project_name") or ""
+        # Header con todo el metadato para que el LLM pueda razonar sobre
+        # las sesiones aunque la pregunta no esté literalmente en el chunk.
+        header_parts = [f"Sesión #{c['session_id']}"]
+        if title: header_parts.append(f"Título: \"{title}\"")
+        if date:  header_parts.append(f"Fecha: {date}")
+        if proj:  header_parts.append(f"Proyecto: {proj}")
+        header_parts.append(f"Sección: {c['kind']}")
+        header = " · ".join(header_parts)
+        blocks.append(f"[{header}]\n{snippet}")
     return "\n\n---\n\n".join(blocks)
+
+
+def _build_sessions_inventory(chunks: list[dict]) -> str:
+    """Lista compacta de TODAS las sesiones únicas presentes en los chunks.
+    Útil para que el LLM responda preguntas "meta" sobre el conjunto (qué
+    sitios, qué clientes, qué proyectos) sin tener que escanear cada chunk."""
+    seen: dict[int, dict] = {}
+    for c in chunks:
+        sid = c.get("session_id")
+        if sid is None or sid in seen:
+            continue
+        seen[sid] = {
+            "title": c.get("session_title") or "(sin título)",
+            "date": c.get("session_date") or "",
+            "project_name": c.get("project_name") or "",
+        }
+    if not seen:
+        return ""
+    lines = ["Inventario de sesiones únicas en el contexto:"]
+    for sid, meta in seen.items():
+        line = f"  · #{sid}  \"{meta['title']}\""
+        if meta["date"]:         line += f"  ({meta['date']})"
+        if meta["project_name"]: line += f"  — proyecto: {meta['project_name']}"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _normalize_for_match(s: str) -> str:
@@ -383,10 +441,26 @@ async def ask(
     relevant_session_ids = {c["session_id"] for c in chunks}
 
     context = _build_context(chunks)
+    sessions_inventory = _build_sessions_inventory(chunks)
     # Pedimos JSON estructurado para que el frontend pueda renderizar
     # secciones (Decisiones / Tareas pendientes / Fuentes) tal como el
     # mockup. Cada decisión y tarea DEBE indicar la(s) sesión(es) origen
     # para hacer verificable el resultado.
+    # Aviso al sistema sobre el contexto conversacional. Si hay prior_turns,
+    # el modelo ya verá esos mensajes en el array `messages` (más abajo) y
+    # tratará la nueva pregunta como SEGUIMIENTO del hilo.
+    convo_hint = ""
+    if req.prior_turns:
+        convo_hint = (
+            "\nEsta es una pregunta de SEGUIMIENTO dentro de un hilo "
+            "conversacional. Antes te llegarán los turnos previos del mismo "
+            "chat (user + assistant). Úsalos para resolver referencias como "
+            "'eso', 'lo anterior', 'ella', 'esa decisión'. Si la nueva pregunta "
+            "es ambigua sola pero clara con el contexto previo, respóndela "
+            "tomando ese hilo. Sigue citando `source_sessions` con IDs reales "
+            "de las actas relevantes.\n"
+        )
+
     system = (
         "Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
         "con esta estructura EXACTA:\n"
@@ -412,7 +486,7 @@ async def ask(
         "1. Responde EXCLUSIVAMENTE en español.\n"
         "2. Cada decisión y cada tarea DEBE incluir el `source_sessions` con "
         "los IDs numéricos (sin '#') de las sesiones del contexto donde aparece. "
-        "El ID es el número que ves entre corchetes (ej: [Sesión #15 · summary] → 15).\n"
+        "El ID es el número que ves después de `Sesión #` en el header del bloque.\n"
         "3. NO incluyas decisiones ni tareas que no estén EXPLÍCITAS en el "
         "contexto. Es preferible una lista vacía a inventar información.\n"
         "4. NO mezcles información entre sesiones: si una decisión proviene "
@@ -427,34 +501,62 @@ async def ask(
         "9. Si NO encuentras decisiones/tareas explícitas en el contexto, "
         "devuelve `decisions: []` y `action_items: []` — NUNCA inventes.\n"
         "10. NO reescribas el contenido textual de la decisión cambiando su "
-        "significado; cíñete a lo que dice el contexto."
+        "significado; cíñete a lo que dice el contexto.\n"
+        "11. PREGUNTAS META sobre el conjunto de reuniones (ej. \"qué sitios "
+        "se visitaron\", \"qué clientes hubo\", \"qué proyectos se trataron\", "
+        "\"qué fechas\", \"con quién nos reunimos\"): respóndelas en `intro` "
+        "USANDO los TÍTULOS, FECHAS y PROYECTOS de las sesiones del contexto "
+        "(están en el header de cada bloque y en el Inventario inicial). Esa "
+        "información es parte del contexto — no digas que \"no se encontró "
+        "información\" si las sesiones existen en el contexto.\n"
+        "12. Cuando el `intro` lista sitios/clientes/proyectos, hazlo concreto "
+        "y enuméralos por nombre (ej. \"Las sesiones registradas corresponden "
+        "a visitas a Kilómetro Rosso (20 mar), Forma Italia (18 mar)…\")."
     )
     quality_note = ""
     if low_quality:
+        # Importante: cuando la similitud es baja la pregunta suele ser
+        # "meta" (sobre el conjunto). NO le decimos al LLM que diga "no
+        # encontré información" — el inventario de sesiones y sus títulos
+        # SÍ es información válida que puede resumir en `intro`.
         quality_note = (
-            "\n\nNOTA DE CALIDAD: el sistema filtró los fragmentos pero la similitud "
-            "semántica con la pregunta no es alta. Es posible que la respuesta no "
-            "esté EXPLÍCITAMENTE en el contexto. Si ese es el caso:\n"
-            "  - En `intro` di honestamente que no encontraste información directa y "
-            "menciona qué reuniones del contexto tocan temas RELACIONADOS.\n"
-            "  - Devuelve `decisions: []` y `action_items: []` antes que inventar.\n"
-            "  - NO afirmes hechos que no estén textualmente en el contexto."
+            "\n\nNOTA DE CALIDAD: la similitud semántica con la pregunta no es alta. "
+            "Probablemente sea una pregunta META sobre el conjunto de reuniones. "
+            "En ese caso:\n"
+            "  - En `intro` resume usando los TÍTULOS/FECHAS/PROYECTOS de las "
+            "sesiones del Inventario (esa información sí está en el contexto).\n"
+            "  - Devuelve `decisions: []` y `action_items: []` si no hay decisiones/"
+            "tareas literales — pero responde la pregunta en `intro` con la info "
+            "META disponible."
         )
 
     user_msg = (
+        f"{convo_hint}"
         f"Pregunta del usuario: {q}\n\n"
-        f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
-        f"filtrados de {len(raw_chunks)} candidatos por umbral de relevancia):\n"
-        f"{context}"
-        f"{quality_note}\n\n"
-        f"Devuelve la respuesta como JSON estricto siguiendo el esquema y RESPETANDO "
-        f"las 10 reglas. Recuerda: cada decisión y tarea DEBE traer su `source_sessions`."
+        + (f"{sessions_inventory}\n\n" if sessions_inventory else "")
+        + f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
+          f"filtrados de {len(raw_chunks)} candidatos por umbral de relevancia):\n"
+          f"{context}"
+          f"{quality_note}\n\n"
+          f"Devuelve la respuesta como JSON estricto siguiendo el esquema y RESPETANDO "
+          f"las 12 reglas. Recuerda: cada decisión y tarea DEBE traer su `source_sessions`."
     )
+
+    # Inyectamos los turnos previos del MISMO hilo (si vienen) para que el
+    # LLM tenga contexto conversacional. Cada turno se modela como
+    # user + assistant. Limitamos a los últimos 8 turnos para no inflar el
+    # token budget; los más recientes son más relevantes para seguimientos.
+    convo_messages = []
+    if req.prior_turns:
+        for t in req.prior_turns[-8:]:
+            convo_messages.append({"role": "user", "content": t.question})
+            convo_messages.append({"role": "assistant", "content": t.answer})
 
     payload_llm = {
         "model": GROQ_MODEL,
         "messages": [
             {"role": "system", "content": system},
+            *convo_messages,
             {"role": "user", "content": user_msg},
         ],
         "temperature": 0.1,  # Bajamos temperatura para reducir confabulación.
@@ -567,7 +669,10 @@ async def ask(
     citations = [
         Citation(
             session_id=c["session_id"], kind=c["kind"],
-            snippet=(c["content"] or "")[:280], distance=c["distance"],
+            snippet=(c.get("content") or "")[:280], distance=c["distance"],
+            session_title=c.get("session_title") or None,
+            session_date=c.get("session_date") or None,
+            project_name=c.get("project_name") or None,
         )
         for c in chunks
     ]

@@ -66,10 +66,49 @@
         </div>
     </header>
 
-    <!-- Loading -->
-    <div class="rp-loading" *ngIf="isLoading">
-        <span class="rp-spinner"></span>
-        <span>Cargando reportes…</span>
+    <!-- Loading: skeleton del dashboard de reportes -->
+    <div class="rp-skeleton" *ngIf="isLoading">
+        <!-- 4 KPIs en fila -->
+        <div class="skeleton-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div class="skeleton-card" *ngFor="let _ of [1,2,3,4]">
+                <div class="skeleton-stack">
+                    <span class="skeleton skeleton-circle"></span>
+                    <div class="skeleton-stack-body">
+                        <span class="skeleton skeleton-line is-sm"></span>
+                        <span class="skeleton skeleton-line is-xl" style="height:30px"></span>
+                    </div>
+                </div>
+                <span class="skeleton skeleton-line is-sm"></span>
+            </div>
+        </div>
+        <!-- Donut + Line chart -->
+        <div class="skeleton-grid" style="grid-template-columns: 1fr 1fr; margin-top: 16px;">
+            <div class="skeleton-card" style="min-height: 320px;">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <div style="display:flex; gap: 24px; align-items: center; margin-top: 16px;">
+                    <span class="skeleton skeleton-circle" style="width:160px; height:160px;"></span>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
+                        <span class="skeleton skeleton-line" *ngFor="let _ of [1,2,3,4,5]"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="skeleton-card" style="min-height: 320px;">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <span class="skeleton" style="height: 240px; margin-top: 12px;"></span>
+            </div>
+        </div>
+        <!-- Workload + Top projects -->
+        <div class="skeleton-grid" style="grid-template-columns: 1fr; margin-top: 16px;">
+            <div class="skeleton-card" style="min-height: 280px;">
+                <span class="skeleton skeleton-line is-lg"></span>
+                <div class="skeleton-stack" *ngFor="let _ of [1,2,3,4,5]" style="margin-top: 8px;">
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                    <div class="skeleton-stack-body">
+                        <span class="skeleton skeleton-line is-full"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <ng-container *ngIf="!isLoading && data">

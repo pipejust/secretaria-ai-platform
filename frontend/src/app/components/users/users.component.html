@@ -164,9 +164,18 @@
 
         <!-- Tabla -->
         <section class="us-table-card">
-            <div class="us-table-loading" *ngIf="isLoading">
-                <span class="us-spinner"></span>
-                <span>Cargando usuarios…</span>
+            <div class="skeleton-table" *ngIf="isLoading">
+                <div class="skeleton-row"
+                     style="grid-template-columns: 50px 40px 2fr 3fr 1fr 1fr 80px;"
+                     *ngFor="let _ of [1,2,3,4,5,6,7]">
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                    <span class="skeleton skeleton-line"></span>
+                    <span class="skeleton skeleton-line"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-line is-sm"></span>
+                    <span class="skeleton skeleton-circle is-sm"></span>
+                </div>
             </div>
 
             <div class="us-table" *ngIf="!isLoading">
