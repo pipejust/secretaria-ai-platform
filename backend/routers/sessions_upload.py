@@ -3,6 +3,7 @@ from fastapi.responses import Response
 from sqlmodel import Session, select
 from models import MeetingSession, ActionItem, IntegrationSetting, Routing, Tenant, User
 from database import get_session
+from config import settings
 from routers.auth import get_current_tenant, get_current_user, require_admin, require_session_writer
 import uuid
 import os
@@ -1098,7 +1099,7 @@ async def dispatch_emails(
                 
             try:
                 r = requests.post(
-                    "https://demo.gotenberg.dev/forms/libreoffice/convert",
+                    f"{(settings.gotenberg_url or 'http://gotenberg:3000').rstrip('/')}/forms/libreoffice/convert",
                     files={"files": ("acta.docx", docx_bytes)},
                     timeout=60
                 )
@@ -1423,7 +1424,7 @@ def export_document(
         import requests
         try:
             r = requests.post(
-                "https://demo.gotenberg.dev/forms/libreoffice/convert",
+                f"{(settings.gotenberg_url or 'http://gotenberg:3000').rstrip('/')}/forms/libreoffice/convert",
                 files={"files": ("acta.docx", docx_bytes)},
                 timeout=60
             )

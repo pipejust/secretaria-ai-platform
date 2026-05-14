@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24
     bcrypt_rounds: int = 12
 
+    # Gotenberg (DOCX → PDF). En docker compose se setea a http://gotenberg:3000
+    # En producción debería apuntar al contenedor local. Si está vacío usamos
+    # el demo público como último fallback (NO recomendado en prod).
+    gotenberg_url: str = "http://gotenberg:3000"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()

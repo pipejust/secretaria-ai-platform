@@ -62,6 +62,10 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE meetingsession ADD COLUMN processing_error TEXT NOT NULL DEFAULT ''",
             'ALTER TABLE meetingsession ADD COLUMN processing_attempts INTEGER NOT NULL DEFAULT 0',
             "ALTER TABLE meetingsession ADD COLUMN processing_completed_at TEXT NOT NULL DEFAULT ''",
+            # Auto-dispatch — bloqueo y dedupe del warning
+            "ALTER TABLE meetingsession ADD COLUMN auto_dispatch_warning_at TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE meetingsession ADD COLUMN auto_dispatch_blocked_reason TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE meetingsession ADD COLUMN session_ready_email_sent_at TEXT NOT NULL DEFAULT ''",
             'ALTER TABLE project ADD COLUMN auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN auto_dispatch_timeout_hours REAL',
             'ALTER TABLE project ADD COLUMN owner_user_id INTEGER REFERENCES "user"(id)',
@@ -88,6 +92,11 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS processing_attempts INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS processing_completed_at VARCHAR(64) NOT NULL DEFAULT ''",
             "CREATE INDEX IF NOT EXISTS idx_meetingsession_proc_error ON meetingsession((CASE WHEN processing_error = '' THEN 0 ELSE 1 END))",
+            # Auto-dispatch — bloqueo + dedupe del warning + ts del correo
+            # post-pipeline para no reenviarlo en cada retry.
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS auto_dispatch_warning_at VARCHAR(64) NOT NULL DEFAULT ''",
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS auto_dispatch_blocked_reason VARCHAR(64) NOT NULL DEFAULT ''",
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS session_ready_email_sent_at VARCHAR(64) NOT NULL DEFAULT ''",
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_timeout_hours DOUBLE PRECISION',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES "user"(id)',
