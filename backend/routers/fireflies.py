@@ -634,24 +634,50 @@ async def process_transcript_background(
                     for s in sentences
                 ).strip()
 
-            # Resumen ejecutivo NATIVO de Fireflies (no se genera con IA).
-            # Fireflies genera el summary asincrónicamente — cuando el webhook
-            # llega muy rápido tras la reunión, el summary puede no estar listo
-            # todavía. Si la primera lectura viene vacía, reintentamos un par
-            # de veces con backoff antes de aceptar que no hay summary.
+            # Resumen ejecutivo NATIVO de Fireflies (cuando aplica).
+            # Política diferenciada por tier:
+            # - paid : Fireflies eventualmente entrega → reintentar con backoff
+            #          hasta 70s. Si igual viene vacío, NO generamos con Groq —
+            #          dejamos que el cliente espere (Fireflies tarda minutos
+            #          a veces) o use el botón refetch después.
+            # - free : Fireflies NUNCA va a generar el summary → ni siquiera
+            #          gastamos 70s esperando. Pasamos directo al fallback Groq.
+            # - unknown (primera vez): tratamos como paid (espera + sin Groq).
+            #   El probe de tier se hace abajo como side effect del refetch.
             raw_summary = _extract_native_summary(ff_data.get("summary"))
+
+            from services.fireflies_service import (
+                fetch_native_summary,
+                get_or_detect_fireflies_tier,
+            )
+
+            tier = "unknown"
+            if ff_api_key:
+                tier = await get_or_detect_fireflies_tier(
+                    db, new_session.tenant_id, ff_api_key,
+                    transcript_id_for_probe=transcript_id,
+                )
+                logger.info("Fireflies tier para tenant %s: %s", new_session.tenant_id, tier)
+
             if not raw_summary and ff_api_key:
-                logger.info(
-                    "Summary vacío en primera lectura de %s, reintentando con backoff…",
-                    transcript_id,
-                )
-                from services.fireflies_service import fetch_native_summary
-                raw_summary = await fetch_native_summary(
-                    transcript_id,
-                    api_key=ff_api_key,
-                    max_attempts=3,
-                    backoff_base_sec=10.0,  # 10s, 20s, 40s = ~70s total worst case
-                )
+                if tier == "free":
+                    logger.info(
+                        "Tenant %s en plan free → saltando retries de Fireflies, "
+                        "Groq generará el summary desde transcript.",
+                        new_session.tenant_id,
+                    )
+                    # raw_summary se queda vacío → el bloque Groq fallback abajo lo genera.
+                else:
+                    logger.info(
+                        "Tier=%s — esperando summary de Fireflies con backoff…",
+                        tier,
+                    )
+                    raw_summary = await fetch_native_summary(
+                        transcript_id,
+                        api_key=ff_api_key,
+                        max_attempts=3,
+                        backoff_base_sec=10.0,  # 10s, 20s, 40s = ~70s
+                    )
 
             # Limpieza cosmética del summary con Groq (traduce headers, quita
             # asteriscos, elimina referencias tipo [Fuente: ...]). Si Groq
@@ -667,16 +693,13 @@ async def process_transcript_background(
                         f"Groq clean_native_summary falló (se mantiene crudo): {exc}"
                     )
                     logger.warning(summary_clean_error)
-            else:
-                # Fallback: si Fireflies NO entregó summary (caso típico del
-                # plan free, o sesiones cortas que aún no procesaron), lo
-                # generamos desde cero con Groq usando el transcript real.
-                # Esto garantiza que TODA sesión tenga summary, sin importar
-                # el plan de Fireflies del cliente.
+            elif tier == "free":
+                # Plan free de Fireflies → el summary NUNCA va a llegar de
+                # ahí. Generamos desde cero con Groq usando el transcript.
                 if raw_transcript and len(raw_transcript) > 50:
                     logger.info(
-                        "Fireflies no devolvió summary para %s — generando con Groq desde transcript (%s chars).",
-                        transcript_id, len(raw_transcript),
+                        "Tenant en plan free, generando summary con Groq desde transcript (%s chars).",
+                        len(raw_transcript),
                     )
                     try:
                         raw_summary = await groq.generate_summary_from_transcript(
@@ -686,7 +709,7 @@ async def process_transcript_background(
                         )
                         if raw_summary:
                             logger.info(
-                                "Summary generado por Groq para %s: %s chars.",
+                                "Summary generado por Groq para %s (free tier): %s chars.",
                                 transcript_id, len(raw_summary),
                             )
                     except Exception as exc:  # noqa: BLE001
@@ -694,6 +717,24 @@ async def process_transcript_background(
                             f"Groq generate_summary_from_transcript falló: {exc}"
                         )
                         logger.warning(summary_clean_error)
+            else:
+                # Plan paid (o tier unknown) y Fireflies devolvió vacío tras
+                # retries: NO generamos con Groq. La cuenta paga eventualmente
+                # entregará el summary nativo (puede tardar varios minutos
+                # para reuniones largas). El admin puede usar el botón
+                # "Traer resumen de Fireflies" más tarde.
+                if not raw_transcript:
+                    logger.info(
+                        "Sin transcript ni summary de Fireflies para %s; "
+                        "se queda vacío hasta que el admin reintente.",
+                        transcript_id,
+                    )
+                else:
+                    logger.info(
+                        "Tier=%s para %s, Fireflies aún sin summary; "
+                        "se preserva vacío para esperar entrega nativa.",
+                        tier, transcript_id,
+                    )
 
             # Doble-check: el valor que estamos a punto de persistir DEBE
             # poder leerse de vuelta. Si por algún motivo se rompió, lo

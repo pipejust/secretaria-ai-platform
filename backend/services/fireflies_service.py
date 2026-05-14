@@ -169,6 +169,128 @@ class FirefliesService:
                 return False
         return True
 
+    async def detect_tier(self, transcript_id: str) -> str:
+        """Probe a un campo PAID-ONLY (analytics) para deducir el plan.
+
+        Returns:
+            'free'    si Fireflies devolvió error 'paid_required'
+            'paid'    si la query devolvió data sin errors
+            'unknown' si no se pudo determinar (HTTP error, transcript no
+                      existe, etc.)
+        """
+        query = """
+        query CheckTier($transcriptId: String!) {
+            transcript(id: $transcriptId) {
+                id
+                analytics {
+                    sentiments { positive_pct }
+                }
+            }
+        }
+        """
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {"query": query, "variables": {"transcriptId": transcript_id}}
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post(self.BASE_URL, json=payload, headers=headers)
+                response.raise_for_status()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("detect_tier: HTTP error: %s", exc)
+                return "unknown"
+            data = response.json()
+
+        # Si hay errors[] y AL MENOS uno es paid_required → free.
+        # too_many_requests también suele ser señal de free (los planes
+        # pagos tienen rate limits mucho más altos).
+        if "errors" in data:
+            for e in data["errors"]:
+                ext = (e.get("extensions") or {}) if isinstance(e, dict) else {}
+                code = ext.get("code") or (e.get("code") if isinstance(e, dict) else "")
+                if code == "paid_required":
+                    return "free"
+                if code == "too_many_requests":
+                    logger.info("detect_tier: too_many_requests → asumiendo free.")
+                    return "free"
+            # Otros errores (object_not_found, etc.) → no se puede determinar.
+            return "unknown"
+
+        # Sin errores y data presente → paid.
+        if (data.get("data") or {}).get("transcript"):
+            return "paid"
+        return "unknown"
+
+
+async def get_or_detect_fireflies_tier(
+    db: Session,
+    tenant_id: int,
+    api_key: Optional[str],
+    transcript_id_for_probe: Optional[str] = None,
+    *,
+    max_age_hours: int = 24,
+) -> str:
+    """Devuelve 'free' | 'paid' | 'unknown' para el tier del cliente.
+
+    Cachea el resultado en `IntegrationSetting.config_json` (campos `tier`
+    y `tier_checked_at`). Si el cache es válido y < `max_age_hours`,
+    devuelve el cacheado sin llamar a Fireflies.
+
+    Si `transcript_id_for_probe` es None, no puede detectar — devuelve el
+    cacheado o 'unknown'.
+    """
+    from datetime import datetime, timezone
+
+    integ = db.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.provider_name == "fireflies")
+        .where(IntegrationSetting.tenant_id == tenant_id)
+    ).first()
+
+    cfg: dict = {}
+    if integ and integ.config_json:
+        try:
+            cfg = json.loads(integ.config_json)
+        except (json.JSONDecodeError, TypeError):
+            cfg = {}
+
+    # Override manual del admin (no caduca). Útil cuando autodetect falla
+    # por rate limit o cuando el admin sabe exactamente qué plan tiene.
+    override = cfg.get("tier_override")
+    if override in ("free", "paid"):
+        return override
+
+    cached_tier = cfg.get("tier")
+    cached_at = cfg.get("tier_checked_at")
+    if cached_tier in ("free", "paid") and cached_at:
+        try:
+            checked_dt = datetime.fromisoformat(cached_at)
+            if checked_dt.tzinfo is None:
+                checked_dt = checked_dt.replace(tzinfo=timezone.utc)
+            age_seconds = (datetime.now(timezone.utc) - checked_dt).total_seconds()
+            if age_seconds < max_age_hours * 3600:
+                return cached_tier
+        except (ValueError, TypeError):
+            pass
+
+    if not api_key or not transcript_id_for_probe:
+        return cached_tier if cached_tier in ("free", "paid") else "unknown"
+
+    service = FirefliesService(api_key=api_key)
+    tier = await service.detect_tier(transcript_id_for_probe)
+    if tier in ("free", "paid") and integ:
+        cfg["tier"] = tier
+        cfg["tier_checked_at"] = datetime.now(timezone.utc).isoformat()
+        try:
+            integ.config_json = json.dumps(cfg)
+            db.add(integ)
+            db.commit()
+            logger.info("Fireflies tier cacheado para tenant %s: %s", tenant_id, tier)
+        except Exception:
+            logger.exception("No pude cachear tier para tenant %s", tenant_id)
+    return tier
+
 
 # ---------------------------------------------------------------------------
 # Helpers para re-fetch de campos específicos (no toda la sesión).
@@ -268,19 +390,19 @@ async def refetch_summary_for_session(
     api_key: Optional[str] = None,
     clean_with_groq: bool = True,
     max_attempts: int = 3,
-    fallback_to_groq: bool = True,
+    fallback_to_groq: Optional[bool] = None,
 ) -> bool:
     """Re-baja el summary nativo desde Fireflies y lo guarda en la sesión.
 
-    Devuelve True si pudo escribir un summary no vacío, False si NI Fireflies
-    NI Groq pudieron entregar algo.
+    Devuelve True si pudo escribir un summary no vacío, False si Fireflies
+    no entregó (y no se usó fallback Groq).
 
-    Política:
-      1. Pide summary nativo a Fireflies (con retries).
-      2. Si Fireflies devuelve algo y `clean_with_groq=True` → Groq limpia formato.
-      3. Si Fireflies NO devuelve nada Y `fallback_to_groq=True` Y la sesión
-         tiene transcript → Groq genera el summary desde cero. Esto cubre
-         cuentas free de Fireflies y sesiones cortas que Fireflies aún no procesó.
+    Política basada en el tier del tenant:
+      1. Si `fallback_to_groq` es None (default): se autodetecta vía
+         `get_or_detect_fireflies_tier()`. Solo activa Groq si tier='free'.
+         Para tier='paid' o 'unknown', NO usa Groq porque la cuenta paga
+         eventualmente entregará el summary nativo (puede tardar minutos).
+      2. Si se pasa explícito True/False, respeta el override del caller.
     """
     if not session.fireflies_id:
         return False
@@ -292,6 +414,21 @@ async def refetch_summary_for_session(
     )
 
     source = "fireflies"
+
+    # Resolver fallback_to_groq según tier si no fue dado explícitamente.
+    if fallback_to_groq is None:
+        tier = await get_or_detect_fireflies_tier(
+            db,
+            session.tenant_id,
+            api_key,
+            transcript_id_for_probe=session.fireflies_id,
+        )
+        fallback_to_groq = (tier == "free")
+        logger.info(
+            "refetch_summary_for_session: tier=%s para sesión %s → fallback_to_groq=%s",
+            tier, session.id, fallback_to_groq,
+        )
+
     if not summary and fallback_to_groq:
         # Fallback: generar el summary desde el transcript con Groq.
         transcript = (session.raw_transcript or "").strip()
