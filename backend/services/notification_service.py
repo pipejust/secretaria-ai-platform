@@ -215,6 +215,58 @@ def notify_admins(
     return created
 
 
+def notify_admins_session_processed(
+    db: Session,
+    *,
+    tenant_id: int,
+    session_id: int,
+    session_title: str,
+    pipeline_failed: bool,
+    missing_task_emails: int,
+    missing_participants: int,
+) -> int:
+    """Notif in-app a admins cuando termina el pipeline post-Fireflies.
+
+    Espejo del correo `send_session_received_email` con el flujo nuevo:
+    primero se procesa, luego se notifica. El kind/título cambian según
+    el estado:
+      - pipeline_failed → kind='session_failed', tono error
+      - missing emails  → kind='session_needs_emails', tono warning
+      - todo OK         → kind='session_processed', tono ok
+    """
+    if pipeline_failed:
+        kind = "session_failed"
+        title = f"Error procesando «{session_title or 'Sin título'}»"
+        body = "El pipeline IA no terminó correctamente. Entrá a reintentar el análisis."
+    elif missing_task_emails > 0 or missing_participants > 0:
+        kind = "session_needs_emails"
+        title = f"Faltan correos en «{session_title or 'Sin título'}»"
+        bits = []
+        if missing_task_emails:
+            bits.append(f"{missing_task_emails} tarea(s) sin correo del responsable")
+        if missing_participants:
+            bits.append(f"{missing_participants} participante(s) sin correo")
+        body = (
+            "El envío automático NO podrá ejecutarse hasta que completes: "
+            + "; ".join(bits) + "."
+        )
+    else:
+        kind = "session_processed"
+        title = f"Sesión lista: «{session_title or 'Sin título'}»"
+        body = "La IA terminó de procesar la sesión y está lista para enviar o curar."
+
+    return notify_admins(
+        db,
+        tenant_id=tenant_id,
+        kind=kind,
+        title=title,
+        body=body,
+        link_to=f"/admin/curation/{session_id}",
+        entity_type="session",
+        entity_id=session_id,
+    )
+
+
 def notify_owner_email(
     db: Session,
     *,

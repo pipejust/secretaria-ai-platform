@@ -1,66 +1,142 @@
 {% extends "email_base.html" %}
 
 {# ──────────────────────────────────────────────────────────────────────────
-   Email INICIAL al admin del proyecto en cuanto Fireflies entrega una sesión.
-   Hereda del email_base.html para que herede:
-     - Header gradient con logo del tenant (brand.logo_data_url)
-     - Footer con datos de contacto del tenant
-     - Colores brand.primary_color / brand.secondary_color / brand.accent_color
+   Email POST-pipeline al admin: la IA terminó de procesar la sesión.
+
+   IMPORTANTE — el flujo es:
+     1. Fireflies entrega webhook → la sesión queda en `processing`.
+     2. El pipeline IA corre (transcript + tareas + decisiones).
+     3. Al terminar, ESTE correo se envía con el estado real:
+        - Pipeline OK + sin emails faltantes → "Lista, va a auto-despacharse"
+        - Pipeline OK + emails faltantes      → "Lista, pero agrega correos
+          antes del timeout o no podrá auto-despacharse"
+        - Pipeline OK + modo manual           → "Lista, esperando que
+          dispares manualmente"
+        - Pipeline FAILED                     → "Hubo un error procesando,
+          entrá a reintentar el análisis"
+   Hereda del email_base.html para el header gradient + logo + footer brand.
    ────────────────────────────────────────────────────────────────────────── #}
 
 {% block content %}
-  <h2>📥 Nueva sesión recibida</h2>
+  {% if pipeline_failed %}
+    <h2>⚠️ Error procesando la sesión</h2>
 
-  <p>Hola {{ admin_name | default('') }},</p>
+    <p>Hola {{ admin_name | default('') }},</p>
 
-  <p>
-    Se acaba de recibir una nueva sesión de <strong>Fireflies</strong>
-    en el proyecto <strong>{{ project_name | default('General') }}</strong>.
-  </p>
+    <p>
+      Recibimos una sesión nueva de <strong>Fireflies</strong> en el proyecto
+      <strong>{{ project_name | default('General') }}</strong>, pero el
+      pipeline de análisis IA <strong>no pudo terminar correctamente</strong>.
+    </p>
 
-  <div class="box">
-    <p class="box-title">{{ session_title | default('Sin título') }}</p>
-
-    {% if auto_dispatch_enabled %}
+    <div class="box" style="border-left-color: #DC2626;">
+      <p class="box-title" style="color: #DC2626;">
+        {{ session_title | default('Sin título') }}
+      </p>
       <p class="box-text">
+        <strong>Detalle del error:</strong><br>
+        <code style="font-size: 13px; color: #7F1D1D; background: #FEF2F2; padding: 8px 10px; border-radius: 6px; display: inline-block; margin-top: 6px;">{{ pipeline_error_summary | default('Error desconocido en el pipeline.') }}</code>
+      </p>
+      <p class="box-text" style="margin-top: 14px;">
+        Mientras esto no se resuelva, <strong>NO se ejecutará el envío
+        automático</strong> de tareas y correos a las plataformas. Entrá a la
+        sesión y presioná <strong>Reintentar análisis IA</strong> para volver
+        a correr el pipeline.
+      </p>
+    </div>
+
+    <div class="button-container" style="text-align: center; margin: 30px 0;">
+      <a href="{{ session_url }}"
+         class="button"
+         style="background: linear-gradient(135deg,
+                  {{ brand.primary_color | default('#4F46E5') }} 0%,
+                  {{ brand.secondary_color | default('#06B6D4') }} 100%);
+                color: #ffffff; padding: 14px 32px; border-radius: 10px;
+                text-decoration: none; font-weight: 700; font-size: 15px;
+                display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+        Abrir y reintentar análisis
+      </a>
+    </div>
+  {% else %}
+    <h2>✅ Sesión procesada y lista</h2>
+
+    <p>Hola {{ admin_name | default('') }},</p>
+
+    <p>
+      Acabamos de terminar de procesar con IA una sesión nueva de
+      <strong>Fireflies</strong> en el proyecto
+      <strong>{{ project_name | default('General') }}</strong>.
+    </p>
+
+    <div class="box">
+      <p class="box-title">{{ session_title | default('Sin título') }}</p>
+      <p class="box-text">
+        Se identificaron <strong>{{ total_tasks }} tarea{{ 's' if total_tasks != 1 else '' }}</strong>
+        a partir del análisis. {% if total_tasks == 0 %}(No detectamos tareas accionables — el resumen y las decisiones igual quedaron registrados.){% endif %}
+      </p>
+    </div>
+
+    {# Warning de correos/participantes faltantes — solo si modo automático
+       está activo. Si es manual, no hay urgencia. #}
+    {% if auto_dispatch_enabled and (missing_task_emails > 0 or missing_participants > 0) %}
+      <div class="box" style="border-left-color: #F59E0B; background: #FFFBEB;">
+        <p class="box-title" style="color: #92400E;">
+          ⚠️ Faltan datos para el envío automático
+        </p>
+        <p class="box-text">
+          {% if missing_task_emails > 0 %}
+            <strong>{{ missing_task_emails }}</strong>
+            tarea{{ 's' if missing_task_emails != 1 else '' }} sin correo del
+            responsable.<br>
+          {% endif %}
+          {% if missing_participants > 0 %}
+            <strong>{{ missing_participants }}</strong>
+            participante{{ 's' if missing_participants != 1 else '' }} sin
+            correo registrado.<br>
+          {% endif %}
+        </p>
+        <p class="box-text" style="margin-top: 12px;">
+          Tienes <strong>{{ timeout_minutes }} minutos</strong> desde que
+          recibes este correo para completar los datos. Si al cumplirse el
+          plazo aún faltan correos, <strong>NO se enviará nada</strong>
+          automáticamente y recibirás otro aviso indicando el bloqueo.
+        </p>
+      </div>
+    {% elif auto_dispatch_enabled %}
+      <p>
         El <strong>envío automático de tareas y correos</strong> está activo.
         Tienes <strong>{{ timeout_minutes }} minutos</strong> para revisar la
-        sesión, agregar los correos y nombres de los participantes faltantes,
-        y editar las tareas detectadas. Si no editas en ese tiempo, las
-        tareas y correos se enviarán <strong>automáticamente</strong> con la
-        información actual.
+        sesión y editar lo que necesites. Pasado ese tiempo, los correos a
+        los responsables y los tickets en las plataformas conectadas
+        (Trello, Jira, ClickUp, Azure DevOps) se crearán automáticamente.
       </p>
     {% else %}
-      <p class="box-text">
+      <p>
         El envío automático <strong>NO está activo</strong>. La sesión queda
         en el listado de reuniones esperando que la cures y dispares
-        manualmente los correos y tareas a las plataformas conectadas.
+        manualmente los correos y tareas desde el botón
+        <strong>"Enviar todo"</strong>.
       </p>
     {% endif %}
-  </div>
 
-  <div class="button-container" style="text-align: center; margin: 30px 0;">
-    <a href="{{ session_url }}"
-       class="button"
-       style="background: linear-gradient(135deg,
-                {{ brand.primary_color | default('#4F46E5') }} 0%,
-                {{ brand.secondary_color | default('#06B6D4') }} 100%);
-              color: #ffffff;
-              padding: 14px 32px;
-              border-radius: 10px;
-              text-decoration: none;
-              font-weight: 700;
-              font-size: 15px;
-              letter-spacing: 0.2px;
-              display: inline-block;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
-      Abrir la sesión en {{ brand.platform_name | default('Acten') }}
-    </a>
-  </div>
+    <div class="button-container" style="text-align: center; margin: 30px 0;">
+      <a href="{{ session_url }}"
+         class="button"
+         style="background: linear-gradient(135deg,
+                  {{ brand.primary_color | default('#4F46E5') }} 0%,
+                  {{ brand.secondary_color | default('#06B6D4') }} 100%);
+                color: #ffffff; padding: 14px 32px; border-radius: 10px;
+                text-decoration: none; font-weight: 700; font-size: 15px;
+                display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+        Abrir la sesión en {{ brand.platform_name | default('Acten') }}
+      </a>
+    </div>
+  {% endif %}
 
   <p style="color: #6b7280; font-size: 13px; line-height: 1.55; margin-top: 28px;">
-    💡 <strong>Recuerda:</strong> si la sesión no tiene todos los correos de
-    los participantes, esos correos no recibirán las tareas detectadas hasta
-    que los agregues.
+    💡 <strong>Recuerda:</strong> los correos automáticos sólo salen a
+    responsables/participantes con dirección de correo registrada. Si una
+    tarea no tiene correo del responsable, esa tarea no se enviará aunque
+    el envío automático esté activo.
   </p>
 {% endblock %}

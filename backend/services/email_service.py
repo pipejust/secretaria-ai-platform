@@ -352,19 +352,30 @@ class EmailService:
         session_url: str,
         auto_dispatch_enabled: bool,
         timeout_minutes: int,
+        total_tasks: int = 0,
+        missing_task_emails: int = 0,
+        missing_participants: int = 0,
+        pipeline_failed: bool = False,
+        pipeline_error_summary: str = "",
     ):
-        """Email INICIAL al admin del proyecto en cuanto Fireflies entrega una
-        sesión. Le avisa que la sesión está en el sistema y, dependiendo del
-        modo de envío, le da N minutos para curar antes del despacho automático.
+        """Email POST-pipeline al admin del proyecto.
 
-        Usa el template branded `email_session_received.html` que extiende
-        `email_base.html` — así hereda el header con gradiente + logo del
-        tenant, los colores de marca y el footer con datos de contacto.
-        Antes este método armaba HTML "a mano" sin marca, por eso llegaba
-        sin logo y con estilos genéricos.
+        Flujo (alineado con la regla del producto):
+          1. Fireflies entrega la sesión vía webhook.
+          2. El pipeline IA corre PRIMERO (transcribe + extrae tareas + decisiones).
+          3. CUANDO TERMINA el pipeline, ESTE correo se envía indicando si:
+             - El pipeline corrió OK o falló (`pipeline_failed`, `pipeline_error_summary`).
+             - Hay tareas sin email de responsable (`missing_task_emails`).
+             - Hay participantes sin email (`missing_participants`).
+             - El modo es manual o automático (con su timeout).
+        El admin sabe en un vistazo qué tiene que arreglar antes de que el cron
+        intente el auto-dispatch.
         """
         platform_name = self.branding.get("platform_name") or "Acten"
-        subject = f"Nueva sesión en {platform_name}: {session_title or 'Sin título'}"
+        if pipeline_failed:
+            subject = f"⚠️ Error procesando sesión en {platform_name}: {session_title or 'Sin título'}"
+        else:
+            subject = f"Sesión lista en {platform_name}: {session_title or 'Sin título'}"
         template = self.jinja_env.get_template('email_session_received.html')
         html_content = template.render(
             admin_name=admin_name or '',
@@ -373,6 +384,76 @@ class EmailService:
             session_url=session_url or '#',
             auto_dispatch_enabled=bool(auto_dispatch_enabled),
             timeout_minutes=int(timeout_minutes or 60),
+            total_tasks=int(total_tasks or 0),
+            missing_task_emails=int(missing_task_emails or 0),
+            missing_participants=int(missing_participants or 0),
+            pipeline_failed=bool(pipeline_failed),
+            pipeline_error_summary=(pipeline_error_summary or "").strip()[:400],
+            current_year=2026,
+            brand=self.branding,
+        )
+        await self._send_html_email(to_email, subject, html_content)
+
+    async def send_auto_dispatch_blocked_email(
+        self,
+        to_email: str,
+        admin_name: str,
+        session_title: str,
+        project_name: str,
+        session_url: str,
+        missing_task_emails: int,
+        missing_participants: int,
+        timeout_minutes: int,
+    ):
+        """Email cuando el cron llega al timeout y NO puede auto-despachar
+        porque faltan correos en tareas o en participantes.
+
+        Lo envía el job `check_and_dispatch_pending_sessions` y se manda una
+        sola vez cada `WARNING_REPEAT_HOURS` (default 24h) por sesión, para no
+        spamear al admin. El admin tiene que entrar a la curación, agregar los
+        correos faltantes, y entonces el cron va a poder auto-despachar.
+        """
+        platform_name = self.branding.get("platform_name") or "Acten"
+        subject = f"🚫 No se puede auto-enviar tareas: {session_title or 'Sin título'}"
+        template = self.jinja_env.get_template('email_auto_dispatch_blocked.html')
+        html_content = template.render(
+            admin_name=admin_name or '',
+            session_title=session_title or 'Sin título',
+            project_name=project_name or 'General',
+            session_url=session_url or '#',
+            missing_task_emails=int(missing_task_emails or 0),
+            missing_participants=int(missing_participants or 0),
+            timeout_minutes=int(timeout_minutes or 60),
+            current_year=2026,
+            brand=self.branding,
+        )
+        await self._send_html_email(to_email, subject, html_content)
+
+    async def send_auto_dispatch_done_email(
+        self,
+        to_email: str,
+        admin_name: str,
+        session_title: str,
+        project_name: str,
+        session_url: str,
+        total_tasks: int,
+    ):
+        """Email cuando el cron despacha exitosamente (correos a responsables +
+        tickets en plataformas conectadas).
+
+        Le da al admin trazabilidad: "esto se envió solo a las HH:MM, mira
+        cuántas tareas y correos salieron, abrí la sesión si querés ver el
+        detalle". Se manda UNA SOLA VEZ por sesión (status → 'processed').
+        """
+        platform_name = self.branding.get("platform_name") or "Acten"
+        subject = f"✅ Tareas y correos enviados: {session_title or 'Sin título'}"
+        template = self.jinja_env.get_template('email_auto_dispatch_done.html')
+        html_content = template.render(
+            admin_name=admin_name or '',
+            session_title=session_title or 'Sin título',
+            project_name=project_name or 'General',
+            session_url=session_url or '#',
+            total_tasks=int(total_tasks or 0),
             current_year=2026,
             brand=self.branding,
         )

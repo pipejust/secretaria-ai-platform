@@ -91,14 +91,20 @@
                         <label class="ap-checkbox-row">
                             <input type="checkbox" id="ad_enabled" name="ad_enabled"
                                    [(ngModel)]="newProject.auto_dispatch_enabled" />
-                            <span>Activar Auto-Dispatch (envío automático tras curación humana opcional)</span>
+                            <span>Activar envío automático de tareas y correos para este proyecto</span>
                         </label>
                         <div class="ap-field">
-                            <label class="ap-label">Horas de espera antes de despachar automáticamente</label>
-                            <input class="ap-input" type="number" min="0" step="0.5" name="ad_timeout"
-                                   [(ngModel)]="newProject.auto_dispatch_timeout_hours"
-                                   placeholder="Ej: 24" />
-                            <small class="ap-hint">Si lo dejas vacío, usa el global (Configuración → Auto-Curación).</small>
+                            <label class="ap-label">Tiempo de espera antes del envío (minutos)</label>
+                            <input class="ap-input" type="number" min="1" max="10080" step="1" name="ad_timeout_min"
+                                   [(ngModel)]="autoDispatchTimeoutMinutes"
+                                   (ngModelChange)="onAutoDispatchTimeoutMinutesChange($event)"
+                                   placeholder="Ej: 60" />
+                            <small class="ap-hint">
+                                Minutos desde que la IA termina de procesar la reunión hasta que se
+                                envían los correos y se crean las tareas. Sugerencia: 60 (1 hora)
+                                para dar margen a editar correos y nombres. Si lo dejas vacío, usa
+                                el ajuste global (Configuración → Sincronización de tareas y correos).
+                            </small>
                         </div>
                     </div>
                 </section>

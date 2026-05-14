@@ -1,0 +1,67 @@
+{% extends "email_base.html" %}
+
+{# ──────────────────────────────────────────────────────────────────────────
+   Email cuando el cron de auto-curación llegó al timeout pero NO puede
+   despachar porque faltan correos en las tareas o en los participantes.
+
+   Se envía UNA VEZ cada `WARNING_REPEAT_HOURS` (default 24h) por sesión,
+   gracias al campo `auto_dispatch_warning_at` en MeetingSession. Esto evita
+   spamear al admin con el mismo aviso cada minuto.
+   ────────────────────────────────────────────────────────────────────────── #}
+
+{% block content %}
+  <h2>🚫 No se pueden enviar las tareas automáticamente</h2>
+
+  <p>Hola {{ admin_name | default('') }},</p>
+
+  <p>
+    Pasaron <strong>{{ timeout_minutes }} minutos</strong> desde que la IA
+    terminó de procesar la sesión en el proyecto
+    <strong>{{ project_name | default('General') }}</strong>, pero el envío
+    automático <strong>no puede ejecutarse</strong> porque faltan correos.
+  </p>
+
+  <div class="box" style="border-left-color: #DC2626; background: #FEF2F2;">
+    <p class="box-title" style="color: #991B1B;">
+      {{ session_title | default('Sin título') }}
+    </p>
+    <p class="box-text">
+      {% if missing_task_emails > 0 %}
+        <strong>{{ missing_task_emails }}</strong>
+        tarea{{ 's' if missing_task_emails != 1 else '' }} sin correo del
+        responsable.<br>
+      {% endif %}
+      {% if missing_participants > 0 %}
+        <strong>{{ missing_participants }}</strong>
+        participante{{ 's' if missing_participants != 1 else '' }} sin correo
+        registrado.<br>
+      {% endif %}
+    </p>
+  </div>
+
+  <p>
+    Entrá a la sesión, completá los correos faltantes, y el envío automático
+    se activará en el próximo ciclo del cron (corre cada minuto). Si no
+    podés agregar todos los correos, también podés disparar el envío manual
+    desde el botón <strong>"Enviar todo"</strong> en la curación — solo se
+    notificará a quienes tengan correo registrado.
+  </p>
+
+  <div class="button-container" style="text-align: center; margin: 30px 0;">
+    <a href="{{ session_url }}"
+       class="button"
+       style="background: linear-gradient(135deg,
+                {{ brand.primary_color | default('#4F46E5') }} 0%,
+                {{ brand.secondary_color | default('#06B6D4') }} 100%);
+              color: #ffffff; padding: 14px 32px; border-radius: 10px;
+              text-decoration: none; font-weight: 700; font-size: 15px;
+              display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+      Abrir la sesión y completar correos
+    </a>
+  </div>
+
+  <p style="color: #6b7280; font-size: 13px; line-height: 1.55; margin-top: 28px;">
+    💡 Este aviso se vuelve a enviar como máximo una vez al día hasta que
+    completes los correos o cambies la sesión a modo manual.
+  </p>
+{% endblock %}

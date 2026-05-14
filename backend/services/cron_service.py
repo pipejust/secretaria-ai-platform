@@ -81,11 +81,246 @@ def _hours_since(created_at_iso: str) -> Optional[float]:
     return (now - created).total_seconds() / 3600.0
 
 
-async def _auto_dispatch_session(session_id: int) -> None:
-    """Llama a los endpoints internos de dispatch usando un Session DB nuevo.
+# Cuánto esperar entre re-envíos del correo "auto-dispatch bloqueado".
+# Si se manda cada 1 min del cron sería spam; 24h da al admin tiempo de
+# entrar a corregir emails antes de recibir otro recordatorio.
+WARNING_REPEAT_HOURS = 24
 
-    Crea instancias reales de los Pydantic request models para que el endpoint
-    las procese. Si alguno falla, deja la sesión en `pending`.
+
+def _count_missing_emails(db: Session, session_id: int) -> tuple[int, int]:
+    """Espejo del helper de fireflies.py para no acoplar el cron al router.
+    Returns (missing_task_emails, missing_participants).
+    """
+    import json as _json
+    import re
+
+    items = db.exec(
+        select(ActionItem).where(ActionItem.session_id == session_id)
+    ).all()
+    email_re = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
+    missing_tasks = sum(
+        1 for it in items
+        if not (it.owner_email or "").strip()
+        or not email_re.match((it.owner_email or "").strip())
+    )
+
+    ms = db.get(MeetingSession, session_id)
+    missing_participants = 0
+    if ms and ms.processed_attendees:
+        raw = (ms.processed_attendees or "").strip()
+        parsed = None
+        if raw.startswith(("[", "{")):
+            try:
+                parsed = _json.loads(raw)
+            except (_json.JSONDecodeError, TypeError):
+                parsed = None
+        if isinstance(parsed, list):
+            for entry in parsed:
+                if isinstance(entry, dict):
+                    em = (entry.get("email") or "").strip()
+                    if em and email_re.match(em):
+                        continue
+                    if entry.get("name") or entry.get("display_name"):
+                        missing_participants += 1
+                elif isinstance(entry, str) and entry.strip() and "@" not in entry:
+                    missing_participants += 1
+    return missing_tasks, missing_participants
+
+
+async def _send_auto_dispatch_blocked_notice(
+    session_id: int,
+    tenant_id: int,
+    missing_task_emails: int,
+    missing_participants: int,
+    timeout_minutes: int,
+) -> None:
+    """Email + notif in-app cuando el cron decide NO despachar por emails
+    faltantes. Dedupe vía `auto_dispatch_warning_at` (re-envío ≥24h)."""
+    import os
+    from services.email_service import EmailService
+    from services.notification_service import notify_admins
+
+    with Session(engine) as db:
+        ms = db.get(MeetingSession, session_id)
+        if not ms:
+            return
+
+        # Dedup: si ya hubo un warning hace menos de WARNING_REPEAT_HOURS, skip.
+        last = (ms.auto_dispatch_warning_at or "").strip()
+        if last:
+            try:
+                last_dt = datetime.fromisoformat(last)
+                hours_since = (datetime.now() - last_dt).total_seconds() / 3600.0
+                if hours_since < WARNING_REPEAT_HOURS:
+                    return
+            except ValueError:
+                pass  # parse error → tratar como "nunca enviado"
+
+        # Identifica destinatarios admin.
+        from models import User, Role
+        admins = db.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.is_active == True)  # noqa: E712
+        ).all()
+        recipients: list[tuple[str, str]] = []
+        for u in admins:
+            role_name = ""
+            if u.role_id:
+                r = db.get(Role, u.role_id)
+                role_name = (r.name if r else "").lower()
+            if "admin" in role_name or getattr(u, "is_platform_admin", False):
+                if u.email:
+                    recipients.append((u.email, u.full_name or ""))
+        if not recipients:
+            return
+
+        project_name = "General"
+        if ms.project_id:
+            p = db.get(Project, ms.project_id)
+            if p:
+                project_name = p.name
+
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip("/")
+        session_url = f"{frontend_url}/admin/curation/{session_id}"
+
+        email_svc = EmailService(db=db, tenant_id=tenant_id)
+        sent_any = False
+        for email, name in recipients:
+            try:
+                await email_svc.send_auto_dispatch_blocked_email(
+                    to_email=email,
+                    admin_name=name,
+                    session_title=ms.title or "Sin título",
+                    project_name=project_name,
+                    session_url=session_url,
+                    missing_task_emails=missing_task_emails,
+                    missing_participants=missing_participants,
+                    timeout_minutes=timeout_minutes,
+                )
+                sent_any = True
+            except Exception:
+                logger.exception(
+                    "Falló auto_dispatch_blocked_email para %s sesión %s",
+                    email, session_id,
+                )
+
+        if sent_any:
+            # Marca dedup + razón legible.
+            ms2 = db.get(MeetingSession, session_id)
+            if ms2:
+                ms2.auto_dispatch_warning_at = datetime.now().isoformat()
+                ms2.auto_dispatch_blocked_reason = (
+                    "missing_task_emails" if missing_task_emails
+                    else "missing_participants"
+                )
+                db.add(ms2)
+                db.commit()
+
+        # Notif in-app.
+        try:
+            bits = []
+            if missing_task_emails:
+                bits.append(f"{missing_task_emails} tarea(s) sin correo")
+            if missing_participants:
+                bits.append(f"{missing_participants} participante(s) sin correo")
+            notify_admins(
+                db,
+                tenant_id=tenant_id,
+                kind="auto_dispatch_blocked",
+                title=f"No se pueden enviar tareas automáticamente: «{ms.title or 'Sin título'}»",
+                body="El envío automático está bloqueado. Falta: " + "; ".join(bits) + ".",
+                link_to=f"/admin/curation/{session_id}",
+                entity_type="session",
+                entity_id=session_id,
+            )
+        except Exception:
+            logger.exception(
+                "Falló notif in-app auto_dispatch_blocked para sesión %s", session_id,
+            )
+
+
+async def _send_auto_dispatch_done_notice(
+    session_id: int, tenant_id: int, total_tasks: int,
+) -> None:
+    """Email + notif in-app post-dispatch exitoso. Se envía UNA VEZ por
+    sesión (justo antes de marcarla 'processed')."""
+    import os
+    from services.email_service import EmailService
+    from services.notification_service import notify_admins
+
+    with Session(engine) as db:
+        ms = db.get(MeetingSession, session_id)
+        if not ms:
+            return
+        from models import User, Role
+        admins = db.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.is_active == True)  # noqa: E712
+        ).all()
+        recipients: list[tuple[str, str]] = []
+        for u in admins:
+            role_name = ""
+            if u.role_id:
+                r = db.get(Role, u.role_id)
+                role_name = (r.name if r else "").lower()
+            if "admin" in role_name or getattr(u, "is_platform_admin", False):
+                if u.email:
+                    recipients.append((u.email, u.full_name or ""))
+        if not recipients:
+            return
+
+        project_name = "General"
+        if ms.project_id:
+            p = db.get(Project, ms.project_id)
+            if p:
+                project_name = p.name
+
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip("/")
+        session_url = f"{frontend_url}/admin/curation/{session_id}"
+
+        email_svc = EmailService(db=db, tenant_id=tenant_id)
+        for email, name in recipients:
+            try:
+                await email_svc.send_auto_dispatch_done_email(
+                    to_email=email,
+                    admin_name=name,
+                    session_title=ms.title or "Sin título",
+                    project_name=project_name,
+                    session_url=session_url,
+                    total_tasks=total_tasks,
+                )
+            except Exception:
+                logger.exception(
+                    "Falló auto_dispatch_done_email para %s sesión %s",
+                    email, session_id,
+                )
+
+        try:
+            notify_admins(
+                db,
+                tenant_id=tenant_id,
+                kind="auto_dispatch_done",
+                title=f"Tareas enviadas automáticamente: «{ms.title or 'Sin título'}»",
+                body=f"{total_tasks} tarea(s) notificadas a responsables y plataformas.",
+                link_to=f"/admin/curation/{session_id}",
+                entity_type="session",
+                entity_id=session_id,
+            )
+        except Exception:
+            logger.exception(
+                "Falló notif in-app auto_dispatch_done para sesión %s", session_id,
+            )
+
+
+async def _auto_dispatch_session(session_id: int) -> None:
+    """Llama a los endpoints internos de dispatch.
+
+    PRE-GATE: antes de despachar, contamos cuántas tareas tienen email del
+    responsable. Si faltan correos, NO despachamos y mandamos un correo +
+    notif al admin diciendo "completá los correos para que esto pueda salir
+    solo". Si todo está OK, despachamos y marcamos status='processed'.
     """
     # Imports adentro de la función para evitar ciclo: cron_service ←→ sessions_upload.
     from routers.sessions_upload import (
@@ -96,12 +331,49 @@ async def _auto_dispatch_session(session_id: int) -> None:
     )
 
     with Session(engine) as db:
-        action_item_ids = [
-            row.id
-            for row in db.exec(
-                select(ActionItem.id).where(ActionItem.session_id == session_id)
-            ).all()
-        ]
+        ms_for_tenant = db.get(MeetingSession, session_id)
+        if not ms_for_tenant:
+            return
+        tenant_id = ms_for_tenant.tenant_id
+
+        action_items = db.exec(
+            select(ActionItem).where(ActionItem.session_id == session_id)
+        ).all()
+        action_item_ids = [it.id for it in action_items]
+
+        # Resolución de timeout_minutes para el correo de bloqueo.
+        # Default 60; el correo lo usa solo para la copia.
+        timeout_minutes_for_copy = 60
+        if ms_for_tenant.project_id:
+            p = db.get(Project, ms_for_tenant.project_id)
+            if p and p.auto_dispatch_timeout_hours is not None:
+                timeout_minutes_for_copy = max(
+                    1, int(float(p.auto_dispatch_timeout_hours) * 60),
+                )
+
+        # --- PRE-GATE: ¿faltan correos en tareas o participantes? ---
+        missing_tasks, missing_participants = _count_missing_emails(db, session_id)
+        if missing_tasks > 0 or missing_participants > 0:
+            logger.warning(
+                "Auto-dispatch sesión %s BLOQUEADO: %d tareas y %d participantes sin correo. "
+                "Mandando aviso al admin.",
+                session_id, missing_tasks, missing_participants,
+            )
+            await _send_auto_dispatch_blocked_notice(
+                session_id, tenant_id,
+                missing_tasks, missing_participants,
+                timeout_minutes_for_copy,
+            )
+            return  # No despachamos. Esperamos a que el admin complete.
+
+        # Si ya había warning previo y ahora los correos están completos,
+        # limpiamos el flag para no confundir el estado.
+        if (ms_for_tenant.auto_dispatch_blocked_reason or "").strip():
+            ms_for_tenant.auto_dispatch_blocked_reason = ""
+            ms_for_tenant.auto_dispatch_warning_at = ""
+            db.add(ms_for_tenant)
+            db.commit()
+
         if not action_item_ids:
             logger.info(
                 "Sesión %s sin action_items. Marcando como processed sin dispatch.",
@@ -117,13 +389,8 @@ async def _auto_dispatch_session(session_id: int) -> None:
         emails_ok = False
         platforms_ok = False
 
-        # Multi-tenant: el cron NO pasa por FastAPI DI, así que tenemos que
-        # cargar el tenant manual y pasarlo explícito a las funciones-endpoint.
         from models import Tenant
-        ms_for_tenant = db.get(MeetingSession, session_id)
-        if not ms_for_tenant:
-            return
-        tenant = db.get(Tenant, ms_for_tenant.tenant_id)
+        tenant = db.get(Tenant, tenant_id)
         if not tenant:
             logger.warning("auto-curación: sesión %s sin tenant resoluble.", session_id)
             return
@@ -165,6 +432,10 @@ async def _auto_dispatch_session(session_id: int) -> None:
             logger.info(
                 "auto-curación: sesión %s despachada y marcada processed.",
                 session_id,
+            )
+            # Correo + notif "todo enviado, no tenés que hacer nada".
+            await _send_auto_dispatch_done_notice(
+                session_id, tenant_id, len(action_item_ids),
             )
         else:
             logger.warning(

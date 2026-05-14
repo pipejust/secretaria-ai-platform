@@ -273,6 +273,29 @@ class MeetingSession(SQLModel, table=True):
         description="ISO timestamp cuando el pipeline terminó SIN errores.",
     )
 
+    # Auto-dispatch — bloqueo y notificaciones.
+    # Cuando el cron de auto-curación llega al timeout pero detecta que faltan
+    # correos en tareas o participantes, NO despacha y deja registrado aquí
+    # el ISO timestamp del último warning enviado al admin. La siguiente
+    # iteración del cron lo lee para NO re-spamear (re-envío sólo después de
+    # WARNING_REPEAT_HOURS, hoy 24h).
+    auto_dispatch_warning_at: str = Field(
+        default="",
+        description="ISO ts del último correo de 'no se puede auto-despachar' enviado.",
+    )
+    # Razón legible del bloqueo (para UI + emails). Vacío = sin bloqueo activo.
+    # Valores típicos: 'missing_task_emails', 'missing_participants', 'pipeline_error'.
+    auto_dispatch_blocked_reason: str = Field(
+        default="",
+        description="Razón legible por la cual auto-dispatch no se ejecutó.",
+    )
+    # ISO ts cuando se envió el correo "sesión procesada" (post-pipeline).
+    # Sirve para que el correo NO se reenvíe en cada retry del pipeline.
+    session_ready_email_sent_at: str = Field(
+        default="",
+        description="ISO ts del correo 'sesión procesada y lista' enviado al admin.",
+    )
+
     # Flags de uso único de los botones de IA en la curación.
     # Se setean a True después de que el usuario los presiona la primera vez.
     ai_fields_regenerated: bool = Field(

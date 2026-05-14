@@ -600,12 +600,18 @@
                             <div>
                                 <strong>Envío automático de tareas y correos</strong>
                                 <small>
-                                    Cuando llega una reunión nueva vía Fireflies, la IA cura el contenido
-                                    al instante. Si activas esta opción, el correo con las tareas se
-                                    envía a los responsables y se crean los tickets externos
-                                    automáticamente al cumplirse el tiempo definido — sin esperar
-                                    confirmación manual. El admin del proyecto siempre recibe primero
-                                    un correo de aviso con el enlace para curar/editar.
+                                    <strong>Flujo:</strong> cuando llega una reunión nueva vía
+                                    Fireflies <em>primero</em> se procesa con IA (transcribe,
+                                    extrae tareas y decisiones). Cuando el procesamiento termina,
+                                    el admin del proyecto recibe un correo de aviso con el estado
+                                    (incluido si faltan correos en tareas o participantes).
+                                    <br><br>
+                                    Si esta opción está <strong>activa</strong>, además, al cumplirse
+                                    el tiempo definido abajo y siempre que <em>todas</em> las tareas
+                                    tengan correo de responsable, los correos y las tareas externas
+                                    (Trello, Jira, ClickUp, Azure DevOps) se envían automáticamente
+                                    sin requerir confirmación manual. Si faltan correos al timeout,
+                                    el sistema NO envía y avisa al admin para que complete.
                                 </small>
                             </div>
                             <label class="st-toggle-pill" [class.is-on]="autoCurationSettings.isEnabled">

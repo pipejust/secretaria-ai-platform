@@ -121,15 +121,128 @@ def _pick_first_date(*candidates) -> Optional[str]:
     return None
 
 
-async def _send_initial_admin_email(session_id: int, tenant_id: int) -> None:
-    """Envía el correo inicial al/los admin/s del tenant en cuanto Fireflies
-    deja una sesión nueva. Informa el modo (automático con timeout en minutos
-    o manual) para que sepan cuánto tiempo tienen para curar.
+def _count_missing_emails_for_session(db, session_id: int) -> tuple[int, int]:
+    """Cuenta tareas SIN owner_email válido y participantes SIN correo.
+
+    Usado por (a) el correo post-pipeline para avisar al admin qué falta y
+    (b) el cron de auto-dispatch para gate-ar el envío automático.
+    Returns: (missing_task_emails, missing_participants)
+    """
+    import re
+
+    items = db.exec(
+        select(ActionItem).where(ActionItem.session_id == session_id)
+    ).all()
+    email_re = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
+    missing_tasks = sum(
+        1 for it in items
+        if not (it.owner_email or "").strip()
+        or not email_re.match((it.owner_email or "").strip())
+    )
+
+    # processed_attendees puede ser JSON list, JSON dict, o texto plano.
+    ms = db.get(MeetingSession, session_id)
+    missing_participants = 0
+    if ms and ms.processed_attendees:
+        raw = (ms.processed_attendees or "").strip()
+        parsed = None
+        if raw.startswith(("[", "{")):
+            try:
+                parsed = json.loads(raw)
+            except (json.JSONDecodeError, TypeError):
+                parsed = None
+        if isinstance(parsed, list):
+            for entry in parsed:
+                if isinstance(entry, dict):
+                    em = (entry.get("email") or "").strip()
+                    if em and email_re.match(em):
+                        continue
+                    if entry.get("name") or entry.get("display_name"):
+                        missing_participants += 1
+                elif isinstance(entry, str) and entry.strip() and "@" not in entry:
+                    missing_participants += 1
+    return missing_tasks, missing_participants
+
+
+def _resolve_auto_dispatch_policy(db, tenant_id: int, project_id: int | None) -> tuple[bool, int]:
+    """Resuelve (auto_enabled, timeout_minutes) para una sesión específica.
+
+    Precedencia:
+      1. Override por proyecto (Project.auto_dispatch_enabled/timeout_hours).
+      2. Setting global del tenant (IntegrationSetting('autoCuration')).
+      3. Default seguro: (False, 60).
+    """
+    from models import IntegrationSetting, Project
+
+    auto_enabled = False
+    timeout_minutes = 60
+    ac_setting = db.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.tenant_id == tenant_id)
+        .where(IntegrationSetting.provider_name == "autoCuration")
+    ).first()
+    if ac_setting:
+        try:
+            cfg = json.loads(ac_setting.config_json or "{}")
+            auto_enabled = bool(cfg.get("isEnabled", False))
+            if cfg.get("timeoutMinutes") is not None:
+                timeout_minutes = max(1, int(float(cfg.get("timeoutMinutes"))))
+            elif cfg.get("timeoutHours") is not None:
+                timeout_minutes = max(1, int(float(cfg.get("timeoutHours")) * 60))
+        except Exception:
+            pass
+
+    if project_id is not None:
+        p = db.get(Project, project_id)
+        if p:
+            if p.auto_dispatch_enabled is not None:
+                auto_enabled = bool(p.auto_dispatch_enabled)
+            if p.auto_dispatch_timeout_hours is not None:
+                timeout_minutes = max(1, int(float(p.auto_dispatch_timeout_hours) * 60))
+    return auto_enabled, timeout_minutes
+
+
+def _resolve_admin_recipients(db, tenant_id: int) -> list[tuple[str, str]]:
+    """Lista de (email, name) de admins activos del tenant — destinatarios
+    del correo post-pipeline y del warning de auto-dispatch bloqueado.
+    """
+    from models import User, Role
+
+    admins = db.exec(
+        select(User)
+        .where(User.tenant_id == tenant_id)
+        .where(User.is_active == True)
+    ).all()
+    out: list[tuple[str, str]] = []
+    for u in admins:
+        role_name = ""
+        if u.role_id:
+            r = db.get(Role, u.role_id)
+            role_name = (r.name if r else "").lower()
+        if "admin" in role_name or getattr(u, "is_platform_admin", False):
+            if u.email:
+                out.append((u.email, u.full_name or ""))
+    return out
+
+
+async def _send_session_ready_email(session_id: int, tenant_id: int) -> None:
+    """Envía el correo POST-pipeline al/los admin/s del tenant.
+
+    Se llama desde `process_transcript_background` DESPUÉS de que la IA
+    terminó (con o sin error). NO se llama antes — la regla del producto
+    es: "primero se procesa, se analiza y luego sí se envía el primer
+    correo". El correo informa:
+      - Estado del pipeline (OK / failed con detalle del error).
+      - Tareas detectadas + cuántas sin email del responsable.
+      - Participantes sin correo registrado.
+      - Modo de envío (automático con timeout o manual).
+
+    Idempotente: si `session_ready_email_sent_at` ya está set en la sesión,
+    NO reenvía. Esto evita spam si el pipeline se reintenta.
     """
     import os
     from sqlmodel import Session
     from database import engine
-    from models import MeetingSession, Project, User, Role, IntegrationSetting
     from services.email_service import EmailService
 
     try:
@@ -137,61 +250,42 @@ async def _send_initial_admin_email(session_id: int, tenant_id: int) -> None:
             ms = db.get(MeetingSession, session_id)
             if not ms:
                 return
+
+            # Idempotencia: ya se envió antes → no reenviar.
+            if (ms.session_ready_email_sent_at or "").strip():
+                logger.debug(
+                    "Sesión %s: session_ready_email ya fue enviado el %s. Skip.",
+                    session_id, ms.session_ready_email_sent_at,
+                )
+                return
+
             project_name = "General"
             if ms.project_id:
+                from models import Project
                 p = db.get(Project, ms.project_id)
                 if p:
                     project_name = p.name
 
-            # Cargar config de envío automático del tenant.
-            ac_setting = db.exec(
-                select(IntegrationSetting)
-                .where(IntegrationSetting.tenant_id == tenant_id)
-                .where(IntegrationSetting.provider_name == "autoCuration")
-            ).first()
-            auto_enabled = False
-            timeout_minutes = 60
-            if ac_setting:
-                try:
-                    cfg = json.loads(ac_setting.config_json or "{}")
-                    auto_enabled = bool(cfg.get("isEnabled", False))
-                    # Prioridad: minutos > horas legacy
-                    if cfg.get("timeoutMinutes") is not None:
-                        timeout_minutes = int(float(cfg.get("timeoutMinutes")))
-                    elif cfg.get("timeoutHours") is not None:
-                        timeout_minutes = int(float(cfg.get("timeoutHours")) * 60)
-                except Exception:
-                    pass
+            auto_enabled, timeout_minutes = _resolve_auto_dispatch_policy(
+                db, tenant_id, ms.project_id,
+            )
 
-            # Override por proyecto (mismo patrón que cron_service).
-            if ms.project_id:
-                p = db.get(Project, ms.project_id)
-                if p:
-                    if p.auto_dispatch_enabled is not None:
-                        auto_enabled = bool(p.auto_dispatch_enabled)
-                    if p.auto_dispatch_timeout_hours is not None:
-                        timeout_minutes = int(float(p.auto_dispatch_timeout_hours) * 60)
-
-            # Buscar admins activos del tenant — usuarios con role "admin"
-            # (por nombre o por flag is_platform_admin).
-            admins = db.exec(
-                select(User)
-                .where(User.tenant_id == tenant_id)
-                .where(User.is_active == True)
+            # Conteo de tareas + faltantes de email.
+            total_tasks = db.exec(
+                select(ActionItem).where(ActionItem.session_id == session_id)
             ).all()
-            admin_recipients: list[tuple[str, str]] = []
-            for u in admins:
-                role_name = ""
-                if u.role_id:
-                    r = db.get(Role, u.role_id)
-                    role_name = (r.name if r else "").lower()
-                # Heurística: cualquier rol que contenga "admin" o el flag de plataforma.
-                if "admin" in role_name or getattr(u, "is_platform_admin", False):
-                    if u.email:
-                        admin_recipients.append((u.email, u.full_name or ""))
+            total_task_count = len(total_tasks)
+            missing_task_emails, missing_participants = _count_missing_emails_for_session(
+                db, session_id,
+            )
+
+            pipeline_failed = bool((ms.processing_error or "").strip())
+            pipeline_error_summary = (ms.processing_error or "").strip()[:400]
+
+            admin_recipients = _resolve_admin_recipients(db, tenant_id)
             if not admin_recipients:
                 logger.info(
-                    "Sesión %s: no se encontraron admins activos en tenant %s para correo inicial.",
+                    "Sesión %s: no hay admins activos en tenant %s para correo post-pipeline.",
                     session_id, tenant_id,
                 )
                 return
@@ -200,6 +294,7 @@ async def _send_initial_admin_email(session_id: int, tenant_id: int) -> None:
             session_url = f"{frontend_url}/admin/curation/{session_id}"
 
             email_svc = EmailService(db=db, tenant_id=tenant_id)
+            ok_any = False
             for email, name in admin_recipients:
                 try:
                     await email_svc.send_session_received_email(
@@ -210,16 +305,51 @@ async def _send_initial_admin_email(session_id: int, tenant_id: int) -> None:
                         session_url=session_url,
                         auto_dispatch_enabled=auto_enabled,
                         timeout_minutes=timeout_minutes,
+                        total_tasks=total_task_count,
+                        missing_task_emails=missing_task_emails,
+                        missing_participants=missing_participants,
+                        pipeline_failed=pipeline_failed,
+                        pipeline_error_summary=pipeline_error_summary,
                     )
+                    ok_any = True
                 except Exception:
                     logger.exception(
-                        "Falló envío de correo inicial a %s para sesión %s",
+                        "Falló envío de correo post-pipeline a %s para sesión %s",
                         email, session_id,
                     )
+
+            # Marca idempotente: con que UNO haya salido, no reintentamos.
+            if ok_any:
+                ms2 = db.get(MeetingSession, session_id)
+                if ms2:
+                    ms2.session_ready_email_sent_at = datetime.now().isoformat()
+                    db.add(ms2)
+                    db.commit()
+
+            # Notificación in-app a los admins también.
+            try:
+                from services.notification_service import notify_admins_session_processed
+                notify_admins_session_processed(
+                    db=db,
+                    tenant_id=tenant_id,
+                    session_id=session_id,
+                    session_title=ms.title or "Sin título",
+                    pipeline_failed=pipeline_failed,
+                    missing_task_emails=missing_task_emails,
+                    missing_participants=missing_participants,
+                )
+            except Exception:
+                logger.exception(
+                    "Falló notificación in-app post-pipeline para sesión %s", session_id,
+                )
     except Exception:
         logger.exception(
-            "_send_initial_admin_email crash inesperado para sesión %s", session_id,
+            "_send_session_ready_email crash inesperado para sesión %s", session_id,
         )
+
+
+# Alias retrocompat — algunos imports legacy todavía usan el nombre viejo.
+_send_initial_admin_email = _send_session_ready_email
 
 
 def _extract_native_summary(summary_obj) -> str:
@@ -646,6 +776,22 @@ async def process_transcript_background(
                     session_id,
                 )
 
+    # Correo + notif POST-pipeline (regla del producto).
+    # Se ejecuta SIEMPRE: con pipeline OK avisa "lista para enviar/curar",
+    # con pipeline fallido avisa "hubo un error, entrá a reintentar". El
+    # método es idempotente (no reenvía si ya se envió antes).
+    try:
+        # tenant_id real puede no estar en scope si crasheó muy temprano —
+        # lo resolvemos desde la sesión.
+        with Session(engine) as db_done:
+            ms_done = db_done.get(MeetingSession, session_id)
+            if ms_done and ms_done.tenant_id:
+                await _send_session_ready_email(session_id, ms_done.tenant_id)
+    except Exception:
+        logger.exception(
+            "No pude enviar session_ready_email para sesión %s", session_id,
+        )
+
 
 # ---------------------------------------------------------------------------
 # Endpoint
@@ -758,13 +904,12 @@ async def receive_fireflies_webhook(
     except Exception:
         logger.exception("No se pudo emitir notif de session_received para %s", new_session.id)
 
-    # Correo INICIAL al admin del proyecto/tenant: "Sesión recibida, tienes
-    # N minutos para curarla antes del envío automático". Se hace en background
-    # para no bloquear el ack del webhook.
-    background_tasks.add_task(
-        _send_initial_admin_email, new_session.id, tenant_id,
-    )
-
+    # Regla del producto: NO enviar correo al admin apenas llega el webhook.
+    # Primero se procesa la sesión con IA, y SÓLO al terminar el pipeline se
+    # envía el correo "Sesión procesada y lista" con la info real (tareas
+    # detectadas, correos faltantes, modo automático/manual). Ese correo lo
+    # dispara `process_transcript_background` al final, vía
+    # `_send_session_ready_email`.
     background_tasks.add_task(
         process_transcript_background, new_session.id, transcript_id, payload
     )

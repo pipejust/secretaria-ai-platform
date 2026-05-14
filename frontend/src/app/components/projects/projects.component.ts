@@ -67,6 +67,23 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     /** UI helper: cuando es false → enviamos null en ambos campos para usar el global */
     autoDispatchOverride = false;
 
+    /** El backend persiste `auto_dispatch_timeout_hours` (Decimal). En la UI
+     *  pedimos minutos al admin (granularidad fina, mismo lenguaje que el
+     *  setting global). Conversión bidireccional vía este campo intermedio. */
+    autoDispatchTimeoutMinutes: number | null = null;
+
+    /** Sincroniza el input de minutos → hours para mandar al backend. */
+    onAutoDispatchTimeoutMinutesChange(min: number | null): void {
+        if (min === null || min === undefined || isNaN(min as any) || (min as any) < 1) {
+            this.newProject.auto_dispatch_timeout_hours = null;
+            this.autoDispatchTimeoutMinutes = null;
+            return;
+        }
+        const m = Math.max(1, Math.round(Number(min)));
+        this.autoDispatchTimeoutMinutes = m;
+        this.newProject.auto_dispatch_timeout_hours = +(m / 60).toFixed(4);
+    }
+
     /** Usuarios disponibles para asignar como responsable de proyecto. */
     users: Array<{ id: number; full_name: string; email: string; role: string; is_active: boolean; avatar_url?: string | null }> = [];
 
@@ -279,6 +296,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.autoDispatchOverride =
             project.auto_dispatch_enabled !== null ||
             project.auto_dispatch_timeout_hours !== null;
+        // Inicializa el input de minutos desde hours guardado.
+        this.autoDispatchTimeoutMinutes = project.auto_dispatch_timeout_hours != null
+            ? Math.max(1, Math.round(Number(project.auto_dispatch_timeout_hours) * 60))
+            : null;
         this.showProjectModal = true;
     }
 
@@ -291,6 +312,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             owner_user_id: null,
         };
         this.autoDispatchOverride = false;
+        this.autoDispatchTimeoutMinutes = null;
     }
 
     /** Helper: nombre del responsable de un proyecto, o '—' si no asignado. */

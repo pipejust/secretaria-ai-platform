@@ -1,0 +1,61 @@
+{% extends "email_base.html" %}
+
+{# ──────────────────────────────────────────────────────────────────────────
+   Email cuando el cron despachó automáticamente: ya salieron los correos a
+   los responsables y los tickets se crearon en las plataformas conectadas
+   (Trello, Jira, ClickUp, Azure DevOps).
+
+   Status de la sesión pasó a `processed`. Este correo es FYI — el admin no
+   tiene nada que hacer; sólo le damos trazabilidad de que el sistema
+   trabajó por él.
+   ────────────────────────────────────────────────────────────────────────── #}
+
+{% block content %}
+  <h2>✅ Tareas y correos enviados automáticamente</h2>
+
+  <p>Hola {{ admin_name | default('') }},</p>
+
+  <p>
+    El envío automático se ejecutó correctamente para la sesión en el
+    proyecto <strong>{{ project_name | default('General') }}</strong>.
+    Las tareas ya están notificadas a los responsables y los tickets fueron
+    creados en las plataformas conectadas.
+  </p>
+
+  <div class="box" style="border-left-color: #16A34A; background: #F0FDF4;">
+    <p class="box-title" style="color: #166534;">
+      {{ session_title | default('Sin título') }}
+    </p>
+    <p class="box-text">
+      <strong>{{ total_tasks }}</strong>
+      tarea{{ 's' if total_tasks != 1 else '' }} despachada{{ 's' if total_tasks != 1 else '' }}
+      a sus responsables (correo) y a las plataformas externas configuradas
+      del proyecto.
+    </p>
+  </div>
+
+  <p>
+    No tenés que hacer nada más. Si necesitás revisar el detalle de la
+    sesión, los correos enviados o el estado de cada tarea, abrí la sesión
+    en la plataforma.
+  </p>
+
+  <div class="button-container" style="text-align: center; margin: 30px 0;">
+    <a href="{{ session_url }}"
+       class="button"
+       style="background: linear-gradient(135deg,
+                {{ brand.primary_color | default('#4F46E5') }} 0%,
+                {{ brand.secondary_color | default('#06B6D4') }} 100%);
+              color: #ffffff; padding: 14px 32px; border-radius: 10px;
+              text-decoration: none; font-weight: 700; font-size: 15px;
+              display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+      Ver el resumen de la sesión
+    </a>
+  </div>
+
+  <p style="color: #6b7280; font-size: 13px; line-height: 1.55; margin-top: 28px;">
+    💡 Si tras revisarlo querés ajustar tareas o reenviar a alguien
+    específico, podés editar las tareas en la sesión y re-disparar manualmente
+    desde el botón <strong>"Enviar"</strong> de la curación.
+  </p>
+{% endblock %}

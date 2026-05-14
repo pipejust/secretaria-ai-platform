@@ -37,11 +37,13 @@
           <span class="meta-val">{{ d.project.owner_user.full_name || d.project.owner_user.email }}</span>
         </div>
         <div class="meta-row">
-          <span class="meta-key">Auto-Dispatch</span>
+          <span class="meta-key">Envío automático</span>
           <span class="meta-val">
             <ng-container *ngIf="d.project.auto_dispatch_enabled === null">Heredado del global</ng-container>
             <ng-container *ngIf="d.project.auto_dispatch_enabled === true">
-              ✓ Activo · {{ d.project.auto_dispatch_timeout_hours || '?' }}h
+              ✓ Activo · {{ d.project.auto_dispatch_timeout_hours
+                ? (d.project.auto_dispatch_timeout_hours * 60 | number:'1.0-0') + ' min'
+                : '?' }}
             </ng-container>
             <ng-container *ngIf="d.project.auto_dispatch_enabled === false">✗ Desactivado</ng-container>
           </span>
