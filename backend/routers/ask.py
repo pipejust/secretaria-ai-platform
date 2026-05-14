@@ -196,6 +196,148 @@ class AskHistoryEntry(BaseModel):
     created_at: str
 
 
+def _enrich_chunks_with_session_text(
+    chunks: list[dict], db: "Session", tenant_id: int,
+) -> list[dict]:
+    """Sustituye el `content` indexado vacío/escaso por el texto REAL del
+    campo correspondiente de la sesión en DB.
+
+    El RAG indexa fragmentos en el momento de procesar la sesión. Si el
+    campo `processed_decisions`/`processed_agreements`/`processed_risks` se
+    editó después (curador agregó decisiones) sin re-indexar, el chunk
+    sigue vacío. Acá lo rellenamos al vuelo desde DB.
+
+    También funciona como red de seguridad cuando un chunk se indexó con
+    metadata `kind=decisions` pero contenido vacío.
+    """
+    from models import MeetingSession
+    if not chunks:
+        return chunks
+    # Cache session_id → (decisions, agreements, risks, summary, title)
+    cache: dict[int, dict] = {}
+    out: list[dict] = []
+    for c in chunks:
+        snippet = (c.get("content") or "").strip()
+        if len(snippet) >= 40:
+            out.append(c)
+            continue  # contenido ya suficiente
+        sid = c.get("session_id")
+        if not sid:
+            out.append(c)
+            continue
+        if sid not in cache:
+            ms = db.get(MeetingSession, sid)
+            if not ms or ms.tenant_id != tenant_id:
+                cache[sid] = {}
+            else:
+                cache[sid] = {
+                    "decisions":  (ms.processed_decisions or "").strip(),
+                    "agreements": (ms.processed_agreements or "").strip(),
+                    "risks":      (ms.processed_risks or "").strip(),
+                    "summary":    (ms.raw_summary or "").strip(),
+                    "title":      (ms.title or "").strip(),
+                }
+        info = cache.get(sid) or {}
+        kind = (c.get("kind") or "").lower()
+        replacement = ""
+        if kind in ("decision", "decisions") and info.get("decisions"):
+            replacement = info["decisions"]
+        elif kind in ("agreement", "agreements") and info.get("agreements"):
+            replacement = info["agreements"]
+        elif kind in ("risk", "risks") and info.get("risks"):
+            replacement = info["risks"]
+        elif kind in ("summary", "overview") and info.get("summary"):
+            replacement = info["summary"]
+        # Si nada del kind específico, intentamos summary como fallback.
+        if not replacement:
+            replacement = info.get("summary") or info.get("decisions") or info.get("agreements") or ""
+        if replacement:
+            c = {**c, "content": replacement[:2000]}
+        out.append(c)
+    return out
+
+
+def _is_recency_question(q: str) -> bool:
+    """Detecta si la pregunta tiene intent de listar sesiones RECIENTES /
+    GENERALES (sin un proyecto/cliente específico). Triggers comunes en
+    es-CO: 'recientes', 'últimos', 'última semana', 'este mes', 'todas las
+    reuniones', 'qué pasó'."""
+    qn = (q or "").lower()
+    triggers = [
+        "reciente", "recientes", "última", "ultimas", "últimas", "ultimas",
+        "últim", "ultim", "esta semana", "este mes", "este día", "este dia",
+        "todas las reun", "todas las sesion", "qué pas", "que pas",
+        "qué hubo", "que hubo", "general",
+    ]
+    return any(t in qn for t in triggers)
+
+
+def _load_recent_session_context(
+    db: "Session", tenant_id: int, project_id: Optional[int], limit: int = 8,
+) -> list[dict]:
+    """Devuelve N sesiones más recientes del tenant (opcionalmente filtradas
+    por proyecto) en el formato chunk-like que espera _build_context.
+
+    Cada sesión se devuelve como un chunk con kind=summary y el resumen
+    ejecutivo + decisiones + acuerdos concatenados. Cuando el usuario
+    pregunta cosas como 'qué decisiones se tomaron recientemente', esto
+    asegura que el LLM tiene el texto real de las sesiones del último
+    período aunque RAG no las haya seleccionado por similitud."""
+    from sqlmodel import select
+    from models import MeetingSession, Project
+
+    q = select(MeetingSession).where(MeetingSession.tenant_id == tenant_id)
+    if project_id:
+        q = q.where(MeetingSession.project_id == project_id)
+    # Excluimos archivadas y aún en proceso.
+    q = q.where(MeetingSession.status.in_(("pending", "completed", "processed")))
+    rows = db.exec(q).all()
+
+    # Ordenamos por id descendente (más recientes primero — created_at suele
+    # correlacionar con id en este sistema).
+    rows.sort(key=lambda s: s.id or 0, reverse=True)
+    rows = rows[:limit]
+
+    # Cache de nombre de proyecto.
+    proj_cache: dict[int, str] = {}
+    out: list[dict] = []
+    for s in rows:
+        if not s.id:
+            continue
+        # Componemos un "snippet" con TODO lo curado de la sesión para que
+        # el LLM tenga material aunque la pregunta sea muy abierta.
+        parts: list[str] = []
+        if (s.raw_summary or "").strip():
+            parts.append("Resumen: " + s.raw_summary.strip())
+        if (s.processed_decisions or "").strip():
+            parts.append("Decisiones: " + s.processed_decisions.strip())
+        if (s.processed_agreements or "").strip():
+            parts.append("Acuerdos: " + s.processed_agreements.strip())
+        if (s.processed_risks or "").strip():
+            parts.append("Riesgos: " + s.processed_risks.strip())
+        snippet = "\n\n".join(parts)
+        if not snippet.strip():
+            continue
+
+        proj_name = ""
+        if s.project_id:
+            if s.project_id not in proj_cache:
+                p = db.get(Project, s.project_id)
+                proj_cache[s.project_id] = (p.name if p else "") or ""
+            proj_name = proj_cache[s.project_id]
+
+        out.append({
+            "session_id": s.id,
+            "kind": "summary",
+            "content": snippet[:2500],
+            "distance": 0.0,  # placeholder — no participa del relevance filter
+            "session_title": s.title or "",
+            "session_date": s.date or "",
+            "project_name": proj_name,
+        })
+    return out
+
+
 def _build_context(chunks: list[dict]) -> str:
     """Construye el contexto que recibe el LLM. Cada bloque incluye el
     metadato de la sesión (id, título, fecha, proyecto) Y el contenido
@@ -409,6 +551,36 @@ async def ask(
 
     # Filtro de relevancia DINÁMICO (ver `_filter_relevant`).
     chunks = _filter_relevant(raw_chunks, override=payload.min_relevance)
+
+    # Enriquecemos cada chunk con el TEXTO REAL de la sesión cuando el
+    # contenido indexado venga vacío o muy corto. Esto pasa cuando el
+    # embedding pipeline indexó la metadata (kind=decisions) pero todavía
+    # no se había escrito el texto en la sesión, o cuando el campo cambió
+    # luego sin reindexarse. Sin esto, el LLM ve `Sección: decisions` y
+    # `Snippet: ""` → responde "no hay decisiones registradas" aunque las
+    # haya en DB.
+    chunks = _enrich_chunks_with_session_text(chunks, db, tenant.id)
+
+    # Después del enriquecimiento, descartamos chunks que siguieron vacíos
+    # (la sesión realmente no tiene ese campo poblado). Si tras filtrar
+    # quedamos sin nada, conservamos al menos los 3 mejores para que el
+    # LLM tenga contexto mínimo aunque sea de baja calidad.
+    chunks_with_text = [c for c in chunks if (c.get("content") or "").strip()]
+    if chunks_with_text:
+        chunks = chunks_with_text
+    # Detectar preguntas "generales / recientes / últimos días" y traer
+    # cronológicamente las N sesiones más recientes con su resumen +
+    # decisiones + acuerdos como contexto adicional. Solo se gatilla cuando
+    # la pregunta tiene ese intent — para no inflar tokens en queries
+    # específicas.
+    if _is_recency_question(q):
+        recency_chunks = _load_recent_session_context(db, tenant.id, payload.project_id, limit=8)
+        # Agregamos sin duplicar session_ids ya cubiertos.
+        seen = {c["session_id"] for c in chunks}
+        for rc in recency_chunks:
+            if rc["session_id"] not in seen:
+                chunks.append(rc)
+                seen.add(rc["session_id"])
 
     # Métrica de calidad: distancia del mejor chunk (0 = perfecto).
     best_distance = raw_chunks[0]["distance"] if raw_chunks else None
@@ -666,16 +838,28 @@ async def ask(
         # plano y `structured` queda en None.
         logger.info("ask: respuesta no es JSON válido (%s) — fallback a markdown", exc)
 
-    citations = [
-        Citation(
+    # Sólo mostramos como FUENTES los chunks con contenido REAL (post-
+    # enriquecimiento). Una fuente vacía es engañosa: el usuario ve "hay
+    # decisiones aquí" pero el LLM no usó nada porque el texto estaba vacío.
+    # Además deduplicamos por session_id+kind para no listar la misma
+    # sección dos veces de la misma sesión.
+    seen_pairs: set = set()
+    citations: list[Citation] = []
+    for c in chunks:
+        content = (c.get("content") or "").strip()
+        if not content:
+            continue
+        key = (c["session_id"], (c.get("kind") or "").lower())
+        if key in seen_pairs:
+            continue
+        seen_pairs.add(key)
+        citations.append(Citation(
             session_id=c["session_id"], kind=c["kind"],
-            snippet=(c.get("content") or "")[:280], distance=c["distance"],
+            snippet=content[:280], distance=c.get("distance", 0.0),
             session_title=c.get("session_title") or None,
             session_date=c.get("session_date") or None,
             project_name=c.get("project_name") or None,
-        )
-        for c in chunks
-    ]
+        ))
     response = AskResponse(
         answer=answer_md,
         structured=structured,

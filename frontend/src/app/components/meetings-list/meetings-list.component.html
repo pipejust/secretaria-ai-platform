@@ -327,19 +327,20 @@
 
                     <!-- Estado -->
                     <div class="cell-status">
-                        <ng-container *ngIf="s.processing_error; else okStatus">
-                            <!-- Estado "fallando": REEMPLAZA el badge normal y NO se
-                                 envía nada por integraciones hasta que el admin
-                                 reintente y termine sin errores. -->
+                        <ng-container *ngIf="isSessionFailing(s); else okStatus">
+                            <!-- Estado "fallando": REEMPLAZA el badge normal. Se
+                                 dispara cuando processing_error está set O cuando
+                                 la sesión está visualmente vacía (legacy).
+                                 Mientras tanto no se envía data a integraciones. -->
                             <span class="status-badge status-failing"
                                   data-status="failing"
-                                  [title]="'Pipeline incompleto: ' + s.processing_error">
+                                  [title]="failingReason(s)">
                                 ⚠ Fallando
                             </span>
                             <button type="button"
                                     class="retry-inline-btn"
-                                    (click)="retrySessionPipeline(s, false, $event)"
-                                    title="Reintentar análisis IA con la data ya guardada">
+                                    (click)="retrySessionPipeline(s, !!s.fireflies_id, $event)"
+                                    [title]="s.fireflies_id ? 'Re-traer de Fireflies + reanalizar con IA' : 'Reintentar análisis IA con la data ya guardada'">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="23 4 23 10 17 10"></polyline>
@@ -393,10 +394,9 @@
                                 Descargar PDF
                             </button>
                             <div class="kebab-divider"></div>
-                            <!-- Reintentar pipeline IA — solo visible si la sesión
-                                 quedó incompleta (Groq/OpenAI fallaron tras los
-                                 reintentos automáticos). -->
-                            <button *ngIf="s.processing_error"
+                            <!-- Reintentar pipeline IA — visible si la sesión está
+                                 fallando (processing_error explícito o sin contenido). -->
+                            <button *ngIf="isSessionFailing(s)"
                                     (click)="retrySessionPipeline(s, false, $event); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -405,7 +405,7 @@
                                 </svg>
                                 Reintentar análisis IA
                             </button>
-                            <button *ngIf="s.processing_error && s.fireflies_id"
+                            <button *ngIf="isSessionFailing(s) && s.fireflies_id"
                                     (click)="retrySessionPipeline(s, true, $event); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -416,7 +416,7 @@
                                 </svg>
                                 Re-traer de Fireflies + IA
                             </button>
-                            <div class="kebab-divider" *ngIf="s.processing_error"></div>
+                            <div class="kebab-divider" *ngIf="isSessionFailing(s)"></div>
                             <!-- Archivar / Desarchivar según el estado actual.
                                  Si está archivada permitimos restaurarla a "pending"
                                  para que vuelva al tab "Pendientes". -->

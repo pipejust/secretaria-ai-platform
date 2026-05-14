@@ -1366,61 +1366,65 @@
 }
 
 /* ============================================================
-   Probar envío de correo — bloque dentro de la card "Tema visual"
+   Probar envío de correo — card propia, separada y siempre visible.
+   Ancho completo del grid (span 3 cols en desktop, full en tablet/mobile).
    ============================================================ */
-.br-test-email {
-    margin-top: 12px;
-    padding: 12px 14px;
-    background: #F8FAFC;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.br-card--test-email {
+    grid-column: 1 / -1;   /* span full width del grid */
+    border: 1px solid var(--brand-action, #155EEF);
+    box-shadow: 0 4px 12px rgba(21, 94, 239, 0.08);
+}
+.br-card--test-email .br-card-head {
+    align-items: flex-start;
+    gap: 12px;
 }
 .br-test-email-head {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: 1;
 }
-.br-test-email-head svg {
-    width: 22px;
-    height: 22px;
+.br-test-email-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(21, 94, 239, 0.10);
     color: var(--brand-action, #155EEF);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
 }
-.br-test-email-head div {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-}
-.br-test-email-head strong {
-    font-size: 0.875rem;
-    color: #0F172A;
+.br-test-email-icon svg { width: 22px; height: 22px; }
+.br-test-email-head h2 {
+    margin: 0;
+    font-size: 1rem;
     font-weight: 600;
+    color: #0F172A;
 }
-.br-test-email-head span {
-    font-size: 0.75rem;
+.br-test-email-head .br-card-sub {
+    margin: 2px 0 0;
+    font-size: 0.8125rem;
     color: #64748B;
-    line-height: 1.4;
+    line-height: 1.45;
+    max-width: 60ch;
 }
 .br-test-email-row {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: stretch;
     flex-wrap: wrap;
 }
 .br-test-email-input {
     flex: 1;
-    min-width: 220px;
-    height: 40px;
-    padding: 0 12px;
+    min-width: 240px;
+    height: 42px;
+    padding: 0 14px;
     border: 1px solid #E2E8F0;
     border-radius: 10px;
     background: #FFFFFF;
     font-family: var(--font-sans);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     color: #0F172A;
     transition: all 150ms;
 }
@@ -1433,4 +1437,11 @@
     background: #F1F5F9;
     color: #94A3B8;
     cursor: not-allowed;
+}
+.br-card--test-email .br-btn {
+    height: 42px;
+    padding: 0 18px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
 }

@@ -144,6 +144,46 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     return statusMap[rawStatus] || status;
   }
 
+  /** ¿La sesión está rota / claramente incompleta?
+   *
+   *  Trigger condiciones:
+   *   1. `processing_error` poblado (pipeline IA falló tras retries).
+   *   2. Sesión legacy visualmente vacía: sin transcripción, sin resumen,
+   *      sin decisiones, sin riesgos y sin acuerdos. Si todo eso está
+   *      en blanco y no está en 'processing', algún paso se cayó silencioso.
+   *
+   *  Excluye 'archived' (decisión humana) y 'processing' (transitorio normal). */
+  isSessionFailing(): boolean {
+    const m = this.meetingData;
+    if (!m) return false;
+    if (((m.processing_error || '') as string).trim()) return true;
+    const status = ((m.status || '') as string).toLowerCase();
+    if (status === 'processing' || status === 'archived') return false;
+    const empty = (v: any) => !((v || '') as string).trim();
+    const noTasks = !((m.action_items || []).length);
+    return (
+      empty(m.raw_transcript) &&
+      empty(m.raw_summary) &&
+      empty(m.processed_decisions) &&
+      empty(m.processed_risks) &&
+      empty(m.processed_agreements) &&
+      noTasks
+    );
+  }
+
+  /** Mensaje humano del por qué está fallando. */
+  failingReason(): string {
+    const m = this.meetingData;
+    if (!m) return '';
+    const explicit = ((m.processing_error || '') as string).trim();
+    if (explicit) return explicit;
+    return (
+      'No hay contenido procesado: ni resumen ejecutivo, ni transcripción, ' +
+      'ni decisiones, ni riesgos, ni acuerdos, ni tareas. Probablemente el ' +
+      'análisis IA no se completó cuando llegó la sesión.'
+    );
+  }
+
   ngOnInit() {
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
@@ -506,10 +546,22 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
                 next: (res) => {
                   const session = res?.session ?? res;
                   if (session) {
+                    // Sincronizamos solo los campos de salud para que el banner
+                    // / badge se re-renderice. NO tocamos las cards de
+                    // contenido todavía — eso lo hace loadSessionDetails().
                     this.meetingData.processing_error = session.processing_error || '';
                     this.meetingData.processing_completed_at = session.processing_completed_at || '';
+                    this.meetingData.raw_transcript = session.raw_transcript ?? this.meetingData.raw_transcript;
+                    this.meetingData.raw_summary = session.raw_summary ?? this.meetingData.raw_summary;
+                    this.meetingData.processed_decisions = session.processed_decisions ?? this.meetingData.processed_decisions;
+                    this.meetingData.processed_risks = session.processed_risks ?? this.meetingData.processed_risks;
+                    this.meetingData.processed_agreements = session.processed_agreements ?? this.meetingData.processed_agreements;
+                    this.meetingData.action_items = res?.action_items || this.meetingData.action_items || [];
                   }
-                  const stillFailing = !!(session?.processing_error || '').trim();
+                  // Usamos la MISMA heurística del banner para decidir cuándo
+                  // dejar de polleal: ya no estamos fallando si el flag está
+                  // limpio Y hay contenido.
+                  const stillFailing = this.isSessionFailing();
                   if (!stillFailing || attempts >= MAX) {
                     this.isRetryingPipeline = false;
                     if (!stillFailing) {

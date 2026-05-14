@@ -732,6 +732,43 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         }
     }
 
+    /** ¿La sesión está rota / claramente incompleta?
+     *
+     *  Devuelve true cuando alguno de estos casos aplica:
+     *   1. El backend marcó `processing_error` (pipeline falló tras retries).
+     *   2. La sesión es legacy (anterior al rollout del flag) PERO está
+     *      visiblemente vacía: sin transcripción, sin resumen, sin decisiones,
+     *      sin riesgos y sin acuerdos. Si todo eso está en blanco y NO está
+     *      en estado 'processing' (que es transitorio normal), claramente
+     *      algún paso del pipeline IA se cayó silenciosamente.
+     *
+     *  Excluimos `archived` porque archivar es decisión humana legítima. */
+    isSessionFailing(s: any): boolean {
+        if (!s) return false;
+        if (((s.processing_error || '') as string).trim()) return true;
+        const status = ((s.status || '') as string).toLowerCase();
+        if (status === 'processing' || status === 'archived') return false;
+        const empty = (v: any) => !((v || '') as string).trim();
+        return (
+            empty(s.raw_transcript) &&
+            empty(s.raw_summary) &&
+            empty(s.processed_decisions) &&
+            empty(s.processed_risks) &&
+            empty(s.processed_agreements)
+        );
+    }
+
+    /** Mensaje humano del por qué está fallando, para tooltip / banner. */
+    failingReason(s: any): string {
+        if (!s) return '';
+        const explicit = ((s.processing_error || '') as string).trim();
+        if (explicit) return explicit;
+        return (
+            'Sesión sin contenido procesado (sin transcripción, resumen, ' +
+            'decisiones ni acuerdos). Probablemente el análisis IA no se completó.'
+        );
+    }
+
     /** Color del badge de prioridad de las action items del panel. */
     priorityBadge(p: string): { label: string; key: 'high' | 'medium' | 'low' } {
         const v = (p || '').toLowerCase();

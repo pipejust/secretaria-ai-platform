@@ -46,8 +46,10 @@
 
         <!-- Banner de pipeline incompleto: bloquea visualmente la página y
              expone el botón de reintento. Mientras esté presente, el backend
-             NO despachará nada a integraciones (Trello/Jira/email a owners). -->
-        <div *ngIf="meetingData.processing_error"
+             NO despachará nada a integraciones (Trello/Jira/email a owners).
+             Se muestra cuando processing_error está set O cuando la sesión
+             está visualmente vacía (caso legacy / fallo silencioso anterior). -->
+        <div *ngIf="isSessionFailing()"
              class="cp-failing-banner"
              role="alert">
             <div class="cp-failing-banner-icon" aria-hidden="true">
@@ -66,37 +68,39 @@
                     se notificará a los responsables. Presiona <strong>Reintentar</strong>
                     para volver a ejecutar el proceso completo.
                 </p>
-                <p class="cp-failing-detail" *ngIf="meetingData.processing_error">
-                    <span class="cp-failing-detail-label">Detalle técnico:</span>
-                    {{ meetingData.processing_error }}
+                <p class="cp-failing-detail">
+                    <span class="cp-failing-detail-label">Motivo:</span>
+                    {{ failingReason() }}
                 </p>
             </div>
             <div class="cp-failing-banner-actions">
-                <!-- Primario: re-ejecuta SOLO la IA con lo que ya está en DB.
-                     Cubre el caso del 90% (Groq/OpenAI fallaron pero el
-                     transcript+summary llegaron bien). Sin segunda llamada
-                     a la API de Fireflies. -->
+                <!-- Para sesiones de Fireflies vacías, lo correcto es re-traer
+                     desde la API y luego correr IA — porque la data original
+                     no está en DB. Por eso, si hay fireflies_id, el botón
+                     primario hace rehydrate. Si no (subida manual), solo IA. -->
                 <button type="button"
                         class="cp-failing-btn cp-failing-btn-primary"
                         [disabled]="isRetryingPipeline"
-                        (click)="retryPipelineFromCuration(false)">
+                        (click)="retryPipelineFromCuration(!!meetingData.fireflies_id)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="23 4 23 10 17 10"></polyline>
                         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                     </svg>
-                    {{ isRetryingPipeline ? 'Reintentando…' : 'Reintentar análisis IA' }}
+                    {{ isRetryingPipeline
+                        ? 'Reintentando…'
+                        : (meetingData.fireflies_id ? 'Re-traer de Fireflies + IA' : 'Reintentar análisis IA') }}
                 </button>
-                <!-- Secundario: vuelve a Fireflies a traer transcript+summary
-                     y luego re-corre IA. Útil sólo si el transcript llegó
-                     vacío o roto. -->
+                <!-- Secundario: solo re-corre IA con la data ya guardada.
+                     Útil cuando el contenido en DB se ve OK pero faltan
+                     piezas (ej. tareas) — más rápido y menos consumo. -->
                 <button type="button"
                         class="cp-failing-btn cp-failing-btn-secondary"
                         *ngIf="meetingData.fireflies_id"
                         [disabled]="isRetryingPipeline"
-                        (click)="retryPipelineFromCuration(true)"
-                        title="Vuelve a consultar Fireflies y reanaliza desde cero">
-                    Re-traer de Fireflies + IA
+                        (click)="retryPipelineFromCuration(false)"
+                        title="Re-ejecuta IA con la data ya guardada (no consulta Fireflies)">
+                    Solo re-ejecutar IA
                 </button>
             </div>
         </div>
@@ -147,10 +151,10 @@
                     </li>
                     <li>
                         <span class="cp-meta-label">Estado:</span>
-                        <ng-container *ngIf="meetingData.processing_error; else cpStatusOk">
+                        <ng-container *ngIf="isSessionFailing(); else cpStatusOk">
                             <span class="cp-badge cp-badge-status cp-status-failing"
                                   data-status="failing"
-                                  [title]="meetingData.processing_error">
+                                  [title]="failingReason()">
                                 ⚠ Fallando
                             </span>
                         </ng-container>
