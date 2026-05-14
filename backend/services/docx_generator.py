@@ -302,17 +302,17 @@ class CorporateDocxGenerator:
 
         s = add_style("act_cover_title")
         s.font.name = font_family
-        s.font.size = Pt(28)
+        s.font.size = Pt(22)
         s.font.bold = True
         s.font.color.rgb = text_rgb
-        s.paragraph_format.space_after = Pt(8)
-        s.paragraph_format.line_spacing = 1.05
+        s.paragraph_format.space_after = Pt(4)
+        s.paragraph_format.line_spacing = 1.1
 
         s = add_style("act_cover_subtitle")
         s.font.name = font_family
-        s.font.size = Pt(14)
+        s.font.size = Pt(12)
         s.font.color.rgb = text_rgb
-        s.paragraph_format.space_after = Pt(20)
+        s.paragraph_format.space_after = Pt(10)
         s.paragraph_format.line_spacing = 1.2
 
         s = add_style("act_section_number")
@@ -400,16 +400,10 @@ class CorporateDocxGenerator:
 
     def _build_running_header_footer(self) -> None:
         section = self.doc.sections[0]
-        section.different_first_page_header_footer = True
-
-        # En la portada (primera página) NO mostramos header/footer running.
-        first_header = section.first_page_header
-        first_header.is_linked_to_previous = False
-        first_header.paragraphs[0].text = ""
-
-        first_footer = section.first_page_footer
-        first_footer.is_linked_to_previous = False
-        first_footer.paragraphs[0].text = ""
+        # SIN portada dedicada: el header/footer running aplica a TODAS las
+        # páginas, incluida la primera. La página 1 arranca con el bloque
+        # de título y sigue con las secciones, en flujo continuo.
+        section.different_first_page_header_footer = False
 
         # Header normal: título del documento en pequeño, alineado izquierda;
         # versión a la derecha. Línea inferior tenue.
@@ -448,13 +442,16 @@ class CorporateDocxGenerator:
         footer_para.add_run(" de ")
         _add_page_field(footer_para, "NUMPAGES")
 
-    # ---------- portada ----------------------------------------------------
+    # ---------- bloque de título (sin portada dedicada) -------------------
 
-    def _build_cover(self) -> None:
-        # Espacio superior para empujar la portada hacia el centro vertical.
-        for _ in range(2):
-            self.doc.add_paragraph()
+    def _build_title_block(self) -> None:
+        """Bloque de título compacto al tope de la página 1.
 
+        Antes era una portada dedicada que dejaba la primera página casi
+        vacía. Ahora es un encabezado del documento que ocupa solo el
+        espacio necesario y deja que las secciones empiecen a continuación
+        en la misma página.
+        """
         eyebrow = (self.data.get("entidad_principal") or "Acta de reunión").upper()
         p = self.doc.add_paragraph(eyebrow, style="act_cover_eyebrow")
         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -465,7 +462,7 @@ class CorporateDocxGenerator:
 
         # Línea acento de marca debajo del título
         accent_p = self.doc.add_paragraph()
-        accent_p.paragraph_format.space_after = Pt(20)
+        accent_p.paragraph_format.space_after = Pt(8)
         _add_bottom_border(
             accent_p,
             color=_hex_clean(self.theme["accentColor"], "0EA5E9"),
@@ -476,54 +473,19 @@ class CorporateDocxGenerator:
         if subtitle:
             p = self.doc.add_paragraph(subtitle, style="act_cover_subtitle")
             p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-        self._build_meta_card()
-
-    def _build_meta_card(self) -> None:
-        """Tarjeta metadata 2x2 elegante en lugar de tabla 4-col descuadrada."""
-        meta_pairs = [
-            ("Acta No.", self.data.get("no_acta") or "—"),
-            ("Fecha de la reunión", _format_human_date(self.data.get("fecha_documento") or self.data.get("date") or "")),
-            ("Proyecto", self.data.get("proyecto") or "General"),
-            ("Idioma", self.data.get("idioma") or "Español"),
-        ]
-        table = self.doc.add_table(rows=2, cols=2)
-        table.alignment = WD_TABLE_ALIGNMENT.LEFT
-        table.autofit = False
-        for col in table.columns:
-            col.width = Cm(8.5)
-        _set_table_layout_fixed(table)
-        _set_table_borders(table, color=_hex_clean(self.theme["borderColor"], "E2E8F0"), sz=4)
-
-        for idx, (label, value) in enumerate(meta_pairs):
-            r, c = divmod(idx, 2)
-            cell = table.cell(r, c)
-            _set_cell_padding(cell, top=140, bottom=140, left=180, right=180)
-            cell.text = ""
-            p1 = cell.paragraphs[0]
-            p1.style = self.doc.styles["act_meta_label"]
-            p1.add_run(label.upper())
-            p2 = cell.add_paragraph(str(value or "—"), style="act_meta_value")
-            p2.paragraph_format.space_before = Pt(2)
-
-        # Salto a la siguiente página después de la portada
-        self.doc.add_page_break()
+            p.paragraph_format.space_after = Pt(4)
 
     # ---------- secciones --------------------------------------------------
 
     def _section_header(self, number: int, label: str) -> None:
-        """Renderiza un header de sección: '01' en color acento + título grande."""
-        # Espacio antes (excepto la primera sección de cada página)
-        # Línea acento corta arriba del bloque
-        accent_top = self.doc.add_paragraph()
-        accent_top.paragraph_format.space_before = Pt(8)
-        accent_top.paragraph_format.space_after = Pt(0)
+        """Renderiza un header de sección: solo el título grande con underline.
 
-        num_p = self.doc.add_paragraph(f"{number:02d}", style="act_section_number")
-        num_p.paragraph_format.space_after = Pt(0)
-
+        El parámetro `number` se mantiene en la firma por compatibilidad con
+        el resolver de bloques, pero ya NO se renderiza visualmente — el
+        usuario pidió quitar los '01/02/03'.
+        """
         title_p = self.doc.add_paragraph(label.upper(), style="act_section_title")
-        title_p.paragraph_format.space_before = Pt(0)
+        title_p.paragraph_format.space_before = Pt(14)
         title_p.paragraph_format.space_after = Pt(6)
         # Línea inferior tenue como separador
         _add_bottom_border(
@@ -787,10 +749,9 @@ class CorporateDocxGenerator:
 
     def generar_buffer(self) -> io.BytesIO:
         self._build_running_header_footer()
-        self._build_cover()
+        self._build_title_block()
 
         order = self._resolve_block_order()
-        # Numeración SECUENCIAL solo sobre los bloques con contenido.
         renderable = [b for b in order if self._block_has_content(b)]
         for idx, block_id in enumerate(renderable, start=1):
             self._section_header(idx, _BLOCK_LABELS[block_id])

@@ -97,12 +97,6 @@ class CorporatePDFGenerator(FPDF):
         self.theme = self._resolve_theme(self.data.get("theme") or {})
         self.set_auto_page_break(auto=True, margin=20)
         self.set_margins(left=18, top=22, right=18)
-        # Número de la página de portada. La cover SIEMPRE es la primera
-        # página, así que lo seteamos en __init__ para que header()/footer()
-        # ya tengan la info en la primera invocación de FPDF (que ocurre
-        # DENTRO de add_page() durante _build_cover, antes de que ese método
-        # pueda asignarlo).
-        self._cover_page_no: int = 1
         self.alias_nb_pages()
         self._cached_title = (
             self.data.get("subtitulo_documento")
@@ -121,9 +115,6 @@ class CorporatePDFGenerator(FPDF):
     # ---------- header / footer running ----------------------------------
 
     def header(self) -> None:
-        # En la portada NO hay header running.
-        if self.page_no() == self._cover_page_no:
-            return
         muted = _hex_to_rgb(self.theme["mutedColor"], (100, 116, 139))
         text = _hex_to_rgb(self.theme["textColor"], (17, 24, 39))
         border = _hex_to_rgb(self.theme["borderColor"], (226, 232, 240))
@@ -158,9 +149,6 @@ class CorporatePDFGenerator(FPDF):
         self.set_y(24)
 
     def footer(self) -> None:
-        # En la portada NO hay footer running.
-        if self.page_no() == self._cover_page_no:
-            return
         muted = _hex_to_rgb(self.theme["mutedColor"], (100, 116, 139))
         self.set_y(-15)
         self.set_font("helvetica", "", 8)
@@ -175,20 +163,20 @@ class CorporatePDFGenerator(FPDF):
         self.set_x(self.l_margin + page_w / 2)
         self.cell(page_w / 2, 6, f"Pagina {self.page_no()} de {{nb}}", align="R")
 
-    # ---------- portada --------------------------------------------------
+    # ---------- bloque de título (sin portada dedicada) -----------------
 
-    def _build_cover(self) -> None:
-        # _cover_page_no = 1 ya está seteado en __init__ para que header()
-        # y footer() lo respeten desde la PRIMERA invocación que hace FPDF
-        # adentro de add_page().
+    def _build_title_block(self) -> None:
+        """Bloque de título compacto al tope de la página 1.
+
+        Sin portada dedicada: el documento arranca con eyebrow + título +
+        accent line + subtítulo, y las secciones siguen en flujo continuo
+        en la misma página.
+        """
         self.add_page()
 
         muted = _hex_to_rgb(self.theme["mutedColor"], (100, 116, 139))
         text = _hex_to_rgb(self.theme["textColor"], (17, 24, 39))
         accent = _hex_to_rgb(self.theme["accentColor"], (14, 165, 233))
-
-        # Espacio superior
-        self.set_y(45)
 
         # Eyebrow
         eyebrow = _safe_latin(self.data.get("entidad_principal") or "Acta de reunion").upper()
@@ -196,74 +184,32 @@ class CorporatePDFGenerator(FPDF):
         self.set_text_color(*muted)
         self.cell(0, 5, eyebrow, ln=1)
 
-        self.ln(2)
+        self.ln(1)
 
-        # Título principal
+        # Título principal — más compacto que la portada (22pt en lugar de 28)
         title = _safe_latin(self.data.get("titulo_documento") or "Acta de reunion").upper()
-        self.set_font("helvetica", "B", 28)
+        self.set_font("helvetica", "B", 22)
         self.set_text_color(*text)
-        self.cell(0, 14, title, ln=1)
+        self.cell(0, 11, title, ln=1)
 
         # Línea acento
         self.set_draw_color(*accent)
-        self.set_line_width(1.2)
-        self.line(self.l_margin, self.get_y() + 3, self.w - self.r_margin, self.get_y() + 3)
-        self.ln(12)
+        self.set_line_width(1.0)
+        self.line(self.l_margin, self.get_y() + 1, self.w - self.r_margin, self.get_y() + 1)
+        self.ln(5)
 
         # Subtítulo (asunto)
         subtitle = _safe_latin(self.data.get("subtitulo_documento") or self.data.get("title") or "")
         if subtitle:
-            self.set_font("helvetica", "", 14)
+            self.set_font("helvetica", "", 12)
             self.set_text_color(*text)
-            self.multi_cell(0, 7, subtitle)
-            self.ln(8)
-
-        # Tarjeta meta 2x2
-        self._cover_meta_card()
-
-    def _cover_meta_card(self) -> None:
-        muted = _hex_to_rgb(self.theme["mutedColor"], (100, 116, 139))
-        text = _hex_to_rgb(self.theme["textColor"], (17, 24, 39))
-        border = _hex_to_rgb(self.theme["borderColor"], (226, 232, 240))
-
-        meta_pairs = [
-            ("Acta No.", self.data.get("no_acta") or "-"),
-            ("Fecha de la reunion", _format_human_date(self.data.get("fecha_documento") or self.data.get("date") or "")),
-            ("Proyecto", self.data.get("proyecto") or "General"),
-            ("Idioma", self.data.get("idioma") or "Espanol"),
-        ]
-        page_w = self.w - self.l_margin - self.r_margin
-        col_w = page_w / 2
-        row_h = 16
-
-        x0 = self.l_margin
-        y0 = self.get_y()
-        self.set_draw_color(*border)
-        self.set_line_width(0.2)
-
-        for idx, (label, value) in enumerate(meta_pairs):
-            r, c = divmod(idx, 2)
-            x = x0 + c * col_w
-            y = y0 + r * row_h
-            # Borde de cada celda
-            self.rect(x, y, col_w, row_h)
-            # Label
-            self.set_xy(x + 4, y + 2.5)
-            self.set_font("helvetica", "B", 8)
-            self.set_text_color(*muted)
-            self.cell(col_w - 8, 4, _safe_latin(label).upper())
-            # Value
-            self.set_xy(x + 4, y + 8)
-            self.set_font("helvetica", "", 11)
-            self.set_text_color(*text)
-            self.cell(col_w - 8, 5, _safe_latin(value or "-"))
-
-        self.set_y(y0 + 2 * row_h + 4)
+            self.multi_cell(0, 6, subtitle)
+            self.ln(2)
 
     # ---------- sección header --------------------------------------------
 
     def _section_header(self, number: int, label: str) -> None:
-        accent = _hex_to_rgb(self.theme["accentColor"], (14, 165, 233))
+        """Solo título + underline. Removido el badge de número."""
         text = _hex_to_rgb(self.theme["textColor"], (17, 24, 39))
         border = _hex_to_rgb(self.theme["borderColor"], (226, 232, 240))
 
@@ -271,12 +217,7 @@ class CorporatePDFGenerator(FPDF):
         if self.get_y() > self.h - 60:
             self.add_page()
 
-        self.ln(6)
-        # Badge del número
-        self.set_font("helvetica", "B", 10)
-        self.set_text_color(*accent)
-        self.cell(0, 5, f"{number:02d}", ln=1)
-
+        self.ln(8)
         # Título
         self.set_font("helvetica", "B", 13)
         self.set_text_color(*text)
@@ -584,18 +525,18 @@ class CorporatePDFGenerator(FPDF):
         return order
 
     def render_all(self) -> None:
-        self._build_cover()
+        self._build_title_block()
 
         order = self._resolve_block_order()
         renderable = [b for b in order if self._block_has_content(b)]
 
-        if renderable:
-            self.add_page()
-            for idx, block_id in enumerate(renderable, start=1):
-                self._section_header(idx, _BLOCK_LABELS[block_id])
-                method = getattr(self, f"_block_{block_id}", None)
-                if method:
-                    method()
+        # Las secciones empiezan inmediatamente debajo del título — sin
+        # portada dedicada, sin add_page() de por medio.
+        for idx, block_id in enumerate(renderable, start=1):
+            self._section_header(idx, _BLOCK_LABELS[block_id])
+            method = getattr(self, f"_block_{block_id}", None)
+            if method:
+                method()
 
     def generar_buffer(self) -> io.BytesIO:
         self.render_all()
