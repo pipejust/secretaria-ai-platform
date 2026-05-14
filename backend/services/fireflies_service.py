@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from typing import Any, Dict, Optional
@@ -6,7 +7,7 @@ import httpx
 from sqlmodel import Session, select
 
 from config import settings
-from models import IntegrationSetting
+from models import IntegrationSetting, MeetingSession
 
 logger = logging.getLogger(__name__)
 
@@ -143,3 +144,147 @@ class FirefliesService:
             result = data["data"].get("transcript") or {}
             result["apps_layer"] = data["data"].get("apps", {})
             return result
+
+
+# ---------------------------------------------------------------------------
+# Helpers para re-fetch de campos específicos (no toda la sesión).
+# ---------------------------------------------------------------------------
+
+
+def _extract_summary_text(summary_obj: Any) -> str:
+    """Compone texto del resumen ejecutivo nativo de Fireflies.
+
+    Duplica `_extract_native_summary` de routers/fireflies.py para que esta
+    función sea autocontenida (no importa el router para evitar circulares).
+    Fireflies devuelve summary como dict con campos opcionales — usamos los
+    que estén poblados.
+    """
+    if not isinstance(summary_obj, dict):
+        return str(summary_obj or "").strip()
+
+    parts: list[str] = []
+    overview = (summary_obj.get("overview") or "").strip()
+    if overview:
+        parts.append(f"### Resumen General\n{overview}")
+    bullet_gist = (summary_obj.get("bullet_gist") or "").strip()
+    if bullet_gist:
+        parts.append(f"### Puntos Clave\n{bullet_gist}")
+    notes = (summary_obj.get("notes") or "").strip()
+    if notes:
+        parts.append(f"### Notas\n{notes}")
+    short_summary = (summary_obj.get("short_summary") or "").strip()
+    if short_summary and not parts:
+        parts.append(f"### Resumen\n{short_summary}")
+    return "\n\n".join(parts).strip()
+
+
+async def fetch_native_summary(
+    fireflies_id: str,
+    *,
+    api_key: Optional[str] = None,
+    max_attempts: int = 3,
+    backoff_base_sec: float = 5.0,
+) -> str:
+    """Pide a Fireflies SOLO el campo summary de un transcript.
+
+    Reintenta hasta `max_attempts` veces con backoff exponencial cuando el
+    summary llega vacío — esto cubre el caso típico donde el webhook se dispara
+    antes de que Fireflies haya terminado de generar el resumen ejecutivo
+    (que es asincrónico de su lado, normalmente listo en 30 s a 2 min).
+
+    Devuelve el resumen formateado como markdown listo para guardar en
+    `MeetingSession.raw_summary`. Si tras todos los intentos sigue vacío,
+    devuelve "" — el caller decide si re-encolar o avisar al admin.
+    """
+    if not fireflies_id:
+        return ""
+
+    service = FirefliesService(api_key=api_key)
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            ff_data = await service.get_transcript_data(fireflies_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "fetch_native_summary: error en intento %s/%s para %s: %s",
+                attempt, max_attempts, fireflies_id, exc,
+            )
+            ff_data = {}
+
+        summary_text = _extract_summary_text(ff_data.get("summary"))
+        if summary_text:
+            logger.info(
+                "fetch_native_summary: summary obtenido para %s en intento %s "
+                "(%s chars).",
+                fireflies_id, attempt, len(summary_text),
+            )
+            return summary_text
+
+        if attempt < max_attempts:
+            wait = backoff_base_sec * (2 ** (attempt - 1))
+            logger.info(
+                "fetch_native_summary: summary vacío para %s (intento %s/%s). "
+                "Esperando %.1fs y reintentando.",
+                fireflies_id, attempt, max_attempts, wait,
+            )
+            await asyncio.sleep(wait)
+
+    logger.warning(
+        "fetch_native_summary: summary sigue vacío para %s tras %s intentos. "
+        "Probablemente Fireflies aún no lo generó del lado de ellos.",
+        fireflies_id, max_attempts,
+    )
+    return ""
+
+
+async def refetch_summary_for_session(
+    db: Session,
+    session: MeetingSession,
+    *,
+    api_key: Optional[str] = None,
+    clean_with_groq: bool = True,
+    max_attempts: int = 3,
+) -> bool:
+    """Re-baja el summary nativo desde Fireflies y lo guarda en la sesión.
+
+    Devuelve True si pudo escribir un summary no vacío, False si Fireflies
+    no tenía nada que devolver (o falló).
+
+    Si `clean_with_groq=True`, pasa el texto crudo por Groq para limpiar
+    headers, asteriscos y referencias `[Fuente: ...]` antes de persistir.
+    Si Groq falla, persiste el texto crudo (mejor mostrar algo que nada).
+    """
+    if not session.fireflies_id:
+        return False
+
+    summary = await fetch_native_summary(
+        session.fireflies_id,
+        api_key=api_key,
+        max_attempts=max_attempts,
+    )
+    if not summary:
+        return False
+
+    if clean_with_groq:
+        try:
+            from services.llm_groq import GroqLLMService
+            groq = GroqLLMService()
+            cleaned = await groq.clean_native_summary(summary)
+            if cleaned and cleaned.strip():
+                summary = cleaned
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "refetch_summary_for_session: Groq cleanup falló para sesión %s "
+                "(se guarda crudo): %s",
+                session.id, exc,
+            )
+
+    session.raw_summary = summary
+    db.add(session)
+    db.commit()
+    logger.info(
+        "refetch_summary_for_session: sesión %s actualizada con summary "
+        "de %s chars desde Fireflies %s.",
+        session.id, len(summary), session.fireflies_id,
+    )
+    return True

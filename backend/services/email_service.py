@@ -356,46 +356,25 @@ class EmailService:
         """Email INICIAL al admin del proyecto en cuanto Fireflies entrega una
         sesión. Le avisa que la sesión está en el sistema y, dependiendo del
         modo de envío, le da N minutos para curar antes del despacho automático.
+
+        Usa el template branded `email_session_received.html` que extiende
+        `email_base.html` — así hereda el header con gradiente + logo del
+        tenant, los colores de marca y el footer con datos de contacto.
+        Antes este método armaba HTML "a mano" sin marca, por eso llegaba
+        sin logo y con estilos genéricos.
         """
-        subject = f"Nueva sesión en Acten: {session_title or 'Sin título'}"
-        body_lines = [
-            f"<p>Hola {admin_name or ''},</p>",
-            f"<p>Se acaba de recibir una nueva sesión de <strong>Fireflies</strong> "
-            f"en el proyecto <strong>{project_name}</strong>:</p>",
-            f"<p style='font-size:1.1rem;font-weight:600;margin:18px 0;'>{session_title or 'Sin título'}</p>",
-        ]
-        if auto_dispatch_enabled:
-            body_lines.append(
-                f"<p>El <strong>envío automático de tareas y correos</strong> está activo. "
-                f"Tienes <strong>{timeout_minutes} minutos</strong> para revisar la sesión, "
-                f"agregar los correos y nombres de los participantes faltantes y editar las "
-                f"tareas detectadas. Si no editas en ese tiempo, las tareas y correos se "
-                f"enviarán automáticamente con la información actual.</p>"
-            )
-        else:
-            body_lines.append(
-                f"<p>El envío automático <strong>NO está activo</strong>. La sesión queda en "
-                f"el listado de reuniones esperando que la cures y dispares manualmente los "
-                f"correos y tareas a las plataformas conectadas.</p>"
-            )
-        body_lines.append(
-            f"<p style='margin-top:18px;'>"
-            f"<a href='{session_url}' style='background:#155EEF;color:#fff;padding:10px 18px;"
-            f"border-radius:8px;text-decoration:none;font-weight:600;'>Abrir la sesión en Acten</a>"
-            f"</p>"
-        )
-        body_lines.append(
-            "<p style='color:#6b7280;font-size:0.85rem;margin-top:24px;'>"
-            "Recuerda que si la sesión no tiene todos los correos de los participantes, "
-            "esos correos no recibirán las tareas detectadas hasta que los agregues."
-            "</p>"
-        )
-        html_content = (
-            f"<!doctype html><html><body style='font-family:Helvetica,Arial,sans-serif;"
-            f"color:#0F172A;line-height:1.55;max-width:600px;margin:0 auto;padding:24px;'>"
-            f"<h2 style='font-size:1.25rem;margin-bottom:16px;'>Acten</h2>"
-            + "".join(body_lines)
-            + "</body></html>"
+        platform_name = self.branding.get("platform_name") or "Acten"
+        subject = f"Nueva sesión en {platform_name}: {session_title or 'Sin título'}"
+        template = self.jinja_env.get_template('email_session_received.html')
+        html_content = template.render(
+            admin_name=admin_name or '',
+            session_title=session_title or 'Sin título',
+            project_name=project_name or 'General',
+            session_url=session_url or '#',
+            auto_dispatch_enabled=bool(auto_dispatch_enabled),
+            timeout_minutes=int(timeout_minutes or 60),
+            current_year=2026,
+            brand=self.branding,
         )
         await self._send_html_email(to_email, subject, html_content)
 

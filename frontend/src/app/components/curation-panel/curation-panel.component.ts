@@ -76,6 +76,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   isDispatchingPlatforms = false;
   isRegeneratingFields = false;
   isRetryingPipeline = false;
+  isRefetchingSummary = false;
   saveStatusMessage = '';
   projects: any[] = [];
 
@@ -524,6 +525,45 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
 
   /** Progreso visible del retry en curso: "X / N intentos". */
   retryProgress = { current: 0, total: 0 };
+
+  /** Re-baja SOLO el resumen ejecutivo nativo desde Fireflies sin tocar el
+   *  resto del pipeline IA. Mucho más barato que re-correr todo. Útil
+   *  cuando Fireflies aún no había generado el summary cuando llegó el
+   *  webhook (caso muy común). */
+  refetchSummaryOnly(): void {
+    if (this.isRefetchingSummary || !this.sessionId) return;
+    if (!this.meetingData.fireflies_id) {
+      this.toast.error('Esta sesión no tiene fireflies_id, no se puede refetchear.');
+      return;
+    }
+    this.isRefetchingSummary = true;
+    const headers = this.authService.getAuthHeaders();
+    const url = `${environment.apiUrl}/api/webhook/fireflies/sessions/${this.sessionId}/refetch-summary`;
+    this.http.post<any>(url, {}, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isRefetchingSummary = false;
+          if (res?.status === 'ok') {
+            this.toast.success(
+              `Resumen actualizado (${res.summary_chars} caracteres).`,
+            );
+            this.loadSessionDetails();
+          } else {
+            this.toast.warning(
+              res?.message || 'Fireflies aún no tiene summary. Probá en unos minutos.',
+            );
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isRefetchingSummary = false;
+          const detail = err?.error?.detail || err?.message || 'Error desconocido';
+          this.toast.error('No pude refetchear el summary: ' + detail);
+          this.cdr.detectChanges();
+        },
+      });
+  }
 
   /** Reintenta el pipeline IA completo desde la curación. Lo dispara el
    *  banner azul/rojo. Mientras corre:

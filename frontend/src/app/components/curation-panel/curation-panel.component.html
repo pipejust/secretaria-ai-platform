@@ -347,7 +347,27 @@
                          class="cp-md-view cp-textarea-scroll"
                          [innerHTML]="meetingData.raw_summary | mdRender"></div>
                     <div *ngIf="!editing.summary && !meetingData.raw_summary"
-                         class="cp-md-empty">No hay resumen disponible. Pulsa el lápiz para añadir uno.</div>
+                         class="cp-md-empty cp-summary-empty-state">
+                        <p>No hay resumen disponible.</p>
+                        <p class="cp-summary-empty-hint" *ngIf="meetingData.fireflies_id">
+                            Esta reunión viene de Fireflies. El resumen ejecutivo
+                            puede haber tardado en generarse — pulsá el botón
+                            para volver a pedirlo.
+                        </p>
+                        <button *ngIf="meetingData.fireflies_id"
+                                type="button"
+                                class="cp-summary-refetch-btn"
+                                [disabled]="isRefetchingSummary"
+                                (click)="refetchSummaryOnly()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                                 [class.cp-spin]="isRefetchingSummary">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                            </svg>
+                            {{ isRefetchingSummary ? 'Pidiendo a Fireflies…' : 'Traer resumen de Fireflies' }}
+                        </button>
+                    </div>
                     <textarea *ngIf="editing.summary"
                               class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.raw_summary"

@@ -505,7 +505,23 @@ async def process_transcript_background(
                 ).strip()
 
             # Resumen ejecutivo NATIVO de Fireflies (no se genera con IA).
+            # Fireflies genera el summary asincrónicamente — cuando el webhook
+            # llega muy rápido tras la reunión, el summary puede no estar listo
+            # todavía. Si la primera lectura viene vacía, reintentamos un par
+            # de veces con backoff antes de aceptar que no hay summary.
             raw_summary = _extract_native_summary(ff_data.get("summary"))
+            if not raw_summary and ff_api_key:
+                logger.info(
+                    "Summary vacío en primera lectura de %s, reintentando con backoff…",
+                    transcript_id,
+                )
+                from services.fireflies_service import fetch_native_summary
+                raw_summary = await fetch_native_summary(
+                    transcript_id,
+                    api_key=ff_api_key,
+                    max_attempts=3,
+                    backoff_base_sec=10.0,  # 10s, 20s, 40s = ~70s total worst case
+                )
 
             # Limpieza cosmética del summary con Groq (traduce headers, quita
             # asteriscos, elimina referencias tipo [Fuente: ...]). Si Groq
@@ -874,6 +890,67 @@ async def list_incomplete_sessions(
             "tasks_count": len(tasks),
         })
     return {"count": len(incomplete), "sessions": incomplete}
+
+
+@router.post("/sessions/{session_id}/refetch-summary")
+async def refetch_session_summary(
+    session_id: int,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+    _admin: User = Depends(require_admin),
+):
+    """Re-baja SOLO el resumen ejecutivo nativo desde Fireflies.
+
+    Endpoint focalizado: no toca transcript, decisiones, riesgos, asistentes
+    ni tareas. Útil cuando el summary llegó vacío del webhook (caso típico:
+    Fireflies aún no había generado el summary asincrónico cuando el webhook
+    se disparó). Mucho más barato que `rehydrate_from_fireflies` porque no
+    re-corre el pipeline IA.
+    """
+    from services.fireflies_service import (
+        get_fireflies_api_key,
+        refetch_summary_for_session,
+    )
+
+    session_obj = db.get(MeetingSession, session_id)
+    if not session_obj or session_obj.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+    if not session_obj.fireflies_id:
+        raise HTTPException(
+            status_code=400,
+            detail="La sesión no tiene fireflies_id; no se puede refetchear.",
+        )
+
+    api_key = get_fireflies_api_key(db, tenant.id)
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No hay Fireflies API key configurada para este tenant. "
+                "Configurala en Configuración → Integraciones."
+            ),
+        )
+
+    try:
+        ok = await refetch_summary_for_session(
+            db, session_obj, api_key=api_key, clean_with_groq=True, max_attempts=3,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("refetch_summary falló para sesión %s", session_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    db.refresh(session_obj)
+    return {
+        "status": "ok" if ok else "empty",
+        "session_id": session_id,
+        "summary_chars": len(session_obj.raw_summary or ""),
+        "message": (
+            "Summary actualizado correctamente."
+            if ok
+            else "Fireflies aún no tiene summary para esta sesión. "
+            "Esperá unos minutos y volvé a intentar."
+        ),
+    }
 
 
 async def _run_ai_pipeline_in_background(session_id: int) -> None:

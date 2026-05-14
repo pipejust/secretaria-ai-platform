@@ -1,0 +1,66 @@
+{% extends "email_base.html" %}
+
+{# ──────────────────────────────────────────────────────────────────────────
+   Email INICIAL al admin del proyecto en cuanto Fireflies entrega una sesión.
+   Hereda del email_base.html para que herede:
+     - Header gradient con logo del tenant (brand.logo_data_url)
+     - Footer con datos de contacto del tenant
+     - Colores brand.primary_color / brand.secondary_color / brand.accent_color
+   ────────────────────────────────────────────────────────────────────────── #}
+
+{% block content %}
+  <h2>📥 Nueva sesión recibida</h2>
+
+  <p>Hola {{ admin_name | default('') }},</p>
+
+  <p>
+    Se acaba de recibir una nueva sesión de <strong>Fireflies</strong>
+    en el proyecto <strong>{{ project_name | default('General') }}</strong>.
+  </p>
+
+  <div class="box">
+    <p class="box-title">{{ session_title | default('Sin título') }}</p>
+
+    {% if auto_dispatch_enabled %}
+      <p class="box-text">
+        El <strong>envío automático de tareas y correos</strong> está activo.
+        Tienes <strong>{{ timeout_minutes }} minutos</strong> para revisar la
+        sesión, agregar los correos y nombres de los participantes faltantes,
+        y editar las tareas detectadas. Si no editas en ese tiempo, las
+        tareas y correos se enviarán <strong>automáticamente</strong> con la
+        información actual.
+      </p>
+    {% else %}
+      <p class="box-text">
+        El envío automático <strong>NO está activo</strong>. La sesión queda
+        en el listado de reuniones esperando que la cures y dispares
+        manualmente los correos y tareas a las plataformas conectadas.
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="button-container" style="text-align: center; margin: 30px 0;">
+    <a href="{{ session_url }}"
+       class="button"
+       style="background: linear-gradient(135deg,
+                {{ brand.primary_color | default('#4F46E5') }} 0%,
+                {{ brand.secondary_color | default('#06B6D4') }} 100%);
+              color: #ffffff;
+              padding: 14px 32px;
+              border-radius: 10px;
+              text-decoration: none;
+              font-weight: 700;
+              font-size: 15px;
+              letter-spacing: 0.2px;
+              display: inline-block;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+      Abrir la sesión en {{ brand.platform_name | default('Acten') }}
+    </a>
+  </div>
+
+  <p style="color: #6b7280; font-size: 13px; line-height: 1.55; margin-top: 28px;">
+    💡 <strong>Recuerda:</strong> si la sesión no tiene todos los correos de
+    los participantes, esos correos no recibirán las tareas detectadas hasta
+    que los agregues.
+  </p>
+{% endblock %}

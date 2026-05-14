@@ -707,6 +707,45 @@
     text-align: center;
 }
 
+/* Empty state especializado del card de Resumen Ejecutivo: incluye CTA
+   para re-traer el summary desde Fireflies cuando vino vacío. */
+.cp-summary-empty-state {
+    padding: 18px 16px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px dashed #f59e0b;
+    color: #78350f;
+    font-style: normal;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.cp-summary-empty-state p { margin: 0; }
+.cp-summary-empty-hint {
+    font-size: var(--text-12);
+    color: #92400e;
+    line-height: 1.45;
+}
+.cp-summary-refetch-btn {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-family: var(--font-sans);
+    font-size: var(--text-13, 13px);
+    font-weight: var(--fw-semibold, 600);
+    background: #d97706;
+    color: #fff;
+    border: 1px solid #b45309;
+    cursor: pointer;
+    transition: background var(--duration-fast, 150ms) ease;
+}
+.cp-summary-refetch-btn:not(:disabled):hover { background: #b45309; }
+.cp-summary-refetch-btn:disabled { opacity: 0.7; cursor: wait; }
+.cp-summary-refetch-btn svg { stroke: #fff; }
+
 /* Acciones internas (IA buttons en Transcripción) */
 .cp-card-actions {
     display: flex;

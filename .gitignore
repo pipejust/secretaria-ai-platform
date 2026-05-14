@@ -82,3 +82,13 @@ rediseño/
 
 # Favicons originales (ya copiados a frontend/public/)
 /favicon/
+
+# ============================================================
+# CREDENCIALES LOCALES — nunca commitear.
+# Vivienda de tokens API (Coolify, GitHub, etc.), SSH keys, etc.
+# ============================================================
+/.secrets/
+/.local/
+*.credentials
+*.token
+.coolify.env
