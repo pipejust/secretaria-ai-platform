@@ -268,15 +268,19 @@ async def refetch_summary_for_session(
     api_key: Optional[str] = None,
     clean_with_groq: bool = True,
     max_attempts: int = 3,
+    fallback_to_groq: bool = True,
 ) -> bool:
     """Re-baja el summary nativo desde Fireflies y lo guarda en la sesión.
 
-    Devuelve True si pudo escribir un summary no vacío, False si Fireflies
-    no tenía nada que devolver (o falló).
+    Devuelve True si pudo escribir un summary no vacío, False si NI Fireflies
+    NI Groq pudieron entregar algo.
 
-    Si `clean_with_groq=True`, pasa el texto crudo por Groq para limpiar
-    headers, asteriscos y referencias `[Fuente: ...]` antes de persistir.
-    Si Groq falla, persiste el texto crudo (mejor mostrar algo que nada).
+    Política:
+      1. Pide summary nativo a Fireflies (con retries).
+      2. Si Fireflies devuelve algo y `clean_with_groq=True` → Groq limpia formato.
+      3. Si Fireflies NO devuelve nada Y `fallback_to_groq=True` Y la sesión
+         tiene transcript → Groq genera el summary desde cero. Esto cubre
+         cuentas free de Fireflies y sesiones cortas que Fireflies aún no procesó.
     """
     if not session.fireflies_id:
         return False
@@ -286,6 +290,31 @@ async def refetch_summary_for_session(
         api_key=api_key,
         max_attempts=max_attempts,
     )
+
+    source = "fireflies"
+    if not summary and fallback_to_groq:
+        # Fallback: generar el summary desde el transcript con Groq.
+        transcript = (session.raw_transcript or "").strip()
+        if len(transcript) > 50:
+            try:
+                from services.llm_groq import GroqLLMService
+                groq = GroqLLMService()
+                generated = await groq.generate_summary_from_transcript(
+                    transcript,
+                    title=session.title or "",
+                    language=session.language or "Español",
+                )
+                if generated and generated.strip():
+                    summary = generated
+                    source = "groq_generated"
+                    # Saltamos el cleanup — Groq ya genera con formato limpio.
+                    clean_with_groq = False
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "refetch_summary_for_session: Groq generate falló para sesión %s: %s",
+                    session.id, exc,
+                )
+
     if not summary:
         return False
 
@@ -308,7 +337,7 @@ async def refetch_summary_for_session(
     db.commit()
     logger.info(
         "refetch_summary_for_session: sesión %s actualizada con summary "
-        "de %s chars desde Fireflies %s.",
-        session.id, len(summary), session.fireflies_id,
+        "de %s chars (origen=%s, ff_id=%s).",
+        session.id, len(summary), source, session.fireflies_id,
     )
     return True

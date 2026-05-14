@@ -667,6 +667,33 @@ async def process_transcript_background(
                         f"Groq clean_native_summary falló (se mantiene crudo): {exc}"
                     )
                     logger.warning(summary_clean_error)
+            else:
+                # Fallback: si Fireflies NO entregó summary (caso típico del
+                # plan free, o sesiones cortas que aún no procesaron), lo
+                # generamos desde cero con Groq usando el transcript real.
+                # Esto garantiza que TODA sesión tenga summary, sin importar
+                # el plan de Fireflies del cliente.
+                if raw_transcript and len(raw_transcript) > 50:
+                    logger.info(
+                        "Fireflies no devolvió summary para %s — generando con Groq desde transcript (%s chars).",
+                        transcript_id, len(raw_transcript),
+                    )
+                    try:
+                        raw_summary = await groq.generate_summary_from_transcript(
+                            raw_transcript,
+                            title=title,
+                            language="Español",
+                        )
+                        if raw_summary:
+                            logger.info(
+                                "Summary generado por Groq para %s: %s chars.",
+                                transcript_id, len(raw_summary),
+                            )
+                    except Exception as exc:  # noqa: BLE001
+                        summary_clean_error = (
+                            f"Groq generate_summary_from_transcript falló: {exc}"
+                        )
+                        logger.warning(summary_clean_error)
 
             # Doble-check: el valor que estamos a punto de persistir DEBE
             # poder leerse de vuelta. Si por algún motivo se rompió, lo
@@ -1092,8 +1119,8 @@ async def refetch_session_summary(
         "message": (
             "Summary actualizado correctamente."
             if ok
-            else "Fireflies aún no tiene summary para esta sesión. "
-            "Esperá unos minutos y volvé a intentar."
+            else "Ni Fireflies ni Groq pudieron generar summary. "
+            "Verifica que la sesión tenga transcript cargado."
         ),
     }
 

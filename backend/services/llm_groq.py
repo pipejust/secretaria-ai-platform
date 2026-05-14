@@ -213,6 +213,102 @@ Transcripción:
         pid = result.get("project_id")
         return int(pid) if isinstance(pid, (int, str)) and str(pid).isdigit() else None
 
+    async def generate_summary_from_transcript(
+        self,
+        transcript: str,
+        *,
+        title: str = "",
+        language: str = "Español",
+    ) -> str:
+        """Genera un resumen ejecutivo desde cero a partir del transcript.
+
+        Fallback usado cuando Fireflies NO entrega summary (cuentas free, o
+        sesiones muy cortas donde Fireflies aún no lo procesa). Devuelve
+        markdown listo para guardar en `MeetingSession.raw_summary` con la
+        misma estética de los summaries nativos limpiados (### Headers).
+
+        Si Groq no está disponible o falla, devuelve "" — el caller decide
+        qué mostrar.
+        """
+        if not transcript or not transcript.strip():
+            return ""
+        if not settings.groq_api_key:
+            logger.warning(
+                "generate_summary_from_transcript: GROQ_API_KEY no configurada."
+            )
+            return ""
+
+        # Truncado defensivo: el modelo soporta 128k tokens pero no queremos
+        # gastar tokens innecesarios para transcripts gigantes. 60.000 chars
+        # ≈ 15.000 tokens cubre reuniones de hasta ~3 horas.
+        max_chars = 60_000
+        truncated = (transcript or "").strip()
+        was_truncated = False
+        if len(truncated) > max_chars:
+            truncated = truncated[:max_chars]
+            was_truncated = True
+
+        title_hint = f"Título de la reunión: {title}\n\n" if (title or "").strip() else ""
+        truncation_note = (
+            "\n\n[NOTA: El transcript es largo y fue truncado para el resumen — "
+            "considerá los últimos puntos como aproximación.]"
+            if was_truncated else ""
+        )
+
+        prompt = (
+            f"Actuás como editor profesional de actas corporativas. Generá un "
+            f"resumen ejecutivo en {language} de la siguiente reunión.\n\n"
+            "FORMATO ESTRICTO de salida (markdown):\n\n"
+            "### Resumen General\n"
+            "Un párrafo de 4–6 líneas con el contexto y el desenlace de la reunión.\n\n"
+            "### Puntos Clave\n"
+            "- Bullet 1 (máx 2 líneas, hecho concreto)\n"
+            "- Bullet 2 ...\n"
+            "(5–8 bullets máximo)\n\n"
+            "### Notas\n"
+            "Información complementaria útil para alguien que no asistió "
+            "(decisiones implícitas, próximos pasos, riesgos sutiles). 2–4 líneas.\n\n"
+            "REGLAS:\n"
+            "- Respetá nombres propios, fechas, números, porcentajes y montos exactos.\n"
+            "- NO inventes datos que no estén en el transcript.\n"
+            "- NO uses asteriscos `**` para énfasis.\n"
+            "- NO incluyas títulos como 'Resumen Ejecutivo' arriba — empezá directo "
+            "con `### Resumen General`.\n"
+            "- Si el transcript es muy corto o sin contenido sustantivo, devolvé "
+            "solo `### Resumen General` con 1–2 líneas explicando qué se discutió.\n\n"
+            f"{title_hint}Transcript:\n{truncated}{truncation_note}"
+        )
+
+        payload = {
+            "model": self.MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "max_tokens": 1500,
+        }
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            try:
+                response = await self._post(client, payload)
+                content = response["choices"][0]["message"]["content"].strip()
+                if not content:
+                    return ""
+                # Si Groq por algún motivo devolvió un wrapper "Resumen Ejecutivo:..."
+                # arriba, lo limpiamos para mantener consistencia con summaries
+                # nativos de Fireflies.
+                lowered = content.lower().lstrip()
+                for prefix in ("resumen ejecutivo:", "resumen ejecutivo\n", "resumen:\n"):
+                    if lowered.startswith(prefix):
+                        idx = len(prefix)
+                        content = content[idx:].lstrip()
+                        break
+                return content
+            except Exception:
+                logger.exception(
+                    "generate_summary_from_transcript falló (transcript len=%s)",
+                    len(transcript),
+                )
+                return ""
+
     async def clean_native_summary(self, dirty_summary: str) -> str:
         """Limpia el summary nativo de Fireflies (traduce headers al español, quita asteriscos).
 
