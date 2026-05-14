@@ -634,26 +634,39 @@ def check_pending_summaries() -> None:
     # el transcript inicial.
     _TRANSIENT_ERRORS = ("no_transcript", "background_task_crashed", "fireflies_api")
 
+    # Ventana extendida para sesiones con error transitorio: Fireflies
+    # puede estar rate-limited por horas (cuota diaria que se resetea
+    # a las 00:00 UTC). Para esas damos 24h de ventana en lugar de 30min,
+    # así el cron las recupera cuando la API vuelva a responder.
+    _TRANSIENT_RETRY_WINDOW_HOURS = 24
+
     with Session(engine) as db:
         candidates = db.exec(
             select(MeetingSession)
             .where(MeetingSession.fireflies_id != "")
         ).all()
-        # Filtramos: que no sean uploads manuales, que tengan menos de
-        # _PAID_SUMMARY_RETRY_WINDOW_MINUTES de creación, y que requieran
-        # algún tipo de retry.
+        # Filtramos: que no sean uploads manuales y que estén dentro de
+        # la ventana de retry apropiada según el tipo de problema.
         ages = []
-        window_hours = _PAID_SUMMARY_RETRY_WINDOW_MINUTES / 60.0
+        summary_window_hours = _PAID_SUMMARY_RETRY_WINDOW_MINUTES / 60.0
         for ms in candidates:
             if (ms.fireflies_id or "").startswith("manual_"):
                 continue
             age_h = _hours_since_iso(ms.created_at)
-            if age_h is None or age_h > window_hours:
+            if age_h is None:
                 continue
             needs_summary = not (ms.raw_summary or "").strip()
             err = (ms.processing_error or "").strip()
             needs_full_retry = any(t in err for t in _TRANSIENT_ERRORS)
-            if not needs_summary and not needs_full_retry:
+
+            # Aplica la ventana correcta según el tipo de retry.
+            if needs_full_retry:
+                if age_h > _TRANSIENT_RETRY_WINDOW_HOURS:
+                    continue
+            elif needs_summary:
+                if age_h > summary_window_hours:
+                    continue
+            else:
                 continue
             ages.append((ms, age_h, needs_full_retry))
 
