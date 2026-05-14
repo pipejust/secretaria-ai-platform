@@ -595,9 +595,10 @@ def check_pending_summaries() -> None:
     Política:
     - Aplica a sesiones con `raw_summary == ''` que vinieron de Fireflies
       (tienen `fireflies_id` válido, no `manual_*`).
-    - Solo dentro de las primeras `_PAID_SUMMARY_RETRY_WINDOW_HOURS` (24h)
-      desde `created_at`. Pasada esa ventana asumimos que Fireflies ya no
-      va a entregar y el cron deja de molestar.
+    - Solo dentro de los primeros `_PAID_SUMMARY_RETRY_WINDOW_MINUTES`
+      (30 min) desde `created_at`. Fireflies entrega summary en menos de
+      5 min casi siempre. Si tras 30 min sigue vacío, asumimos que no
+      va a llegar y el cron deja de molestar.
     - Si el tier del tenant es 'free' → ya debería tener summary generado
       por Groq al procesarse, NO insistimos.
     - Para tier 'paid' o 'unknown' → pull de Fireflies. Si trae summary,
@@ -606,12 +607,12 @@ def check_pending_summaries() -> None:
     - Si Fireflies sigue devolviendo vacío, NO se manda correo. La regla
       del producto es: no se notifica a medias.
 
-    Frecuencia: cada 5 minutos. No usamos 1 min para no martillar la API
-    de Fireflies (free tier rate-limita rápido).
+    Frecuencia: cada 1 minuto. La ventana es corta y el summary llega
+    rápido, así que pollear cada minuto da feedback fluido al admin.
     """
     from routers.fireflies import (
         _send_session_ready_email,
-        _PAID_SUMMARY_RETRY_WINDOW_HOURS,
+        _PAID_SUMMARY_RETRY_WINDOW_MINUTES,
         _hours_since_iso,
     )
     from services.fireflies_service import (
@@ -627,13 +628,14 @@ def check_pending_summaries() -> None:
             .where(MeetingSession.fireflies_id != "")
         ).all()
         # Filtramos: que no sean uploads manuales y que tengan menos de
-        # _PAID_SUMMARY_RETRY_WINDOW_HOURS de creación.
+        # _PAID_SUMMARY_RETRY_WINDOW_MINUTES de creación.
         ages = []
+        window_hours = _PAID_SUMMARY_RETRY_WINDOW_MINUTES / 60.0
         for ms in candidates:
             if (ms.fireflies_id or "").startswith("manual_"):
                 continue
             age_h = _hours_since_iso(ms.created_at)
-            if age_h is None or age_h > _PAID_SUMMARY_RETRY_WINDOW_HOURS:
+            if age_h is None or age_h > window_hours:
                 continue
             ages.append((ms, age_h))
 
@@ -717,8 +719,10 @@ scheduler.add_job(
 )
 # Refetch periódico de summaries de Fireflies para tenants paid donde el
 # webhook llegó antes que Fireflies terminara de generar el summary.
+# Cada 1 min porque la ventana de espera es corta (30 min) y el summary
+# normalmente llega en menos de 5 min.
 scheduler.add_job(
-    check_pending_summaries, "interval", minutes=5, max_instances=1
+    check_pending_summaries, "interval", minutes=1, max_instances=1
 )
 
 

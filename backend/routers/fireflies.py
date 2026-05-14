@@ -227,10 +227,11 @@ def _resolve_admin_recipients(db, tenant_id: int) -> list[tuple[str, str]]:
 
 # Hasta cuánto sigue intentando el cron pull de summary desde Fireflies
 # para una sesión recién creada. Pasado este umbral, el cron deja de
-# probar (Fireflies casi seguro nunca va a entregar). El correo NO se
-# manda por gracia: la regla del producto es "no se notifica si el summary
-# no está listo". Si tras 24h sigue vacío, queda como caso para el admin.
-_PAID_SUMMARY_RETRY_WINDOW_HOURS = 24
+# probar — Fireflies entrega el summary en menos de 5 min casi siempre,
+# y casi nunca tarda más de eso. 30 min es un buffer cómodo para
+# meetings muy largas o lentitud puntual de su lado. Si tras 30 min
+# sigue vacío, asumimos que no va a llegar y paramos.
+_PAID_SUMMARY_RETRY_WINDOW_MINUTES = 30
 
 
 def _hours_since_iso(value: str) -> Optional[float]:
