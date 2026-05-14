@@ -589,26 +589,33 @@ def check_overdue_action_items() -> None:
 
 
 def check_pending_summaries() -> None:
-    """Reintenta pull de summary nativo desde Fireflies para sesiones que
-    aún no lo tienen.
+    """Reintenta procesamiento de sesiones de Fireflies que quedaron
+    incompletas por errores transitorios (rate-limit, timeout, summary
+    pendiente).
 
-    Política:
-    - Aplica a sesiones con `raw_summary == ''` que vinieron de Fireflies
-      (tienen `fireflies_id` válido, no `manual_*`).
-    - Solo dentro de los primeros `_PAID_SUMMARY_RETRY_WINDOW_MINUTES`
-      (30 min) desde `created_at`. Fireflies entrega summary en menos de
-      5 min casi siempre. Si tras 30 min sigue vacío, asumimos que no
-      va a llegar y el cron deja de molestar.
-    - Si el tier del tenant es 'free' → ya debería tener summary generado
-      por Groq al procesarse, NO insistimos.
-    - Para tier 'paid' o 'unknown' → pull de Fireflies. Si trae summary,
-      lo guarda Y dispara `_send_session_ready_email` (que pasa el gating
-      porque ahora summary está presente).
-    - Si Fireflies sigue devolviendo vacío, NO se manda correo. La regla
-      del producto es: no se notifica a medias.
+    Cubre DOS casos:
 
-    Frecuencia: cada 1 minuto. La ventana es corta y el summary llega
-    rápido, así que pollear cada minuto da feedback fluido al admin.
+    Caso A — `raw_summary == ''` pero el resto OK:
+      Pipeline IA terminó pero Fireflies aún no había generado el summary
+      cuando se hizo el pull. Hacemos refetch del summary; si llega →
+      guarda + dispara session_ready_email.
+
+    Caso B — `processing_error` con marcadores transitorios (no_transcript,
+      crash de fireflies API, etc.):
+      Toda la sesión quedó vacía porque el primer intento falló al bajar
+      datos de Fireflies. Re-ejecutamos `process_transcript_background`
+      completo, que vuelve a tirar Fireflies y corre el pipeline de cero.
+
+    Filtros comunes:
+    - Sesiones de Fireflies (`fireflies_id != ''`, no `manual_*`).
+    - Tenant tier 'paid' o 'unknown' (los free ya tuvieron su chance).
+    - Edad < `_PAID_SUMMARY_RETRY_WINDOW_MINUTES` (30 min). Pasada esa
+      ventana paramos — Fireflies casi nunca tarda tanto.
+    - Si Fireflies sigue devolviendo error en cada ciclo, no insistimos
+      indefinidamente: el cron simplemente vuelve a intentar el próximo
+      minuto hasta que la API responda o se venza la ventana.
+
+    Frecuencia: cada 1 minuto.
     """
     from routers.fireflies import (
         _send_session_ready_email,
@@ -621,14 +628,20 @@ def check_pending_summaries() -> None:
         get_or_detect_fireflies_tier,
     )
 
+    # Errores transitorios de Fireflies que justifican re-intentar el
+    # pipeline completo (no solo el summary). 'no_transcript' ocurre
+    # cuando Fireflies devolvió rate-limit/error y no pudimos ni bajar
+    # el transcript inicial.
+    _TRANSIENT_ERRORS = ("no_transcript", "background_task_crashed", "fireflies_api")
+
     with Session(engine) as db:
         candidates = db.exec(
             select(MeetingSession)
-            .where(MeetingSession.raw_summary == "")
             .where(MeetingSession.fireflies_id != "")
         ).all()
-        # Filtramos: que no sean uploads manuales y que tengan menos de
-        # _PAID_SUMMARY_RETRY_WINDOW_MINUTES de creación.
+        # Filtramos: que no sean uploads manuales, que tengan menos de
+        # _PAID_SUMMARY_RETRY_WINDOW_MINUTES de creación, y que requieran
+        # algún tipo de retry.
         ages = []
         window_hours = _PAID_SUMMARY_RETRY_WINDOW_MINUTES / 60.0
         for ms in candidates:
@@ -637,7 +650,12 @@ def check_pending_summaries() -> None:
             age_h = _hours_since_iso(ms.created_at)
             if age_h is None or age_h > window_hours:
                 continue
-            ages.append((ms, age_h))
+            needs_summary = not (ms.raw_summary or "").strip()
+            err = (ms.processing_error or "").strip()
+            needs_full_retry = any(t in err for t in _TRANSIENT_ERRORS)
+            if not needs_summary and not needs_full_retry:
+                continue
+            ages.append((ms, age_h, needs_full_retry))
 
         if not ages:
             return
@@ -648,11 +666,46 @@ def check_pending_summaries() -> None:
         )
 
         async def _process() -> None:
-            for ms, age_h in ages:
+            from routers.fireflies import process_transcript_background
+
+            for ms, age_h, needs_full_retry in ages:
                 api_key = get_fireflies_api_key(db, ms.tenant_id)
                 if not api_key:
                     continue
 
+                # Caso B: la sesión quedó vacía por error transitorio en el
+                # primer intento (rate limit, timeout). Re-corremos TODO el
+                # pipeline (vuelve a tirar Fireflies + Groq + OpenAI). Si
+                # Fireflies sigue rate-limited, va a fallar de nuevo y el
+                # próximo ciclo del cron lo reintenta.
+                if needs_full_retry:
+                    logger.info(
+                        "Sesión %s: tiene processing_error transitorio (%s) y "
+                        "raw_transcript=%sc. Re-corriendo pipeline completo.",
+                        ms.id, (ms.processing_error or "")[:60],
+                        len(ms.raw_transcript or ""),
+                    )
+                    # Limpiamos session_ready_email_sent_at para que cuando
+                    # el pipeline termine OK pueda mandarse el correo bueno
+                    # (sin la nota de error del primer envío).
+                    if (ms.session_ready_email_sent_at or "").strip():
+                        ms_clear = db.get(MeetingSession, ms.id)
+                        if ms_clear:
+                            ms_clear.session_ready_email_sent_at = ""
+                            db.add(ms_clear)
+                            db.commit()
+                    try:
+                        await process_transcript_background(
+                            ms.id, ms.fireflies_id, {"title": ms.title or ""},
+                        )
+                    except Exception:
+                        logger.exception(
+                            "check_pending_summaries: full retry falló para sesión %s",
+                            ms.id,
+                        )
+                    continue  # el process_transcript_background ya manda correo si OK
+
+                # Caso A: tiene transcript pero le falta summary.
                 tier = await get_or_detect_fireflies_tier(
                     db, ms.tenant_id, api_key,
                     transcript_id_for_probe=ms.fireflies_id,
@@ -661,15 +714,14 @@ def check_pending_summaries() -> None:
                     # Su chance ya pasó al procesarse (Groq debió generar).
                     continue
 
-                # Tier paid o unknown → pull de Fireflies sin Groq fallback.
                 try:
                     db.refresh(ms)
                     await refetch_summary_for_session(
                         db, ms,
                         api_key=api_key,
                         clean_with_groq=True,
-                        max_attempts=1,        # cada ciclo reintenta una vez
-                        fallback_to_groq=False, # nunca Groq en paid
+                        max_attempts=1,
+                        fallback_to_groq=False,
                     )
                     db.refresh(ms)
                 except Exception:
@@ -687,9 +739,6 @@ def check_pending_summaries() -> None:
                         ms.id, len(ms.raw_summary or ""),
                     )
                     try:
-                        # force=True para bypassar el gating del summary
-                        # (que justo acabamos de validar; pasamos la doble
-                        # verificación dentro del send también).
                         await _send_session_ready_email(
                             ms.id, ms.tenant_id, force=True,
                         )
@@ -698,8 +747,6 @@ def check_pending_summaries() -> None:
                             "check_pending_summaries: send_email falló para sesión %s",
                             ms.id,
                         )
-                # Else: summary aún vacío → NO mandamos correo, próximo
-                # ciclo del cron lo intentará otra vez.
 
         try:
             _run_async(_process())
