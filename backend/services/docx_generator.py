@@ -335,8 +335,10 @@ class CorporateDocxGenerator:
         s.font.size = Pt(13)
         s.font.bold = True
         s.font.color.rgb = text_rgb
-        s.paragraph_format.space_before = Pt(14)
-        s.paragraph_format.space_after = Pt(2)
+        # Espacio generoso antes para crear separación visual con el
+        # contenido anterior, sin necesitar líneas decorativas.
+        s.paragraph_format.space_before = Pt(24)
+        s.paragraph_format.space_after = Pt(10)
         # Sección debe quedar pegada a su contenido, no orfanada al pie.
         s.paragraph_format.keep_with_next = True
         s.paragraph_format.keep_together = True
@@ -361,8 +363,10 @@ class CorporateDocxGenerator:
         s.font.size = Pt(10.5)
         s.font.bold = True
         s.font.color.rgb = text_rgb
-        s.paragraph_format.space_before = Pt(8)
-        s.paragraph_format.space_after = Pt(2)
+        # Espacio antes generoso para que el subtítulo no quede pegado
+        # al párrafo anterior.
+        s.paragraph_format.space_before = Pt(14)
+        s.paragraph_format.space_after = Pt(4)
         # Mantener el subheading en la MISMA página que su contenido
         # (evita el caso "título solo abajo + footer + contenido en
         # próxima página").
@@ -376,7 +380,10 @@ class CorporateDocxGenerator:
         s.paragraph_format.left_indent = Cm(0.55)
         s.paragraph_format.first_line_indent = Cm(-0.55)
         s.paragraph_format.line_spacing = 1.3
-        s.paragraph_format.space_after = Pt(2)
+        s.paragraph_format.space_after = Pt(3)
+        # Justificar bullets también — antes solo act_body lo hacía y los
+        # bullets quedaban con borde derecho irregular.
+        s.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         s = add_style("act_table_header")
         s.font.name = font_family
@@ -495,21 +502,18 @@ class CorporateDocxGenerator:
     # ---------- secciones --------------------------------------------------
 
     def _section_header(self, number: int, label: str) -> None:
-        """Renderiza un header de sección: solo el título grande con underline.
+        """Renderiza un header de sección: solo el título grande, limpio.
 
-        El parámetro `number` se mantiene en la firma por compatibilidad con
-        el resolver de bloques, pero ya NO se renderiza visualmente — el
-        usuario pidió quitar los '01/02/03'.
+        El parámetro `number` se mantiene en la firma por compatibilidad
+        con el resolver de bloques, pero NO se renderiza visualmente.
+
+        SIN línea inferior — el usuario pidió quitar los underlines.
+        El espaciado generoso antes/después da el respiro visual sin
+        necesitar reglas decorativas.
         """
         title_p = self.doc.add_paragraph(label.upper(), style="act_section_title")
-        title_p.paragraph_format.space_before = Pt(14)
-        title_p.paragraph_format.space_after = Pt(6)
-        # Línea inferior tenue como separador
-        _add_bottom_border(
-            title_p,
-            color=_hex_clean(self.theme["borderColor"], "E2E8F0"),
-            sz=4,
-        )
+        title_p.paragraph_format.space_before = Pt(24)
+        title_p.paragraph_format.space_after = Pt(10)
 
     def _block_meta(self) -> None:
         """Bloque 'meta': tabla limpia 2 columnas (label/value)."""
@@ -632,7 +636,12 @@ class CorporateDocxGenerator:
     # ---------- markdown light renderer -----------------------------------
 
     def _render_markdown(self, text: str) -> None:
-        """Renderer minimalista de markdown — solo lo que producen los LLMs."""
+        """Renderer minimalista de markdown — solo lo que producen los LLMs.
+
+        Aplica alignment explícito a cada párrafo además del style, porque
+        LibreOffice (vía Gotenberg) a veces ignora la alineación heredada
+        del style si no está reasentada en el párrafo concreto.
+        """
         if not text:
             return
         for raw_line in str(text).split("\n"):
@@ -647,6 +656,7 @@ class CorporateDocxGenerator:
             if m:
                 clean = self._strip_md_inline(m.group(2))
                 p = self.doc.add_paragraph(clean, style="act_subheading")
+                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 continue
 
             # Bullets (- / *)
@@ -655,11 +665,13 @@ class CorporateDocxGenerator:
                 clean = self._strip_md_inline(m.group(1))
                 # Hanging indent simulado: bullet + tab
                 p = self.doc.add_paragraph(style="act_bullet")
+                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                 p.add_run("•\t" + clean)
                 continue
 
             clean = self._strip_md_inline(line)
-            self.doc.add_paragraph(clean, style="act_body")
+            p = self.doc.add_paragraph(clean, style="act_body")
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
     @staticmethod
     def _strip_md_inline(text: str) -> str:
