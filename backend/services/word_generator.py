@@ -119,10 +119,12 @@ class WordGeneratorService:
         gen.doc = existing_doc
         gen._register_styles(override_normal=False)
 
-        # Page break ANTES de empezar las secciones agregadas para que el
-        # contenido pro empiece en su propia página y no choque con lo que
-        # haya dejado la plantilla del cliente.
-        existing_doc.add_page_break()
+        # NO agregar page break automático. Si la plantilla del cliente
+        # ya tiene contenido (placeholders rendereados con docxtpl), el
+        # bloque pro se appendea inmediatamente debajo sin desperdiciar
+        # una página vacía.
+        # Si el cliente NECESITA forzar un salto, puede agregarlo en su
+        # propio template como parte del diseño.
 
         # Render de los bloques con numeración secuencial sobre los que
         # tienen contenido — misma lógica que el standalone.

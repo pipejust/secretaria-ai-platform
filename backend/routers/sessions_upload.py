@@ -929,9 +929,15 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
         for item in action_items:
             formatted_items.append({
                 "title": item.title,
-                "owner_email": f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "Asignado"),
-                "due_date": item.due_date or "Sin fecha",
-                "status": "Pendiente"
+                # Mantener owner_name y owner_email SEPARADOS — el generador
+                # decide cómo mostrarlos (típicamente solo el name, dejando
+                # el email al backend de routing). Antes los unía en un
+                # solo string que rompía visualmente la tabla.
+                "owner_name": item.owner_name or "",
+                "owner_email": item.owner_email or "",
+                "due_date": item.due_date or "",
+                "priority": (item.priority or "media"),
+                "status": "Pendiente",
             })
 
     theme = None

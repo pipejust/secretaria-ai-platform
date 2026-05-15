@@ -142,6 +142,14 @@ def _set_row_min_height(row, min_pt: float = 18) -> None:
     tr_pr.append(h)
 
 
+def _set_row_cant_split(row) -> None:
+    """Evita que el contenido de la fila se rompa entre dos páginas. Word
+    moverá toda la fila a la siguiente página antes que romperla."""
+    tr_pr = row._tr.get_or_add_trPr()
+    cs = OxmlElement("w:cantSplit")
+    tr_pr.append(cs)
+
+
 def _add_bottom_border(paragraph, color: str = "0EA5E9", sz: int = 6) -> None:
     p_pr = paragraph._p.get_or_add_pPr()
     pbdr = p_pr.find(qn("w:pBdr"))
@@ -329,6 +337,9 @@ class CorporateDocxGenerator:
         s.font.color.rgb = text_rgb
         s.paragraph_format.space_before = Pt(14)
         s.paragraph_format.space_after = Pt(2)
+        # Sección debe quedar pegada a su contenido, no orfanada al pie.
+        s.paragraph_format.keep_with_next = True
+        s.paragraph_format.keep_together = True
 
         s = add_style("act_body")
         s.font.name = font_family
@@ -336,6 +347,7 @@ class CorporateDocxGenerator:
         s.font.color.rgb = text_rgb
         s.paragraph_format.line_spacing = 1.3
         s.paragraph_format.space_after = Pt(4)
+        s.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         s = add_style("act_body_muted")
         s.font.name = font_family
@@ -351,6 +363,11 @@ class CorporateDocxGenerator:
         s.font.color.rgb = text_rgb
         s.paragraph_format.space_before = Pt(8)
         s.paragraph_format.space_after = Pt(2)
+        # Mantener el subheading en la MISMA página que su contenido
+        # (evita el caso "título solo abajo + footer + contenido en
+        # próxima página").
+        s.paragraph_format.keep_with_next = True
+        s.paragraph_format.keep_together = True
 
         s = add_style("act_bullet")
         s.font.name = font_family
@@ -585,7 +602,12 @@ class CorporateDocxGenerator:
         rows = []
         for it in items:
             if isinstance(it, dict):
-                owner = it.get("owner_name") or it.get("owner_email") or "—"
+                # Solo el nombre del responsable (el email queda implícito).
+                # Antes podía venir pegado "Nombre (email@x)" desde el caller
+                # legacy, pero ahora sessions_upload normaliza separados.
+                owner = (it.get("owner_name") or "").strip()
+                if not owner:
+                    owner = (it.get("owner_email") or "").strip() or "—"
                 due = _format_human_date(it.get("due_date") or "") or "—"
                 rows.append([
                     it.get("title") or "—",
@@ -595,10 +617,15 @@ class CorporateDocxGenerator:
                 ])
             else:
                 rows.append([str(it), "—", "—", "Media"])
+        # Anchos balanceados (suma 16cm + 1cm del # = 17cm útil):
+        # - Descripción: 6.5cm (texto largo)
+        # - Responsable: 4.0cm (nombre + apellido típicos)
+        # - Fecha límite: 2.7cm (DD/MM/YYYY)
+        # - Prioridad: 2.8cm (la palabra "Prioridad" cabe sin wrap)
         self._render_data_table(
             headers=["Descripción", "Responsable", "Fecha límite", "Prioridad"],
             rows=rows,
-            widths_cm=[7.5, 4.0, 3.5, 2.0],
+            widths_cm=[6.5, 4.0, 2.7, 2.8],
             include_index=True,
         )
 
@@ -676,6 +703,7 @@ class CorporateDocxGenerator:
         header_row = table.rows[0]
         _repeat_header_row(header_row)
         _set_row_min_height(header_row, min_pt=22)
+        _set_row_cant_split(header_row)
         for i, label in enumerate(headers):
             cell = header_row.cells[i]
             _set_cell_bg(cell, header_bg)
@@ -691,6 +719,7 @@ class CorporateDocxGenerator:
         for r_idx, data_row in enumerate(rows):
             row = table.rows[r_idx + 1]
             _set_row_min_height(row, min_pt=18)
+            _set_row_cant_split(row)
             for i, val in enumerate(data_row):
                 if i >= n_cols:
                     break
