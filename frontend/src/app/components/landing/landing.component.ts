@@ -6,17 +6,19 @@ import { Router } from '@angular/router';
 import { LandingCmsService, LandingContent, ContactSubmission } from '../../services/landing-cms.service';
 
 /**
- * Landing pública de Acten. Servida en `/` para el hostname acten.app.
- * Toda la lógica de plataforma queda en admin.acten.app (vía HostnameGuard).
+ * Landing pública de Acten — rediseño "Acten Premium" 2026-Q2.
+ *
+ * Servida en `/` para el hostname acten.app. Toda la lógica de plataforma
+ * queda en admin.acten.app (vía HostnameGuard).
  *
  * Contenido: 100% dinámico desde el backend (`LandingCmsService.loadPublic()`).
- * Diseño: tokens oficiales del proyecto (charcoal / cream / ink-blue /
- * deep-indigo / emerald / amber), tipografía Playfair Display + Sora,
- * iconografía Lucide-style inline SVG.
+ * Estilo: paleta navy/blue/emerald (definida como CSS vars dentro de :host
+ * para no contaminar el resto de la app), tipografía Playfair Display + Sora,
+ * iconografía Lucide-style inline SVG (sin innerHTML, sin DomSanitizer).
  *
  * Secciones (en orden de scroll):
  *   header → hero → trust → features → flow → integrations → testimonials
- *   → pricing → resources → company → contact → final CTA → footer
+ *   → contact → final CTA → footer
  */
 @Component({
     selector: 'app-landing',
@@ -62,6 +64,9 @@ export class LandingComponent implements OnInit {
     contactSent = false;
     contactError = '';
     contactLoading = false;
+
+    /** Carrusel de testimonios — índice activo. Solo afecta a los dots. */
+    activeTestimonialDot = 0;
 
     async ngOnInit(): Promise<void> {
         // Si el hostname es admin.* (admin.acten.app), esta landing NO debe
@@ -140,6 +145,11 @@ export class LandingComponent implements OnInit {
         return parts.length === 1
             ? parts[0].slice(0, 2).toUpperCase()
             : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    /** Click en los dots del carrusel de testimonios — UI-only por ahora. */
+    setActiveDot(i: number): void {
+        this.activeTestimonialDot = i;
     }
 
     submitNewsletter(event: Event): void {

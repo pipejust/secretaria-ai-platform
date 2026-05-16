@@ -1,717 +1,685 @@
-<!-- ====================================================================
-     Landing pública de Acten.
-     Contenido 100% dinámico desde LandingCmsService.loadPublic().
-     Mientras carga: placeholder mínimo (no full-screen blocker).
-     ==================================================================== -->
+<!--
+  Landing pública de Acten — rediseño "Acten Premium" 2026-Q2.
+  Estructura: header · hero · trust · features · flow · integrations
+              · testimonials · contact · final CTA · footer.
+  Todo el contenido viene de `content` (LandingCmsService.loadPublic()).
+-->
+<div class="acten-landing" *ngIf="content as c; else loadingTpl">
 
-<div class="acten-landing" [class.is-scrolled]="scrolled" *ngIf="!contentLoading; else loadingTpl">
-
-  <!-- ============= HEADER ============= -->
-  <header class="al-header" [class.is-solid]="scrolled" role="banner">
-    <div class="al-container al-header-inner">
-      <a href="#top" class="al-logo" aria-label="Acten — Inicio" (click)="scrollTo('#top', $event)">
-        <span class="al-logo-mark" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 32 32" fill="none">
-            <rect x="1" y="1" width="30" height="30" rx="9" fill="#111318"/>
-            <rect x="1" y="1" width="30" height="30" rx="9" stroke="#1B7F67" stroke-width="1.5"/>
-            <path d="M9 23 L16 8 L23 23" stroke="#F7F4EE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-            <path d="M12 18 H20" stroke="#D9A441" stroke-width="2.2" stroke-linecap="round"/>
-          </svg>
-        </span>
-        <span class="al-logo-text">Acten</span>
+  <!-- ================================================================
+       HEADER — translúcido sobre el hero oscuro, se vuelve opaco al scroll
+       ================================================================ -->
+  <header class="al-header" [class.al-header--scrolled]="scrolled" role="banner">
+    <div class="al-container al-header__inner">
+      <a class="al-brand" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
+        <span class="al-brand__mark" aria-hidden="true">A</span>
+        <span class="al-brand__word">Acten</span>
       </a>
 
-      <nav class="al-nav" aria-label="Navegación principal" *ngIf="content">
-        <a *ngFor="let item of content.nav.items"
-           [href]="item.anchor"
-           (click)="scrollTo(item.anchor, $event)"
-           class="al-nav-link">
-          {{ item.label }}
-        </a>
+      <nav class="al-nav" [class.al-nav--open]="mobileMenuOpen" aria-label="Navegación principal">
+        <ul class="al-nav__list">
+          <li *ngFor="let item of c.nav.items">
+            <a [href]="item.anchor" (click)="scrollTo(item.anchor, $event)">{{ item.label }}</a>
+          </li>
+        </ul>
       </nav>
 
-      <div class="al-header-actions" *ngIf="content">
-        <a [href]="loginUrl" class="al-btn al-btn-ghost">
-          {{ content.nav.login_label }}
+      <div class="al-header__actions">
+        <a class="al-btn al-btn--ghost-light" [href]="loginUrl">{{ c.nav.login_label }}</a>
+        <a class="al-btn al-btn--primary" href="#contact" (click)="scrollTo('#contact', $event)">
+          {{ c.nav.cta_label }}
         </a>
-        <a href="#contact"
-           (click)="scrollTo('#contact', $event)"
-           class="al-btn al-btn-primary">
-          {{ content.nav.cta_label }}
-        </a>
-      </div>
-
-      <button type="button" class="al-mobile-toggle"
-              [class.is-open]="mobileMenuOpen"
-              (click)="toggleMobileMenu()"
-              aria-label="Abrir menú">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-
-    <!-- Mobile menu overlay -->
-    <div class="al-mobile-menu" *ngIf="mobileMenuOpen && content">
-      <a *ngFor="let item of content.nav.items"
-         [href]="item.anchor"
-         (click)="scrollTo(item.anchor, $event)"
-         class="al-mobile-link">
-        {{ item.label }}
-      </a>
-      <div class="al-mobile-actions">
-        <a [href]="loginUrl" class="al-btn al-btn-ghost">{{ content.nav.login_label }}</a>
-        <a href="#contact" (click)="scrollTo('#contact', $event)" class="al-btn al-btn-primary">
-          {{ content.nav.cta_label }}
-        </a>
+        <button
+          type="button"
+          class="al-header__burger"
+          (click)="toggleMobileMenu()"
+          [attr.aria-expanded]="mobileMenuOpen"
+          aria-label="Abrir menú">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
   </header>
 
-  <main *ngIf="content">
+  <main id="top">
 
-    <!-- ============= HERO ============= -->
-    <section class="al-hero" id="top" aria-labelledby="hero-heading">
-      <div class="al-hero-noise" aria-hidden="true"></div>
-      <div class="al-hero-glow al-hero-glow-1" aria-hidden="true"></div>
-      <div class="al-hero-glow al-hero-glow-2" aria-hidden="true"></div>
+    <!-- ================================================================
+         HERO — fondo navy con dashboard mockup flotante a la derecha
+         ================================================================ -->
+    <section class="al-hero" aria-labelledby="al-hero-title">
+      <div class="al-hero__bg" aria-hidden="true">
+        <span class="al-hero__dots"></span>
+        <span class="al-hero__grid"></span>
+      </div>
 
-      <div class="al-container al-hero-grid">
-        <div class="al-hero-copy">
-          <span class="al-eyebrow al-eyebrow-on-dark">
-            <span class="al-eyebrow-dot" aria-hidden="true"></span>
-            {{ content.hero.badge }}
+      <div class="al-container al-hero__inner">
+
+        <!-- LEFT — copy + CTAs + atributos -->
+        <div class="al-hero__copy">
+          <span class="al-pill al-pill--emerald">
+            <span class="al-pill__dot" aria-hidden="true"></span>
+            {{ c.hero.badge }}
           </span>
-          <h1 id="hero-heading" class="al-hero-title">{{ content.hero.title }}</h1>
-          <p class="al-hero-sub">{{ content.hero.subtitle }}</p>
 
-          <div class="al-hero-actions">
-            <a [href]="content.hero.cta_primary_anchor"
-               (click)="scrollTo(content.hero.cta_primary_anchor, $event)"
-               class="al-btn al-btn-primary al-btn-lg">
-              {{ content.hero.cta_primary_label }}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
+          <h1 id="al-hero-title" class="al-hero__title">
+            <ng-container *ngIf="c.hero.title_lead || c.hero.title_highlight_prefix; else heroTitlePlain">
+              <span class="al-hero__title-lead" *ngIf="c.hero.title_lead">{{ c.hero.title_lead }}</span>
+              <span class="al-hero__title-second" *ngIf="c.hero.title_highlight_prefix || c.hero.title_highlight_word">
+                {{ c.hero.title_highlight_prefix }}<ng-container *ngIf="c.hero.title_highlight_word"> <span class="al-accent">{{ c.hero.title_highlight_word }}</span></ng-container>
+              </span>
+            </ng-container>
+            <ng-template #heroTitlePlain>{{ c.hero.title }}</ng-template>
+          </h1>
+
+          <p class="al-hero__subtitle">{{ c.hero.subtitle }}</p>
+
+          <div class="al-hero__ctas">
+            <a class="al-btn al-btn--primary al-btn--lg"
+               [href]="c.hero.cta_primary_anchor"
+               (click)="scrollTo(c.hero.cta_primary_anchor, $event)">
+              {{ c.hero.cta_primary_label }}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
               </svg>
             </a>
-            <a [href]="content.hero.cta_secondary_anchor"
-               (click)="scrollTo(content.hero.cta_secondary_anchor, $event)"
-               class="al-btn al-btn-ghost-light al-btn-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <a class="al-btn al-btn--ghost-dark al-btn--lg"
+               [href]="c.hero.cta_secondary_anchor"
+               (click)="scrollTo(c.hero.cta_secondary_anchor, $event)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"/>
                 <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
               </svg>
-              {{ content.hero.cta_secondary_label }}
+              {{ c.hero.cta_secondary_label }}
             </a>
           </div>
-        </div>
 
-        <!-- Mockup: acta de reunión -->
-        <aside class="al-hero-mockup" aria-hidden="true">
-          <div class="al-mockup-frame">
-            <div class="al-mockup-bar">
-              <span class="al-mockup-dot"></span>
-              <span class="al-mockup-dot"></span>
-              <span class="al-mockup-dot"></span>
-              <span class="al-mockup-url">acten.app · acta</span>
-            </div>
-            <div class="al-mockup-body">
-              <span class="al-mockup-eyebrow">{{ content.hero.mockup_eyebrow }}</span>
-              <h3 class="al-mockup-title">{{ content.hero.mockup_title }}</h3>
-              <p class="al-mockup-meta">{{ content.hero.mockup_meta }}</p>
-
-              <div class="al-mockup-section">
-                <span class="al-mockup-label">Decisiones</span>
-                <div class="al-mockup-row">
-                  <span class="al-mockup-bullet al-bullet-emerald"></span>
-                  <span>Aprobado release v2.4 para martes 19</span>
-                </div>
-                <div class="al-mockup-row">
-                  <span class="al-mockup-bullet al-bullet-emerald"></span>
-                  <span>Migración de Postgres pospuesta al sprint 12</span>
-                </div>
-              </div>
-
-              <div class="al-mockup-section">
-                <span class="al-mockup-label">Tareas asignadas</span>
-                <div class="al-mockup-row">
-                  <span class="al-mockup-pill al-pill-indigo">LA</span>
-                  <span>Validar pruebas E2E antes del jueves</span>
-                </div>
-                <div class="al-mockup-row">
-                  <span class="al-mockup-pill al-pill-amber">CM</span>
-                  <span>Coordinar despliegue con infraestructura</span>
-                </div>
-              </div>
-
-              <div class="al-mockup-footer">
-                <span class="al-mockup-status">
-                  <span class="al-mockup-statusdot"></span>
-                  Correos enviados a 7 responsables
-                </span>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <!-- ============= TRUST LOGOS ============= -->
-    <section class="al-trust" aria-label="Clientes y partners">
-      <div class="al-container">
-        <p class="al-trust-text">{{ content.trust.eyebrow }}</p>
-        <ul class="al-trust-logos">
-          <li *ngFor="let logo of content.trust.logos">{{ logo }}</li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- ============= FEATURES ============= -->
-    <section class="al-section al-features" id="features" aria-labelledby="features-heading">
-      <div class="al-container">
-        <div class="al-section-head">
-          <span class="al-eyebrow">{{ content.features.eyebrow }}</span>
-          <h2 id="features-heading" class="al-section-title">{{ content.features.title }}</h2>
-          <p class="al-section-sub">{{ content.features.subtitle }}</p>
-        </div>
-
-        <div class="al-features-grid">
-          <article class="al-feature-card" *ngFor="let f of content.features.items">
-            <span class="al-feature-icon" aria-hidden="true" [ngSwitch]="f.icon">
-              <svg *ngSwitchCase="'capture'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
-              </svg>
-              <svg *ngSwitchCase="'decisions'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 11l3 3L22 4"/>
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-              </svg>
-              <svg *ngSwitchCase="'tasks'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="6" height="6" rx="1"/>
-                <rect x="3" y="13" width="6" height="6" rx="1"/>
-                <path d="M13 5h8M13 9h5M13 15h8M13 19h5"/>
-              </svg>
-              <svg *ngSwitchCase="'docs'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="8" y1="13" x2="16" y2="13"/>
-                <line x1="8" y1="17" x2="16" y2="17"/>
-              </svg>
-              <svg *ngSwitchCase="'email'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
-                <polyline points="22 6 12 13 2 6"/>
-              </svg>
-              <svg *ngSwitchCase="'integrations'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="6" cy="12" r="3"/>
-                <circle cx="18" cy="6" r="3"/>
-                <circle cx="18" cy="18" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-              <svg *ngSwitchDefault xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-            </span>
-            <h3 class="al-feature-title">{{ f.title }}</h3>
-            <p class="al-feature-desc">{{ f.description }}</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============= PROCESS FLOW ============= -->
-    <section class="al-section al-flow" id="flow" aria-labelledby="flow-heading">
-      <div class="al-container">
-        <div class="al-section-head">
-          <span class="al-eyebrow">{{ content.flow.eyebrow }}</span>
-          <h2 id="flow-heading" class="al-section-title">{{ content.flow.title }}</h2>
-          <p class="al-section-sub">{{ content.flow.subtitle }}</p>
-        </div>
-
-        <ol class="al-flow-steps">
-          <li *ngFor="let s of content.flow.steps; let i = index" class="al-flow-step">
-            <div class="al-flow-step-head">
-              <span class="al-flow-num">{{ pad2(i + 1) }}</span>
-              <span class="al-flow-icon" aria-hidden="true" [ngSwitch]="s.icon">
-                <svg *ngSwitchCase="'mic'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                </svg>
-                <svg *ngSwitchCase="'brain'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
-                  <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
-                </svg>
-                <svg *ngSwitchCase="'list'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="8" y1="6" x2="21" y2="6"/>
-                  <line x1="8" y1="12" x2="21" y2="12"/>
-                  <line x1="8" y1="18" x2="21" y2="18"/>
-                  <line x1="3" y1="6" x2="3.01" y2="6"/>
-                  <line x1="3" y1="12" x2="3.01" y2="12"/>
-                  <line x1="3" y1="18" x2="3.01" y2="18"/>
-                </svg>
-                <svg *ngSwitchCase="'send'" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-                <svg *ngSwitchDefault xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
+          <ul class="al-hero__attrs" *ngIf="c.hero.attributes?.length">
+            <li *ngFor="let attr of c.hero.attributes" class="al-hero__attr">
+              <span class="al-hero__attr-icon" aria-hidden="true">
+                <ng-container [ngSwitch]="attr.icon">
+                  <svg *ngSwitchCase="'sparkles'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                  </svg>
+                  <svg *ngSwitchCase="'globe'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                  </svg>
+                  <svg *ngSwitchCase="'shield'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 13c0 5-3.5 7.5-8 8.5-4.5-1-8-3.5-8-8.5V6l8-3 8 3z"/><path d="m9 12 2 2 4-4"/>
+                  </svg>
+                  <svg *ngSwitchCase="'building'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/>
+                  </svg>
+                  <svg *ngSwitchDefault width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/>
+                  </svg>
+                </ng-container>
               </span>
-            </div>
-            <h3 class="al-flow-title">{{ s.title }}</h3>
-            <p class="al-flow-desc">{{ s.description }}</p>
-            <span class="al-flow-arrow" aria-hidden="true" *ngIf="i < content.flow.steps.length - 1">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </span>
-          </li>
-        </ol>
-      </div>
-    </section>
-
-    <!-- ============= INTEGRATIONS ============= -->
-    <section class="al-section al-integrations" id="integrations" aria-labelledby="integrations-heading">
-      <div class="al-container">
-        <div class="al-integrations-head">
-          <div>
-            <span class="al-eyebrow">{{ content.integrations.eyebrow }}</span>
-            <h2 id="integrations-heading" class="al-section-title">{{ content.integrations.title }}</h2>
-            <p class="al-section-sub al-section-sub-inline">{{ content.integrations.subtitle }}</p>
-          </div>
-        </div>
-        <ul class="al-integrations-list">
-          <li *ngFor="let i of content.integrations.items" class="al-integration-pill">
-            <span class="al-integration-dot" aria-hidden="true"></span>
-            {{ i }}
-          </li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- ============= TESTIMONIALS ============= -->
-    <section class="al-section al-testimonials" id="testimonials" aria-labelledby="testimonials-heading">
-      <div class="al-container">
-        <div class="al-section-head">
-          <span class="al-eyebrow">{{ content.testimonials.eyebrow }}</span>
-          <h2 id="testimonials-heading" class="al-section-title">{{ content.testimonials.title }}</h2>
-        </div>
-
-        <div class="al-testimonial-grid">
-          <article *ngFor="let t of content.testimonials.items" class="al-testimonial-card">
-            <svg class="al-quote-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
-              <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
-            </svg>
-            <blockquote class="al-testimonial-quote">{{ t.quote }}</blockquote>
-            <div class="al-testimonial-author">
-              <span class="al-avatar" aria-hidden="true">{{ initialsOf(t) }}</span>
-              <div>
-                <strong>{{ t.name }}</strong>
-                <span>{{ t.role }} · {{ t.company }}</span>
-              </div>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============= PRICING ============= -->
-    <section class="al-section al-pricing" id="pricing" aria-labelledby="pricing-heading">
-      <div class="al-container">
-        <div class="al-section-head">
-          <span class="al-eyebrow">{{ content.pricing.eyebrow }}</span>
-          <h2 id="pricing-heading" class="al-section-title">{{ content.pricing.title }}</h2>
-          <p class="al-section-sub">{{ content.pricing.subtitle }}</p>
-        </div>
-
-        <div class="al-pricing-grid">
-          <article *ngFor="let plan of content.pricing.plans"
-                   class="al-pricing-card"
-                   [class.is-featured]="plan.featured">
-            <span class="al-pricing-badge" *ngIf="plan.featured">Más popular</span>
-            <header class="al-pricing-head">
-              <h3 class="al-pricing-name">{{ plan.name }}</h3>
-              <p class="al-pricing-desc">{{ plan.description }}</p>
-              <div class="al-pricing-price">
-                <span class="al-pricing-amount">{{ plan.price }}</span>
-                <span class="al-pricing-billing">{{ plan.billing }}</span>
-              </div>
-            </header>
-            <ul class="al-pricing-features">
-              <li *ngFor="let f of plan.features">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                <span>{{ f }}</span>
-              </li>
-            </ul>
-            <a [href]="plan.cta_anchor"
-               (click)="scrollTo(plan.cta_anchor, $event)"
-               class="al-btn al-btn-lg"
-               [class.al-btn-primary]="plan.featured"
-               [class.al-btn-outline]="!plan.featured">
-              {{ plan.cta_label }}
-            </a>
-          </article>
-        </div>
-
-        <p class="al-pricing-footnote" *ngIf="content.pricing.footnote">
-          {{ content.pricing.footnote }}
-        </p>
-      </div>
-    </section>
-
-    <!-- ============= RESOURCES ============= -->
-    <section class="al-section al-resources" id="resources" aria-labelledby="resources-heading">
-      <div class="al-container">
-        <div class="al-section-head">
-          <span class="al-eyebrow">{{ content.resources.eyebrow }}</span>
-          <h2 id="resources-heading" class="al-section-title">{{ content.resources.title }}</h2>
-          <p class="al-section-sub">{{ content.resources.subtitle }}</p>
-        </div>
-
-        <div class="al-resources-grid">
-          <a *ngFor="let r of content.resources.items"
-             [href]="r.url || '#'"
-             class="al-resource-card"
-             [attr.target]="r.url && r.url.startsWith('http') ? '_blank' : null"
-             [attr.rel]="r.url && r.url.startsWith('http') ? 'noopener noreferrer' : null">
-            <div class="al-resource-head">
-              <span class="al-resource-tag">{{ r.category }}</span>
-              <span class="al-resource-icon" aria-hidden="true" [ngSwitch]="r.icon">
-                <svg *ngSwitchCase="'guide'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                </svg>
-                <svg *ngSwitchCase="'video'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="23 7 16 12 23 17 23 7"/>
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                </svg>
-                <svg *ngSwitchCase="'blog'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="8" y1="13" x2="16" y2="13"/>
-                  <line x1="8" y1="17" x2="13" y2="17"/>
-                </svg>
-                <svg *ngSwitchCase="'case'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                </svg>
-                <svg *ngSwitchDefault xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-              </span>
-            </div>
-            <h3 class="al-resource-title">{{ r.title }}</h3>
-            <p class="al-resource-desc">{{ r.description }}</p>
-            <span class="al-resource-link">
-              Leer más
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============= COMPANY ============= -->
-    <section class="al-section al-company" id="company" aria-labelledby="company-heading">
-      <div class="al-container">
-        <div class="al-company-grid">
-          <div class="al-company-intro">
-            <span class="al-eyebrow">{{ content.company.eyebrow }}</span>
-            <h2 id="company-heading" class="al-section-title">{{ content.company.title }}</h2>
-            <p class="al-company-story">{{ content.company.story }}</p>
-            <p class="al-company-mission">
-              <span class="al-mission-label">Misión</span>
-              {{ content.company.mission }}
-            </p>
-          </div>
-
-          <div class="al-company-values">
-            <article *ngFor="let v of content.company.values; let i = index" class="al-value-card">
-              <span class="al-value-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" *ngIf="i % 4 === 0">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" *ngIf="i % 4 === 1">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" *ngIf="i % 4 === 2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" *ngIf="i % 4 === 3">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-              </span>
-              <h3 class="al-value-title">{{ v.title }}</h3>
-              <p class="al-value-desc">{{ v.description }}</p>
-            </article>
-          </div>
-        </div>
-
-        <div class="al-stats-strip" *ngIf="content.company.stats.length">
-          <div *ngFor="let s of content.company.stats" class="al-stat">
-            <span class="al-stat-value">{{ s.value }}</span>
-            <span class="al-stat-label">{{ s.label }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============= CONTACT ============= -->
-    <section class="al-section al-contact" id="contact" aria-labelledby="contact-heading">
-      <div class="al-container al-contact-grid">
-        <div class="al-contact-intro">
-          <span class="al-eyebrow">{{ content.contact.eyebrow }}</span>
-          <h2 id="contact-heading" class="al-section-title">{{ content.contact.title }}</h2>
-          <p class="al-section-sub">{{ content.contact.subtitle }}</p>
-
-          <ul class="al-contact-info">
-            <li *ngIf="content.contact.email">
-              <span class="al-contact-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
-                  <polyline points="22 6 12 13 2 6"/>
-                </svg>
-              </span>
-              <a [href]="'mailto:' + content.contact.email">{{ content.contact.email }}</a>
-            </li>
-            <li *ngIf="content.contact.phone">
-              <span class="al-contact-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                </svg>
-              </span>
-              <a [href]="'tel:' + content.contact.phone">{{ content.contact.phone }}</a>
-            </li>
-            <li *ngIf="content.contact.address">
-              <span class="al-contact-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
-                </svg>
-              </span>
-              <span>{{ content.contact.address }}</span>
+              <span class="al-hero__attr-label">{{ attr.label }}</span>
             </li>
           </ul>
         </div>
 
-        <form class="al-contact-form"
-              (submit)="submitContact($event)"
-              [class.is-sent]="contactSent"
-              novalidate
-              autocomplete="on">
-          <ng-container *ngIf="!contactSent">
-            <div class="al-form-row al-form-row-2">
-              <label class="al-field">
-                <span class="al-field-label">{{ content.contact.form_name_label }}</span>
-                <input type="text"
-                       name="name"
-                       autocomplete="name"
-                       required
-                       [(ngModel)]="contactForm.name"
-                       [disabled]="contactLoading">
-              </label>
-              <label class="al-field">
-                <span class="al-field-label">{{ content.contact.form_email_label }}</span>
-                <input type="email"
-                       name="email"
-                       autocomplete="email"
-                       required
-                       [(ngModel)]="contactForm.email"
-                       [disabled]="contactLoading">
-              </label>
-            </div>
-            <div class="al-form-row al-form-row-2">
-              <label class="al-field">
-                <span class="al-field-label">{{ content.contact.form_company_label }}</span>
-                <input type="text"
-                       name="company"
-                       autocomplete="organization"
-                       [(ngModel)]="contactForm.company"
-                       [disabled]="contactLoading">
-              </label>
-              <label class="al-field">
-                <span class="al-field-label">{{ content.contact.form_role_label }}</span>
-                <input type="text"
-                       name="role"
-                       autocomplete="organization-title"
-                       [(ngModel)]="contactForm.role"
-                       [disabled]="contactLoading">
-              </label>
-            </div>
-            <label class="al-field">
-              <span class="al-field-label">{{ content.contact.form_message_label }}</span>
-              <textarea name="message"
-                        rows="4"
-                        required
-                        [(ngModel)]="contactForm.message"
-                        [disabled]="contactLoading"></textarea>
-            </label>
-
-            <!-- Honeypot: invisible. Si un bot lo rellena, el backend rechaza. -->
-            <label class="al-honeypot" aria-hidden="true">
-              Website
-              <input type="text"
-                     name="website"
-                     tabindex="-1"
-                     autocomplete="off"
-                     [(ngModel)]="contactForm.website">
-            </label>
-
-            <div class="al-form-error" *ngIf="contactError" role="alert">
-              {{ contactError }}
+        <!-- RIGHT — dashboard mockup -->
+        <aside class="al-hero__mockup" aria-hidden="true">
+          <div class="al-mock">
+            <!-- internal sidebar -->
+            <div class="al-mock__sidebar">
+              <span class="al-mock__sidebar-mark">A</span>
+              <span class="al-mock__sidebar-ico" *ngFor="let _ of [1,2,3,4,5]"></span>
             </div>
 
+            <div class="al-mock__main">
+              <!-- top bar -->
+              <div class="al-mock__topbar">
+                <div class="al-mock__title-wrap">
+                  <span class="al-mock__title-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                  </span>
+                  <div>
+                    <div class="al-mock__title">{{ c.hero.mockup_title }}</div>
+                    <div class="al-mock__meta">{{ c.hero.mockup_meta }}</div>
+                  </div>
+                </div>
+                <div class="al-mock__top-actions">
+                  <span class="al-mock__chip al-mock__chip--success">Completada</span>
+                  <button class="al-mock__btn" type="button" disabled>Compartir</button>
+                  <button class="al-mock__btn-ico" type="button" disabled aria-label="Más">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- tabs -->
+              <div class="al-mock__tabs">
+                <span class="al-mock__tab al-mock__tab--active">Resumen</span>
+                <span class="al-mock__tab">Decisiones</span>
+                <span class="al-mock__tab">Tareas</span>
+                <span class="al-mock__tab">Riesgos</span>
+                <span class="al-mock__tab">Documentos</span>
+                <span class="al-mock__tab">Integraciones</span>
+              </div>
+
+              <!-- metric tiles -->
+              <div class="al-mock__metrics">
+                <div class="al-mock__metric">
+                  <span class="al-mock__metric-ico al-mock__metric-ico--emerald">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <div class="al-mock__metric-num">28</div>
+                  <div class="al-mock__metric-lbl">Elementos de acción</div>
+                </div>
+                <div class="al-mock__metric">
+                  <span class="al-mock__metric-ico al-mock__metric-ico--blue">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+                  </span>
+                  <div class="al-mock__metric-num">6</div>
+                  <div class="al-mock__metric-lbl">Decisiones</div>
+                </div>
+                <div class="al-mock__metric">
+                  <span class="al-mock__metric-ico al-mock__metric-ico--amber">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                  </span>
+                  <div class="al-mock__metric-num">3</div>
+                  <div class="al-mock__metric-lbl">Riesgos</div>
+                </div>
+                <div class="al-mock__metric">
+                  <span class="al-mock__metric-ico al-mock__metric-ico--teal">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                  </span>
+                  <div class="al-mock__metric-num">68%</div>
+                  <div class="al-mock__metric-lbl">Confianza</div>
+                </div>
+              </div>
+
+              <!-- body 2 cols -->
+              <div class="al-mock__body">
+                <div class="al-mock__col-main">
+                  <div class="al-mock__section">
+                    <div class="al-mock__section-title">Resumen ejecutivo</div>
+                    <div class="al-mock__bar"></div>
+                    <div class="al-mock__bar" style="width:92%"></div>
+                    <div class="al-mock__bar" style="width:88%"></div>
+                    <div class="al-mock__bar" style="width:70%"></div>
+                  </div>
+
+                  <div class="al-mock__section">
+                    <div class="al-mock__section-title">Decisiones clave</div>
+                    <div class="al-mock__row" *ngFor="let _ of [1,2,3]">
+                      <span class="al-mock__row-dot"></span>
+                      <div class="al-mock__row-bars">
+                        <span class="al-mock__bar al-mock__bar--strong"></span>
+                        <span class="al-mock__bar" style="width:65%"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="al-mock__section">
+                    <div class="al-mock__section-title">Tareas</div>
+                    <div class="al-mock__task" *ngFor="let i of [1,2,3]">
+                      <span class="al-mock__avatar al-mock__avatar--sm">{{ i }}</span>
+                      <span class="al-mock__bar al-mock__bar--task"></span>
+                      <span class="al-mock__date">May {{ 16 + i }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="al-mock__col-side">
+                  <div class="al-mock__section">
+                    <div class="al-mock__section-title">Participantes</div>
+                    <div class="al-mock__person" *ngFor="let p of [
+                      {n:'Maya Patel',  i:'MP'},
+                      {n:'Ariyan Mehta', i:'AM'},
+                      {n:'Lisa Chen',    i:'LC'},
+                      {n:'Reik Singh',   i:'RS'}]">
+                      <span class="al-mock__avatar">{{ p.i }}</span>
+                      <span class="al-mock__person-name">{{ p.n }}</span>
+                    </div>
+                    <div class="al-mock__more">+2 más</div>
+                  </div>
+
+                  <div class="al-mock__section">
+                    <div class="al-mock__section-title">Progreso</div>
+                    <div class="al-mock__progress">
+                      <span class="al-mock__progress-fill" style="width:72%"></span>
+                    </div>
+                    <div class="al-mock__progress-lbl">72% completado</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ================================================================
+         TRUST — banda blanca con wordmarks de logos
+         ================================================================ -->
+    <section class="al-trust" aria-labelledby="al-trust-title">
+      <div class="al-container">
+        <p id="al-trust-title" class="al-trust__title">{{ c.trust.eyebrow }}</p>
+        <ul class="al-trust__logos">
+          <li *ngFor="let logo of c.trust.logos" class="al-trust__logo">{{ logo }}</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         FEATURES — 2 col: copy + grid 3×2 de cards con iconos
+         ================================================================ -->
+    <section id="features" class="al-features" aria-labelledby="al-features-title">
+      <div class="al-container al-features__inner">
+
+        <div class="al-section-copy">
+          <span class="al-eyebrow">{{ c.features.eyebrow }}</span>
+          <h2 id="al-features-title" class="al-section-title">
+            <ng-container *ngIf="c.features.title_lead || c.features.title_highlight; else featTitle">
+              {{ c.features.title_lead }}<ng-container *ngIf="c.features.title_highlight"> <span class="al-accent">{{ c.features.title_highlight }}</span></ng-container>
+            </ng-container>
+            <ng-template #featTitle>{{ c.features.title }}</ng-template>
+          </h2>
+          <p class="al-section-subtitle">{{ c.features.subtitle }}</p>
+          <a *ngIf="c.features.link_label && c.features.link_anchor"
+             class="al-arrow-link"
+             [href]="c.features.link_anchor"
+             (click)="scrollTo(c.features.link_anchor!, $event)">
+            {{ c.features.link_label }}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+
+        <div class="al-feature-grid">
+          <article class="al-feature-card" *ngFor="let f of c.features.items">
+            <span class="al-feature-card__icon" aria-hidden="true">
+              <ng-container [ngSwitch]="f.icon">
+                <svg *ngSwitchCase="'capture'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="2" width="6" height="13" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+                <svg *ngSwitchCase="'decisions'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 13c0 5-3.5 7.5-8 8.5-4.5-1-8-3.5-8-8.5V6l8-3 8 3z"/><path d="m9 12 2 2 4-4"/>
+                </svg>
+                <svg *ngSwitchCase="'tasks'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>
+                </svg>
+                <svg *ngSwitchCase="'docs'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" x2="15" y1="13" y2="13"/><line x1="9" x2="15" y1="17" y2="17"/>
+                </svg>
+                <svg *ngSwitchCase="'email'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+                <svg *ngSwitchCase="'integrations'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11v1a10 10 0 1 1-9-10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/><path d="m16 3 4 4-4 4"/>
+                </svg>
+                <svg *ngSwitchDefault width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                </svg>
+              </ng-container>
+            </span>
+            <h3 class="al-feature-card__title">{{ f.title }}</h3>
+            <p class="al-feature-card__desc">{{ f.description }}</p>
+          </article>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================================================================
+         FLOW — un asistente, todo el ciclo. 4 pasos horizontales.
+         ================================================================ -->
+    <section id="flow" class="al-flow" aria-labelledby="al-flow-title">
+      <div class="al-container al-flow__inner">
+
+        <div class="al-section-copy">
+          <span class="al-eyebrow">{{ c.flow.eyebrow }}</span>
+          <h2 id="al-flow-title" class="al-section-title">
+            <ng-container *ngIf="c.flow.title_lead || c.flow.title_highlight; else flowTitle">
+              {{ c.flow.title_lead }}<ng-container *ngIf="c.flow.title_highlight"> <span class="al-accent">{{ c.flow.title_highlight }}</span></ng-container>
+            </ng-container>
+            <ng-template #flowTitle>{{ c.flow.title }}</ng-template>
+          </h2>
+          <p class="al-section-subtitle">{{ c.flow.subtitle }}</p>
+          <a *ngIf="c.flow.link_label && c.flow.link_anchor"
+             class="al-arrow-link"
+             [href]="c.flow.link_anchor"
+             (click)="scrollTo(c.flow.link_anchor!, $event)">
+            {{ c.flow.link_label }}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+
+        <ol class="al-flow__steps">
+          <ng-container *ngFor="let s of c.flow.steps; let i = index; let last = last">
+            <li class="al-flow__step">
+              <div class="al-flow__circle" aria-hidden="true">
+                <ng-container [ngSwitch]="s.icon">
+                  <svg *ngSwitchCase="'mic'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                  </svg>
+                  <svg *ngSwitchCase="'brain'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                  </svg>
+                  <svg *ngSwitchCase="'list'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>
+                  </svg>
+                  <svg *ngSwitchCase="'send'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/>
+                  </svg>
+                  <svg *ngSwitchDefault width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+                  </svg>
+                </ng-container>
+              </div>
+              <div class="al-flow__num">{{ pad2(i + 1) }} · {{ s.title }}</div>
+              <p class="al-flow__desc">{{ s.description }}</p>
+            </li>
+            <li *ngIf="!last" class="al-flow__arrow" aria-hidden="true">
+              <svg width="32" height="14" viewBox="0 0 32 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 7h28"/><path d="m24 2 6 5-6 5"/>
+              </svg>
+            </li>
+          </ng-container>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         INTEGRATIONS — banda blanca con wordmarks de marcas
+         ================================================================ -->
+    <section id="integrations" class="al-integrations" aria-labelledby="al-int-title">
+      <div class="al-container">
+        <div class="al-integrations__head">
+          <div>
+            <span class="al-eyebrow">{{ c.integrations.eyebrow }}</span>
+            <h2 id="al-int-title" class="al-integrations__title">{{ c.integrations.title }}</h2>
+          </div>
+          <a *ngIf="c.integrations.see_all_label && c.integrations.see_all_anchor"
+             class="al-btn al-btn--outline"
+             [href]="c.integrations.see_all_anchor"
+             (click)="scrollTo(c.integrations.see_all_anchor!, $event)">
+            {{ c.integrations.see_all_label }}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+        <ul class="al-integrations__list">
+          <li *ngFor="let item of c.integrations.items" class="al-integrations__item">{{ item }}</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         TESTIMONIALS — 3 cards con quote + autor + brand
+         ================================================================ -->
+    <section id="testimonials" class="al-testimonials" aria-labelledby="al-test-title">
+      <div class="al-container">
+        <div class="al-testimonials__head">
+          <span class="al-eyebrow">{{ c.testimonials.eyebrow }}</span>
+          <h2 id="al-test-title" class="al-section-title al-section-title--center">{{ c.testimonials.title }}</h2>
+        </div>
+
+        <div class="al-testimonials__grid">
+          <article class="al-testimonial" *ngFor="let t of c.testimonials.items.slice(0, 3)">
+            <p class="al-testimonial__quote">{{ t.quote }}</p>
+            <div class="al-testimonial__foot">
+              <div class="al-testimonial__author">
+                <span class="al-testimonial__avatar">{{ initialsOf(t) }}</span>
+                <div>
+                  <div class="al-testimonial__name">{{ t.name }}</div>
+                  <div class="al-testimonial__role">{{ t.role }}</div>
+                </div>
+              </div>
+              <div class="al-testimonial__brand" *ngIf="t.brand_wordmark">{{ t.brand_wordmark }}</div>
+            </div>
+          </article>
+        </div>
+
+        <div class="al-testimonials__dots" *ngIf="c.testimonials.items.length > 0" role="tablist" aria-label="Carrusel testimonios">
+          <button
+            type="button"
+            *ngFor="let _ of [0,1,2,3]; let i = index"
+            class="al-dot"
+            [class.al-dot--active]="activeTestimonialDot === i"
+            [attr.aria-selected]="activeTestimonialDot === i"
+            (click)="setActiveDot(i)"
+            [attr.aria-label]="'Página ' + (i+1)"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         CONTACT — formulario compacto antes del CTA final
+         ================================================================ -->
+    <section id="contact" class="al-contact" aria-labelledby="al-contact-title">
+      <div class="al-container al-contact__inner">
+        <div class="al-contact__copy">
+          <span class="al-eyebrow">{{ c.contact.eyebrow }}</span>
+          <h2 id="al-contact-title" class="al-section-title">{{ c.contact.title }}</h2>
+          <p class="al-section-subtitle">{{ c.contact.subtitle }}</p>
+          <ul class="al-contact__meta">
+            <li *ngIf="c.contact.email">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+              <a [href]="'mailto:' + c.contact.email">{{ c.contact.email }}</a>
+            </li>
+            <li *ngIf="c.contact.phone">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              <span>{{ c.contact.phone }}</span>
+            </li>
+            <li *ngIf="c.contact.address">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>{{ c.contact.address }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <form class="al-contact__form" (submit)="submitContact($event)" novalidate>
+          <input type="text" name="website" [(ngModel)]="contactForm.website" tabindex="-1" autocomplete="off" aria-hidden="true" class="al-honeypot" />
+
+          <div class="al-field">
+            <label for="al-name">{{ c.contact.form_name_label }}</label>
+            <input id="al-name" type="text" name="name" required [(ngModel)]="contactForm.name" autocomplete="name" />
+          </div>
+          <div class="al-field">
+            <label for="al-email">{{ c.contact.form_email_label }}</label>
+            <input id="al-email" type="email" name="email" required [(ngModel)]="contactForm.email" autocomplete="email" />
+          </div>
+          <div class="al-field">
+            <label for="al-company">{{ c.contact.form_company_label }}</label>
+            <input id="al-company" type="text" name="company" [(ngModel)]="contactForm.company" autocomplete="organization" />
+          </div>
+          <div class="al-field">
+            <label for="al-role">{{ c.contact.form_role_label }}</label>
+            <input id="al-role" type="text" name="role" [(ngModel)]="contactForm.role" />
+          </div>
+          <div class="al-field al-field--full">
+            <label for="al-msg">{{ c.contact.form_message_label }}</label>
+            <textarea id="al-msg" name="message" rows="4" required [(ngModel)]="contactForm.message"></textarea>
+          </div>
+
+          <div class="al-contact__submit">
             <button type="submit"
-                    class="al-btn al-btn-primary al-btn-lg al-form-submit"
-                    [disabled]="contactLoading">
-              <span *ngIf="!contactLoading">{{ content.contact.form_cta_label }}</span>
-              <span *ngIf="contactLoading">Enviando…</span>
-              <svg *ngIf="!contactLoading" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="22" y1="2" x2="11" y2="13"/>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    class="al-btn al-btn--primary al-btn--lg"
+                    [disabled]="contactLoading || contactSent">
+              <span *ngIf="!contactSent">{{ c.contact.form_cta_label }}</span>
+              <span *ngIf="contactSent">{{ c.contact.form_success }}</span>
+              <svg *ngIf="!contactSent" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
               </svg>
             </button>
-          </ng-container>
-
-          <div class="al-form-success" *ngIf="contactSent" role="status">
-            <span class="al-form-success-icon" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </span>
-            <h3>Mensaje enviado</h3>
-            <p>{{ content.contact.form_success }}</p>
+            <p *ngIf="contactError" class="al-contact__error" role="alert">{{ contactError }}</p>
           </div>
         </form>
       </div>
     </section>
 
-    <!-- ============= FINAL CTA ============= -->
-    <section class="al-final-cta" aria-labelledby="final-cta-heading">
+    <!-- ================================================================
+         FINAL CTA — card navy + panel cristal
+         ================================================================ -->
+    <section class="al-finalcta" aria-labelledby="al-final-title">
       <div class="al-container">
-        <div class="al-final-cta-card">
-          <span class="al-eyebrow al-eyebrow-on-dark" *ngIf="content.final_cta.eyebrow">
-            {{ content.final_cta.eyebrow }}
-          </span>
-          <h2 id="final-cta-heading" class="al-final-cta-title">{{ content.final_cta.title }}</h2>
-          <p class="al-final-cta-sub">{{ content.final_cta.subtitle }}</p>
-          <div class="al-final-cta-actions">
-            <a [href]="content.final_cta.cta_anchor"
-               (click)="scrollTo(content.final_cta.cta_anchor, $event)"
-               class="al-btn al-btn-primary al-btn-lg">
-              {{ content.final_cta.cta_label }}
-            </a>
-            <a [href]="content.final_cta.secondary_anchor"
-               (click)="scrollTo(content.final_cta.secondary_anchor, $event)"
-               class="al-btn al-btn-ghost-light al-btn-lg">
-              {{ content.final_cta.secondary_label }}
-            </a>
+        <div class="al-finalcta__card">
+          <div class="al-finalcta__copy">
+            <h2 id="al-final-title" class="al-finalcta__title">
+              <ng-container *ngIf="c.final_cta.title_lead || c.final_cta.title_highlight; else finalTitle">
+                {{ c.final_cta.title_lead }}<ng-container *ngIf="c.final_cta.title_highlight"> <span class="al-accent">{{ c.final_cta.title_highlight }}</span></ng-container>
+              </ng-container>
+              <ng-template #finalTitle>{{ c.final_cta.title }}</ng-template>
+            </h2>
+            <p class="al-finalcta__subtitle">{{ c.final_cta.subtitle }}</p>
+            <div class="al-finalcta__ctas">
+              <a class="al-btn al-btn--primary al-btn--lg"
+                 [href]="c.final_cta.cta_anchor"
+                 (click)="scrollTo(c.final_cta.cta_anchor, $event)">
+                {{ c.final_cta.cta_label }}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                </svg>
+              </a>
+              <a class="al-btn al-btn--ghost-dark al-btn--lg"
+                 [href]="c.final_cta.secondary_anchor"
+                 (click)="scrollTo(c.final_cta.secondary_anchor, $event)">
+                {{ c.final_cta.secondary_label }}
+              </a>
+            </div>
+          </div>
+
+          <div class="al-finalcta__panel" aria-hidden="true">
+            <div class="al-finalcta__check">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/>
+              </svg>
+            </div>
+            <ul class="al-finalcta__statuses">
+              <li *ngFor="let s of c.final_cta.status_items">
+                <span class="al-finalcta__status-lbl">{{ s.label }}</span>
+                <span class="al-finalcta__status-bar">
+                  <span class="al-finalcta__status-fill" [class.al-finalcta__status-fill--warning]="s.tone === 'warning'"></span>
+                </span>
+                <span class="al-finalcta__status-check"
+                      [class.al-finalcta__status-check--warning]="s.tone === 'warning'">
+                  <ng-container *ngIf="s.tone !== 'warning'; else warnIco">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </ng-container>
+                  <ng-template #warnIco>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>
+                    </svg>
+                  </ng-template>
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
     </section>
+
   </main>
 
-  <!-- ============= FOOTER ============= -->
-  <footer class="al-footer" *ngIf="content" role="contentinfo">
-    <div class="al-container al-footer-inner">
-      <div class="al-footer-brand">
-        <a href="#top" class="al-logo" (click)="scrollTo('#top', $event)">
-          <span class="al-logo-mark" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 32 32" fill="none">
-              <rect x="1" y="1" width="30" height="30" rx="9" fill="#F7F4EE"/>
-              <path d="M9 23 L16 8 L23 23" stroke="#111318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              <path d="M12 18 H20" stroke="#1B7F67" stroke-width="2.2" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="al-logo-text">Acten</span>
-        </a>
-        <p>{{ content.footer.tagline }}</p>
-        <div class="al-social">
-          <a href="#" aria-label="LinkedIn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-            </svg>
+  <!-- ================================================================
+       FOOTER — 5 cols (brand+social, 4 link cols), col newsletter, bottom
+       ================================================================ -->
+  <footer class="al-footer" role="contentinfo">
+    <div class="al-container">
+
+      <div class="al-footer__grid">
+        <div class="al-footer__brand-col">
+          <a class="al-brand al-brand--dark" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
+            <span class="al-brand__mark" aria-hidden="true">A</span>
+            <span class="al-brand__word">Acten</span>
           </a>
-          <a href="#" aria-label="X">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-          </a>
-          <a href="#" aria-label="YouTube">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-          </a>
+          <p class="al-footer__tagline">{{ c.footer.tagline }}</p>
+          <ul class="al-footer__social" *ngIf="c.footer.social_links?.length">
+            <li *ngFor="let link of c.footer.social_links">
+              <a [href]="link.url" [attr.aria-label]="link.label" target="_blank" rel="noopener noreferrer">
+                <ng-container [ngSwitch]="link.icon">
+                  <svg *ngSwitchCase="'linkedin'" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zM8.339 18.339V9.927H5.692v8.412h2.647zM7.015 8.792a1.54 1.54 0 1 0 0-3.08 1.54 1.54 0 0 0 0 3.08zm11.324 9.547V13.66c0-2.448-1.301-3.587-3.04-3.587-1.4 0-2.027.77-2.38 1.31V9.927h-2.643c.035.747 0 8.412 0 8.412h2.642v-4.7c0-.237.017-.474.087-.643.19-.475.626-.967 1.355-.967.957 0 1.34.73 1.34 1.798v4.512h2.64z"/>
+                  </svg>
+                  <svg *ngSwitchCase="'x'" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  <svg *ngSwitchCase="'youtube'" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  <svg *ngSwitchCase="'github'" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                  </svg>
+                  <svg *ngSwitchDefault width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                  </svg>
+                </ng-container>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <nav class="al-footer__cols" aria-label="Enlaces de pie de página">
+          <div class="al-footer__col" *ngFor="let col of c.footer.columns">
+            <h3 class="al-footer__col-title">{{ col.title }}</h3>
+            <ul>
+              <li *ngFor="let link of col.links">
+                <a [href]="link.url" (click)="scrollTo(link.url, $event)">{{ link.label }}</a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <div class="al-footer__news">
+          <h3 class="al-footer__col-title">{{ c.footer.newsletter_title }}</h3>
+          <p class="al-footer__news-sub">{{ c.footer.newsletter_subtitle }}</p>
+          <form class="al-footer__news-form" (submit)="submitNewsletter($event)" novalidate>
+            <input type="email"
+                   required
+                   [placeholder]="c.footer.newsletter_placeholder || 'tu@empresa.com'"
+                   [(ngModel)]="newsletterEmail"
+                   name="newsletter_email"
+                   aria-label="Email para newsletter" />
+            <button type="submit" class="al-btn al-btn--primary">
+              {{ newsletterSent ? c.footer.newsletter_success : c.footer.newsletter_cta }}
+            </button>
+          </form>
         </div>
       </div>
 
-      <div class="al-footer-cols">
-        <div class="al-footer-col" *ngFor="let col of content.footer.columns">
-          <h4>{{ col.title }}</h4>
-          <a *ngFor="let link of col.links"
-             [href]="link.url"
-             (click)="link.url.startsWith('#') ? scrollTo(link.url, $event) : null">
-            {{ link.label }}
-          </a>
-        </div>
-      </div>
-
-      <div class="al-footer-newsletter">
-        <h4>{{ content.footer.newsletter_title }}</h4>
-        <p>{{ content.footer.newsletter_subtitle }}</p>
-        <form (submit)="submitNewsletter($event)" class="al-newsletter-form">
-          <input type="email" required
-                 [(ngModel)]="newsletterEmail"
-                 name="newsletter_email"
-                 placeholder="tu@correo.com"
-                 [disabled]="newsletterSent"
-                 aria-label="Correo electrónico para suscripción">
-          <button type="submit" class="al-btn al-btn-primary" [disabled]="newsletterSent">
-            <ng-container *ngIf="newsletterSent">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              {{ content.footer.newsletter_success }}
-            </ng-container>
-            <ng-container *ngIf="!newsletterSent">{{ content.footer.newsletter_cta }}</ng-container>
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <div class="al-footer-bottom">
-      <div class="al-container al-footer-bottom-inner">
-        <span>© {{ year }} {{ content.footer.copyright }}</span>
-        <div class="al-footer-legal">
-          <a href="/privacy">Privacidad</a>
-          <a href="/terms">Términos</a>
-          <a href="#contact" (click)="scrollTo('#contact', $event)">Contacto</a>
-        </div>
+      <div class="al-footer__bottom">
+        <p class="al-footer__copy">© {{ year }} {{ c.footer.copyright }}</p>
+        <ul class="al-footer__legal" *ngIf="c.footer.legal_links?.length">
+          <li *ngFor="let l of c.footer.legal_links">
+            <a [href]="l.url">{{ l.label }}</a>
+          </li>
+        </ul>
+        <span class="al-footer__lang" *ngIf="c.footer.language_label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          {{ c.footer.language_label }}
+        </span>
       </div>
     </div>
   </footer>
 </div>
 
+<!-- Skeleton minimalista mientras carga el CMS -->
 <ng-template #loadingTpl>
   <div class="al-loading" role="status" aria-live="polite">
-    <div class="al-loading-dot"></div>
-    <div class="al-loading-dot"></div>
-    <div class="al-loading-dot"></div>
-    <span class="al-loading-text">Cargando…</span>
+    <span class="al-loading__spinner" aria-hidden="true"></span>
+    <p *ngIf="contentError">No pudimos cargar el contenido. Recarga la página.</p>
   </div>
 </ng-template>

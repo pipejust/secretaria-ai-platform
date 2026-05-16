@@ -56,37 +56,52 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Hero ────────────────────────────────────────────────────────────
     "hero": {
-        "badge": "Plataforma IA para reuniones empresariales",
-        "title": "Convierte cada reunión en una decisión, un responsable y una acción.",
+        "badge": "AI MEETING ASSISTANT",
+        "title_lead": "De conversación a claridad.",
+        "title_highlight_prefix": "De claridad a ",
+        "title_highlight_word": "impacto.",
+        # Legacy combined title (kept para compat con código que aún lo lea).
+        "title": "De conversación a claridad. De claridad a impacto.",
         "subtitle": (
-            "Acten transcribe, interpreta y estructura tus reuniones en actas "
-            "profesionales con tareas asignadas a cada responsable — listas para "
-            "ejecutar en Jira, Trello, ClickUp o Azure DevOps."
+            "Acten transforma conversaciones habladas en decisiones, tareas y "
+            "entregables profesionales. Escucha, interpreta, organiza y da "
+            "seguimiento para que tu equipo ejecute lo que importa."
         ),
         "cta_primary_label": "Solicitar demo",
         "cta_primary_anchor": "#contact",
         "cta_secondary_label": "Ver cómo funciona",
         "cta_secondary_anchor": "#flow",
-        "mockup_eyebrow": "ACTA · Reunión Mar 12 · 10:30",
-        "mockup_title": "Seguimiento Plataforma — Sprint 14",
-        "mockup_meta": "5 decisiones · 8 tareas · 3 riesgos",
+        # 4 atributos chip bajo los CTAs del hero.
+        "attributes": [
+            {"label": "IA avanzada", "icon": "sparkles"},
+            {"label": "Multilenguaje", "icon": "globe"},
+            {"label": "Seguro y privado", "icon": "shield"},
+            {"label": "Enterprise ready", "icon": "building"},
+        ],
+        # Mockup (decorativo, ilustrativo — no editable fino).
+        "mockup_eyebrow": "Q2 Product Roadmap",
+        "mockup_title": "Reunión de planificación · Q2",
+        "mockup_meta": "16 may, 2024 · 10:00 a. m. · 45 min · 6 participantes",
     },
 
     # ─── Trust logos (clientes / empresas) ──────────────────────────────
     "trust": {
-        "eyebrow": "Equipos que ya organizan sus reuniones con Acten",
-        "logos": ["Colpensiones", "Softnexus", "Nexura", "Acten", "BBVA", "Deloitte"],
+        "eyebrow": "Equipos de alto rendimiento ya confían en Acten",
+        "logos": ["Microsoft", "Google", "Siemens", "BBVA", "Santander", "Deloitte"],
     },
 
     # ─── Capacidades (features grid) ────────────────────────────────────
     "features": {
-        "eyebrow": "Capacidades",
-        "title": "Toda la inteligencia de tus reuniones, en un solo flujo.",
+        "eyebrow": "UN ASISTENTE, TODO EL CICLO",
+        "title_lead": "Todo lo que tu equipo necesita, ",
+        "title_highlight": "automáticamente.",
+        "title": "Todo lo que tu equipo necesita, automáticamente.",
         "subtitle": (
-            "Acten reemplaza el copy-paste manual entre transcriptor, acta, "
-            "tareas y correos. La IA lee la reunión y entrega resultados "
-            "ejecutables."
+            "Acten cierra el ciclo completo de tus reuniones: captura, "
+            "interpreta, organiza, documenta, asigna y da seguimiento."
         ),
+        "link_label": "Conocer todas las funciones",
+        "link_anchor": "#flow",
         "items": [
             {
                 "title": "Captura e interpreta",
@@ -123,12 +138,16 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Flujo de 4 pasos ────────────────────────────────────────────────
     "flow": {
-        "eyebrow": "Cómo funciona",
-        "title": "De grabación a ejecución, en cuatro pasos.",
+        "eyebrow": "DEL DICHO AL HECHO",
+        "title_lead": "Un flujo inteligente que convierte reuniones en ",
+        "title_highlight": "resultados.",
+        "title": "Un flujo inteligente que convierte reuniones en resultados.",
         "subtitle": (
-            "El equipo solo aporta la reunión. Acten se encarga del resto: "
-            "transcribe, analiza, estructura y reparte."
+            "Acten procesa, estructura y distribuye la información para que "
+            "nada se pierda y todo se ejecute."
         ),
+        "link_label": "Ver flujo completo",
+        "link_anchor": "#contact",
         "steps": [
             {
                 "title": "Captura",
@@ -155,43 +174,45 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Integraciones ──────────────────────────────────────────────────
     "integrations": {
-        "eyebrow": "Integraciones",
+        "eyebrow": "INTEGRACIONES QUE POTENCIAN TU EQUIPO",
         "title": "Conecta Acten con las herramientas que ya usas.",
-        "subtitle": (
-            "No te pedimos cambiar tu stack. Acten despacha las tareas a "
-            "donde tu equipo ya trabaja."
-        ),
+        "subtitle": "",
+        "see_all_label": "Ver todas",
+        "see_all_anchor": "#integrations",
         "items": [
             "Jira", "Trello", "ClickUp", "Azure DevOps",
-            "Microsoft 365", "Google Workspace", "Slack", "Fireflies",
+            "Microsoft 365", "Google Workspace", "Slack",
         ],
     },
 
     # ─── Testimonios ─────────────────────────────────────────────────────
     "testimonials": {
-        "eyebrow": "Quienes ya usan Acten",
-        "title": "Equipos que ahorraron horas y ganaron trazabilidad.",
+        "eyebrow": "EMPRESAS QUE YA TRANSFORMARON SUS REUNIONES",
+        "title": "Más claridad. Más acción. Mejores resultados.",
         "items": [
             {
-                "quote": "Acten redujo en 4 horas semanales el trabajo de seguimiento de mi equipo. Las actas salen solas y los responsables saben qué hacer.",
-                "name": "Lady Edith Ardila",
-                "role": "Líder de Producto",
-                "company": "Colpensiones",
-                "initials": "LA",
+                "quote": "Acten nos ahorra horas cada semana. Las reuniones ahora terminan con claridad y las tareas realmente se ejecutan.",
+                "name": "Maya Patel",
+                "role": "CEO, TechNova",
+                "company": "TechNova",
+                "brand_wordmark": "TECHNOVA",
+                "initials": "MP",
             },
             {
-                "quote": "Pasamos de tener decisiones perdidas en chats a un acta formal con trazabilidad. Lo más útil: la integración con Azure DevOps.",
-                "name": "Felipe Cortés",
-                "role": "CTO",
-                "company": "Acten",
-                "initials": "FC",
+                "quote": "La precisión de las minutas y la asignación automática de tareas ha elevado nuestra disciplina de ejecución.",
+                "name": "Ariyan Mehta",
+                "role": "Product Manager, BuildFast",
+                "company": "BuildFast",
+                "brand_wordmark": "BUILDFAST",
+                "initials": "AM",
             },
             {
-                "quote": "La IA capta hasta los detalles que se nos escapan. El resumen ejecutivo es exactamente lo que necesita la dirección.",
-                "name": "Christian Muñoz",
-                "role": "SCRUM Master",
-                "company": "Softnexus",
-                "initials": "CM",
+                "quote": "La integración con Jira y ClickUp nos permite llevar lo discutido directamente a nuestro flujo de trabajo.",
+                "name": "Lisa Chen",
+                "role": "Head of Operations, DataCore",
+                "company": "DataCore",
+                "brand_wordmark": "DATACORE",
+                "initials": "LC",
             },
         ],
     },
@@ -366,60 +387,92 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── CTA final ───────────────────────────────────────────────────────
     "final_cta": {
-        "eyebrow": "Empieza hoy",
-        "title": "Tu próxima reunión puede terminar con acciones claras.",
-        "subtitle": "Solicita una demo y deja que Acten haga el seguimiento.",
+        "eyebrow": "",
+        "title_lead": "Convierte cada reunión en una ",
+        "title_highlight": "ventaja competitiva.",
+        "title": "Convierte cada reunión en una ventaja competitiva.",
+        "subtitle": (
+            "Solicita una demo personalizada y descubre cómo Acten puede "
+            "transformar la productividad de tu equipo."
+        ),
         "cta_label": "Solicitar demo",
         "cta_anchor": "#contact",
-        "secondary_label": "Ver precios",
-        "secondary_anchor": "#pricing",
+        "secondary_label": "Hablar con ventas",
+        "secondary_anchor": "#contact",
+        # Panel derecho con estados — visual demostrativo
+        "status_items": [
+            {"label": "Decisión tomada", "tone": "success"},
+            {"label": "Tarea asignada", "tone": "success"},
+            {"label": "Riesgo identificado", "tone": "warning"},
+            {"label": "Documento generado", "tone": "success"},
+        ],
     },
 
     # ─── Footer ──────────────────────────────────────────────────────────
     "footer": {
-        "tagline": "Plataforma IA de actas y tareas para reuniones empresariales.",
-        "newsletter_title": "Recibe las novedades",
-        "newsletter_subtitle": "Una vez al mes. Sin spam.",
-        "newsletter_cta": "Suscribir",
+        "tagline": (
+            "El asistente inteligente de reuniones que transforma conversaciones "
+            "en claridad, decisiones y acción."
+        ),
+        "newsletter_title": "Suscríbete a nuestro newsletter",
+        "newsletter_subtitle": (
+            "Recibe novedades y mejores prácticas para equipos de alto rendimiento."
+        ),
+        "newsletter_placeholder": "tu@email.com",
+        "newsletter_cta": "Suscribirme",
         "newsletter_success": "¡Gracias! Te avisamos cuando salga algo bueno.",
+        "social_links": [
+            {"label": "LinkedIn", "icon": "linkedin", "url": "https://linkedin.com/company/acten"},
+            {"label": "X", "icon": "x", "url": "https://x.com/acten_app"},
+            {"label": "YouTube", "icon": "youtube", "url": "https://youtube.com/@acten"},
+            {"label": "GitHub", "icon": "github", "url": "https://github.com/acten"},
+        ],
         "columns": [
             {
                 "title": "Producto",
                 "links": [
-                    {"label": "Capacidades", "url": "#features"},
-                    {"label": "Cómo funciona", "url": "#flow"},
-                    {"label": "Integraciones", "url": "#integrations"},
+                    {"label": "Funciones", "url": "#features"},
+                    {"label": "Seguridad", "url": "#features"},
+                    {"label": "Roadmap", "url": "#flow"},
                     {"label": "Precios", "url": "#pricing"},
+                ],
+            },
+            {
+                "title": "Soluciones",
+                "links": [
+                    {"label": "Equipos", "url": "#features"},
+                    {"label": "Empresas", "url": "#company"},
+                    {"label": "Instituciones", "url": "#contact"},
+                    {"label": "Casos de uso", "url": "#resources"},
                 ],
             },
             {
                 "title": "Recursos",
                 "links": [
                     {"label": "Blog", "url": "#resources"},
-                    {"label": "Casos de uso", "url": "#resources"},
-                    {"label": "Guías", "url": "#resources"},
-                    {"label": "Documentación API", "url": "#"},
+                    {"label": "Documentación", "url": "#"},
+                    {"label": "Webinars", "url": "#resources"},
+                    {"label": "Plantillas", "url": "#resources"},
                 ],
             },
             {
                 "title": "Empresa",
                 "links": [
-                    {"label": "Quiénes somos", "url": "#company"},
-                    {"label": "Misión", "url": "#company"},
+                    {"label": "Nosotros", "url": "#company"},
                     {"label": "Carreras", "url": "#"},
+                    {"label": "Prensa", "url": "#"},
                     {"label": "Contacto", "url": "#contact"},
                 ],
             },
-            {
-                "title": "Legal",
-                "links": [
-                    {"label": "Términos", "url": "/terms"},
-                    {"label": "Privacidad", "url": "/privacy"},
-                    {"label": "Cookies", "url": "/privacy"},
-                ],
-            },
         ],
-        "copyright": "© Acten. Todos los derechos reservados.",
+        "legal_links": [
+            {"label": "Privacidad", "url": "/privacy"},
+            {"label": "Términos", "url": "/terms"},
+            {"label": "Seguridad", "url": "/privacy"},
+            {"label": "Cookies", "url": "/privacy"},
+        ],
+        "language_label": "Español (ES)",
+        "copyright": "© 2024 Acten.ai. Todos los derechos reservados.",
     },
 }
 

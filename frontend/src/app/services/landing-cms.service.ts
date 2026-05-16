@@ -13,7 +13,18 @@ import { environment } from '../../environments/environment';
 export interface NavItem { label: string; anchor: string; }
 export interface FeatureItem { title: string; description: string; icon: string; }
 export interface StepItem    { title: string; description: string; icon: string; }
-export interface Testimonial { quote: string; name: string; role: string; company: string; initials: string; }
+export interface Testimonial {
+  quote: string;
+  name: string;
+  role: string;
+  company: string;
+  brand_wordmark?: string;
+  initials: string;
+}
+export interface HeroAttribute { label: string; icon: string; }
+export interface StatusItem  { label: string; tone: string; }
+export interface SocialLink  { label: string; icon: string; url: string; }
+export interface LegalLink   { label: string; url: string; }
 export interface PricingPlan {
   name: string;
   price: string;
@@ -39,11 +50,15 @@ export interface LandingContent {
   hero: {
     badge: string;
     title: string;
+    title_lead?: string;
+    title_highlight_prefix?: string;
+    title_highlight_word?: string;
     subtitle: string;
     cta_primary_label: string;
     cta_primary_anchor: string;
     cta_secondary_label: string;
     cta_secondary_anchor: string;
+    attributes?: HeroAttribute[];
     mockup_eyebrow: string;
     mockup_title: string;
     mockup_meta: string;
@@ -55,19 +70,29 @@ export interface LandingContent {
   features: {
     eyebrow: string;
     title: string;
+    title_lead?: string;
+    title_highlight?: string;
     subtitle: string;
+    link_label?: string;
+    link_anchor?: string;
     items: FeatureItem[];
   };
   flow: {
     eyebrow: string;
     title: string;
+    title_lead?: string;
+    title_highlight?: string;
     subtitle: string;
+    link_label?: string;
+    link_anchor?: string;
     steps: StepItem[];
   };
   integrations: {
     eyebrow: string;
     title: string;
     subtitle: string;
+    see_all_label?: string;
+    see_all_anchor?: string;
     items: string[];
   };
   testimonials: {
@@ -116,19 +141,26 @@ export interface LandingContent {
   final_cta: {
     eyebrow: string;
     title: string;
+    title_lead?: string;
+    title_highlight?: string;
     subtitle: string;
     cta_label: string;
     cta_anchor: string;
     secondary_label: string;
     secondary_anchor: string;
+    status_items?: StatusItem[];
   };
   footer: {
     tagline: string;
     newsletter_title: string;
     newsletter_subtitle: string;
+    newsletter_placeholder?: string;
     newsletter_cta: string;
     newsletter_success: string;
+    social_links?: SocialLink[];
     columns: FooterColumn[];
+    legal_links?: LegalLink[];
+    language_label?: string;
     copyright: string;
   };
 }
