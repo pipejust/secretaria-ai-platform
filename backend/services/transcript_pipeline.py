@@ -98,6 +98,156 @@ def _match_project_by_text(projects: list[Project], *texts: str) -> Optional[int
     return None
 
 
+def _canonical_speaker_name(name: str) -> str:
+    """Normaliza un nombre para deduplicación.
+
+    - Strip whitespace
+    - Lowercase para comparar
+    - Remueve sufijos numéricos que Fireflies a veces añade cuando el
+      mismo speaker aparece en múltiples canales/sesiones ('Felipe1',
+      'Tatiana Arango 2').
+    """
+    import re
+    n = (name or "").strip()
+    # Quitar sufijos como "1", "2", "  2" al final
+    n = re.sub(r"\s*\d+\s*$", "", n)
+    return n.strip().lower()
+
+
+def _prettify_name(name: str) -> str:
+    """Normaliza presentación: quita sufijos numéricos y convierte
+    UPPERCASE → Title Case sin romper acentos."""
+    import re
+    n = re.sub(r"\s*\d+\s*$", "", (name or "").strip()).strip()
+    if not n:
+        return ""
+    # Si está TODO en mayúsculas (más de 3 chars letras), Title Case.
+    letters = [c for c in n if c.isalpha()]
+    if letters and all(c.isupper() for c in letters):
+        # Title Case respetando partículas comunes en español
+        parts = n.split()
+        small_words = {"de", "del", "la", "las", "los", "y", "e", "o", "u", "a", "el"}
+        titled = []
+        for i, part in enumerate(parts):
+            if i > 0 and part.lower() in small_words:
+                titled.append(part.lower())
+            else:
+                titled.append(part.capitalize())
+        n = " ".join(titled)
+    return n
+
+
+def _extract_speakers_from_transcript(transcript: str) -> list[str]:
+    """Saca la lista única de nombres de speaker que aparecen al inicio de
+    cada línea con formato `[Nombre]` — formato que pone Fireflies cuando
+    arma el transcript de las sentences.
+
+    Devuelve nombres ya prettyficados (sin sufijos numéricos, sin
+    UPPERCASE estridente), deduplicados case-insensitive.
+
+    Filtra placeholders genéricos como 'Speaker', 'Speaker 1', etc.
+
+    Esto es la FUENTE DE VERDAD para asistentes — solo quienes hablaron
+    son asistentes, no los mencionados.
+    """
+    import re
+
+    raw_counts: dict[str, dict] = {}  # canonical → {best_name, count}
+    for line in (transcript or "").split("\n"):
+        m = re.match(r"^\[([^\]]+)\]\s*", line)
+        if not m:
+            continue
+        spk = m.group(1).strip()
+        if not spk:
+            continue
+        low = spk.lower()
+        # Filtrar placeholders genéricos de Fireflies
+        if low == "speaker" or re.match(r"^speaker\s*\d*$", low):
+            continue
+        canon = _canonical_speaker_name(spk)
+        if not canon:
+            continue
+        if canon not in raw_counts:
+            raw_counts[canon] = {"best_name": spk, "count": 1}
+        else:
+            entry = raw_counts[canon]
+            entry["count"] += 1
+            current = entry["best_name"]
+            if _name_quality_score(spk) > _name_quality_score(current):
+                entry["best_name"] = spk
+    # Prettyficar y ordenar
+    pretty = sorted({_prettify_name(e["best_name"]) for e in raw_counts.values()}, key=str.lower)
+    return [p for p in pretty if p]
+
+
+def _name_quality_score(name: str) -> int:
+    """Score subjetivo para elegir la 'mejor' representación de un nombre.
+    Title Case > UPPERCASE > lowercase. Más palabras > menos."""
+    if not name:
+        return 0
+    score = 0
+    # Penalizar all-caps
+    if name == name.upper() and any(c.isalpha() for c in name):
+        score -= 5
+    # Premiar palabras múltiples (nombre+apellido)
+    score += len(name.split()) * 3
+    # Premiar Title Case
+    if name == name.title():
+        score += 2
+    # Premiar longitud (preferir nombres completos sobre cortos)
+    score += min(len(name), 30) // 5
+    return score
+
+
+def _merge_speakers_with_groq_attendees(
+    real_speakers: list[str],
+    groq_attendees: list[dict],
+    project_contacts: list[dict],
+) -> list[dict]:
+    """Combina los speakers REALES (del transcript) con la metadata que Groq
+    o los contacts del proyecto puedan aportar sobre role/entity.
+
+    Regla: solo aparecen en la lista final los nombres que efectivamente
+    hablaron (los que están en `real_speakers`). Para cada uno, intentamos
+    enriquecer con:
+        1. project_contacts (match por nombre canonical)
+        2. groq_attendees (match por nombre canonical)
+    Si no hay match en ninguno, se usa role="—" y entity="—".
+    """
+    # Index para enriquecimiento por nombre canonical
+    contacts_idx = {
+        _canonical_speaker_name(c.get("name", "")): c
+        for c in (project_contacts or []) if c.get("name")
+    }
+    groq_idx = {
+        _canonical_speaker_name(a.get("name", "")): a
+        for a in (groq_attendees or []) if isinstance(a, dict) and a.get("name")
+    }
+
+    out: list[dict] = []
+    for spk in real_speakers:
+        canon = _canonical_speaker_name(spk)
+        role = ""
+        entity = ""
+        email = ""
+        if canon in contacts_idx:
+            c = contacts_idx[canon]
+            role = c.get("role") or ""
+            entity = c.get("entity") or c.get("organization") or ""
+            email = c.get("email") or ""
+        elif canon in groq_idx:
+            g = groq_idx[canon]
+            role = g.get("role") or ""
+            entity = g.get("entity") or ""
+        out.append({
+            "name": spk,
+            "role": role or "—",
+            "entity": entity or "—",
+            "email": email,
+        })
+    return out
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -222,12 +372,54 @@ async def process_session_with_ai(
         session_obj.processed_decisions = insights.get("decisions", "") or ""
         session_obj.processed_risks = insights.get("risks", "") or ""
         session_obj.processed_agreements = insights.get("agreements", "") or ""
-        session_obj.processed_attendees = json.dumps(
-            insights.get("attendees", []) or [], ensure_ascii=False
-        )
         session_obj.processed_themes = json.dumps(
             insights.get("themes", []) or [], ensure_ascii=False
         )
+
+    # ASISTENTES: fuente de verdad = speakers que efectivamente hablaron
+    # en el transcript (marcadores `[Nombre]` que pone Fireflies). Antes
+    # confiábamos en lo que Groq inferíera del texto, pero terminaba
+    # incluyendo a gente que solo era MENCIONADA en la conversación
+    # (invitados que no entraron, personas referidas, etc.).
+    # Fallback: si el transcript NO tiene marcadores `[Name]` (caso de
+    # uploads manuales o pegados como texto plano), caemos a la lista
+    # que produjo Groq — es lo mejor que tenemos.
+    real_speakers = _extract_speakers_from_transcript(transcript)
+    groq_atts = insights.get("attendees", []) if insights else []
+    if real_speakers:
+        final_attendees = _merge_speakers_with_groq_attendees(
+            real_speakers, groq_atts, project_contacts,
+        )
+    else:
+        logger.info(
+            "Sesión %s: transcript sin marcadores [Nombre], usando attendees de Groq como fallback.",
+            session_id,
+        )
+        # Limpieza: prettificar nombres, deduplicar, filtrar placeholders.
+        import re as _re
+        seen_canon = set()
+        final_attendees = []
+        for g in groq_atts:
+            if not isinstance(g, dict):
+                continue
+            raw_name = (g.get("name") or "").strip()
+            if not raw_name:
+                continue
+            low = raw_name.lower()
+            # Filtrar placeholders genéricos como 'Speaker', 'Speaker 1', etc.
+            if low == "speaker" or _re.match(r"^speaker\s*\d*$", low):
+                continue
+            canon = _canonical_speaker_name(raw_name)
+            if canon in seen_canon:
+                continue
+            seen_canon.add(canon)
+            final_attendees.append({
+                "name": _prettify_name(raw_name),
+                "role": g.get("role") or "—",
+                "entity": g.get("entity") or "—",
+                "email": g.get("email") or "",
+            })
+    session_obj.processed_attendees = json.dumps(final_attendees, ensure_ascii=False)
     db.add(session_obj)
     db.commit()
 
