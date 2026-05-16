@@ -47,17 +47,33 @@ except ImportError:
 # Origins:
 #   - Desarrollo local (Angular dev server)
 #   - FRONTEND_URL inyectada por env (prod: https://acten.app)
-#   - Variantes www y apex de FRONTEND_URL (sin tener que duplicar config)
+#   - Variantes www, apex y admin de FRONTEND_URL (sin duplicar config)
 #   - Legacy de Vercel/Render (compat hasta retirar dominios viejos)
+#
+# Reglas de derivación:
+#   acten.app           → +www.acten.app +admin.acten.app
+#   www.acten.app       → +acten.app     +admin.acten.app
+#   admin.acten.app     → +acten.app     +www.acten.app
 _frontend_url = os.environ.get("FRONTEND_URL", "").rstrip("/")
 _dynamic_origins: list[str] = []
 if _frontend_url:
     _dynamic_origins.append(_frontend_url)
-    # Añade contraparte www/apex (acten.app ↔ www.acten.app)
+    # Calculamos el apex (sin www. ni admin. al frente) para derivar todas
+    # las variantes. Esto evita que cualquier subdominio nuevo tenga que
+    # agregarse a mano otra vez.
     if "://www." in _frontend_url:
-        _dynamic_origins.append(_frontend_url.replace("://www.", "://"))
+        _apex = _frontend_url.replace("://www.", "://")
+    elif "://admin." in _frontend_url:
+        _apex = _frontend_url.replace("://admin.", "://")
     else:
-        _dynamic_origins.append(_frontend_url.replace("://", "://www."))
+        _apex = _frontend_url
+    # Sumamos las tres variantes canónicas. El set de duplicados se quita
+    # más abajo al concatenar con dev/legacy.
+    _dynamic_origins.append(_apex)
+    _dynamic_origins.append(_apex.replace("://", "://www."))
+    _dynamic_origins.append(_apex.replace("://", "://admin."))
+    # Deduplica preservando orden
+    _dynamic_origins = list(dict.fromkeys(_dynamic_origins))
 
 app.add_middleware(
     CORSMiddleware,
