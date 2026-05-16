@@ -867,55 +867,54 @@
   gap: 64px;
   align-items: center;
 }
+/* Grid de 7 columnas: circle | arrow | circle | arrow | circle | arrow | circle.
+   Las flechas son elementos separados, NO pseudo-elementos: garantiza alineación
+   pixel-perfect con el centro vertical de los círculos. */
 .al-flow__steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto 1fr auto;
+  align-items: start;
+  gap: 0;
 }
 .al-flow__step {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
 }
 .al-flow__circle {
-  width: 92px; height: 92px;
+  width: 96px; height: 96px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  background: #F8FAFC;
-  border: 1px solid var(--ac-border);
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
   color: #155EEF;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  margin-bottom: 8px;
 }
-.al-flow__num {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ac-fg);
-  letter-spacing: -0.005em;
+.al-flow__label {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 .al-flow__desc {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
-  color: var(--ac-fg-muted);
-  max-width: 20ch;
+  color: #475569;
+  max-width: 180px;
 }
+/* Flecha horizontal — sentada en la línea media de los círculos (48px = mitad
+   de 96px). Color azul de marca, sin padding-top hack. */
 .al-flow__arrow {
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Empuja la flecha hacia el centro vertical del círculo (~46px del top). */
-  padding-top: 38px;
+  height: 96px;
   color: #145DFF;
+  min-width: 32px;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -997,84 +996,66 @@
   margin-bottom: 50px;
   max-width: 720px;
 }
-.al-testimonials__grid {
+/* People grid — personas reales del sistema. Layout simple: avatar + nombre + rol.
+   Sin quote, sin wordmark, sin carousel dots. */
+.al-people__grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
 }
-.al-testimonial {
-  background: #fff;
-  border: 1px solid var(--ac-border);
-  border-radius: 18px;
-  padding: 28px 28px 24px;
+.al-people__card {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 280px;
-  box-shadow: var(--ac-shadow-card);
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 24px 16px;
+  background: #fff;
+  border: 1px solid var(--ac-border-soft);
+  border-radius: 16px;
+  transition: border-color var(--ac-ease) 180ms,
+              transform var(--ac-ease) 180ms,
+              box-shadow var(--ac-ease) 180ms;
 }
-.al-testimonial__quote {
-  margin: 0 0 28px 0;
-  font-size: 16px;
-  line-height: 1.55;
+.al-people__card:hover {
+  border-color: var(--ac-border);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px -14px rgba(15, 23, 42, 0.18);
+}
+.al-people__avatar,
+.al-people__avatar-img {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.al-people__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(140deg, var(--ac-blue) 0%, #4F8CFF 100%);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.al-people__avatar-img {
+  object-fit: cover;
+  background: var(--ac-border-soft);
+}
+.al-people__name {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--ac-fg);
   letter-spacing: -0.005em;
 }
-.al-testimonial__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-top: 1px solid var(--ac-border-soft);
-  padding-top: 18px;
-}
-.al-testimonial__author {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.al-testimonial__avatar {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: linear-gradient(140deg, var(--ac-blue) 0%, #4F8CFF 100%);
-  color: #fff;
-  font-size: 12.5px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-/* Avatar real (URL del CMS). Mismo footprint que las iniciales. */
-.al-testimonial__avatar-img {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  background: var(--ac-border-soft);
-}
-/* Logo de empresa real (URL del CMS) — reemplaza el wordmark. */
-.al-testimonial__company-logo {
-  max-height: 28px;
-  width: auto;
-  opacity: 0.85;
-  flex-shrink: 0;
-}
-.al-testimonial__name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ac-fg);
-}
-.al-testimonial__role {
-  font-size: 12px;
+.al-people__role {
+  font-size: 13px;
   color: var(--ac-fg-muted);
-  margin-top: 1px;
-}
-.al-testimonial__brand {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.10em;
-  color: var(--ac-fg-faint);
-  text-transform: uppercase;
+  line-height: 1.35;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1160,14 +1141,72 @@
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
   flex-wrap: wrap;
 }
-.al-contact__error {
-  margin: 0;
-  font-size: 13px;
+/* Banner de error — rojo, full-width, visible. Reemplaza el <p> inline. */
+.al-contact__error-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
   color: #B91C1C;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.al-contact__error-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+/* Spinner del botón submit — heredamos el currentColor del botón. */
+.al-contact__spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: al-spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* Bloque de éxito — reemplaza el form completo cuando contactSent === true.
+   Anima con fade-in para feedback visual claro. */
+.al-contact__success {
+  background: linear-gradient(140deg, #ECFDF5 0%, #F0FDF4 100%);
+  border: 1px solid #A7F3D0;
+  border-radius: 20px;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  animation: al-fade-in 280ms var(--ac-ease);
+}
+.al-contact__success-check {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ac-emerald);
+  color: #fff;
+  box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.14);
+}
+.al-contact__success-msg {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #065F46;
+  letter-spacing: -0.005em;
+  max-width: 36ch;
+  line-height: 1.5;
+}
+@keyframes al-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1184,13 +1223,16 @@
     radial-gradient(circle at 0% 100%, rgba(16, 185, 129, 0.10), transparent 55%),
     linear-gradient(180deg, var(--ac-hero-bg-from) 0%, var(--ac-hero-bg-mid) 100%);
   border-radius: 28px;
-  padding: 60px 60px;
+  padding: 64px 64px;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 56px;
   color: var(--ac-on-dark);
   overflow: hidden;
 }
+/* IMPORTANTE: el styles.css global tiene `h2 { color: var(--color-fg-default); }`
+   con specificity (1,0,1) que gana al heredar `color: var(--ac-on-dark)` del card.
+   Forzamos blanco aquí — es contraste crítico (texto sobre navy oscuro). */
 .al-finalcta__title {
   margin: 0;
   font-family: var(--font-display);
@@ -1198,7 +1240,10 @@
   font-size: clamp(1.8rem, 1.3rem + 1.8vw, 2.75rem);
   line-height: 1.1;
   letter-spacing: -0.022em;
+  color: #FFFFFF !important;
 }
+/* El span .al-accent dentro del h2 mantiene su color emerald (definido en
+   .al-accent global) — el highlight debe seguir destacando. */
 .al-finalcta__subtitle {
   margin: 18px 0 0 0;
   font-size: 16px;
@@ -1223,44 +1268,46 @@
   align-items: stretch;
   gap: 20px;
 }
-/* Check grande centrado ARRIBA del listado de statuses. */
+/* Check grande centrado ARRIBA del listado — 56px, glow emerald más fuerte. */
 .al-finalcta__check {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px; height: 48px;
+  width: 56px; height: 56px;
   border-radius: 50%;
-  background: var(--ac-emerald-soft);
-  color: var(--ac-emerald);
-  margin: 0 auto 6px;
-  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.08);
+  background: var(--ac-emerald);
+  color: #FFFFFF;
+  margin: 4px auto 12px;
+  box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.10),
+              0 0 30px rgba(16, 185, 129, 0.18);
 }
 .al-finalcta__statuses {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 4px 4px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
+/* Cada fila: label flex / sparkline 80px / check 12px. Look "data-row". */
 .al-finalcta__statuses li {
   display: grid;
-  /* label flex / line ~70px / check */
-  grid-template-columns: 1fr 70px auto;
+  grid-template-columns: 1fr 80px 12px;
   align-items: center;
   gap: 14px;
 }
 .al-finalcta__status-lbl {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ac-on-dark);
   font-weight: 500;
+  letter-spacing: -0.005em;
 }
-/* Línea/sparkline — angosta, no full-bar. */
+/* Sparkline — línea fina con gradient. Emerald (ok) o amber (warning). */
 .al-finalcta__status-bar {
   position: relative;
-  height: 3px;
-  width: 70px;
-  background: rgba(255,255,255,0.10);
+  height: 2px;
+  width: 80px;
+  background: rgba(255,255,255,0.08);
   border-radius: 2px;
   overflow: hidden;
   justify-self: end;
@@ -1269,24 +1316,26 @@
   display: block;
   height: 100%;
   width: 100%;
-  background: linear-gradient(90deg, var(--ac-emerald) 0%, #34D399 100%);
+  background: linear-gradient(90deg, var(--ac-emerald) 0%, rgba(52, 211, 153, 0) 100%);
   border-radius: 2px;
 }
 .al-finalcta__status-fill--warning {
   width: 60%;
-  background: linear-gradient(90deg, var(--ac-amber) 0%, #FCD34D 100%);
+  background: linear-gradient(90deg, var(--ac-amber) 0%, rgba(252, 211, 77, 0) 100%);
 }
+/* Check pequeño relleno a la derecha — emerald solid + check blanco dentro. */
 .al-finalcta__status-check {
-  width: 22px; height: 22px;
+  width: 12px; height: 12px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  background: var(--ac-emerald-soft);
-  color: var(--ac-emerald);
+  background: var(--ac-emerald);
+  color: #FFFFFF;
 }
 .al-finalcta__status-check--warning {
-  background: var(--ac-amber-soft);
-  color: var(--ac-amber);
+  background: var(--ac-amber);
+  color: #FFFFFF;
 }
+.al-finalcta__status-check svg { width: 8px; height: 8px; }
 
 /* ──────────────────────────────────────────────────────────────────────────
  * 13. Footer
@@ -1440,8 +1489,12 @@
   .al-feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .al-flow__steps { gap: 4px; }
-  .al-flow__circle { width: 72px; height: 72px; }
+  .al-flow__circle { width: 84px; height: 84px; }
+  .al-flow__arrow { height: 84px; }
+  .al-flow__arrow svg { width: 40px; }
+
+  /* People — 3 cols en tablet (1024) */
+  .al-people__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
   .al-contact__inner {
     grid-template-columns: minmax(0, 1fr);
@@ -1512,20 +1565,30 @@
 
   .al-feature-grid { grid-template-columns: minmax(0, 1fr); }
 
+  /* Flow — stack vertical en mobile. Cada step en su propia fila, la flecha
+     rota 90deg apuntando hacia abajo, sentada entre filas. */
   .al-flow__steps {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px 12px;
+    grid-template-columns: 1fr;
+    gap: 18px 0;
   }
-  .al-flow__arrow { display: none; }
-  .al-flow__circle { width: 76px; height: 76px; }
+  .al-flow__arrow {
+    height: auto;
+    padding: 4px 0;
+    transform: rotate(90deg);
+    transform-origin: center;
+  }
+  .al-flow__circle { width: 88px; height: 88px; }
+  .al-flow__desc { max-width: 240px; }
 
   .al-integrations__head { flex-direction: column; align-items: flex-start; }
   .al-integrations__list { gap: 10px; justify-content: flex-start; }
 
-  .al-testimonials__grid { grid-template-columns: minmax(0, 1fr); }
+  /* People — 2 cols en mobile */
+  .al-people__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .al-people__card { padding: 20px 12px; }
 
   .al-contact__form { grid-template-columns: 1fr; padding: 24px; }
+  .al-contact__success { padding: 40px 24px; }
 
   .al-finalcta__card { padding: 36px 24px; }
   .al-finalcta__statuses li {

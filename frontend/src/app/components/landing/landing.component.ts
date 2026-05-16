@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem } from '../../services/landing-cms.service';
+import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem, LandingPerson } from '../../services/landing-cms.service';
 
 /**
  * Landing pública de Acten — rediseño "Acten Premium" 2026-Q2.
@@ -51,6 +51,10 @@ export class LandingComponent implements OnInit {
     /** Logos reales de tenants en la trust band. Vacío => sección oculta. */
     trustLogos: TrustLogoItem[] = [];
 
+    /** Personas reales del sistema (owners de tareas + project_contacts).
+     *  Reemplaza a los testimonios estáticos del CMS. Vacío => sección oculta. */
+    people: LandingPerson[] = [];
+
     /** Estado newsletter (UI-only por ahora). */
     newsletterEmail = '';
     newsletterSent = false;
@@ -67,9 +71,6 @@ export class LandingComponent implements OnInit {
     contactSent = false;
     contactError = '';
     contactLoading = false;
-
-    /** Carrusel de testimonios — índice activo. Solo afecta a los dots. */
-    activeTestimonialDot = 0;
 
     async ngOnInit(): Promise<void> {
         // Si el hostname es admin.* (admin.acten.app), esta landing NO debe
@@ -92,13 +93,23 @@ export class LandingComponent implements OnInit {
             this.contentLoading = false;
         }
 
-        // Trust logos en paralelo al render — si falla, simplemente queda vacío
-        // y la sección no se muestra (gracias a *ngIf en el template).
-        try {
-            this.trustLogos = await this.cms.loadTrustLogos();
-        } catch (err) {
-            console.warn('[Landing] No se pudieron cargar trust logos', err);
+        // Trust logos + personas en paralelo — si alguno falla queda vacío
+        // y la sección correspondiente no se muestra (gracias a *ngIf).
+        const [logosResult, peopleResult] = await Promise.allSettled([
+            this.cms.loadTrustLogos(),
+            this.cms.loadPeople(),
+        ]);
+        if (logosResult.status === 'fulfilled') {
+            this.trustLogos = logosResult.value;
+        } else {
+            console.warn('[Landing] No se pudieron cargar trust logos', logosResult.reason);
             this.trustLogos = [];
+        }
+        if (peopleResult.status === 'fulfilled') {
+            this.people = peopleResult.value;
+        } else {
+            console.warn('[Landing] No se pudieron cargar personas', peopleResult.reason);
+            this.people = [];
         }
     }
 
@@ -157,11 +168,6 @@ export class LandingComponent implements OnInit {
         return parts.length === 1
             ? parts[0].slice(0, 2).toUpperCase()
             : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-
-    /** Click en los dots del carrusel de testimonios — UI-only por ahora. */
-    setActiveDot(i: number): void {
-        this.activeTestimonialDot = i;
     }
 
     /**
@@ -228,6 +234,14 @@ export class LandingComponent implements OnInit {
                 website: this.contactForm.website || '',
             });
             this.contactSent = true;
+            // Reset suave: tras 6s vuelve al formulario vacío por si el usuario
+            // quiere enviar otra solicitud (p. ej. para un colega).
+            setTimeout(() => {
+                this.contactSent = false;
+                this.contactForm = {
+                    name: '', email: '', company: '', role: '', message: '', website: '',
+                };
+            }, 6000);
         } catch (err) {
             console.error('[Landing] Error enviando contacto', err);
             this.contactError = this.content?.contact.form_error

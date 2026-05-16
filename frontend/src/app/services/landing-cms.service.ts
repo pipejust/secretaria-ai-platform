@@ -33,6 +33,15 @@ export interface TrustLogoItem {
   /** Vacío si el tenant no subió logo; el frontend cae a wordmark. */
   logo_url: string;
 }
+
+/** Persona real del sistema — endpoint /api/public/landing/people */
+export interface LandingPerson {
+  name: string;
+  role: string;
+  /** URL del avatar (https/data) o vacío. */
+  avatar_url: string;
+  initials: string;
+}
 export interface HeroAttribute { label: string; icon: string; }
 export interface StatusItem  { label: string; tone: string; }
 export interface SocialLink  { label: string; icon: string; url: string; }
@@ -203,6 +212,14 @@ export class LandingCmsService {
   async loadTrustLogos(): Promise<TrustLogoItem[]> {
     const resp = await firstValueFrom(
       this.http.get<{ items: TrustLogoItem[] }>(`${this.publicUrl}/trust-logos`),
+    );
+    return resp?.items ?? [];
+  }
+
+  /** GET público — personas reales (owners de tareas + project_contacts). */
+  async loadPeople(): Promise<LandingPerson[]> {
+    const resp = await firstValueFrom(
+      this.http.get<{ items: LandingPerson[] }>(`${this.publicUrl}/people`),
     );
     return resp?.items ?? [];
   }

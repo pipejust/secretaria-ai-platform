@@ -68,6 +68,93 @@ def get_public_landing_content(db: Session = Depends(get_session)) -> Dict[str, 
     return landing_content_service.get_landing_content(db, tenant.id)
 
 
+@public_router.get("/landing/people")
+def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, Any]:
+    """Personas reales del sistema para la sección 'testimonios'.
+
+    Agrega owners de action_items (gente que recibió tareas) + ProjectContacts
+    (participantes registrados por el admin) del tenant 'acten'. Dedup por
+    email. Si hay un User con ese email, usamos su avatar_url y full_name.
+
+    No expone emails para evitar harvesting — solo nombre + rol + avatar.
+    Limita a 8 personas para que el grid del landing quepa.
+    """
+    from models import ActionItem, ProjectContact, Project, User
+
+    tenant = _resolve_acten_tenant(db)
+
+    # 1) owners de action_items (gente que recibió tareas en sesiones reales)
+    items = db.exec(
+        select(ActionItem.owner_name, ActionItem.owner_email)
+        .where(ActionItem.tenant_id == tenant.id)
+        .where(ActionItem.owner_email != "")
+    ).all()
+
+    # 2) ProjectContacts (participantes registrados de proyectos del tenant)
+    contacts = db.exec(
+        select(ProjectContact.name, ProjectContact.email, ProjectContact.role)
+        .join(Project, Project.id == ProjectContact.project_id)
+        .where(Project.tenant_id == tenant.id)
+        .where(ProjectContact.email != "")
+    ).all()
+
+    by_email: dict[str, dict[str, Any]] = {}
+    for name, email in items:
+        key = (email or "").lower().strip()
+        if not key or key in by_email:
+            continue
+        by_email[key] = {"name": (name or "").strip(), "role": ""}
+    for name, email, role in contacts:
+        key = (email or "").lower().strip()
+        if not key:
+            continue
+        if key in by_email:
+            if not by_email[key]["role"] and role:
+                by_email[key]["role"] = role
+            if not by_email[key]["name"] and name:
+                by_email[key]["name"] = name
+        else:
+            by_email[key] = {"name": (name or "").strip(), "role": (role or "").strip()}
+
+    # 3) Avatares: si el email matchea un User, traemos su avatar_url + position.
+    if by_email:
+        users = db.exec(
+            select(User.email, User.avatar_url, User.full_name, User.position)
+            .where(User.tenant_id == tenant.id)
+        ).all()
+        for email, avatar_url, full_name, position in users:
+            key = (email or "").lower().strip()
+            if key in by_email:
+                if avatar_url:
+                    by_email[key]["avatar_url"] = avatar_url
+                if full_name and (not by_email[key]["name"] or len(full_name) > len(by_email[key]["name"])):
+                    by_email[key]["name"] = full_name
+                if position and not by_email[key]["role"]:
+                    by_email[key]["role"] = position
+
+    def _initials(n: str) -> str:
+        parts = [p for p in n.strip().split() if p]
+        if not parts:
+            return "?"
+        if len(parts) == 1:
+            return parts[0][:2].upper()
+        return (parts[0][0] + parts[-1][0]).upper()
+
+    out: list[dict[str, Any]] = []
+    for person in by_email.values():
+        name = person.get("name") or "Persona"
+        out.append({
+            "name": name,
+            "role": person.get("role") or "Equipo Acten",
+            "avatar_url": person.get("avatar_url") or "",
+            "initials": _initials(name),
+        })
+
+    # Prioriza los que tienen avatar (visual más rico) y limita a 8.
+    out.sort(key=lambda p: (0 if p["avatar_url"] else 1, p["name"].lower()))
+    return {"items": out[:8]}
+
+
 @public_router.get("/landing/trust-logos")
 def get_public_trust_logos(db: Session = Depends(get_session)) -> Dict[str, Any]:
     """Lista de empresas reales (tenants activos) que aparecen en la trust band.

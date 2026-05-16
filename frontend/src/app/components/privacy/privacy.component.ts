@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
 
 interface Section { id: string; title: string; }
 
@@ -12,8 +12,25 @@ interface Section { id: string; title: string; }
   styleUrls: ['./privacy.component.css'],
 })
 export class PrivacyComponent {
+  private readonly location = inject(Location);
+  private readonly router = inject(Router);
+
   readonly year = new Date().getFullYear();
   readonly lastUpdated = '15 de mayo de 2026';
+
+  /** Volver al lugar de origen. Si hay history previo, usamos back();
+   *  si no, vamos al landing (`/`). Evita "Volver al login" cuando el
+   *  visitante venía desde el footer de acten.app. */
+  goBack(event?: Event): void {
+    if (event) event.preventDefault();
+    // Si hay historia previa dentro de la app (más de la entrada actual),
+    // usamos back. En SSR / direct-link no hay historia → vamos al raíz.
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      this.location.back();
+    } else {
+      this.router.navigateByUrl('/');
+    }
+  }
 
   readonly sections: Section[] = [
     { id: 'intro',         title: '1. Introducción' },
