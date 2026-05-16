@@ -117,6 +117,21 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
             by_email[key] = {"name": (name or "").strip(), "role": (role or "").strip()}
 
     # 3) Avatares: si el email matchea un User, traemos su avatar_url + position.
+    # API_BASE_URL para absolutizar paths relativos (/static/avatars/...) — el
+    # SPA del landing corre en acten.app pero los avatares viven en api.acten.app,
+    # así que sin absolutización el browser pega 404 contra acten.app/static/...
+    import os
+    api_base = (os.environ.get("PUBLIC_BASE_URL") or "https://api.acten.app").rstrip("/")
+
+    def _absolutize(url: str) -> str:
+        if not url:
+            return ""
+        if url.startswith(("http://", "https://", "data:")):
+            return url
+        if url.startswith("/"):
+            return api_base + url
+        return api_base + "/" + url
+
     if by_email:
         users = db.exec(
             select(User.email, User.avatar_url, User.full_name, User.position)
@@ -126,7 +141,7 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
             key = (email or "").lower().strip()
             if key in by_email:
                 if avatar_url:
-                    by_email[key]["avatar_url"] = avatar_url
+                    by_email[key]["avatar_url"] = _absolutize(avatar_url)
                 if full_name and (not by_email[key]["name"] or len(full_name) > len(by_email[key]["name"])):
                     by_email[key]["name"] = full_name
                 if position and not by_email[key]["role"]:
