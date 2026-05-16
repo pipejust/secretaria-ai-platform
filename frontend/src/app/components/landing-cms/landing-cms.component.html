@@ -1,0 +1,922 @@
+<div class="lcms-page">
+
+    <!-- Header del CMS -->
+    <header class="lcms-header">
+        <div class="lcms-header-left">
+            <div class="lcms-title-wrap">
+                <span class="lcms-eyebrow">acten.app · contenido público</span>
+                <h1 class="lcms-title">Landing CMS</h1>
+                <p class="lcms-subtitle">
+                    Edita todos los textos, capacidades, testimonios, precios y enlaces
+                    del landing público de Acten. Cambios se publican al guardar.
+                </p>
+            </div>
+        </div>
+        <div class="lcms-header-actions">
+            <button type="button" class="lcms-btn lcms-btn-ghost" (click)="openLanding()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Ver landing
+            </button>
+            <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-danger"
+                    (click)="resetToDefaults()" [disabled]="isResetting || isLoading">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+                {{ isResetting ? 'Restableciendo…' : 'Restablecer defaults' }}
+            </button>
+        </div>
+    </header>
+
+    <!-- Loading state -->
+    <div class="lcms-loading" *ngIf="isLoading">
+        <div class="lcms-spinner"></div>
+        <p>Cargando el contenido del landing…</p>
+    </div>
+
+    <!-- Error state -->
+    <div class="lcms-error-banner" *ngIf="!isLoading && loadError">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ loadError }}</span>
+    </div>
+
+    <!-- Editor -->
+    <div class="lcms-shell" *ngIf="!isLoading && !loadError && content">
+
+        <!-- Navegador de secciones -->
+        <nav class="lcms-sidebar" aria-label="Secciones del landing">
+            <ul>
+                <li *ngFor="let s of sections">
+                    <button type="button"
+                            class="lcms-section-btn"
+                            [class.active]="activeSection === s.key"
+                            (click)="selectSection(s.key)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path *ngFor="let p of s.iconPaths" [attr.d]="p"></path>
+                        </svg>
+                        <span class="lcms-section-info">
+                            <span class="lcms-section-label">{{ s.label }}</span>
+                            <span class="lcms-section-hint">{{ s.hint }}</span>
+                        </span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Panel del formulario -->
+        <main class="lcms-panel">
+
+            <!-- ============================================================
+                 NAVEGACIÓN
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'nav'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Navegación del header</h2>
+                    <p>Los enlaces que aparecen en el menú superior del landing y los CTAs del header.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Texto del CTA principal</span>
+                        <input type="text" [(ngModel)]="content.nav.cta_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Texto del enlace "Iniciar sesión"</span>
+                        <input type="text" [(ngModel)]="content.nav.login_label" maxlength="40" />
+                    </label>
+                </div>
+
+                <h3 class="lcms-subheading">Enlaces del menú</h3>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let item of content.nav.items; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow">
+                            <span class="lcms-field-label">Etiqueta</span>
+                            <input type="text" [(ngModel)]="item.label" maxlength="40" />
+                        </label>
+                        <label class="lcms-field lcms-field-grow">
+                            <span class="lcms-field-label">Anchor o URL</span>
+                            <input type="text" [(ngModel)]="item.anchor" placeholder="#features" />
+                        </label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeNavItem(i)" title="Eliminar enlace">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addNavItem()">
+                    + Añadir enlace
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 HERO
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'hero'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Hero principal</h2>
+                    <p>La primera pantalla que ve el visitante. Determina el tono de toda la página.</p>
+                </header>
+
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Badge superior</span>
+                    <input type="text" [(ngModel)]="content.hero.badge" maxlength="120" />
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Título</span>
+                    <textarea [(ngModel)]="content.hero.title" rows="2" maxlength="240"></textarea>
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.hero.subtitle" rows="3" maxlength="600"></textarea>
+                </label>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA primario · texto</span>
+                        <input type="text" [(ngModel)]="content.hero.cta_primary_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA primario · anchor</span>
+                        <input type="text" [(ngModel)]="content.hero.cta_primary_anchor" placeholder="#contact" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA secundario · texto</span>
+                        <input type="text" [(ngModel)]="content.hero.cta_secondary_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA secundario · anchor</span>
+                        <input type="text" [(ngModel)]="content.hero.cta_secondary_anchor" placeholder="#flow" />
+                    </label>
+                </div>
+
+                <h3 class="lcms-subheading">Mockup de producto (panel derecho)</h3>
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow del mockup</span>
+                        <input type="text" [(ngModel)]="content.hero.mockup_eyebrow" maxlength="100" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título del mockup</span>
+                        <input type="text" [(ngModel)]="content.hero.mockup_title" maxlength="100" />
+                    </label>
+                    <label class="lcms-field lcms-field-full">
+                        <span class="lcms-field-label">Meta (ej. "5 decisiones · 8 tareas")</span>
+                        <input type="text" [(ngModel)]="content.hero.mockup_meta" maxlength="120" />
+                    </label>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 TRUST
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'trust'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Logos de confianza</h2>
+                    <p>Empresas que ya usan Acten. Se muestran como wordmarks (sin imágenes).</p>
+                </header>
+
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Texto introductorio (eyebrow)</span>
+                    <input type="text" [(ngModel)]="content.trust.eyebrow" maxlength="180" />
+                </label>
+
+                <h3 class="lcms-subheading">Empresas</h3>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let name of content.trust.logos; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow">
+                            <span class="lcms-field-label">Nombre de la empresa</span>
+                            <input type="text" [ngModel]="name" (ngModelChange)="content.trust.logos[i] = $event" maxlength="60" />
+                        </label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTrustLogo(i)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addTrustLogo()">
+                    + Añadir empresa
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 FEATURES
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'features'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Capacidades</h2>
+                    <p>Las 6 capacidades que diferencian a Acten. Cada una tiene un icono.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.features.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.features.title" maxlength="180" />
+                    </label>
+                </div>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.features.subtitle" rows="2" maxlength="400"></textarea>
+                </label>
+
+                <h3 class="lcms-subheading">Cards de capacidades</h3>
+                <div class="lcms-cards">
+                    <div class="lcms-card" *ngFor="let item of content.features.items; let i = index; trackBy: trackByIndex">
+                        <header class="lcms-card-header">
+                            <span class="lcms-card-index">Capacidad {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFeature(i)" title="Eliminar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                            </button>
+                        </header>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Título</span>
+                            <input type="text" [(ngModel)]="item.title" maxlength="80" />
+                        </label>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Descripción</span>
+                            <textarea [(ngModel)]="item.description" rows="3" maxlength="280"></textarea>
+                        </label>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Icono</span>
+                            <select [(ngModel)]="item.icon">
+                                <option *ngFor="let opt of featureIcons" [value]="opt.value">{{ opt.label }}</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addFeature()">
+                    + Añadir capacidad
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 FLOW
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'flow'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Flujo de 4 pasos</h2>
+                    <p>Captura → Inteligencia → Estructura → Acción.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.flow.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.flow.title" maxlength="180" />
+                    </label>
+                </div>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.flow.subtitle" rows="2" maxlength="400"></textarea>
+                </label>
+
+                <h3 class="lcms-subheading">Pasos</h3>
+                <div class="lcms-cards">
+                    <div class="lcms-card" *ngFor="let step of content.flow.steps; let i = index; trackBy: trackByIndex">
+                        <header class="lcms-card-header">
+                            <span class="lcms-card-index">Paso {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeStep(i)" title="Eliminar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                            </button>
+                        </header>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Título</span>
+                            <input type="text" [(ngModel)]="step.title" maxlength="60" />
+                        </label>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Descripción</span>
+                            <textarea [(ngModel)]="step.description" rows="3" maxlength="280"></textarea>
+                        </label>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Icono</span>
+                            <select [(ngModel)]="step.icon">
+                                <option *ngFor="let opt of stepIcons" [value]="opt.value">{{ opt.label }}</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addStep()">
+                    + Añadir paso
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 INTEGRATIONS
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'integrations'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Integraciones</h2>
+                    <p>Lista de plataformas con las que Acten se conecta.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.integrations.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.integrations.title" maxlength="180" />
+                    </label>
+                </div>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.integrations.subtitle" rows="2" maxlength="400"></textarea>
+                </label>
+
+                <h3 class="lcms-subheading">Plataformas</h3>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let name of content.integrations.items; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow">
+                            <span class="lcms-field-label">Nombre</span>
+                            <input type="text" [ngModel]="name" (ngModelChange)="content.integrations.items[i] = $event" maxlength="60" />
+                        </label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeIntegration(i)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addIntegration()">
+                    + Añadir integración
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 TESTIMONIALS
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'testimonials'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Testimonios</h2>
+                    <p>Citas de clientes reales. Más alto el impacto, mejor.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.testimonials.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título de la sección</span>
+                        <input type="text" [(ngModel)]="content.testimonials.title" maxlength="180" />
+                    </label>
+                </div>
+
+                <h3 class="lcms-subheading">Citas</h3>
+                <div class="lcms-cards">
+                    <div class="lcms-card" *ngFor="let t of content.testimonials.items; let i = index; trackBy: trackByIndex">
+                        <header class="lcms-card-header">
+                            <span class="lcms-card-index">Testimonio {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTestimonial(i)" title="Eliminar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                            </button>
+                        </header>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Cita</span>
+                            <textarea [(ngModel)]="t.quote" rows="4" maxlength="600"></textarea>
+                        </label>
+                        <div class="lcms-grid lcms-grid-2">
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Nombre completo</span>
+                                <input type="text" [(ngModel)]="t.name" maxlength="80" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Iniciales (avatar)</span>
+                                <input type="text" [(ngModel)]="t.initials" maxlength="4" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Cargo</span>
+                                <input type="text" [(ngModel)]="t.role" maxlength="80" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Empresa</span>
+                                <input type="text" [(ngModel)]="t.company" maxlength="80" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addTestimonial()">
+                    + Añadir testimonio
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 PRICING
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'pricing'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Precios</h2>
+                    <p>Planes Starter / Business / Enterprise. Marca uno como "destacado" (badge "Más popular").</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.pricing.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.pricing.title" maxlength="180" />
+                    </label>
+                </div>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.pricing.subtitle" rows="2" maxlength="400"></textarea>
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Nota al pie (footnote)</span>
+                    <input type="text" [(ngModel)]="content.pricing.footnote" maxlength="240" />
+                </label>
+
+                <h3 class="lcms-subheading">Planes</h3>
+                <div class="lcms-cards lcms-cards-pricing">
+                    <div class="lcms-card" *ngFor="let plan of content.pricing.plans; let i = index; trackBy: trackByIndex">
+                        <header class="lcms-card-header">
+                            <span class="lcms-card-index">Plan {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removePlan(i)" title="Eliminar plan">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                            </button>
+                        </header>
+                        <div class="lcms-grid lcms-grid-2">
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Nombre del plan</span>
+                                <input type="text" [(ngModel)]="plan.name" maxlength="40" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Precio</span>
+                                <input type="text" [(ngModel)]="plan.price" maxlength="20" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Facturación (ej. "USD / mes")</span>
+                                <input type="text" [(ngModel)]="plan.billing" maxlength="40" />
+                            </label>
+                            <label class="lcms-field lcms-field-checkbox">
+                                <input type="checkbox" [(ngModel)]="plan.featured" />
+                                <span>Marcar como "Más popular"</span>
+                            </label>
+                        </div>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Descripción corta</span>
+                            <textarea [(ngModel)]="plan.description" rows="2" maxlength="280"></textarea>
+                        </label>
+                        <div class="lcms-grid lcms-grid-2">
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">CTA · texto</span>
+                                <input type="text" [(ngModel)]="plan.cta_label" maxlength="40" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">CTA · anchor o URL</span>
+                                <input type="text" [(ngModel)]="plan.cta_anchor" placeholder="#contact" />
+                            </label>
+                        </div>
+
+                        <h4 class="lcms-subheading-sm">Beneficios incluidos</h4>
+                        <div class="lcms-list">
+                            <div class="lcms-list-row" *ngFor="let feat of plan.features; let j = index; trackBy: trackByIndex">
+                                <label class="lcms-field lcms-field-grow">
+                                    <input type="text" [ngModel]="feat" (ngModelChange)="plan.features[j] = $event" maxlength="160" />
+                                </label>
+                                <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removePlanFeature(i, j)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addPlanFeature(i)">
+                            + Añadir beneficio
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addPlan()">
+                    + Añadir plan
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 RESOURCES
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'resources'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Recursos</h2>
+                    <p>Blog, guías, videos, casos de uso. Cards con enlace externo.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.resources.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.resources.title" maxlength="180" />
+                    </label>
+                </div>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.resources.subtitle" rows="2" maxlength="400"></textarea>
+                </label>
+
+                <h3 class="lcms-subheading">Recursos</h3>
+                <div class="lcms-cards">
+                    <div class="lcms-card" *ngFor="let r of content.resources.items; let i = index; trackBy: trackByIndex">
+                        <header class="lcms-card-header">
+                            <span class="lcms-card-index">Recurso {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeResource(i)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                            </button>
+                        </header>
+                        <div class="lcms-grid lcms-grid-2">
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Categoría</span>
+                                <input type="text" [(ngModel)]="r.category" maxlength="40" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">Icono</span>
+                                <select [(ngModel)]="r.icon">
+                                    <option *ngFor="let opt of resourceIcons" [value]="opt.value">{{ opt.label }}</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Título</span>
+                            <input type="text" [(ngModel)]="r.title" maxlength="160" />
+                        </label>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Descripción</span>
+                            <textarea [(ngModel)]="r.description" rows="3" maxlength="320"></textarea>
+                        </label>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">URL</span>
+                            <input type="url" [(ngModel)]="r.url" placeholder="https://..." />
+                        </label>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addResource()">
+                    + Añadir recurso
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 COMPANY
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'company'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Empresa</h2>
+                    <p>Quiénes somos, misión, valores y métricas destacadas.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.company.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.company.title" maxlength="180" />
+                    </label>
+                </div>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo (opcional)</span>
+                    <input type="text" [(ngModel)]="content.company.subtitle" maxlength="240" />
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Story (párrafo largo de la empresa)</span>
+                    <textarea [(ngModel)]="content.company.story" rows="6" maxlength="1500"></textarea>
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Misión</span>
+                    <textarea [(ngModel)]="content.company.mission" rows="3" maxlength="600"></textarea>
+                </label>
+
+                <h3 class="lcms-subheading">Valores</h3>
+                <div class="lcms-cards">
+                    <div class="lcms-card" *ngFor="let v of content.company.values; let i = index; trackBy: trackByIndex">
+                        <header class="lcms-card-header">
+                            <span class="lcms-card-index">Valor {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeValue(i)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                            </button>
+                        </header>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Título</span>
+                            <input type="text" [(ngModel)]="v.title" maxlength="80" />
+                        </label>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Descripción</span>
+                            <textarea [(ngModel)]="v.description" rows="3" maxlength="320"></textarea>
+                        </label>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addValue()">
+                    + Añadir valor
+                </button>
+
+                <h3 class="lcms-subheading">Métricas destacadas</h3>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let s of content.company.stats; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow">
+                            <span class="lcms-field-label">Etiqueta</span>
+                            <input type="text" [(ngModel)]="s.label" maxlength="80" />
+                        </label>
+                        <label class="lcms-field lcms-field-grow">
+                            <span class="lcms-field-label">Valor</span>
+                            <input type="text" [(ngModel)]="s.value" maxlength="20" />
+                        </label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeStat(i)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addStat()">
+                    + Añadir métrica
+                </button>
+            </section>
+
+            <!-- ============================================================
+                 CONTACT
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'contact'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Contacto</h2>
+                    <p>Información de contacto, etiquetas del formulario y mensajes de feedback.</p>
+                </header>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Eyebrow</span>
+                        <input type="text" [(ngModel)]="content.contact.eyebrow" maxlength="60" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.contact.title" maxlength="180" />
+                    </label>
+                </div>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.contact.subtitle" rows="2" maxlength="400"></textarea>
+                </label>
+
+                <h3 class="lcms-subheading">Datos de contacto</h3>
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Email destino del formulario</span>
+                        <input type="email" [(ngModel)]="content.contact.email" placeholder="hola@acten.app" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Teléfono</span>
+                        <input type="text" [(ngModel)]="content.contact.phone" />
+                    </label>
+                    <label class="lcms-field lcms-field-full">
+                        <span class="lcms-field-label">Dirección / ubicación</span>
+                        <input type="text" [(ngModel)]="content.contact.address" />
+                    </label>
+                </div>
+
+                <h3 class="lcms-subheading">Etiquetas del formulario</h3>
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Etiqueta · Nombre</span>
+                        <input type="text" [(ngModel)]="content.contact.form_name_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Etiqueta · Email</span>
+                        <input type="text" [(ngModel)]="content.contact.form_email_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Etiqueta · Empresa</span>
+                        <input type="text" [(ngModel)]="content.contact.form_company_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Etiqueta · Cargo</span>
+                        <input type="text" [(ngModel)]="content.contact.form_role_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field lcms-field-full">
+                        <span class="lcms-field-label">Etiqueta · Mensaje</span>
+                        <input type="text" [(ngModel)]="content.contact.form_message_label" maxlength="80" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Texto del botón "Enviar"</span>
+                        <input type="text" [(ngModel)]="content.contact.form_cta_label" maxlength="40" />
+                    </label>
+                </div>
+
+                <h3 class="lcms-subheading">Mensajes de feedback</h3>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Mensaje de éxito</span>
+                    <input type="text" [(ngModel)]="content.contact.form_success" maxlength="240" />
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Mensaje de error</span>
+                    <input type="text" [(ngModel)]="content.contact.form_error" maxlength="240" />
+                </label>
+            </section>
+
+            <!-- ============================================================
+                 FINAL CTA
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'final_cta'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>CTA final</h2>
+                    <p>El banner oscuro de cierre justo antes del footer.</p>
+                </header>
+
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Eyebrow</span>
+                    <input type="text" [(ngModel)]="content.final_cta.eyebrow" maxlength="60" />
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Título</span>
+                    <textarea [(ngModel)]="content.final_cta.title" rows="2" maxlength="240"></textarea>
+                </label>
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Subtítulo</span>
+                    <textarea [(ngModel)]="content.final_cta.subtitle" rows="2" maxlength="400"></textarea>
+                </label>
+
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA primario · texto</span>
+                        <input type="text" [(ngModel)]="content.final_cta.cta_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA primario · anchor</span>
+                        <input type="text" [(ngModel)]="content.final_cta.cta_anchor" placeholder="#contact" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA secundario · texto</span>
+                        <input type="text" [(ngModel)]="content.final_cta.secondary_label" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA secundario · anchor</span>
+                        <input type="text" [(ngModel)]="content.final_cta.secondary_anchor" placeholder="#pricing" />
+                    </label>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 FOOTER
+                 ============================================================ -->
+            <section *ngIf="activeSection === 'footer'" class="lcms-section">
+                <header class="lcms-section-header">
+                    <h2>Footer</h2>
+                    <p>Columnas de enlaces, newsletter y copyright.</p>
+                </header>
+
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Tagline (texto bajo el logo)</span>
+                    <input type="text" [(ngModel)]="content.footer.tagline" maxlength="240" />
+                </label>
+
+                <h3 class="lcms-subheading">Newsletter</h3>
+                <div class="lcms-grid lcms-grid-2">
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Título</span>
+                        <input type="text" [(ngModel)]="content.footer.newsletter_title" maxlength="80" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Subtítulo</span>
+                        <input type="text" [(ngModel)]="content.footer.newsletter_subtitle" maxlength="160" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">CTA del botón</span>
+                        <input type="text" [(ngModel)]="content.footer.newsletter_cta" maxlength="40" />
+                    </label>
+                    <label class="lcms-field">
+                        <span class="lcms-field-label">Mensaje de éxito</span>
+                        <input type="text" [(ngModel)]="content.footer.newsletter_success" maxlength="240" />
+                    </label>
+                </div>
+
+                <h3 class="lcms-subheading">Columnas de enlaces</h3>
+                <div class="lcms-cards">
+                    <div class="lcms-card" *ngFor="let col of content.footer.columns; let i = index; trackBy: trackByIndex">
+                        <header class="lcms-card-header">
+                            <span class="lcms-card-index">Columna {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFooterColumn(i)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                                </svg>
+                            </button>
+                        </header>
+                        <label class="lcms-field">
+                            <span class="lcms-field-label">Título de la columna</span>
+                            <input type="text" [(ngModel)]="col.title" maxlength="60" />
+                        </label>
+                        <h4 class="lcms-subheading-sm">Enlaces</h4>
+                        <div class="lcms-list">
+                            <div class="lcms-list-row" *ngFor="let link of col.links; let j = index; trackBy: trackByIndex">
+                                <label class="lcms-field lcms-field-grow">
+                                    <input type="text" [(ngModel)]="link.label" placeholder="Etiqueta" maxlength="60" />
+                                </label>
+                                <label class="lcms-field lcms-field-grow">
+                                    <input type="text" [(ngModel)]="link.url" placeholder="/ruta o https://..." />
+                                </label>
+                                <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFooterLink(i, j)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addFooterLink(i)">
+                            + Añadir enlace
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addFooterColumn()">
+                    + Añadir columna
+                </button>
+
+                <label class="lcms-field">
+                    <span class="lcms-field-label">Copyright</span>
+                    <input type="text" [(ngModel)]="content.footer.copyright" maxlength="160" />
+                </label>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Bottom bar — siempre visible, refleja estado dirty -->
+    <footer class="lcms-bottombar" *ngIf="!isLoading && !loadError && content">
+        <div class="lcms-bottombar-status">
+            <span *ngIf="!isDirty" class="lcms-status lcms-status-clean">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Sin cambios pendientes
+            </span>
+            <span *ngIf="isDirty" class="lcms-status lcms-status-dirty">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                Tienes cambios sin guardar
+            </span>
+        </div>
+        <div class="lcms-bottombar-actions">
+            <button type="button" class="lcms-btn lcms-btn-ghost" (click)="cancelChanges()" [disabled]="!isDirty || isSaving">
+                Cancelar cambios
+            </button>
+            <button type="button" class="lcms-btn lcms-btn-primary" (click)="save()" [disabled]="!isDirty || isSaving">
+                <svg *ngIf="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+        </div>
+    </footer>
+
+</div>

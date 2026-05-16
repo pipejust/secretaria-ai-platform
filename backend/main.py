@@ -259,7 +259,9 @@ app.include_router(projects.router)
 from routers import documental
 app.include_router(documental.router)
 from routers import landing
-app.include_router(landing.router)
+app.include_router(landing.router)         # /api/landing-cms (admin)
+app.include_router(landing.public_router)  # /api/public/landing (público)
+app.include_router(landing.legacy_router)  # /api/v1/landing_page_content (legacy)
 from routers import rondas
 app.include_router(rondas.router)
 from routers import sessions_upload

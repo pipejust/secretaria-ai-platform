@@ -809,6 +809,10 @@ ROLE_CATALOG: list[dict] = [
     {"key": "empresas",       "label": "Empresas",        "actions": ["view", "manage"]},
     {"key": "marca",          "label": "Marca",           "actions": ["view", "edit"]},
     {"key": "configuracion",  "label": "Configuración",   "actions": ["view", "edit"]},
+    # CMS del landing público de acten.app — sólo lo usa el tenant 'acten'
+    # (super-admin de plataforma), pero declaramos el módulo aquí para que
+    # los permisos del rol admin lo incluyan automáticamente.
+    {"key": "landing_cms",    "label": "Landing CMS",     "actions": ["view", "edit"]},
 ]
 VALID_MODULES = {m["key"]: set(m["actions"]) for m in ROLE_CATALOG}
 SYSTEM_ROLE_NAMES = {"admin", "validator", "viewer"}

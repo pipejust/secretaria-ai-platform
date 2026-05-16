@@ -168,6 +168,25 @@
                         <span class="nav-text" *ngIf="!isCollapsed">Empresas</span>
                     </a>
                 </li>
+                <!--
+                  Landing CMS — sólo se muestra al super-admin (que por
+                  diseño pertenece al tenant Acten). El backend además
+                  bloquea la edición a otros tenants con un guard explícito,
+                  así que esto es solo cosmético / UX.
+                -->
+                <li *ngIf="isSuperAdmin" class="super-only">
+                    <a routerLink="/admin/landing-cms" routerLinkActive="active" title="Editar el landing público de acten.app">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 3h20v18H2z"></path>
+                            <path d="M2 8h20"></path>
+                            <path d="M7 3v5"></path>
+                            <path d="M7 13h10"></path>
+                            <path d="M7 17h6"></path>
+                        </svg>
+                        <span class="nav-text" *ngIf="!isCollapsed">Landing CMS</span>
+                    </a>
+                </li>
                 <li *ngIf="canSee('marca')">
                     <a routerLink="/admin/branding" routerLinkActive="active" title="Personaliza la marca: logo, colores, datos de tu empresa">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"

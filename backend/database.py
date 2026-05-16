@@ -82,6 +82,8 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE role ADD COLUMN is_system  INTEGER NOT NULL DEFAULT 0',
             'ALTER TABLE role ADD COLUMN created_at TEXT',
             'ALTER TABLE role ADD COLUMN updated_at TEXT',
+            # Landing CMS (sqlite dev)
+            "ALTER TABLE tenant ADD COLUMN landing_content_json TEXT NOT NULL DEFAULT '{}'",
         ]
     else:
         statements = [
@@ -184,6 +186,8 @@ def _apply_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS idx_actionitem_tenant      ON actionitem(tenant_id)",
             "CREATE INDEX IF NOT EXISTS idx_apikey_tenant          ON apikey(tenant_id)",
             "CREATE INDEX IF NOT EXISTS idx_auditlog_tenant        ON auditlog(tenant_id)",
+            # Landing CMS — contenido editable de acten.app (solo tenant 'acten').
+            "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS landing_content_json TEXT NOT NULL DEFAULT '{}'",
         ]
 
     from sqlalchemy import text

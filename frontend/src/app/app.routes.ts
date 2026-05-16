@@ -123,6 +123,12 @@ export const routes: Routes = [
                 data: { description: 'Gestión de empresas / tenants — sólo super-admins.', robots: 'noindex, nofollow' },
             },
             {
+                path: 'landing-cms',
+                loadComponent: () => import('./components/landing-cms/landing-cms.component').then(m => m.LandingCmsComponent),
+                title: 'Landing CMS | Acten',
+                data: { description: 'Edita el contenido del landing público de acten.app — sólo super-admin del tenant Acten.', robots: 'noindex, nofollow' },
+            },
+            {
                 path: 'profile',
                 component: ProfileComponent,
                 title: 'Mi Perfil | Acten',

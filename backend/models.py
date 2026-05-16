@@ -37,6 +37,14 @@ class Tenant(SQLModel, table=True):
         default="{}",
         description="JSON con company_name, logo_data_url, primary_color, etc.",
     )
+    # Contenido editable del landing público (solo se usa para el tenant 'acten',
+    # que es el dueño de acten.app). El admin puede editar todos los textos,
+    # features, testimonios, pricing, etc. desde /admin/landing-cms. Guardado
+    # como JSON para no requerir migrations cuando se añade/quita una sección.
+    landing_content_json: str = Field(
+        default="{}",
+        description="JSON con la configuración del landing público (solo acten).",
+    )
     is_active: bool = Field(default=True)
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
