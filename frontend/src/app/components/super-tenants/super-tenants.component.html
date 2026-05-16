@@ -1006,3 +1006,95 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================================
+     Modal de empresa creada — muestra URL de acceso prominente
+     con botones copiar para que el super-admin se lo pase al
+     admin de la empresa. También se envía por correo automático.
+     ============================================================ -->
+<div class="tn-modal-overlay" *ngIf="createdSuccess.tenant" (click)="closeCreatedSuccessModal()">
+    <div class="tn-modal tn-modal--narrow tn-created" (click)="$event.stopPropagation()">
+        <div class="tn-created-head">
+            <span class="tn-created-ico" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </span>
+            <div>
+                <h3>¡Empresa "{{ createdSuccess.tenant?.name }}" creada!</h3>
+                <p class="tn-created-sub">
+                    Comparte estos datos con el administrador para que pueda
+                    entrar. Le mandamos un correo automático con la misma información.
+                </p>
+            </div>
+        </div>
+
+        <div class="tn-created-body">
+            <div class="tn-field-block">
+                <label>URL de acceso</label>
+                <div class="tn-copy-row">
+                    <input type="text" readonly [value]="createdSuccess.accessUrl"
+                           class="tn-copy-input" />
+                    <button type="button"
+                            class="tn-btn tn-btn--copy"
+                            (click)="_copyToClipboard(createdSuccess.accessUrl, 'url')">
+                        <ng-container *ngIf="!createdSuccess.copiedUrl">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copiar
+                        </ng-container>
+                        <ng-container *ngIf="createdSuccess.copiedUrl">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Copiado
+                        </ng-container>
+                    </button>
+                </div>
+                <p class="tn-field-hint">
+                    El admin guarda este enlace en sus favoritos. Cada vez que entre,
+                    accede directo al login de su empresa.
+                </p>
+            </div>
+
+            <div class="tn-field-block">
+                <label>Correo del administrador</label>
+                <div class="tn-copy-row">
+                    <input type="text" readonly [value]="createdSuccess.adminEmail"
+                           class="tn-copy-input" />
+                    <button type="button"
+                            class="tn-btn tn-btn--copy"
+                            (click)="_copyToClipboard(createdSuccess.adminEmail, 'email')">
+                        <ng-container *ngIf="!createdSuccess.copiedEmail">Copiar</ng-container>
+                        <ng-container *ngIf="createdSuccess.copiedEmail">Copiado</ng-container>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tn-field-block tn-field-credentials">
+                <label>Contraseña inicial</label>
+                <p class="tn-field-hint">
+                    Por seguridad no la mostramos aquí. La enviamos por correo al
+                    admin junto con instrucciones para cambiarla en el primer acceso.
+                </p>
+            </div>
+        </div>
+
+        <div class="tn-created-foot">
+            <a [href]="createdSuccess.accessUrl" target="_blank" rel="noopener"
+               class="tn-btn tn-btn--primary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Abrir login del cliente
+            </a>
+            <button type="button" class="tn-btn" (click)="closeCreatedSuccessModal()">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>

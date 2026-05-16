@@ -1185,3 +1185,126 @@
         box-sizing: border-box;
     }
 }
+
+/* ============================================================
+   Modal de empresa creada (post-registro): URL prominente + copy
+   ============================================================ */
+
+.tn-created .tn-created-head {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+.tn-created-ico {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #d1fae5;
+    color: #047857;
+}
+.tn-created-head h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-fg, #0f172a);
+}
+.tn-created-sub {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-fg-muted, #64748b);
+    line-height: 1.45;
+}
+
+.tn-created-body {
+    padding: 16px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tn-field-block label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-fg-muted, #475569);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tn-copy-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+.tn-copy-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 13px;
+    background: #f8fafc;
+    color: #0f172a;
+}
+.tn-copy-input:focus {
+    outline: 2px solid #0EA5E9;
+    outline-offset: -2px;
+}
+
+.tn-btn--copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #fff;
+    border: 1px solid #0f172a;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+}
+.tn-btn--copy:hover { background: #1e293b; }
+
+.tn-field-hint {
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: var(--color-fg-muted, #64748b);
+    line-height: 1.45;
+}
+
+.tn-field-credentials .tn-field-hint {
+    padding: 10px 12px;
+    background: #fef3c7;
+    border-left: 3px solid #f59e0b;
+    border-radius: 4px;
+    color: #92400e;
+    margin-top: 0;
+}
+
+.tn-created-foot {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 14px 22px 20px;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+}
+.tn-btn--primary {
+    background: #18B767;
+    color: #0B1220;
+    border: 1px solid #15a35d;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.tn-btn--primary:hover { background: #34D399; }

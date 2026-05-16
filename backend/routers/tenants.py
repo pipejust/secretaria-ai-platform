@@ -285,7 +285,13 @@ def create_tenant(
 
 async def _send_tenant_welcome_safe(user_id: int, tenant_id: int) -> None:
     """Envía email de bienvenida al admin del tenant recién provisionado.
-    Best-effort: si falla, se loggea pero NO rompe la creación del tenant."""
+    Best-effort: si falla, se loggea pero NO rompe la creación del tenant.
+
+    El correo incluye la URL de acceso tenant-específica:
+    https://admin.acten.app/t/{slug}/login para que el admin la guarde
+    en favoritos y entre directo al login de su empresa.
+    """
+    import os
     from sqlmodel import Session as _Session
     from database import engine as _engine
     from services.email_service import EmailService
@@ -293,19 +299,35 @@ async def _send_tenant_welcome_safe(user_id: int, tenant_id: int) -> None:
     try:
         with _Session(_engine) as _db:
             user = _db.get(User, user_id)
-            if not user:
-                logger.warning("tenant welcome email: user_id=%s no existe", user_id)
+            tenant = _db.get(Tenant, tenant_id)
+            if not user or not tenant:
+                logger.warning(
+                    "tenant welcome email: user_id=%s tenant_id=%s no existen",
+                    user_id, tenant_id,
+                )
                 return
             role_name = user.role.name if user.role else "Administrador"
+
+            # URL tenant-específica. ADMIN_BASE_URL puede setearse a
+            # https://admin.acten.app en producción; default al frontend
+            # actual (compat con dev).
+            admin_base = (
+                os.environ.get("ADMIN_BASE_URL")
+                or os.environ.get("FRONTEND_URL")
+                or "http://localhost:4200"
+            ).rstrip("/")
+            tenant_login_url = f"{admin_base}/t/{tenant.slug}/login"
+
             svc = EmailService(db=_db, tenant_id=tenant_id)
             await svc.send_welcome_email(
                 to_email=user.email,
                 user_name=user.full_name or user.email,
                 role=role_name,
+                login_url=tenant_login_url,
             )
             logger.info(
-                "tenant welcome email enviado a %s (tenant_id=%s)",
-                user.email, tenant_id,
+                "tenant welcome email enviado a %s (tenant_id=%s, url=%s)",
+                user.email, tenant_id, tenant_login_url,
             )
     except Exception as exc:  # noqa: BLE001
         logger.exception("tenant welcome email FALLÓ user=%s tenant=%s: %s",

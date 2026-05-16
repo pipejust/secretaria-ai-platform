@@ -1,22 +1,41 @@
 {% extends "email_base.html" %}
 
 {% block content %}
-  <h2>¡Bienvenido/a, {{ user_name }}! </h2>
-  
-  <p>Estamos muy felices de que te unas a la plataforma {{ brand.platform_name | default("Acten") }}. Hemos configurado todo para que tu cuenta esté lista para organizar tus reuniones y proyectos inteligentemente.</p>
-  
+  <h2>¡Bienvenido/a, {{ user_name }}!</h2>
+
+  <p>
+    Estamos muy felices de que te unas a la plataforma
+    {{ brand.platform_name | default("Acten") }}. Hemos configurado todo
+    para que tu cuenta esté lista para organizar tus reuniones y proyectos
+    inteligentemente.
+  </p>
+
   <div class="box">
-    <h3 class="box-title">Tus credenciales de acceso:</h3>
+    <h3 class="box-title">Tu enlace de acceso directo</h3>
+    <p class="box-text" style="margin-bottom: 10px;">
+      Te recomendamos guardar este enlace en tus favoritos. Cada vez que
+      quieras entrar, simplemente hacés click acá y vas directo al login
+      de tu empresa:
+    </p>
+    <p style="word-break: break-all; background: #f1f5f9; padding: 10px 12px; border-radius: 6px; font-family: 'SF Mono', Consolas, monospace; font-size: 13px; color: #0f172a; margin: 0;">
+      {{ login_url }}
+    </p>
+  </div>
+
+  <div class="box" style="margin-top: 16px;">
+    <h3 class="box-title">Tus credenciales</h3>
     <ul style="color: #4b5563; margin: 0; padding-left: 20px;">
       <li style="margin-bottom: 8px;"><strong>Correo:</strong> {{ email }}</li>
       <li><strong>Rol asignado:</strong> {{ role }}</li>
     </ul>
+    <p class="box-text" style="margin-top: 12px; font-size: 13px; color: #64748b;">
+      La contraseña inicial te la entregó el administrador que creó la
+      cuenta. Podés cambiarla desde "Mi perfil" una vez dentro.
+    </p>
   </div>
 
-  <p>Para comenzar a utilizar la plataforma, haz clic en el botón de abajo e inicia sesión con la contraseña que registraste o que tu administrador te proporcionó.</p>
-
   <div class="button-container">
-    <a href="{{ login_url }}" class="button">Ir a {{ brand.platform_name | default("Acten") }}</a>
+    <a href="{{ login_url }}" class="button">Entrar a {{ brand.platform_name | default("Acten") }}</a>
   </div>
 
   <p>Si tienes cualquier problema, no dudes en contactar a soporte.</p>

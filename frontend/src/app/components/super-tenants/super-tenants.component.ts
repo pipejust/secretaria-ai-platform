@@ -269,6 +269,37 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         return null;
     }
 
+    /** Modal post-creación con la URL de acceso para que el admin la copie. */
+    createdSuccess: {
+        tenant: TenantOut | null;
+        accessUrl: string;
+        adminEmail: string;
+        adminName: string;
+        copiedUrl: boolean;
+        copiedEmail: boolean;
+    } = {
+        tenant: null,
+        accessUrl: '',
+        adminEmail: '',
+        adminName: '',
+        copiedUrl: false,
+        copiedEmail: false,
+    };
+
+    /** Construye la URL pública de acceso para un tenant nuevo.
+     *  En prod: https://admin.acten.app/t/{slug}/login.
+     *  En dev local: usa el origen actual + /t/{slug}/login. */
+    private _buildTenantAccessUrl(slug: string): string {
+        if (typeof window === 'undefined') return `/t/${slug}/login`;
+        const host = window.location.hostname;
+        if (host === 'localhost' || host.startsWith('127.') || host.endsWith('.local')) {
+            return `${window.location.origin}/t/${slug}/login`;
+        }
+        // En producción siempre forzamos admin.acten.app para que sea consistente
+        // sin importar desde dónde se cree el tenant.
+        return `https://admin.acten.app/t/${slug}/login`;
+    }
+
     async createTenant(): Promise<void> {
         const err = this.validateCreate();
         if (err) { this.errorMsg = err; return; }
@@ -276,30 +307,65 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         this.errorMsg = '';
         this.successMsg = '';
         try {
+            const adminEmail = this.form.admin_email.trim().toLowerCase();
+            const adminName = this.form.admin_full_name.trim();
             const out = await firstValueFrom(
                 this.http.post<TenantOut>(`${this.apiUrl}/`, {
                     slug: this.form.slug.trim().toLowerCase(),
                     name: this.form.name.trim(),
                     domain: this.form.domain.trim() || null,
-                    admin_email: this.form.admin_email.trim().toLowerCase(),
+                    admin_email: adminEmail,
                     admin_password: this.form.admin_password,
-                    admin_full_name: this.form.admin_full_name.trim(),
+                    admin_full_name: adminName,
                     logo_data_url: this.form.logo_data_url || undefined,
                     icon_data_url: this.form.icon_data_url || undefined,
                 }, { headers: this._headers() }),
             );
             this.tenants = [...this.tenants, out];
-            this.successMsg = `Empresa '${out.name}' creada. Comparte estas credenciales con el admin del cliente.`;
             this.toast.success(`Empresa '${out.name}' creada correctamente.`);
             this.selected = out;
             this.showCreate = false;
             this.form = this._emptyForm();
+            // Abrir modal de éxito con la URL de acceso prominente.
+            this.createdSuccess = {
+                tenant: out,
+                accessUrl: this._buildTenantAccessUrl(out.slug),
+                adminEmail,
+                adminName,
+                copiedUrl: false,
+                copiedEmail: false,
+            };
         } catch (err: any) {
             this.errorMsg = err?.error?.detail || 'No se pudo crear la empresa.';
         } finally {
             this.isCreating = false;
             this.cdr.detectChanges();
         }
+    }
+
+    /** Copia un texto al clipboard y muestra confirmación temporal. */
+    async _copyToClipboard(text: string, kind: 'url' | 'email'): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(text);
+            if (kind === 'url') this.createdSuccess.copiedUrl = true;
+            else this.createdSuccess.copiedEmail = true;
+            this.cdr.detectChanges();
+            setTimeout(() => {
+                if (kind === 'url') this.createdSuccess.copiedUrl = false;
+                else this.createdSuccess.copiedEmail = false;
+                this.cdr.detectChanges();
+            }, 2000);
+        } catch {
+            this.toast.error('No se pudo copiar al portapapeles.');
+        }
+    }
+
+    closeCreatedSuccessModal(): void {
+        this.createdSuccess = {
+            tenant: null, accessUrl: '', adminEmail: '',
+            adminName: '', copiedUrl: false, copiedEmail: false,
+        };
+        this.cdr.detectChanges();
     }
 
     // ============================================================

@@ -1,0 +1,513 @@
+<!-- ====================================================================
+     Landing pública de Acten. Composición de arriba a abajo:
+       1) Header sobre fondo oscuro (integrado al hero)
+       2) Hero (charcoal + editorial title + mockup)
+       3) Trust logos
+       4) Features grid (6 cards)
+       5) Process flow (4 steps)
+       6) Integrations
+       7) Testimonials
+       8) Final CTA (dark)
+       9) Footer
+     ==================================================================== -->
+
+<div class="acten-landing" [class.scrolled]="scrolled">
+
+  <!-- ============= HEADER ============= -->
+  <header class="al-header" [class.al-header-solid]="scrolled">
+    <div class="al-container al-header-inner">
+      <a href="#top" class="al-logo" aria-label="Acten — Inicio">
+        <span class="al-logo-mark">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="#18B767"/>
+            <path d="M9 22 L16 8 L23 22 M12 17 H20" stroke="#0B1220" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="al-logo-text">Acten</span>
+      </a>
+
+      <nav class="al-nav" aria-label="Navegación principal">
+        <a *ngFor="let item of navItems"
+           [href]="item.anchor"
+           (click)="scrollTo(item.anchor, $event)"
+           class="al-nav-link">
+          {{ item.label }}
+        </a>
+      </nav>
+
+      <div class="al-header-actions">
+        <a [href]="loginUrl" class="al-btn al-btn-ghost">Iniciar sesión</a>
+        <a [href]="loginUrl" class="al-btn al-btn-primary">Solicitar demo</a>
+      </div>
+
+      <button type="button" class="al-mobile-toggle"
+              [class.is-open]="mobileMenuOpen"
+              (click)="toggleMobileMenu()"
+              aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile menu overlay -->
+    <div class="al-mobile-menu" *ngIf="mobileMenuOpen">
+      <a *ngFor="let item of navItems"
+         [href]="item.anchor"
+         (click)="scrollTo(item.anchor, $event)"
+         class="al-mobile-link">
+        {{ item.label }}
+      </a>
+      <div class="al-mobile-actions">
+        <a [href]="loginUrl" class="al-btn al-btn-ghost">Iniciar sesión</a>
+        <a [href]="loginUrl" class="al-btn al-btn-primary">Solicitar demo</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============= HERO ============= -->
+  <section class="al-hero" id="top">
+    <div class="al-container al-hero-grid">
+
+      <!-- Columna izquierda: copy + CTA -->
+      <div class="al-hero-copy">
+        <span class="al-eyebrow al-eyebrow-on-dark">AI MEETING ASSISTANT</span>
+        <h1 class="al-hero-title">
+          De conversación a claridad.<br>
+          De claridad a <span class="al-accent">impacto.</span>
+        </h1>
+        <p class="al-hero-sub">
+          Acten transforma cada reunión en decisiones, tareas accionables, documentos
+          profesionales y seguimiento automático. Cero pérdida de información. Cero
+          trabajo manual. Tu equipo enfocado en lo importante.
+        </p>
+
+        <div class="al-hero-actions">
+          <a [href]="loginUrl" class="al-btn al-btn-primary al-btn-lg">Solicitar demo</a>
+          <a href="#flow" (click)="scrollTo('#flow', $event)" class="al-btn al-btn-ghost-light al-btn-lg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/>
+            </svg>
+            Ver cómo funciona
+          </a>
+        </div>
+
+        <ul class="al-hero-benefits" aria-label="Beneficios">
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            IA avanzada
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Multilenguaje
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Seguro y privado
+          </li>
+          <li>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Enterprise ready
+          </li>
+        </ul>
+      </div>
+
+      <!-- Columna derecha: mockup product -->
+      <div class="al-hero-mockup">
+        <div class="al-mockup-frame">
+          <div class="al-mockup-bar">
+            <span class="al-mockup-dot"></span>
+            <span class="al-mockup-dot"></span>
+            <span class="al-mockup-dot"></span>
+          </div>
+          <div class="al-mockup-body">
+            <aside class="al-mockup-sidebar">
+              <div class="al-mockup-logo-mini">A</div>
+              <ul>
+                <li class="active">Reuniones</li>
+                <li>Proyectos</li>
+                <li>Tareas</li>
+                <li>Reportes</li>
+                <li>Plantillas</li>
+              </ul>
+            </aside>
+            <main class="al-mockup-main">
+              <div class="al-mockup-h1">Resumen ejecutivo</div>
+              <div class="al-mockup-cards">
+                <div class="al-mockup-card">
+                  <span class="al-mockup-label">Sesiones</span>
+                  <span class="al-mockup-num">128</span>
+                </div>
+                <div class="al-mockup-card">
+                  <span class="al-mockup-label">Tareas activas</span>
+                  <span class="al-mockup-num">42</span>
+                </div>
+                <div class="al-mockup-card al-mockup-card-accent">
+                  <span class="al-mockup-label">Cumplimiento</span>
+                  <span class="al-mockup-num">94%</span>
+                </div>
+              </div>
+              <div class="al-mockup-row">
+                <span class="al-mockup-bullet al-mockup-bullet-green"></span>
+                <span>Acta lista — Colpensiones release 20</span>
+              </div>
+              <div class="al-mockup-row">
+                <span class="al-mockup-bullet al-mockup-bullet-amber"></span>
+                <span>3 riesgos detectados en última sesión</span>
+              </div>
+              <div class="al-mockup-row">
+                <span class="al-mockup-bullet al-mockup-bullet-blue"></span>
+                <span>Despliegue programado: martes 19, 14:30</span>
+              </div>
+              <div class="al-mockup-row">
+                <span class="al-mockup-bullet al-mockup-bullet-green"></span>
+                <span>Correos enviados a 7 responsables</span>
+              </div>
+            </main>
+          </div>
+        </div>
+        <!-- nodos decorativos sutiles -->
+        <span class="al-deco al-deco-1"></span>
+        <span class="al-deco al-deco-2"></span>
+        <span class="al-deco al-deco-3"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= TRUST LOGOS ============= -->
+  <section class="al-trust">
+    <div class="al-container">
+      <p class="al-trust-text">Equipos de alto rendimiento ya confían en Acten</p>
+      <ul class="al-trust-logos">
+        <li *ngFor="let logo of trustLogos">{{ logo }}</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============= FEATURES ============= -->
+  <section class="al-section al-features" id="features">
+    <div class="al-container al-split">
+      <div class="al-split-intro">
+        <span class="al-eyebrow">UN ASISTENTE, TODO EL CICLO</span>
+        <h2 class="al-section-title">
+          Todo lo que tu equipo necesita,
+          <span class="al-accent">automáticamente.</span>
+        </h2>
+        <p class="al-section-sub">
+          Desde la transcripción hasta el envío de tareas. Acten cubre cada
+          paso del ciclo de reunión, sin que tu equipo gaste tiempo en lo
+          mecánico.
+        </p>
+        <a href="#flow" (click)="scrollTo('#flow', $event)" class="al-link">
+          Conocer todas las funciones
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="al-features-grid">
+        <article class="al-feature-card" *ngFor="let f of features">
+          <span class="al-feature-icon">
+            <svg *ngIf="f.icon === 'capture'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <svg *ngIf="f.icon === 'decisions'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            <svg *ngIf="f.icon === 'tasks'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/>
+              <rect x="3" y="3" width="6" height="6" rx="1"/>
+              <rect x="3" y="13" width="6" height="6" rx="1"/>
+            </svg>
+            <svg *ngIf="f.icon === 'docs'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="13" x2="16" y2="13"/>
+              <line x1="8" y1="17" x2="16" y2="17"/>
+            </svg>
+            <svg *ngIf="f.icon === 'email'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+              <polyline points="22 6 12 13 2 6"/>
+            </svg>
+            <svg *ngIf="f.icon === 'integrations'" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="6" r="3"/>
+              <circle cx="18" cy="18" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </span>
+          <h3 class="al-feature-title">{{ f.title }}</h3>
+          <p class="al-feature-desc">{{ f.description }}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= PROCESS FLOW ============= -->
+  <section class="al-section al-flow" id="flow">
+    <div class="al-container">
+      <div class="al-section-head">
+        <span class="al-eyebrow">DEL DICHO AL HECHO</span>
+        <h2 class="al-section-title">
+          Un flujo inteligente que convierte reuniones en
+          <span class="al-accent">resultados.</span>
+        </h2>
+        <p class="al-section-sub">
+          Cuatro pasos automáticos. Sin intervención manual. Trazabilidad total
+          de extremo a extremo.
+        </p>
+      </div>
+
+      <ol class="al-flow-steps">
+        <li *ngFor="let s of steps; let i = index" class="al-flow-step">
+          <span class="al-flow-num">{{ pad2(i + 1) }}</span>
+          <span class="al-flow-icon">
+            <svg *ngIf="s.icon === 'mic'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+            </svg>
+            <svg *ngIf="s.icon === 'brain'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
+              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
+            </svg>
+            <svg *ngIf="s.icon === 'list'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            <svg *ngIf="s.icon === 'send'" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </span>
+          <h3 class="al-flow-title">{{ s.title }}</h3>
+          <p class="al-flow-desc">{{ s.description }}</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============= INTEGRATIONS ============= -->
+  <section class="al-section al-integrations" id="integrations">
+    <div class="al-container">
+      <div class="al-integrations-head">
+        <h2 class="al-section-title">
+          Conecta Acten con las herramientas que
+          <span class="al-accent">ya usas.</span>
+        </h2>
+        <a [href]="loginUrl" class="al-link">
+          Ver todas las integraciones
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+      </div>
+      <ul class="al-integrations-list">
+        <li *ngFor="let i of integrations" class="al-integration-pill">{{ i }}</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============= TESTIMONIALS ============= -->
+  <section class="al-section al-testimonials" id="testimonials">
+    <div class="al-container">
+      <div class="al-section-head">
+        <span class="al-eyebrow">EMPRESAS QUE YA TRANSFORMARON SUS REUNIONES</span>
+        <h2 class="al-section-title">
+          Más claridad. Más acción.
+          <span class="al-accent">Mejores resultados.</span>
+        </h2>
+      </div>
+
+      <div class="al-testimonial-grid">
+        <article *ngFor="let t of testimonials" class="al-testimonial-card">
+          <svg class="al-quote-icon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+            <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
+          </svg>
+          <p class="al-testimonial-quote">{{ t.quote }}</p>
+          <div class="al-testimonial-author">
+            <span class="al-avatar">{{ t.initials }}</span>
+            <div>
+              <strong>{{ t.name }}</strong>
+              <span>{{ t.role }} · {{ t.company }}</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Indicadores de slider (estáticos, decorativos) -->
+      <div class="al-slider-dots" aria-hidden="true">
+        <span class="al-dot is-active"></span>
+        <span class="al-dot"></span>
+        <span class="al-dot"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= FINAL CTA ============= -->
+  <section class="al-final-cta">
+    <div class="al-container">
+      <div class="al-final-cta-card">
+        <div class="al-final-cta-copy">
+          <h2 class="al-final-cta-title">
+            Convierte cada reunión en una
+            <span class="al-accent">ventaja competitiva.</span>
+          </h2>
+          <p class="al-final-cta-sub">
+            Únete a los equipos que dejaron atrás las actas manuales, las tareas
+            perdidas y las decisiones sin trazabilidad.
+          </p>
+          <div class="al-final-cta-actions">
+            <a [href]="loginUrl" class="al-btn al-btn-primary al-btn-lg">Solicitar demo</a>
+            <a [href]="loginUrl" class="al-btn al-btn-ghost-light al-btn-lg">Hablar con ventas</a>
+          </div>
+        </div>
+        <div class="al-final-cta-visual">
+          <div class="al-stat-pill">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span><strong>+1,200</strong> reuniones procesadas/mes</span>
+          </div>
+          <div class="al-stat-pill">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span><strong>4h/semana</strong> ahorradas por equipo</span>
+          </div>
+          <div class="al-stat-pill">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18"/>
+              <path d="M7 12l4 4 6-8"/>
+            </svg>
+            <span><strong>94%</strong> cumplimiento de tareas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= FOOTER ============= -->
+  <footer class="al-footer">
+    <div class="al-container al-footer-inner">
+      <div class="al-footer-brand">
+        <a href="#top" class="al-logo">
+          <span class="al-logo-mark">
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#18B767"/>
+              <path d="M9 22 L16 8 L23 22 M12 17 H20" stroke="#0B1220" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="al-logo-text">Acten</span>
+        </a>
+        <p>
+          AI Meeting Assistant para equipos enterprise.<br>
+          Decisiones, tareas y documentos que se ejecutan solos.
+        </p>
+        <div class="al-social">
+          <a href="#" aria-label="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+          </a>
+          <a href="#" aria-label="X">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="#" aria-label="YouTube">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="al-footer-cols">
+        <div class="al-footer-col">
+          <h4>Producto</h4>
+          <a href="#features" (click)="scrollTo('#features', $event)">Funciones</a>
+          <a href="#">Seguridad</a>
+          <a href="#">Roadmap</a>
+          <a href="#">Precios</a>
+        </div>
+        <div class="al-footer-col">
+          <h4>Soluciones</h4>
+          <a href="#">Equipos</a>
+          <a href="#">Empresas</a>
+          <a href="#">Instituciones</a>
+          <a href="#">Casos de uso</a>
+        </div>
+        <div class="al-footer-col">
+          <h4>Recursos</h4>
+          <a href="#">Blog</a>
+          <a href="#">Documentación</a>
+          <a href="#">Webinars</a>
+          <a href="#">Plantillas</a>
+        </div>
+        <div class="al-footer-col">
+          <h4>Empresa</h4>
+          <a href="#">Nosotros</a>
+          <a href="#">Carreras</a>
+          <a href="#">Prensa</a>
+          <a href="#">Contacto</a>
+        </div>
+      </div>
+
+      <div class="al-footer-newsletter">
+        <h4>Suscríbete a nuestro newsletter</h4>
+        <p>Recibe las novedades de Acten una vez al mes. Sin spam, sin promociones.</p>
+        <form (submit)="submitNewsletter($event)" class="al-newsletter-form">
+          <input type="email" required
+                 [(ngModel)]="newsletterEmail"
+                 name="newsletter_email"
+                 placeholder="tu@correo.com"
+                 [disabled]="newsletterSent"
+                 aria-label="Correo electrónico para suscripción">
+          <button type="submit" class="al-btn al-btn-primary" [disabled]="newsletterSent">
+            <ng-container *ngIf="newsletterSent">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Suscrito
+            </ng-container>
+            <ng-container *ngIf="!newsletterSent">Suscribirme</ng-container>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="al-footer-bottom">
+      <div class="al-container al-footer-bottom-inner">
+        <span>© {{ year }} Acten. Todos los derechos reservados.</span>
+        <div class="al-footer-legal">
+          <a href="/privacy">Privacidad</a>
+          <a href="/terms">Términos</a>
+          <a href="#">Seguridad</a>
+          <a href="#">Cookies</a>
+        </div>
+        <div class="al-footer-lang">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          Español (ES)
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>

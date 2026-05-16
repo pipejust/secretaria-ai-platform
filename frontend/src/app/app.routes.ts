@@ -224,6 +224,19 @@ export const routes: Routes = [
     // /t/:slug y /t/:slug/ van directo al login del tenant
     { path: 't/:slug', redirectTo: 't/:slug/login', pathMatch: 'full' },
 
-    { path: '', redirectTo: '/login', pathMatch: 'full' },
-    { path: '**', redirectTo: '/login' }
+    /* ──────────────────────────────────────────────────────────────────────
+     * Landing pública en la raíz `/` (solo para hostname acten.app).
+     * En admin.acten.app, un HostnameGuard redirige `/` a `/admin`.
+     * ────────────────────────────────────────────────────────────────────── */
+    {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () => import('./components/landing/landing.component').then(m => m.LandingComponent),
+        title: 'Acten — Convierte cada reunión en una decisión',
+        data: {
+            description: 'Acten transforma reuniones en decisiones, tareas, documentos y seguimiento accionable. AI Meeting Assistant para equipos enterprise.',
+            robots: 'index, follow',
+        },
+    },
+    { path: '**', redirectTo: '/' }
 ];
