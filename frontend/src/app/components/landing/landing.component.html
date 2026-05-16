@@ -12,8 +12,7 @@
   <header class="al-header" [class.al-header--scrolled]="scrolled" role="banner">
     <div class="al-container al-header__inner">
       <a class="al-brand" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
-        <span class="al-brand__mark" aria-hidden="true">A</span>
-        <span class="al-brand__word">Acten</span>
+        <img src="brand/acten-logo-full.svg" alt="Acten" class="al-brand__logo al-brand__logo--light" />
       </a>
 
       <nav class="al-nav" [class.al-nav--open]="mobileMenuOpen" aria-label="Navegación principal">
@@ -50,17 +49,25 @@
       <div class="al-hero__bg" aria-hidden="true">
         <span class="al-hero__dots"></span>
         <span class="al-hero__grid"></span>
+        <!-- Decoración tipo nodo+línea: 5 puntos + 3 conexiones sutiles.
+             Posición absoluta dentro de .al-hero__bg, vive a la derecha. -->
+        <svg class="al-hero__nodes" viewBox="0 0 400 500" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M 60 80 L 200 160" stroke="rgba(20,93,255,0.35)" stroke-width="1" fill="none"/>
+          <path d="M 200 160 L 340 90" stroke="rgba(16,185,129,0.32)" stroke-width="1" fill="none"/>
+          <path d="M 200 160 L 260 320" stroke="rgba(241,167,22,0.28)" stroke-width="1" fill="none"/>
+          <path d="M 60 80 L 100 380" stroke="rgba(20,93,255,0.20)" stroke-width="1" fill="none"/>
+          <circle cx="60"  cy="80"  r="3.5" fill="#145DFF" opacity="0.55"/>
+          <circle cx="200" cy="160" r="4"   fill="#10B981" opacity="0.55"/>
+          <circle cx="340" cy="90"  r="3"   fill="#F1A716" opacity="0.50"/>
+          <circle cx="260" cy="320" r="3"   fill="#10B981" opacity="0.45"/>
+          <circle cx="100" cy="380" r="3.5" fill="#145DFF" opacity="0.45"/>
+        </svg>
       </div>
 
       <div class="al-container al-hero__inner">
 
         <!-- LEFT — copy + CTAs + atributos -->
         <div class="al-hero__copy">
-          <span class="al-pill al-pill--emerald">
-            <span class="al-pill__dot" aria-hidden="true"></span>
-            {{ c.hero.badge }}
-          </span>
-
           <h1 id="al-hero-title" class="al-hero__title">
             <ng-container *ngIf="c.hero.title_lead || c.hero.title_highlight_prefix; else heroTitlePlain">
               <span class="al-hero__title-lead" *ngIf="c.hero.title_lead">{{ c.hero.title_lead }}</span>
@@ -258,13 +265,21 @@
     </section>
 
     <!-- ================================================================
-         TRUST — banda blanca con wordmarks de logos
+         TRUST — banda blanca con logos reales de tenants (dinámico).
+         Si no hay tenants con logo subido, ocultamos la sección entera
+         en vez de mostrar wordmarks placeholder.
          ================================================================ -->
-    <section class="al-trust" aria-labelledby="al-trust-title">
+    <section class="al-trust" aria-labelledby="al-trust-title" *ngIf="trustLogos.length > 0">
       <div class="al-container">
         <p id="al-trust-title" class="al-trust__title">{{ c.trust.eyebrow }}</p>
         <ul class="al-trust__logos">
-          <li *ngFor="let logo of c.trust.logos" class="al-trust__logo">{{ logo }}</li>
+          <li *ngFor="let logo of trustLogos" class="al-trust__item">
+            <img *ngIf="logo.logo_url; else trustWord"
+                 [src]="logo.logo_url" [alt]="logo.name" class="al-trust__logo-img" />
+            <ng-template #trustWord>
+              <span class="al-trust__wordmark">{{ logo.name }}</span>
+            </ng-template>
+          </li>
         </ul>
       </div>
     </section>
@@ -345,15 +360,6 @@
             <ng-template #flowTitle>{{ c.flow.title }}</ng-template>
           </h2>
           <p class="al-section-subtitle">{{ c.flow.subtitle }}</p>
-          <a *ngIf="c.flow.link_label && c.flow.link_anchor"
-             class="al-arrow-link"
-             [href]="c.flow.link_anchor"
-             (click)="scrollTo(c.flow.link_anchor!, $event)">
-            {{ c.flow.link_label }}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-            </svg>
-          </a>
         </div>
 
         <ol class="al-flow__steps">
@@ -412,7 +418,58 @@
           </a>
         </div>
         <ul class="al-integrations__list">
-          <li *ngFor="let item of c.integrations.items" class="al-integrations__item">{{ item }}</li>
+          <li *ngFor="let item of c.integrations.items" class="al-integrations__item">
+            <span class="al-integrations__logo" aria-hidden="true" [attr.data-brand]="integrationKey(item)">
+              <ng-container [ngSwitch]="integrationKey(item)">
+                <!-- Jira (Atlassian) -->
+                <svg *ngSwitchCase="'jira'" width="24" height="24" viewBox="0 0 24 24" fill="#2684FF">
+                  <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zM17.286 5.786H5.715a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 18.29 18.272V6.79a1.005 1.005 0 0 0-1.005-1.004zM23 0H11.429a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 24.005 12.486V1.005A1.005 1.005 0 0 0 23 0z"/>
+                </svg>
+                <!-- Trello -->
+                <svg *ngSwitchCase="'trello'" width="24" height="24" viewBox="0 0 24 24" fill="#0079BF">
+                  <path d="M21 0H3C1.343 0 0 1.343 0 3v18c0 1.656 1.343 3 3 3h18c1.656 0 3-1.344 3-3V3c0-1.657-1.344-3-3-3zM10.44 18.18c0 .795-.645 1.44-1.44 1.44H4.56c-.795 0-1.44-.646-1.44-1.44V4.56c0-.795.645-1.44 1.44-1.44H9c.795 0 1.44.645 1.44 1.44v13.62zm10.44-6c0 .794-.645 1.44-1.44 1.44H15c-.795 0-1.44-.646-1.44-1.44V4.56c0-.795.645-1.44 1.44-1.44h4.44c.795 0 1.44.645 1.44 1.44v7.62z"/>
+                </svg>
+                <!-- ClickUp -->
+                <svg *ngSwitchCase="'clickup'" width="24" height="24" viewBox="0 0 24 24" fill="#7B68EE">
+                  <path d="M2 18.439l3.69-2.828c1.961 2.56 4.044 3.739 6.363 3.739 2.307 0 4.33-1.166 6.203-3.704L22 18.405C19.298 22.065 15.941 24 12.053 24 8.178 24 4.788 22.078 2 18.439zM12.04 6.15L5.486 11.8 2.879 8.765 12.05 .881l9.13 7.892-2.624 3.019z"/>
+                </svg>
+                <!-- Azure DevOps -->
+                <svg *ngSwitchCase="'azure'" width="24" height="24" viewBox="0 0 24 24" fill="#0078D4">
+                  <path d="M0 8.877L2.247 5.91l8.405-3.416V.022l7.37 5.393L2.966 8.338v8.225L0 15.707zm24-4.45v14.651l-5.753 4.9-9.303-3.057v3.056l-5.978-7.416 15.230 1.186V5.415z"/>
+                </svg>
+                <!-- Google Calendar -->
+                <svg *ngSwitchCase="'google'" width="24" height="24" viewBox="0 0 24 24">
+                  <path fill="#FFFFFF" d="M19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-15A2.5 2.5 0 0 1 4.5 2h15A2.5 2.5 0 0 1 22 4.5v15a2.5 2.5 0 0 1-2.5 2.5z"/>
+                  <path fill="#4285F4" d="M19.5 2H17v4h5V4.5A2.5 2.5 0 0 0 19.5 2z"/>
+                  <path fill="#34A853" d="M22 17v2.5a2.5 2.5 0 0 1-2.5 2.5H17v-5z"/>
+                  <path fill="#FBBC04" d="M2 17h5v5H4.5A2.5 2.5 0 0 1 2 19.5z"/>
+                  <path fill="#EA4335" d="M4.5 2A2.5 2.5 0 0 0 2 4.5V7h5V2z"/>
+                  <path fill="#1A73E8" d="M17 2H7v5h10z"/>
+                  <path fill="#1A73E8" d="M2 7h5v10H2z"/>
+                  <path fill="#1A73E8" d="M17 17h5V7h-5z"/>
+                  <path fill="#1A73E8" d="M7 22h10v-5H7z"/>
+                  <text x="12" y="15" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="700" fill="#1A73E8">31</text>
+                </svg>
+                <!-- Microsoft (Outlook/Calendar) — usamos cuadrícula MS oficial -->
+                <svg *ngSwitchCase="'microsoft'" width="24" height="24" viewBox="0 0 24 24">
+                  <path fill="#F25022" d="M0 0h11.5v11.5H0z"/>
+                  <path fill="#7FBA00" d="M12.5 0H24v11.5H12.5z"/>
+                  <path fill="#00A4EF" d="M0 12.5h11.5V24H0z"/>
+                  <path fill="#FFB900" d="M12.5 12.5H24V24H12.5z"/>
+                </svg>
+                <!-- Fireflies.ai -->
+                <svg *ngSwitchCase="'fireflies'" width="24" height="24" viewBox="0 0 24 24" fill="#FF6B35">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path fill="#fff" d="M8.5 7.5h7v2h-7zM8.5 11h7v2h-7zM8.5 14.5h4.5v2H8.5z"/>
+                </svg>
+                <!-- Fallback: punto neutro si el nombre no coincide -->
+                <svg *ngSwitchDefault width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2">
+                  <circle cx="12" cy="12" r="9"/>
+                </svg>
+              </ng-container>
+            </span>
+            <span class="al-integrations__name">{{ item }}</span>
+          </li>
         </ul>
       </div>
     </section>
@@ -424,7 +481,7 @@
       <div class="al-container">
         <div class="al-testimonials__head">
           <span class="al-eyebrow">{{ c.testimonials.eyebrow }}</span>
-          <h2 id="al-test-title" class="al-section-title al-section-title--center">{{ c.testimonials.title }}</h2>
+          <h2 id="al-test-title" class="al-section-title">{{ c.testimonials.title }}</h2>
         </div>
 
         <div class="al-testimonials__grid">
@@ -432,26 +489,23 @@
             <p class="al-testimonial__quote">{{ t.quote }}</p>
             <div class="al-testimonial__foot">
               <div class="al-testimonial__author">
-                <span class="al-testimonial__avatar">{{ initialsOf(t) }}</span>
+                <img *ngIf="t.avatar_url; else initialsBlock"
+                     [src]="t.avatar_url" alt="" class="al-testimonial__avatar-img" loading="lazy" />
+                <ng-template #initialsBlock>
+                  <span class="al-testimonial__avatar">{{ initialsOf(t) }}</span>
+                </ng-template>
                 <div>
                   <div class="al-testimonial__name">{{ t.name }}</div>
                   <div class="al-testimonial__role">{{ t.role }}</div>
                 </div>
               </div>
-              <div class="al-testimonial__brand" *ngIf="t.brand_wordmark">{{ t.brand_wordmark }}</div>
+              <img *ngIf="t.company_logo_url; else brandWordTpl"
+                   [src]="t.company_logo_url" alt="" class="al-testimonial__company-logo" loading="lazy" />
+              <ng-template #brandWordTpl>
+                <div class="al-testimonial__brand" *ngIf="t.brand_wordmark">{{ t.brand_wordmark }}</div>
+              </ng-template>
             </div>
           </article>
-        </div>
-
-        <div class="al-testimonials__dots" *ngIf="c.testimonials.items.length > 0" role="tablist" aria-label="Carrusel testimonios">
-          <button
-            type="button"
-            *ngFor="let _ of [0,1,2,3]; let i = index"
-            class="al-dot"
-            [class.al-dot--active]="activeTestimonialDot === i"
-            [attr.aria-selected]="activeTestimonialDot === i"
-            (click)="setActiveDot(i)"
-            [attr.aria-label]="'Página ' + (i+1)"></button>
         </div>
       </div>
     </section>
@@ -601,8 +655,7 @@
       <div class="al-footer__grid">
         <div class="al-footer__brand-col">
           <a class="al-brand al-brand--dark" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
-            <span class="al-brand__mark" aria-hidden="true">A</span>
-            <span class="al-brand__word">Acten</span>
+            <img src="brand/acten-logo-full.svg" alt="Acten" class="al-brand__logo al-brand__logo--dark" />
           </a>
           <p class="al-footer__tagline">{{ c.footer.tagline }}</p>
           <ul class="al-footer__social" *ngIf="c.footer.social_links?.length">
@@ -634,28 +687,14 @@
           <div class="al-footer__col" *ngFor="let col of c.footer.columns">
             <h3 class="al-footer__col-title">{{ col.title }}</h3>
             <ul>
-              <li *ngFor="let link of col.links">
-                <a [href]="link.url" (click)="scrollTo(link.url, $event)">{{ link.label }}</a>
-              </li>
+              <ng-container *ngFor="let link of col.links">
+                <li *ngIf="isValidLink(link.url)">
+                  <a [href]="link.url" (click)="scrollTo(link.url, $event)">{{ link.label }}</a>
+                </li>
+              </ng-container>
             </ul>
           </div>
         </nav>
-
-        <div class="al-footer__news">
-          <h3 class="al-footer__col-title">{{ c.footer.newsletter_title }}</h3>
-          <p class="al-footer__news-sub">{{ c.footer.newsletter_subtitle }}</p>
-          <form class="al-footer__news-form" (submit)="submitNewsletter($event)" novalidate>
-            <input type="email"
-                   required
-                   [placeholder]="c.footer.newsletter_placeholder || 'tu@empresa.com'"
-                   [(ngModel)]="newsletterEmail"
-                   name="newsletter_email"
-                   aria-label="Email para newsletter" />
-            <button type="submit" class="al-btn al-btn--primary">
-              {{ newsletterSent ? c.footer.newsletter_success : c.footer.newsletter_cta }}
-            </button>
-          </form>
-        </div>
       </div>
 
       <div class="al-footer__bottom">
@@ -665,12 +704,6 @@
             <a [href]="l.url">{{ l.label }}</a>
           </li>
         </ul>
-        <span class="al-footer__lang" *ngIf="c.footer.language_label">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-          </svg>
-          {{ c.footer.language_label }}
-        </span>
       </div>
     </div>
   </footer>

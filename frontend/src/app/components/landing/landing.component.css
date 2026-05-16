@@ -275,15 +275,22 @@
   font-size: 17px;
   letter-spacing: -0.01em;
 }
-.al-brand__mark {
-  width: 28px; height: 28px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 8px;
-  background: linear-gradient(140deg, var(--ac-blue) 0%, #4F8CFF 100%);
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.18), inset 0 -1px 0 rgba(0,0,0,0.12);
+/* Logo oficial Acten (SVG con monograma + wordmark).
+   --light: invertimos a blanco para que se lea sobre el header oscuro.
+   --dark : colores nativos para el footer claro. */
+.al-brand__logo {
+  display: block;
+  width: auto;
+  height: 32px;
+}
+.al-brand__logo--light {
+  /* brightness(0) → todo negro · invert(1) → todo blanco.
+     Robusto frente a un SVG multi-color como el nuestro. */
+  filter: brightness(0) invert(1);
+}
+.al-brand__logo--dark {
+  height: 36px;
+  filter: none;
 }
 .al-brand--dark { color: var(--ac-fg); }
 
@@ -367,6 +374,28 @@
   mask-image: radial-gradient(circle at 30% 70%, #000 0%, transparent 65%);
   -webkit-mask-image: radial-gradient(circle at 30% 70%, #000 0%, transparent 65%);
 }
+/* Decoración tipo "red neural" — nodos + líneas en el flanco derecho.
+   No es un SVG complejo, sólo 5 puntos y 4 líneas (ver template). */
+.al-hero__nodes {
+  position: absolute;
+  top: 40px; right: 0;
+  width: 420px; height: 520px;
+  max-width: 45%;
+  opacity: 0.85;
+  pointer-events: none;
+}
+/* Punteado adicional en la mitad derecha — clave del look "tech network". */
+.al-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 50%;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 80%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
 
 .al-hero__inner {
   position: relative;
@@ -409,28 +438,32 @@
   gap: 14px;
 }
 
+/* Atributos del hero: una sola fila en desktop, iconos blancos sin contenedor.
+   Wrap permitido en móvil (responsive más abajo). */
 .al-hero__attrs {
   margin: 36px 0 0 0;
   padding: 0;
   list-style: none;
   display: flex;
-  flex-wrap: wrap;
-  gap: 22px 28px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 22px;
 }
 .al-hero__attr {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 13.5px;
   color: var(--ac-on-dark-mut);
+  white-space: nowrap;
 }
 .al-hero__attr-icon {
-  width: 30px; height: 30px;
+  width: 18px; height: 18px;
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: var(--ac-emerald);
+  color: #FFFFFF;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 /* --- HERO MOCKUP ---------------------------------------------------------- */
@@ -733,18 +766,36 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 44px 60px;
+  gap: 32px 52px;
 }
-.al-trust__logo {
+.al-trust__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Logo real subido por el tenant: grayscale + opacidad para armonizar. */
+.al-trust__logo-img {
+  max-height: 40px;
+  width: auto;
+  opacity: 0.7;
+  filter: grayscale(1);
+  transition: opacity var(--ac-ease) 180ms, filter var(--ac-ease) 180ms;
+}
+.al-trust__item:hover .al-trust__logo-img {
+  opacity: 1;
+  filter: grayscale(0);
+}
+/* Fallback wordmark cuando no hay logo subido. */
+.al-trust__wordmark {
   font-family: var(--font-sans);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 18px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: #94A3B8;
   text-transform: uppercase;
   transition: color var(--ac-ease) 180ms;
 }
-.al-trust__logo:hover { color: var(--ac-fg-muted); }
+.al-trust__item:hover .al-trust__wordmark { color: var(--ac-fg-muted); }
 
 /* ──────────────────────────────────────────────────────────────────────────
  * 7. Features
@@ -835,16 +886,17 @@
   min-width: 0;
 }
 .al-flow__circle {
-  width: 88px; height: 88px;
+  width: 92px; height: 92px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  background: #fff;
+  background: #F8FAFC;
   border: 1px solid var(--ac-border);
-  color: var(--ac-blue);
-  box-shadow: 0 2px 0 rgba(15, 23, 42, 0.03), inset 0 0 0 6px var(--ac-surface-alt);
+  color: #155EEF;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  margin-bottom: 8px;
 }
 .al-flow__num {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ac-fg);
   letter-spacing: -0.005em;
@@ -852,17 +904,18 @@
 .al-flow__desc {
   margin: 0;
   font-size: 12.5px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--ac-fg-muted);
-  max-width: 18ch;
+  max-width: 20ch;
 }
 .al-flow__arrow {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ac-blue);
+  /* Empuja la flecha hacia el centro vertical del círculo (~46px del top). */
   padding-top: 38px;
+  color: #145DFF;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -891,31 +944,45 @@
 }
 .al-integrations__list {
   margin: 0;
-  padding: 22px 28px;
+  padding: 0;
   list-style: none;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px 30px;
-  background: var(--ac-surface-alt);
-  border: 1px solid var(--ac-border);
-  border-radius: 16px;
+  justify-content: center;
+  gap: 14px;
 }
+/* Chip individual: logo + nombre. Look "pill" con borde sutil. */
 .al-integrations__item {
-  font-weight: 700;
-  font-size: 16px;
-  color: #475569;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #FFFFFF;
+  border: 1px solid var(--ac-border);
+  border-radius: 14px;
+  transition: border-color var(--ac-ease) 180ms,
+              transform var(--ac-ease) 180ms,
+              box-shadow var(--ac-ease) 180ms;
 }
-.al-integrations__item:nth-child(7n+1) { color: #0052CC; }
-.al-integrations__item:nth-child(7n+2) { color: #1E66F5; }
-.al-integrations__item:nth-child(7n+3) { color: #7C3AED; }
-.al-integrations__item:nth-child(7n+4) { color: #0B5CAB; }
-.al-integrations__item:nth-child(7n+5) { color: #DA3B01; }
-.al-integrations__item:nth-child(7n+6) { color: #1FAA59; }
-.al-integrations__item:nth-child(7n)   { color: #4A154B; }
+.al-integrations__item:hover {
+  border-color: #CBD5E1;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -10px rgba(15, 23, 42, 0.18);
+}
+.al-integrations__logo {
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.al-integrations__logo svg { display: block; }
+.al-integrations__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ac-fg);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
 
 /* ──────────────────────────────────────────────────────────────────────────
  * 10. Testimonials
@@ -926,8 +993,9 @@
   border-top: 1px solid var(--ac-border-soft);
 }
 .al-testimonials__head {
-  text-align: center;
+  text-align: left;
   margin-bottom: 50px;
+  max-width: 720px;
 }
 .al-testimonials__grid {
   display: grid;
@@ -974,6 +1042,22 @@
   color: #fff;
   font-size: 12.5px;
   font-weight: 700;
+  flex-shrink: 0;
+}
+/* Avatar real (URL del CMS). Mismo footprint que las iniciales. */
+.al-testimonial__avatar-img {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--ac-border-soft);
+}
+/* Logo de empresa real (URL del CMS) — reemplaza el wordmark. */
+.al-testimonial__company-logo {
+  max-height: 28px;
+  width: auto;
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 .al-testimonial__name {
   font-size: 14px;
@@ -992,25 +1076,6 @@
   color: var(--ac-fg-faint);
   text-transform: uppercase;
 }
-
-.al-testimonials__dots {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 36px;
-}
-.al-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  border: none;
-  padding: 0;
-  background: #CBD5E1;
-  cursor: pointer;
-  transition: background var(--ac-ease) 180ms,
-              transform var(--ac-ease) 180ms;
-}
-.al-dot--active { background: var(--ac-blue); transform: scale(1.2); }
-.al-dot:hover { background: var(--ac-blue-hover); }
 
 /* ──────────────────────────────────────────────────────────────────────────
  * 11. Contact
@@ -1158,16 +1223,17 @@
   align-items: stretch;
   gap: 20px;
 }
+/* Check grande centrado ARRIBA del listado de statuses. */
 .al-finalcta__check {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 78px; height: 78px;
+  width: 48px; height: 48px;
   border-radius: 50%;
   background: var(--ac-emerald-soft);
   color: var(--ac-emerald);
-  margin: 0 auto;
-  box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.08);
+  margin: 0 auto 6px;
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.08);
 }
 .al-finalcta__statuses {
   list-style: none;
@@ -1179,31 +1245,35 @@
 }
 .al-finalcta__statuses li {
   display: grid;
-  grid-template-columns: minmax(140px, 1.2fr) minmax(0, 1.4fr) auto;
+  /* label flex / line ~70px / check */
+  grid-template-columns: 1fr 70px auto;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .al-finalcta__status-lbl {
   font-size: 13px;
   color: var(--ac-on-dark);
   font-weight: 500;
 }
+/* Línea/sparkline — angosta, no full-bar. */
 .al-finalcta__status-bar {
   position: relative;
-  height: 6px;
-  width: 100%;
-  background: rgba(255,255,255,0.08);
-  border-radius: 4px;
+  height: 3px;
+  width: 70px;
+  background: rgba(255,255,255,0.10);
+  border-radius: 2px;
   overflow: hidden;
+  justify-self: end;
 }
 .al-finalcta__status-fill {
   display: block;
   height: 100%;
-  width: 88%;
+  width: 100%;
   background: linear-gradient(90deg, var(--ac-emerald) 0%, #34D399 100%);
+  border-radius: 2px;
 }
 .al-finalcta__status-fill--warning {
-  width: 56%;
+  width: 60%;
   background: linear-gradient(90deg, var(--ac-amber) 0%, #FCD34D 100%);
 }
 .al-finalcta__status-check {
@@ -1229,16 +1299,14 @@
 }
 .al-footer__grid {
   display: grid;
-  grid-template-columns: 1.4fr repeat(4, 1fr) 1.5fr;
-  gap: 40px;
+  /* brand-col + 4 link columns. Sin newsletter. */
+  grid-template-columns: 1.5fr repeat(4, 1fr);
+  gap: 48px;
 }
 .al-footer__brand-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-.al-footer__brand-col .al-brand__mark {
-  background: linear-gradient(140deg, var(--ac-blue) 0%, #4F8CFF 100%);
 }
 .al-footer__tagline {
   margin: 0;
@@ -1299,33 +1367,6 @@
 }
 .al-footer__col a:hover { color: var(--ac-blue); }
 
-.al-footer__news-sub {
-  margin: 0 0 14px 0;
-  font-size: 13px;
-  color: var(--ac-fg-muted);
-  line-height: 1.5;
-}
-.al-footer__news-form {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.al-footer__news-form input {
-  flex: 1 1 180px;
-  font: inherit;
-  font-size: 14px;
-  padding: 10px 14px;
-  border: 1px solid var(--ac-border);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--ac-fg);
-}
-.al-footer__news-form input:focus {
-  outline: none;
-  border-color: var(--ac-blue);
-  box-shadow: 0 0 0 3px var(--ac-blue-soft);
-}
-
 .al-footer__bottom {
   margin-top: 50px;
   padding-top: 24px;
@@ -1355,13 +1396,6 @@
   text-decoration: none;
 }
 .al-footer__legal a:hover { color: var(--ac-blue); }
-.al-footer__lang {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--ac-fg-muted);
-}
 
 /* ──────────────────────────────────────────────────────────────────────────
  * 14. Loading skeleton
@@ -1422,9 +1456,9 @@
 
   .al-footer__grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 36px;
   }
   .al-footer__brand-col { grid-column: 1 / -1; }
-  .al-footer__news { grid-column: 1 / -1; }
 }
 
 /* --- 768px: nav drawer, features 1 col, flow becomes 2x2 ------------------ */
@@ -1464,7 +1498,8 @@
   .al-header__actions .al-btn--ghost-light { display: none; }
 
   .al-hero { padding: 110px 0 70px; }
-  .al-hero__attrs { gap: 14px 18px; }
+  /* Permitimos wrap a 2 líneas en mobile. */
+  .al-hero__attrs { flex-wrap: wrap; gap: 12px 18px; }
 
   .al-mock__metrics { grid-template-columns: repeat(2, 1fr); }
   .al-mock__body { grid-template-columns: minmax(0, 1fr); }
@@ -1486,7 +1521,7 @@
   .al-flow__circle { width: 76px; height: 76px; }
 
   .al-integrations__head { flex-direction: column; align-items: flex-start; }
-  .al-integrations__list { padding: 18px 20px; gap: 14px 22px; justify-content: flex-start; }
+  .al-integrations__list { gap: 10px; justify-content: flex-start; }
 
   .al-testimonials__grid { grid-template-columns: minmax(0, 1fr); }
 
@@ -1502,8 +1537,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 32px;
   }
-  .al-footer__brand-col,
-  .al-footer__news { grid-column: 1 / -1; }
+  .al-footer__brand-col { grid-column: 1 / -1; }
   .al-footer__bottom { justify-content: flex-start; gap: 18px; }
 }
 

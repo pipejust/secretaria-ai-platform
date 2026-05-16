@@ -19,7 +19,19 @@ export interface Testimonial {
   role: string;
   company: string;
   brand_wordmark?: string;
+  /** URL del avatar real (https:// o data:). Si vacío, se renderizan iniciales. */
+  avatar_url?: string;
+  /** URL del logo de la empresa para reemplazar el wordmark. Opcional. */
+  company_logo_url?: string;
   initials: string;
+}
+
+/** Item de la trust band — endpoint /api/public/landing/trust-logos */
+export interface TrustLogoItem {
+  slug: string;
+  name: string;
+  /** Vacío si el tenant no subió logo; el frontend cae a wordmark. */
+  logo_url: string;
 }
 export interface HeroAttribute { label: string; icon: string; }
 export interface StatusItem  { label: string; tone: string; }
@@ -185,6 +197,14 @@ export class LandingCmsService {
   /** GET público — usado por el landing en acten.app. Sin token. */
   async loadPublic(): Promise<LandingContent> {
     return firstValueFrom(this.http.get<LandingContent>(this.publicUrl));
+  }
+
+  /** GET público — tenants reales del sistema para la trust band. */
+  async loadTrustLogos(): Promise<TrustLogoItem[]> {
+    const resp = await firstValueFrom(
+      this.http.get<{ items: TrustLogoItem[] }>(`${this.publicUrl}/trust-logos`),
+    );
+    return resp?.items ?? [];
   }
 
   /** GET admin — devuelve el mismo shape que loadPublic. Requiere token + tenant 'acten'. */

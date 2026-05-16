@@ -181,7 +181,7 @@ DEFAULT_CONTENT: Dict[str, Any] = {
         "see_all_anchor": "#integrations",
         "items": [
             "Jira", "Trello", "ClickUp", "Azure DevOps",
-            "Microsoft 365", "Google Workspace", "Slack",
+            "Google Calendar", "Microsoft Calendar", "Fireflies",
         ],
     },
 
@@ -196,6 +196,8 @@ DEFAULT_CONTENT: Dict[str, Any] = {
                 "role": "CEO, TechNova",
                 "company": "TechNova",
                 "brand_wordmark": "TECHNOVA",
+                "avatar_url": "",  # opcional, https://...
+                "company_logo_url": "",  # opcional, https://...
                 "initials": "MP",
             },
             {
@@ -204,6 +206,8 @@ DEFAULT_CONTENT: Dict[str, Any] = {
                 "role": "Product Manager, BuildFast",
                 "company": "BuildFast",
                 "brand_wordmark": "BUILDFAST",
+                "avatar_url": "",
+                "company_logo_url": "",
                 "initials": "AM",
             },
             {
@@ -212,6 +216,8 @@ DEFAULT_CONTENT: Dict[str, Any] = {
                 "role": "Head of Operations, DataCore",
                 "company": "DataCore",
                 "brand_wordmark": "DATACORE",
+                "avatar_url": "",
+                "company_logo_url": "",
                 "initials": "LC",
             },
         ],

@@ -419,6 +419,14 @@
                                 <input type="text" [(ngModel)]="t.initials" maxlength="4" />
                             </label>
                             <label class="lcms-field">
+                                <span class="lcms-field-label">URL de avatar (opcional)</span>
+                                <input type="url" [(ngModel)]="t.avatar_url" placeholder="https://..." maxlength="500" />
+                            </label>
+                            <label class="lcms-field">
+                                <span class="lcms-field-label">URL de logo de empresa (opcional)</span>
+                                <input type="url" [(ngModel)]="t.company_logo_url" placeholder="https://..." maxlength="500" />
+                            </label>
+                            <label class="lcms-field">
                                 <span class="lcms-field-label">Cargo</span>
                                 <input type="text" [(ngModel)]="t.role" maxlength="80" />
                             </label>

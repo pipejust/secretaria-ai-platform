@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { LandingCmsService, LandingContent, ContactSubmission } from '../../services/landing-cms.service';
+import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem } from '../../services/landing-cms.service';
 
 /**
  * Landing pública de Acten — rediseño "Acten Premium" 2026-Q2.
@@ -48,6 +48,9 @@ export class LandingComponent implements OnInit {
     contentLoading = true;
     contentError = false;
 
+    /** Logos reales de tenants en la trust band. Vacío => sección oculta. */
+    trustLogos: TrustLogoItem[] = [];
+
     /** Estado newsletter (UI-only por ahora). */
     newsletterEmail = '';
     newsletterSent = false;
@@ -87,6 +90,15 @@ export class LandingComponent implements OnInit {
             this.contentError = true;
         } finally {
             this.contentLoading = false;
+        }
+
+        // Trust logos en paralelo al render — si falla, simplemente queda vacío
+        // y la sección no se muestra (gracias a *ngIf en el template).
+        try {
+            this.trustLogos = await this.cms.loadTrustLogos();
+        } catch (err) {
+            console.warn('[Landing] No se pudieron cargar trust logos', err);
+            this.trustLogos = [];
         }
     }
 
@@ -150,6 +162,33 @@ export class LandingComponent implements OnInit {
     /** Click en los dots del carrusel de testimonios — UI-only por ahora. */
     setActiveDot(i: number): void {
         this.activeTestimonialDot = i;
+    }
+
+    /**
+     * Footer link sanity check — filtra enlaces sin destino real.
+     * Acepta anchors (#features), rutas (/login) y URLs absolutas (https://...).
+     * Descarta vacíos y el literal "#" que es un placeholder común.
+     */
+    isValidLink(url: string): boolean {
+        if (!url || url === '#') return false;
+        return url.startsWith('#') || url.startsWith('/') || url.startsWith('http');
+    }
+
+    /**
+     * Mapea el nombre de una integración (texto libre del CMS) a una clave
+     * conocida para renderizar el SVG oficial. Match case-insensitive y
+     * por substring. Devuelve '' si no hay match — el template cae al wordmark.
+     */
+    integrationKey(name: string): string {
+        const n = (name || '').toLowerCase();
+        if (n.includes('jira')) return 'jira';
+        if (n.includes('trello')) return 'trello';
+        if (n.includes('clickup')) return 'clickup';
+        if (n.includes('azure')) return 'azure';
+        if (n.includes('fireflies')) return 'fireflies';
+        if (n.includes('google')) return 'google';
+        if (n.includes('microsoft') || n.includes('outlook')) return 'microsoft';
+        return '';
     }
 
     submitNewsletter(event: Event): void {

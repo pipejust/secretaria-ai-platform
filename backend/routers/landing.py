@@ -68,6 +68,45 @@ def get_public_landing_content(db: Session = Depends(get_session)) -> Dict[str, 
     return landing_content_service.get_landing_content(db, tenant.id)
 
 
+@public_router.get("/landing/trust-logos")
+def get_public_trust_logos(db: Session = Depends(get_session)) -> Dict[str, Any]:
+    """Lista de empresas reales (tenants activos) que aparecen en la trust band.
+
+    Sin auth. Excluye el tenant 'acten' (es la propia plataforma).
+    Si el tenant tiene logo subido en branding_json, lo expone como data URL;
+    si no, el frontend renderiza el name como wordmark. Cualquier campo extra
+    de branding (company_name) tiene prioridad sobre el slug.
+    """
+    import json
+    tenants = db.exec(
+        select(Tenant)
+        .where(Tenant.is_active == True)  # noqa: E712
+        .where(Tenant.slug != DEFAULT_TENANT_SLUG)
+    ).all()
+    out: list[Dict[str, Any]] = []
+    for t in tenants:
+        brand: Dict[str, Any] = {}
+        if t.branding_json:
+            try:
+                brand = json.loads(t.branding_json) or {}
+            except (json.JSONDecodeError, TypeError):
+                brand = {}
+        display_name = (brand.get("company_name") or t.name or t.slug).strip()
+        logo = (brand.get("logo_data_url") or "").strip()
+        # Si es data URL o URL absoluta servible, la pasamos. Cualquier otro
+        # valor raro queda como cadena vacía → el frontend cae a wordmark.
+        if not (logo.startswith("data:") or logo.startswith("http")):
+            logo = ""
+        out.append({
+            "slug": t.slug,
+            "name": display_name,
+            "logo_url": logo,
+        })
+    # Ordenamos: primero los que tienen logo (jerarquía visual), luego alfabético.
+    out.sort(key=lambda x: (0 if x["logo_url"] else 1, x["name"].lower()))
+    return {"items": out}
+
+
 # ─── Contact form ───────────────────────────────────────────────────────────
 #
 # Rate limit naïve in-memory (por IP). En producción real conviene reemplazar
