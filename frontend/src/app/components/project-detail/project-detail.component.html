@@ -41,11 +41,20 @@
           <span class="meta-val">
             <ng-container *ngIf="d.project.auto_dispatch_enabled === null">Heredado del global</ng-container>
             <ng-container *ngIf="d.project.auto_dispatch_enabled === true">
-              ✓ Activo · {{ d.project.auto_dispatch_timeout_hours
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px;">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Activo · {{ d.project.auto_dispatch_timeout_hours
                 ? (d.project.auto_dispatch_timeout_hours * 60 | number:'1.0-0') + ' min'
                 : '?' }}
             </ng-container>
-            <ng-container *ngIf="d.project.auto_dispatch_enabled === false">✗ Desactivado</ng-container>
+            <ng-container *ngIf="d.project.auto_dispatch_enabled === false">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px;">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              Desactivado
+            </ng-container>
           </span>
         </div>
       </div>

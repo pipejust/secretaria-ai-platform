@@ -60,8 +60,8 @@ DEFAULT_TEMPLATES = [
         "role_type": "status",
         "prompt_template": (
             "Genera un Status Update conciso en Markdown:\n"
-            "## ✅ Logrado en este período\n## 🚧 En progreso\n"
-            "## ⛔ Bloqueos\n## 🎯 Próximos hitos\n\n"
+            "## Logrado en este período\n## En progreso\n"
+            "## Bloqueos\n## Próximos hitos\n\n"
             "Transcripción:\n{{transcript}}"
         ),
     },

@@ -1373,8 +1373,9 @@
 
     /* Labels prefijo para dar pista de qué es cada dato en mobile */
     .cell-duration::before {
-        content: '⏱ ';
+        content: 'Duración: ';
         opacity: 0.6;
+        font-size: 11px;
     }
 
     /* Paginación apilada */

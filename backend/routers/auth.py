@@ -673,20 +673,21 @@ def my_activity(
         .limit(limit)
     ).all()
 
-    # Labels legibles por acción — fallback al raw action.
+    # Labels legibles por acción + clave de icono (el frontend resuelve a SVG).
+    # NO usar emojis aquí — el frontend pintará un SVG mapeado a icon_key.
     labels = {
-        "login":               ("Inicio de sesión", "🔑"),
-        "logout":              ("Cierre de sesión", "🚪"),
-        "profile_update":      ("Actualización de perfil", "✏️"),
-        "password_change":     ("Cambio de contraseña", "🔒"),
-        "gdpr_export":         ("Exportación de datos personales", "📦"),
-        "gdpr_delete_request": ("Solicitud de eliminación de cuenta", "🗑️"),
-        "edit_settings":       ("Cambios en configuración", "⚙️"),
-        "session_dispatch":    ("Envío de reunión procesada", "📤"),
+        "login":               ("Inicio de sesión",                       "log-in"),
+        "logout":              ("Cierre de sesión",                       "log-out"),
+        "profile_update":      ("Actualización de perfil",                "edit"),
+        "password_change":     ("Cambio de contraseña",                   "lock"),
+        "gdpr_export":         ("Exportación de datos personales",        "download"),
+        "gdpr_delete_request": ("Solicitud de eliminación de cuenta",     "trash"),
+        "edit_settings":       ("Cambios en configuración",               "settings"),
+        "session_dispatch":    ("Envío de reunión procesada",             "send"),
     }
     items: list[dict] = []
     for r in rows:
-        label, icon = labels.get(r.action, (r.action.replace("_", " ").capitalize(), "•"))
+        label, icon = labels.get(r.action, (r.action.replace("_", " ").capitalize(), "dot"))
         items.append({
             "id": r.id,
             "action": r.action,

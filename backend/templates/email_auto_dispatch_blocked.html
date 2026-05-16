@@ -10,7 +10,7 @@
    ────────────────────────────────────────────────────────────────────────── #}
 
 {% block content %}
-  <h2>🚫 No se pueden enviar las tareas automáticamente</h2>
+  <h2>No se pueden enviar las tareas automáticamente</h2>
 
   <p>Hola {{ admin_name | default('') }},</p>
 
@@ -61,7 +61,7 @@
   </div>
 
   <p style="color: #6b7280; font-size: 13px; line-height: 1.55; margin-top: 28px;">
-    💡 Este aviso se vuelve a enviar como máximo una vez al día hasta que
+    <strong>Tip:</strong> Este aviso se vuelve a enviar como máximo una vez al día hasta que
     completes los correos o cambies la sesión a modo manual.
   </p>
 {% endblock %}

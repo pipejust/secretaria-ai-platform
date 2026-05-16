@@ -188,16 +188,16 @@ class EmailService:
                     payload["attachments"] = attachments
                     
                 response = resend.Emails.send(payload)
-                print(f"✅ Email enviado a {to_email} (ID: {response.get('id', 'Unknown')})")
+                print(f"[OK] Email enviado a {to_email} (ID: {response.get('id', 'Unknown')})")
                 return True
             except Exception as e:
-                print(f"❌ Error enviando email: {str(e)}")
+                print(f"[FAIL] Error enviando email: {str(e)}")
                 raise e
         
 
         else:
             # Modo Desarrollo: Simular envío e imprimir HTML en consola
-            print(f"--- 📧 SIMULACIÓN DE ENVÍO DE EMAIL ---")
+            print(f"--- [SIM] SIMULACIÓN DE ENVÍO DE EMAIL ---")
             print(f"To: {to_email}")
             print(f"Subject: {subject}")
             print(f"Body (HTML):")
@@ -373,7 +373,7 @@ class EmailService:
         """
         platform_name = self.branding.get("platform_name") or "Acten"
         if pipeline_failed:
-            subject = f"⚠️ Error procesando sesión en {platform_name}: {session_title or 'Sin título'}"
+            subject = f"[Error] Procesando sesión en {platform_name}: {session_title or 'Sin título'}"
         else:
             subject = f"Sesión lista en {platform_name}: {session_title or 'Sin título'}"
         template = self.jinja_env.get_template('email_session_received.html')
@@ -414,7 +414,7 @@ class EmailService:
         correos faltantes, y entonces el cron va a poder auto-despachar.
         """
         platform_name = self.branding.get("platform_name") or "Acten"
-        subject = f"🚫 No se puede auto-enviar tareas: {session_title or 'Sin título'}"
+        subject = f"[Bloqueado] No se puede auto-enviar tareas: {session_title or 'Sin título'}"
         template = self.jinja_env.get_template('email_auto_dispatch_blocked.html')
         html_content = template.render(
             admin_name=admin_name or '',
@@ -446,7 +446,7 @@ class EmailService:
         detalle". Se manda UNA SOLA VEZ por sesión (status → 'processed').
         """
         platform_name = self.branding.get("platform_name") or "Acten"
-        subject = f"✅ Tareas y correos enviados: {session_title or 'Sin título'}"
+        subject = f"Tareas y correos enviados: {session_title or 'Sin título'}"
         template = self.jinja_env.get_template('email_auto_dispatch_done.html')
         html_content = template.render(
             admin_name=admin_name or '',

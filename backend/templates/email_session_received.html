@@ -19,7 +19,7 @@
 
 {% block content %}
   {% if pipeline_failed %}
-    <h2>⚠️ Error procesando la sesión</h2>
+    <h2>Error procesando la sesión</h2>
 
     <p>Hola {{ admin_name | default('') }},</p>
 
@@ -58,7 +58,7 @@
       </a>
     </div>
   {% else %}
-    <h2>✅ Sesión procesada y lista</h2>
+    <h2>Sesión procesada y lista</h2>
 
     <p>Hola {{ admin_name | default('') }},</p>
 
@@ -81,7 +81,7 @@
     {% if auto_dispatch_enabled and (missing_task_emails > 0 or missing_participants > 0) %}
       <div class="box" style="border-left-color: #F59E0B; background: #FFFBEB;">
         <p class="box-title" style="color: #92400E;">
-          ⚠️ Faltan datos para el envío automático
+          Faltan datos para el envío automático
         </p>
         <p class="box-text">
           {% if missing_task_emails > 0 %}
@@ -134,7 +134,7 @@
   {% endif %}
 
   <p style="color: #6b7280; font-size: 13px; line-height: 1.55; margin-top: 28px;">
-    💡 <strong>Recuerda:</strong> los correos automáticos sólo salen a
+    <strong>Tip:</strong> <strong>Recuerda:</strong> los correos automáticos sólo salen a
     responsables/participantes con dirección de correo registrada. Si una
     tarea no tiene correo del responsable, esa tarea no se enviará aunque
     el envío automático esté activo.

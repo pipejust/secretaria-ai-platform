@@ -19,7 +19,7 @@
     {% endif %}
     {% if task.due_date %}
     <p style="margin: 0 0 12px 0; font-size: 13px; color: #059669; font-weight: 600;">
-      📅 Fecha límite: {{ task.due_date }}
+      Fecha límite: {{ task.due_date }}
     </p>
     {% endif %}
     <!-- Botones "Añadir al calendario" por tarea — un solo clic abre el
@@ -29,14 +29,14 @@
          style="display: inline-block; padding: 6px 12px; margin-right: 8px;
                 background: #155EEF; color: #ffffff; text-decoration: none;
                 border-radius: 6px; font-size: 12px; font-weight: 600;">
-        📅 Añadir a Google Calendar
+        Añadir a Google Calendar
       </a>
       {% if task.outlook_url %}
       <a href="{{ task.outlook_url }}" target="_blank" rel="noopener"
          style="display: inline-block; padding: 6px 12px; margin-right: 8px;
                 background: #0078d4; color: #ffffff; text-decoration: none;
                 border-radius: 6px; font-size: 12px; font-weight: 600;">
-        📅 Añadir a Outlook
+        Añadir a Outlook
       </a>
       {% endif %}
       <span style="font-size: 11px; color: #6b7280;">
@@ -48,14 +48,14 @@
 
   <div style="background-color: #ecfdf5; padding: 14px; border-radius: 6px; margin: 20px 0; border: 1px solid #a7f3d0;">
     <p style="margin: 0; color: #065f46; font-size: 13px; line-height: 1.5;">
-      💡 <strong>Importa todas tus tareas de una vez:</strong> abre el archivo adjunto
+      <strong>Tip:</strong> <strong>Importa todas tus tareas de una vez:</strong> abre el archivo adjunto
       <code>recordatorio_tareas.ics</code> con tu app de calendario favorita.
     </p>
   </div>
 
   {% if summary %}
   <div style="margin-top: 28px;">
-    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">📋 Resumen ejecutivo</h4>
+    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Resumen ejecutivo</h4>
     <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
       {{ summary | linkify | safe }}
     </div>
@@ -64,7 +64,7 @@
 
   {% if decisions %}
   <div style="margin-top: 18px;">
-    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">⚖️ Decisiones clave</h4>
+    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Decisiones clave</h4>
     <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
       {{ decisions | linkify | safe }}
     </div>
@@ -73,7 +73,7 @@
 
   {% if risks %}
   <div style="margin-top: 18px;">
-    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">⚠️ Riesgos identificados</h4>
+    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Riesgos identificados</h4>
     <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
       {{ risks | linkify | safe }}
     </div>
@@ -82,7 +82,7 @@
 
   {% if agreements %}
   <div style="margin-top: 18px;">
-    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">🤝 Acuerdos</h4>
+    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Acuerdos</h4>
     <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
       {{ agreements | linkify | safe }}
     </div>
@@ -91,7 +91,7 @@
 
   {% if raw_transcript %}
   <div style="margin-top: 24px;">
-    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">🎙️ Transcripción de la reunión</h4>
+    <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Transcripción de la reunión</h4>
     <div style="font-size: 13px; color: #4a4a4a; line-height: 1.55; background: #fafbfc;
                 padding: 14px; border-radius: 6px; border: 1px solid #e5e7eb;
                 max-height: 480px; overflow-y: auto; white-space: pre-wrap;">{{ raw_transcript }}</div>
@@ -99,7 +99,7 @@
   {% endif %}
 
   <p style="margin-top: 24px; margin-bottom: 8px; font-size: 13px; color: #4b5563;">
-    📎 Se adjunta el <strong>acta completa</strong> de la sesión en formato Word/PDF.
+    Se adjunta el <strong>acta completa</strong> de la sesión en formato Word/PDF.
     El documento incluye resumen, decisiones, riesgos, acuerdos y tareas —
     <strong>sin la transcripción</strong> (esa la tienes arriba en el correo).
   </p>

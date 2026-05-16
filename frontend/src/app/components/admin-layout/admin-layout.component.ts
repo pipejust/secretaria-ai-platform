@@ -10,6 +10,7 @@ import { NotificationService, AcnNotification } from '../../services/notificatio
 import { PermissionsService } from '../../services/permissions.service';
 import { SearchService, SearchGroup } from '../../services/search.service';
 import { environment } from '../../../environments/environment';
+import { DomSanitizer } from '@angular/platform-browser';
 
 interface CurrentUser {
     email?: string;
@@ -76,6 +77,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
         private router: Router,
         private activatedRoute: ActivatedRoute,
         private cdr: ChangeDetectorRef,
+        private sanitizer: DomSanitizer,
     ) { }
 
     /** Recorre el árbol de rutas hijas para encontrar la activa y leer su title. */
@@ -304,14 +306,17 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
         this.searchOpen = false;
     }
 
-    searchTypeIcon(type: string): string {
-        const map: Record<string, string> = {
-            meeting: '🎙',
-            project: '📁',
-            task:    '✓',
-            person:  '👤',
+    /** Devuelve SVG inline para el tipo de resultado. Usado vía [innerHTML]
+     *  con SafeHtml para que Angular no lo escape. */
+    searchTypeIconSvg(type: string): import('@angular/platform-browser').SafeHtml {
+        const svgs: Record<string, string> = {
+            meeting: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>',
+            project: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
+            task:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+            person:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
         };
-        return map[type] || '•';
+        const fallback = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"></circle></svg>';
+        return this.sanitizer.bypassSecurityTrustHtml(svgs[type] || fallback);
     }
 
     toggleMobileMenu() {

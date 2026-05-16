@@ -598,7 +598,7 @@ async def process_session_with_ai(
                 db,
                 tenant_id=session_obj.tenant_id,
                 kind=KIND_SESSION_PROCESSED,
-                title=f"⚠️ Sesión incompleta: {session_obj.title[:120]}",
+                title=f"Sesión incompleta: {session_obj.title[:120]}",
                 body=(
                     "El pipeline IA terminó con errores. "
                     f"Pasos fallidos: {', '.join(errors.keys())}. "

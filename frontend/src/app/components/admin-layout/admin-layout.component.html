@@ -301,7 +301,7 @@
                                 <li *ngFor="let it of g.items"
                                     (click)="onSearchHit(it.link_to)"
                                     role="button" tabindex="0">
-                                    <span class="ts-icon" [attr.data-type]="it.type">{{ searchTypeIcon(it.type) }}</span>
+                                    <span class="ts-icon" [attr.data-type]="it.type" [innerHTML]="searchTypeIconSvg(it.type)"></span>
                                     <div class="ts-text">
                                         <span class="ts-title">{{ it.title }}</span>
                                         <span class="ts-sub" *ngIf="it.subtitle">{{ it.subtitle }}</span>
