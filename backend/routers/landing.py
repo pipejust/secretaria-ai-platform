@@ -24,7 +24,7 @@ from collections import defaultdict
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, validator
 from sqlmodel import Session, select
 
 from database import DEFAULT_TENANT_SLUG, get_session
@@ -78,14 +78,26 @@ _CONTACT_RATE_WINDOW_SECONDS = 60 * 10  # 10 minutos
 _CONTACT_RATE_MAX = 3  # máximo 3 mensajes por IP en 10 min
 
 
+# Validación de email casera para evitar la dependencia `email-validator`
+# (`pydantic.EmailStr`). Cubre el 99% de casos legítimos sin agregar deps.
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
 class ContactSubmission(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    email: EmailStr
+    email: str = Field(min_length=5, max_length=240)
     company: str | None = Field(default=None, max_length=120)
     role: str | None = Field(default=None, max_length=120)
     message: str = Field(min_length=10, max_length=4000)
     # Honeypot: cualquier valor no vacío en este campo invisible = bot.
     website: str | None = Field(default="")
+
+    @validator("email")
+    def _validate_email(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not _EMAIL_RE.match(v):
+            raise ValueError("Email inválido.")
+        return v.lower()
 
 
 def _check_rate_limit(ip: str) -> None:
