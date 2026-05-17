@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Open Graph card 1200x630 — landscape para Facebook / LinkedIn / WhatsApp.
+       Tipografía: Playfair Display (display) + Sora (sans). Si las webfuentes
+       no cargan en el rasterizador del crawler, cae a serif/sans-serif. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#02060F"/>
+      <stop offset="50%" stop-color="#06111F"/>
+      <stop offset="100%" stop-color="#0A1A33"/>
+    </linearGradient>
+    <radialGradient id="halo1" cx="0.25" cy="0.35" r="0.5">
+      <stop offset="0%" stop-color="#145DFF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#145DFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo2" cx="0.85" cy="0.7" r="0.4">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.05)"/>
+    </pattern>
+  </defs>
+
+  <!-- Fondo navy con gradiente -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#halo1)"/>
+  <rect width="1200" height="630" fill="url(#halo2)"/>
+  <!-- Grid de puntos solo en la mitad derecha (decoración estilo "neural") -->
+  <rect x="600" y="0" width="600" height="630" fill="url(#dots)"/>
+
+  <!-- Nodos + conexiones (decorativo, mitad derecha) -->
+  <g stroke-width="1" fill="none">
+    <line x1="780" y1="160" x2="920" y2="240" stroke="rgba(20,93,255,0.35)"/>
+    <line x1="920" y1="240" x2="1060" y2="180" stroke="rgba(16,185,129,0.32)"/>
+    <line x1="920" y1="240" x2="980" y2="400" stroke="rgba(241,167,22,0.28)"/>
+    <line x1="780" y1="160" x2="820" y2="460" stroke="rgba(20,93,255,0.22)"/>
+  </g>
+  <g>
+    <circle cx="780" cy="160" r="4.5" fill="#145DFF" opacity="0.65"/>
+    <circle cx="920" cy="240" r="5"   fill="#10B981" opacity="0.65"/>
+    <circle cx="1060" cy="180" r="4"  fill="#F1A716" opacity="0.55"/>
+    <circle cx="980" cy="400" r="4"   fill="#10B981" opacity="0.5"/>
+    <circle cx="820" cy="460" r="4.5" fill="#145DFF" opacity="0.5"/>
+  </g>
+
+  <!-- Logo Acten arriba izquierda -->
+  <g transform="translate(80, 80)">
+    <rect x="0" y="0" width="44" height="44" rx="10" fill="#10B981" opacity="0.18"/>
+    <path d="M 12 32 L 22 12 L 32 32 M 16 24 H 28" stroke="#F7F4EE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="62" y="32" font-family="'Sora', system-ui, sans-serif" font-size="26" font-weight="700" fill="#F7F4EE" letter-spacing="-0.5">Acten</text>
+  </g>
+
+  <!-- Título principal -->
+  <text x="80" y="270" font-family="'Playfair Display', Georgia, serif" font-size="64" font-weight="500" fill="#F7F4EE" letter-spacing="-1.5">
+    De conversación
+  </text>
+  <text x="80" y="340" font-family="'Playfair Display', Georgia, serif" font-size="64" font-weight="500" fill="#F7F4EE" letter-spacing="-1.5">
+    a claridad.
+  </text>
+  <text x="80" y="410" font-family="'Playfair Display', Georgia, serif" font-size="64" font-weight="500" fill="#F7F4EE" letter-spacing="-1.5">
+    De claridad a <tspan fill="#10B981" font-style="italic">impacto.</tspan>
+  </text>
+
+  <!-- Subtítulo -->
+  <text x="80" y="475" font-family="'Sora', system-ui, sans-serif" font-size="20" fill="#CBD5E1" font-weight="400">
+    AI Meeting Assistant para equipos enterprise.
+  </text>
+  <text x="80" y="505" font-family="'Sora', system-ui, sans-serif" font-size="20" fill="#CBD5E1" font-weight="400">
+    Reuniones que terminan en decisiones, tareas y trazabilidad.
+  </text>
+
+  <!-- CTA bar -->
+  <g transform="translate(80, 540)">
+    <rect x="0" y="0" width="200" height="48" rx="12" fill="#145DFF"/>
+    <text x="100" y="31" text-anchor="middle" font-family="'Sora', system-ui, sans-serif" font-size="16" font-weight="600" fill="#FFFFFF">Solicitar demo</text>
+  </g>
+
+  <!-- Chips de atributos -->
+  <g transform="translate(310, 555)" font-family="'Sora', system-ui, sans-serif" font-size="14" fill="#94A3B8">
+    <text x="0" y="20">IA avanzada</text>
+    <text x="120" y="20">·</text>
+    <text x="140" y="20">Multilenguaje</text>
+    <text x="270" y="20">·</text>
+    <text x="290" y="20">Seguro y privado</text>
+    <text x="430" y="20">·</text>
+    <text x="450" y="20">Enterprise ready</text>
+  </g>
+
+  <!-- URL al pie -->
+  <text x="1120" y="595" text-anchor="end" font-family="'Sora', system-ui, sans-serif" font-size="14" fill="#475569" font-weight="500">acten.app</text>
+</svg>

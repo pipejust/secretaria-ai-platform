@@ -60,8 +60,17 @@
   <meta property="og:site_name" content="Acten">
   <meta property="og:title" content="Acten — Plataforma IA de actas y tareas para reuniones empresariales">
   <meta property="og:description" content="Transforma cada reunión en decisiones, tareas y entregables distribuidos a Trello, Jira, ClickUp y Azure DevOps. Powered by Fireflies + Groq + OpenAI.">
+  <!-- og:image preferida: landscape 1200x630 (SVG con paleta Acten).
+       Facebook/LinkedIn/WhatsApp lo renderizan grande con summary_large_image.
+       Fallback al PNG cuadrado 512x512 para crawlers que aún no aceptan SVG. -->
+  <meta property="og:image" content="https://acten.app/og-image.svg">
+  <meta property="og:image:secure_url" content="https://acten.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Acten — AI Meeting Assistant para equipos enterprise. De conversación a claridad, de claridad a impacto.">
+  <!-- Segundo og:image como fallback PNG (crawlers que rechazan SVG). -->
   <meta property="og:image" content="https://acten.app/android-chrome-512x512.png">
-  <meta property="og:image:secure_url" content="https://acten.app/android-chrome-512x512.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="512">
   <meta property="og:image:height" content="512">
@@ -77,8 +86,9 @@
   <meta name="twitter:url" content="https://acten.app/">
   <meta name="twitter:title" content="Acten — IA que convierte reuniones en resultados">
   <meta name="twitter:description" content="Transcribe, decide, asigna tareas y entrega actas listas. Integraciones nativas con Fireflies, Trello, Jira, ClickUp y Azure DevOps.">
-  <meta name="twitter:image" content="https://acten.app/android-chrome-512x512.png">
-  <meta name="twitter:image:alt" content="Acten — Plataforma IA empresarial">
+  <!-- Twitter/X usa la landscape SVG (acepta SVG desde 2017). -->
+  <meta name="twitter:image" content="https://acten.app/og-image.svg">
+  <meta name="twitter:image:alt" content="Acten — AI Meeting Assistant para equipos enterprise. De conversación a claridad, de claridad a impacto.">
   <meta name="twitter:creator" content="@acten_app">
   <meta name="twitter:site" content="@acten_app">
 
@@ -89,6 +99,14 @@
   <link rel="dns-prefetch" href="https://api.acten.app">
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Preload del logo del header — es el primer asset visible y se
+       repinta al entrar al landing. Sin preload el browser lo descubre
+       hasta que parsea el component HTML (~300-400ms más tarde). -->
+  <link rel="preload" href="/brand/acten-logo-full.svg" as="image" type="image/svg+xml">
+  <!-- Hint al endpoint público del landing para que el browser empiece
+       el connection setup en paralelo al SPA bootstrap. Reduce el TTFB
+       del primer GET /api/public/landing. -->
+  <link rel="prefetch" href="https://api.acten.app/api/public/landing" crossorigin>
 
   <!-- ─────────────────────────────────────────────────────────────────
        Structured data — Organization

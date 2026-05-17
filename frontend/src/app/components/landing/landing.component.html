@@ -12,7 +12,11 @@
   <header class="al-header" [class.al-header--scrolled]="scrolled" role="banner">
     <div class="al-container al-header__inner">
       <a class="al-brand" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
-        <img src="brand/acten-logo-full.svg" alt="Acten" class="al-brand__logo al-brand__logo--light" />
+        <!-- LCP candidate: above-the-fold + preloaded en index.html.
+             width/height explícitos previenen CLS (1.18 ratio del logo). -->
+        <img src="brand/acten-logo-full.svg" alt="Acten"
+             class="al-brand__logo al-brand__logo--light"
+             width="118" height="32" decoding="async" fetchpriority="high" />
       </a>
 
       <nav class="al-nav" [class.al-nav--open]="mobileMenuOpen" aria-label="Navegación principal">
@@ -275,7 +279,10 @@
         <ul class="al-trust__logos">
           <li *ngFor="let logo of trustLogos" class="al-trust__item">
             <img *ngIf="logo.logo_url; else trustWord"
-                 [src]="logo.logo_url" [alt]="logo.name" class="al-trust__logo-img" />
+                 [src]="logo.logo_url" [alt]="logo.name"
+                 class="al-trust__logo-img"
+                 loading="lazy" decoding="async"
+                 width="120" height="40" />
             <ng-template #trustWord>
               <span class="al-trust__wordmark">{{ logo.name }}</span>
             </ng-template>
@@ -537,7 +544,8 @@
                    [src]="p.avatar_url"
                    [alt]="p.name"
                    class="al-testimonial__avatar-img"
-                   loading="lazy" />
+                   loading="lazy" decoding="async"
+                   width="48" height="48" />
               <ng-template #testInitialsTpl>
                 <span class="al-testimonial__avatar" aria-hidden="true">{{ p.initials || initialsOf(p) }}</span>
               </ng-template>
@@ -723,7 +731,9 @@
       <div class="al-footer__grid">
         <div class="al-footer__brand-col">
           <a class="al-brand al-brand--dark" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
-            <img src="brand/acten-logo-full.svg" alt="Acten" class="al-brand__logo al-brand__logo--dark" />
+            <img src="brand/acten-logo-full.svg" alt="Acten"
+                 class="al-brand__logo al-brand__logo--dark"
+                 width="132" height="36" decoding="async" loading="lazy" />
           </a>
           <p class="al-footer__tagline">{{ c.footer.tagline }}</p>
           <ul class="al-footer__social" *ngIf="c.footer.social_links?.length">
