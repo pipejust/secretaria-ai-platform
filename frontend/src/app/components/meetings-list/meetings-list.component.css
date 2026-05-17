@@ -1281,7 +1281,11 @@
  * ============================================================ */
 
 /* Tablet: panel lateral pasa abajo, métricas a 2×2 */
-@media (max-width: 1200px) {
+/* En 13" (1280-1366) el sidebar + padding deja ~960-1050px de área de
+   contenido. El layout en grid `main + 380-440px detail` no cabe sin que
+   la tabla del meeting overflow horizontalmente. Por eso stackeamos a
+   1440px — abajo de esta marca el detalle va debajo de la lista. */
+@media (max-width: 1440px) {
     /* CRÍTICO: minmax(0, 1fr), no solo 1fr.
        Sin minmax(0, ...) el grid permite que un descendiente con
        contenido ancho (ej: una métrica con número grande, una fila

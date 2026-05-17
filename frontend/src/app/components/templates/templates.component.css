@@ -1212,7 +1212,12 @@
 /* ============================================================
  *  RESPONSIVE
  * ============================================================ */
-@media (max-width: 1200px) {
+/* En 13" (1280-1366px) el layout de 3 columnas (240 + main + 380) deja
+   el `main` con ~700px tras descontar sidebar + padding global, y el
+   panel preview se vuelve incómodo. A partir de 1440px y abajo
+   reducimos el sidebar de categorías a 220px y stackeamos el preview
+   debajo en lugar de al costado. */
+@media (max-width: 1440px) {
     .tpl-grid, .tpl-grid:not(.has-detail) { grid-template-columns: 220px minmax(0, 1fr); }
     .tpl-grid.has-detail .tpl-detail {
         grid-column: 1 / -1;
