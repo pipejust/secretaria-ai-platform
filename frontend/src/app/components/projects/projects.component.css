@@ -734,14 +734,10 @@
 }
 .ap-insights-link:hover { text-decoration: underline; }
 
-/* ====== Responsive ======
-   Stack del panel derecho (sync + resumen + insights) bajo el contenido
-   principal. Cubre TODAS las MacBook 13"/14" (incluyendo Air M2/M3 a
-   1470-1512 CSS px en default scaling). Sobre 1600 (monitor 24"+) sigue
-   el split clásico. */
-@media (max-width: 1600px) {
+/* ====== Responsive ====== */
+@media (max-width: 1180px) {
     .ap-layout { grid-template-columns: 1fr; }
-    .ap-side { flex-direction: row; flex-wrap: wrap; gap: var(--space-16); }
+    .ap-side { flex-direction: row; flex-wrap: wrap; }
     .ap-side .ap-card { flex: 1 1 280px; }
 }
 @media (max-width: 720px) {

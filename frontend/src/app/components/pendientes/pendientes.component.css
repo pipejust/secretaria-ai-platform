@@ -1116,28 +1116,18 @@
 }
 .tk-upcoming-meta { font-size: 11px; color: var(--tk-text-muted); }
 
-/* ===================== Responsive =====================
-   Layout: tabla (main) + 320px (sidebar derecho). Stackeamos a 1600
-   para cubrir MacBook 13"/14" en cualquier scaling (incluye Air M2/M3
-   con default scaling a 1470-1512 CSS px). Sobre 1600 sigue el split.
-   ===================================================== */
-@media (max-width: 1600px) {
-    .tk-layout { grid-template-columns: 1fr; }
-    .tk-side {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: var(--space-16, 16px);
-    }
-    .tk-side-card { flex: 1 1 300px; min-width: 280px; }
-}
+/* ===================== Responsive ===================== */
 @media (max-width: 1280px) {
     .tk-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 1100px) {
+    .tk-layout { grid-template-columns: 1fr; }
+    .tk-side { flex-direction: row; flex-wrap: wrap; }
+    .tk-side-card { flex: 1; min-width: 280px; }
+}
+@media (max-width: 1100px) {
     /* En tablet apretado el panel de filtros pasa a 3 columnas. */
     .mt-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    /* Paginación con scroll horizontal en vez de overflow del contenedor. */
-    .tk-pagination { flex-wrap: wrap; gap: 10px; row-gap: 12px; }
 }
 @media (max-width: 768px) {
     .acten-tasks { padding: 16px; }

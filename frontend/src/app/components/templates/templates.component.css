@@ -1212,11 +1212,7 @@
 /* ============================================================
  *  RESPONSIVE
  * ============================================================ */
-/* MacBook 13"/14" (incluyendo Air M2/M3 a 1470-1512 CSS px en default
-   scaling): el grid de 3 columnas (240 + main + 380) no respira. A 1600
-   y abajo, reducimos el sidebar y stackeamos el preview. Sobre 1600
-   (monitor externo) sigue las 3 columnas. */
-@media (max-width: 1600px) {
+@media (max-width: 1200px) {
     .tpl-grid, .tpl-grid:not(.has-detail) { grid-template-columns: 220px minmax(0, 1fr); }
     .tpl-grid.has-detail .tpl-detail {
         grid-column: 1 / -1;

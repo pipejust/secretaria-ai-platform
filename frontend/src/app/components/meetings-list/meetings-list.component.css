@@ -1281,13 +1281,7 @@
  * ============================================================ */
 
 /* Tablet: panel lateral pasa abajo, métricas a 2×2 */
-/* MacBook 13" (incluyendo Air M2/M3 a 1470/1512 CSS px en defaultscaling)
-   deja ~1200-1260px de área tras descontar sidebar+padding global. El
-   layout en grid `main + 380-440px detail` queda apretado porque el
-   sidebar global ya se come 250px. Stackeamos a 1600px — incluye todas
-   las MacBook 13"/14" en cualquier scaling. Sobre 1600 (monitores 24"+)
-   sigue el split clásico. */
-@media (max-width: 1600px) {
+@media (max-width: 1200px) {
     /* CRÍTICO: minmax(0, 1fr), no solo 1fr.
        Sin minmax(0, ...) el grid permite que un descendiente con
        contenido ancho (ej: una métrica con número grande, una fila
