@@ -1663,10 +1663,23 @@ section[id] { scroll-margin-top: 88px; }
      no se pegue al borde. */
   .al-container { padding-left: 20px; padding-right: 20px; }
   .al-hero__inner { gap: 36px; }
-  /* Centrar también el eyebrow + título + subtítulos de secciones
-     siguientes en mobile (Capacidades / Flujo / Integraciones / etc). */
-  .al-section-title, .al-eyebrow, .al-section-subtitle {
-    text-align: center;
+  /* Centrar eyebrow + título + subtítulos de TODAS las secciones en
+     mobile. Usamos selectores específicos por sección porque hay reglas
+     scoped que sobreescriben con text-align: start (visible en h2 de
+     Integraciones y Testimonios). */
+  .al-section-title,
+  .al-section-copy,
+  .al-eyebrow,
+  .al-section-subtitle,
+  .al-features__head,
+  .al-flow__head,
+  .al-integrations__head,
+  .al-integrations__head h2,
+  .al-testimonials__head,
+  .al-testimonials__head h2,
+  .al-contact__copy,
+  .al-finalcta__copy {
+    text-align: center !important;
   }
   .al-section-subtitle { margin-left: auto; margin-right: auto; }
   .al-arrow-link, .al-feature-link {
@@ -1674,6 +1687,22 @@ section[id] { scroll-margin-top: 88px; }
     justify-content: center;
     margin-left: auto;
     margin-right: auto;
+  }
+  /* Botones del hero + final CTA + submit del contacto: centrados en
+     contenedor flex con justify-content. */
+  .al-finalcta__ctas { justify-content: center; }
+  .al-finalcta__ctas .al-btn { width: 100%; max-width: 320px; justify-content: center; }
+  .al-contact__submit {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .al-contact__submit .al-btn { width: 100%; max-width: 320px; justify-content: center; }
+  .al-contact__meta { display: inline-flex; flex-direction: column; }
+  /* Contact info meta items: chips alineadas al texto del bloque centrado */
+  .al-contact__copy .al-contact__meta {
+    margin: 14px auto 0;
+    align-items: flex-start;
   }
   /* Padding vertical de TODAS las secciones más conservador en mobile. */
   .al-features,
