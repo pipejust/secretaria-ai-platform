@@ -90,9 +90,11 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
         .where(ActionItem.owner_email != "")
     ).all()
 
-    # 2) ProjectContacts (participantes registrados de proyectos del tenant)
+    # 2) ProjectContacts (participantes registrados de proyectos del tenant).
+    #    `entity` = empresa/organización a la que pertenece el contacto —
+    #    útil para mostrar "Gerente · Colpensiones" en la card.
     contacts = db.exec(
-        select(ProjectContact.name, ProjectContact.email, ProjectContact.role)
+        select(ProjectContact.name, ProjectContact.email, ProjectContact.role, ProjectContact.entity)
         .join(Project, Project.id == ProjectContact.project_id)
         .where(Project.tenant_id == tenant.id)
         .where(ProjectContact.email != "")
@@ -103,8 +105,8 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
         key = (email or "").lower().strip()
         if not key or key in by_email:
             continue
-        by_email[key] = {"name": (name or "").strip(), "role": ""}
-    for name, email, role in contacts:
+        by_email[key] = {"name": (name or "").strip(), "role": "", "entity": ""}
+    for name, email, role, entity in contacts:
         key = (email or "").lower().strip()
         if not key:
             continue
@@ -113,8 +115,14 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
                 by_email[key]["role"] = role
             if not by_email[key]["name"] and name:
                 by_email[key]["name"] = name
+            if not by_email[key].get("entity") and entity:
+                by_email[key]["entity"] = entity
         else:
-            by_email[key] = {"name": (name or "").strip(), "role": (role or "").strip()}
+            by_email[key] = {
+                "name": (name or "").strip(),
+                "role": (role or "").strip(),
+                "entity": (entity or "").strip(),
+            }
 
     # 3) Avatares: si el email matchea un User, traemos su avatar_url + position.
     # API_BASE_URL para absolutizar paths relativos (/static/avatars/...) — el
@@ -183,11 +191,13 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
             continue
         existing = by_norm_name[key]
         # Mejorar entrada: tomar avatar si la nueva lo tiene, role si falta,
-        # nombre más largo (más completo) si aplica.
+        # entity si falta, nombre más largo (más completo) si aplica.
         if person.get("avatar_url") and not existing.get("avatar_url"):
             existing["avatar_url"] = person["avatar_url"]
         if person.get("role") and not existing.get("role"):
             existing["role"] = person["role"]
+        if person.get("entity") and not existing.get("entity"):
+            existing["entity"] = person["entity"]
         if name and len(name) > len(existing.get("name") or ""):
             existing["name"] = name
 
@@ -212,13 +222,27 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
         name = person.get("name") or "Persona"
         if not _is_display_worthy(name):
             continue
+        # Componer el role mostrado: si tenemos role + entity
+        # (Gerente · Colpensiones) lo unimos. Si solo role, va como está.
+        # Si solo entity, mostramos "Equipo · Empresa".
+        base_role = (person.get("role") or "").strip()
+        entity = (person.get("entity") or "").strip()
+        if base_role and entity:
+            shown_role = f"{base_role} · {entity}"
+        elif base_role:
+            shown_role = base_role
+        elif entity:
+            shown_role = f"Equipo · {entity}"
+        else:
+            shown_role = f"Equipo {tenant_company}"
         out.append({
             "name": name,
-            "role": person.get("role") or f"Equipo {tenant_company}",
+            "role": shown_role,
+            "company": entity,            # útil si el frontend quiere mostrarlo aparte
             "avatar_url": person.get("avatar_url") or "",
             "initials": _initials(name),
             "_is_platform_user": person.get("is_platform_user", False),
-            "_has_real_role": bool(person.get("role")),
+            "_has_real_role": bool(base_role or entity),
         })
 
     # Sort de "prueba social":
@@ -389,25 +413,65 @@ async def submit_contact_form(
 
     subject = f"[Contacto Landing] {payload.name} — {payload.company or 'Sin empresa'}"
 
+    sent_flag = False
+    error_msg = ""
     try:
         from services.email_service import EmailService
         email_service = EmailService(db=db, tenant_id=tenant.id)
-        # send_html_email no levanta excepción si falla — devuelve False —
-        # así que verificamos el flag.
-        sent = await email_service._send_html_email(
+        logger.info(
+            "contact form email attempt: tenant=%s api_key_set=%s from=%s to=%s",
+            tenant.slug, bool(email_service.api_key),
+            email_service.from_email, target_email,
+        )
+        if not email_service.api_key:
+            logger.warning(
+                "contact form: tenant '%s' NO tiene Resend api_key configurado "
+                "en IntegrationSetting(provider_name='smtp'). El correo NO se envía "
+                "— se simula en consola. Configurar en /admin/settings.",
+                tenant.slug,
+            )
+        sent_flag = await email_service._send_html_email(
             to_email=target_email,
             subject=subject,
             html_content=html,
         )
-        if not sent:
-            logger.warning("contact form email no se envió (email service inactivo).")
-    except Exception:
-        logger.exception("Error enviando email de contacto del landing.")
+        if sent_flag:
+            logger.info("contact form email OK → %s", target_email)
+        else:
+            logger.warning("contact form email no se envió (sent=False sin excepción).")
+    except Exception as exc:
+        error_msg = str(exc)[:200]
+        logger.exception("contact form: excepción enviando email — %s", error_msg)
         # No tiramos 500: si el SMTP falla, igual devolvemos OK al usuario y
         # registramos para revisión. La alternativa (500) le da mala señal a
         # un visitante que sí escribió legítimamente.
 
     return {"status": "ok"}
+
+
+@public_router.get("/landing/_email_status")
+def landing_email_status(db: Session = Depends(get_session)) -> Dict[str, Any]:
+    """DIAGNOSTIC — endpoint público que reporta si el email del tenant 'acten'
+    está bien configurado para enviar el form de contacto. No expone el API
+    key ni nada sensible — solo banderas + el from/to addresses.
+    """
+    tenant = _resolve_acten_tenant(db)
+    from services.email_service import EmailService
+    es = EmailService(db=db, tenant_id=tenant.id)
+    content = landing_content_service.get_landing_content(db, tenant.id)
+    target = (content.get("contact", {}).get("email") or "").strip() or "hola@acten.app"
+    return {
+        "tenant_slug": tenant.slug,
+        "tenant_id": tenant.id,
+        "api_key_configured": bool(es.api_key),
+        "api_key_length": len(es.api_key) if es.api_key else 0,
+        "from_email": es.from_email,
+        "contact_to_email": target,
+        "hint": (
+            "Si api_key_configured=False, el correo NO se envía (modo simulación). "
+            "Configura el Resend API key en /admin/settings → SMTP del tenant acten."
+        ),
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -37,7 +37,10 @@ export interface TrustLogoItem {
 /** Persona real del sistema — endpoint /api/public/landing/people */
 export interface LandingPerson {
   name: string;
+  /** Role componiendo "Cargo · Empresa" si tenemos ambos. */
   role: string;
+  /** Empresa/entity del project_contact si existe. Vacío si no aplica. */
+  company?: string;
   /** URL del avatar (https/data) o vacío. */
   avatar_url: string;
   initials: string;
