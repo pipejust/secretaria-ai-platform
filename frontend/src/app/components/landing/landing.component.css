@@ -351,7 +351,10 @@ section[id] { scroll-margin-top: 88px; }
  * ────────────────────────────────────────────────────────────────────────── */
 .al-hero {
   position: relative;
-  padding: 140px 0 100px;
+  /* Antes 140/100 = 240px de padding vertical → hero gigante. Bajamos
+     a 96/72 (168px). El header fijo es ~72px así que con 96 top hay
+     respiro suficiente. */
+  padding: 96px 0 72px;
   background:
     radial-gradient(circle at 80% 0%, rgba(20, 93, 255, 0.14), transparent 50%),
     radial-gradient(circle at 0% 90%, rgba(16, 185, 129, 0.06), transparent 55%),
@@ -1529,12 +1532,18 @@ section[id] { scroll-margin-top: 88px; }
 
 /* --- 1024px: hero stacks, features 2 col, flow compresses ----------------- */
 @media (max-width: 1024px) {
-  .al-hero { padding: 130px 0 80px; }
+  .al-hero { padding: 88px 0 56px; }
   .al-hero__inner {
     grid-template-columns: minmax(0, 1fr);
-    gap: 50px;
+    gap: 36px;
   }
-  .al-hero__mockup { max-width: 720px; margin: 0 auto; width: 100%; }
+  /* Mockup más chico en mobile/tablet — antes 720px max → 1900px de
+     hero apilado. Ahora 580px max + transform scale para descontar. */
+  .al-hero__mockup {
+    max-width: 580px;
+    margin: 0 auto;
+    width: 100%;
+  }
 
   .al-features__inner,
   .al-flow__inner {
@@ -1606,9 +1615,14 @@ section[id] { scroll-margin-top: 88px; }
   .al-header__burger { display: inline-flex; }
   .al-header__actions .al-btn--ghost-light { display: none; }
 
-  .al-hero { padding: 110px 0 70px; }
+  .al-hero { padding: 76px 0 48px; }
   /* Permitimos wrap a 2 líneas en mobile. */
   .al-hero__attrs { flex-wrap: wrap; gap: 12px 18px; }
+  /* Hero title más compacto en mobile real (<=560) para que quepa
+     en 2-3 líneas sin "a / impacto." palabras sueltas. */
+  .al-hero__title { font-size: clamp(1.85rem, 1.2rem + 4.4vw, 2.5rem); }
+  /* Mockup mobile: ancho razonable + truncar height para no inflar el hero */
+  .al-hero__mockup { max-width: 420px; }
 
   .al-mock__metrics { grid-template-columns: repeat(2, 1fr); }
   .al-mock__body { grid-template-columns: minmax(0, 1fr); }
