@@ -1617,6 +1617,10 @@ section[id] { scroll-margin-top: 88px; }
     transition: transform var(--ac-ease) 220ms,
                 opacity var(--ac-ease) 220ms;
     border-bottom: 1px solid rgba(255,255,255,0.08);
+    /* Stack vertical para que .al-nav__list (links) y .al-nav__actions
+       (login + cta del drawer) queden uno debajo del otro, no en row. */
+    flex-direction: column;
+    align-items: stretch;
   }
   .al-nav--open {
     transform: translateY(0);
