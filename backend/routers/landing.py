@@ -413,15 +413,37 @@ async def submit_contact_form(
 
     subject = f"[Contacto Landing] {payload.name} — {payload.company or 'Sin empresa'}"
 
+    # 1) Persistir el mensaje SIEMPRE — pase lo que pase con el email, el
+    #    admin debe poder verlo en su UI. Esto es la verdad: el SMTP es solo
+    #    "notificación adicional" para que llegue a la bandeja.
+    from models import ContactMessage, Notification, User as UserModel
+    cm = ContactMessage(
+        tenant_id=tenant.id,
+        name=payload.name.strip(),
+        email=payload.email.strip(),
+        company=(payload.company or "").strip() or None,
+        role=(payload.role or "").strip() or None,
+        message=payload.message.strip(),
+        ip=client_ip,
+        user_agent=(request.headers.get("user-agent") or "")[:500],
+        referer=(request.headers.get("referer") or "")[:500],
+        status="new",
+        email_status="pending",
+    )
+    db.add(cm)
+    db.commit()
+    db.refresh(cm)
+
+    # 2) Enviar el email notificación al destinatario configurado en CMS.
     sent_flag = False
     error_msg = ""
     try:
         from services.email_service import EmailService
         email_service = EmailService(db=db, tenant_id=tenant.id)
         logger.info(
-            "contact form email attempt: tenant=%s api_key_set=%s from=%s to=%s",
+            "contact form email attempt: tenant=%s api_key_set=%s from=%s to=%s msg_id=%s",
             tenant.slug, bool(email_service.api_key),
-            email_service.from_email, target_email,
+            email_service.from_email, target_email, cm.id,
         )
         if not email_service.api_key:
             logger.warning(
@@ -436,17 +458,56 @@ async def submit_contact_form(
             html_content=html,
         )
         if sent_flag:
-            logger.info("contact form email OK → %s", target_email)
+            cm.email_status = "sent"
+            logger.info("contact form email OK msg_id=%s → %s", cm.id, target_email)
         else:
-            logger.warning("contact form email no se envió (sent=False sin excepción).")
+            cm.email_status = "failed"
+            cm.email_error = "EmailService devolvió sent=False sin excepción (revisar SMTP config)"
+            logger.warning("contact form email no se envió (sent=False) msg_id=%s", cm.id)
     except Exception as exc:
-        error_msg = str(exc)[:200]
-        logger.exception("contact form: excepción enviando email — %s", error_msg)
-        # No tiramos 500: si el SMTP falla, igual devolvemos OK al usuario y
-        # registramos para revisión. La alternativa (500) le da mala señal a
-        # un visitante que sí escribió legítimamente.
+        error_msg = str(exc)[:400]
+        cm.email_status = "failed"
+        cm.email_error = error_msg
+        logger.exception("contact form: excepción enviando email msg_id=%s — %s", cm.id, error_msg)
+        # No tiramos 500: el mensaje YA está persistido. El usuario fue
+        # atendido (queda visible en /admin/landing-cms-mensajes).
+    finally:
+        try:
+            db.add(cm); db.commit()
+        except Exception:
+            db.rollback()
 
-    return {"status": "ok"}
+    # 3) Notificar a los admins del tenant (campana del topbar). 1 notif
+    #    por admin para que cada uno la cierre individualmente.
+    try:
+        from sqlmodel import select as _select
+        admin_users = db.exec(
+            _select(UserModel)
+            .where(UserModel.tenant_id == tenant.id)
+            .where(UserModel.is_active == True)  # noqa: E712
+        ).all()
+        # Filtramos en Python al rol "admin" o is_superadmin para evitar
+        # depender de schema de role (relación lazy puede ser lenta).
+        for u in admin_users:
+            role_name = (u.role.name if u.role else "").lower()
+            if role_name not in ("admin",) and not u.is_superadmin:
+                continue
+            db.add(Notification(
+                tenant_id=tenant.id,
+                user_id=u.id,
+                kind="contact_message",
+                title=f"Nuevo mensaje del landing — {payload.name}",
+                body=(payload.message or "")[:200],
+                link_to="/admin/landing-cms/mensajes",
+                entity_type="contact_message",
+                entity_id=cm.id,
+            ))
+        db.commit()
+    except Exception:
+        logger.exception("contact form: no pude crear Notifications para admins")
+        db.rollback()
+
+    return {"status": "ok", "id": cm.id}
 
 
 @public_router.get("/landing/_email_test_send")
@@ -582,6 +643,105 @@ def admin_reset_landing(
 ) -> Dict[str, Any]:
     """Vuelve al contenido por defecto. Útil si el admin rompió algo."""
     return landing_content_service.reset_landing_content(db, tenant.id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mensajes del formulario de contacto — bandeja para el admin
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/messages")
+def admin_list_contact_messages(
+    status: str | None = None,
+    limit: int = 100,
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(_require_acten_tenant),
+) -> Dict[str, Any]:
+    """Lista los mensajes del form de contacto, recientes primero.
+
+    Filtra opcional por estado ('new' | 'read' | 'replied' | 'archived').
+    Limita a 100 por default — la bandeja del admin no necesita pagination
+    todavía (volumen esperado bajo).
+    """
+    from models import ContactMessage
+    q = select(ContactMessage).where(ContactMessage.tenant_id == tenant.id)
+    if status:
+        q = q.where(ContactMessage.status == status)
+    q = q.order_by(ContactMessage.created_at.desc()).limit(max(1, min(limit, 500)))
+    rows = db.exec(q).all()
+    unread = db.exec(
+        select(ContactMessage)
+        .where(ContactMessage.tenant_id == tenant.id)
+        .where(ContactMessage.status == "new")
+    ).all()
+    return {
+        "items": [
+            {
+                "id": m.id,
+                "name": m.name,
+                "email": m.email,
+                "company": m.company or "",
+                "role": m.role or "",
+                "message": m.message,
+                "ip": m.ip or "",
+                "status": m.status,
+                "email_status": m.email_status,
+                "email_error": m.email_error or "",
+                "read_at": m.read_at,
+                "replied_at": m.replied_at,
+                "created_at": m.created_at,
+            }
+            for m in rows
+        ],
+        "unread_count": len(unread),
+    }
+
+
+@router.patch("/messages/{msg_id}")
+def admin_update_contact_message(
+    msg_id: int,
+    patch: Dict[str, Any],
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(_require_acten_tenant),
+) -> Dict[str, Any]:
+    """Actualiza el estado de un mensaje. Solo acepta 'status' (whitelist
+    de valores) para evitar tocar campos sensibles desde el frontend."""
+    import datetime as _dt
+    from models import ContactMessage
+    msg = db.get(ContactMessage, msg_id)
+    if not msg or msg.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado.")
+    new_status = (patch.get("status") or "").strip()
+    if new_status not in ("new", "read", "replied", "archived"):
+        raise HTTPException(
+            status_code=400,
+            detail="Estado inválido. Use: new, read, replied o archived.",
+        )
+    now = _dt.datetime.now().isoformat()
+    msg.status = new_status
+    if new_status == "read" and not msg.read_at:
+        msg.read_at = now
+    if new_status == "replied" and not msg.replied_at:
+        msg.replied_at = now
+    db.add(msg); db.commit(); db.refresh(msg)
+    return {"id": msg.id, "status": msg.status}
+
+
+@router.delete("/messages/{msg_id}")
+def admin_delete_contact_message(
+    msg_id: int,
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(_require_acten_tenant),
+) -> Dict[str, Any]:
+    """Borra definitivamente un mensaje. Operación irreversible."""
+    from models import ContactMessage
+    msg = db.get(ContactMessage, msg_id)
+    if not msg or msg.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado.")
+    db.delete(msg); db.commit()
+    return {"deleted": msg_id}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -618,3 +618,51 @@ class AskHistory(SQLModel, table=True):
     chunks_used: int = Field(default=0)
 
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), index=True)
+
+
+# ============================================================================
+# Mensajes del formulario de contacto del landing público.
+# Cada submission del form de acten.app se persiste para que el admin
+# pueda verlos en la UI y reciba una notificación in-app.
+# ============================================================================
+
+class ContactMessage(SQLModel, table=True):
+    """Mensaje enviado desde el formulario público del landing.
+
+    Multi-tenant: tenant_id denormalizado. Hoy solo el tenant 'acten'
+    recibe estos (porque acten.app es el único landing público), pero el
+    modelo está listo para que cualquier tenant white-label tenga lo suyo.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+
+    # Campos llenados por el visitante
+    name: str = Field(max_length=120)
+    email: str = Field(max_length=240, index=True)
+    company: Optional[str] = Field(default=None, max_length=120)
+    role: Optional[str] = Field(default=None, max_length=120)
+    message: str = Field(max_length=4000)
+
+    # Metadata operacional
+    ip: Optional[str] = Field(default=None, max_length=64)
+    user_agent: Optional[str] = Field(default=None, max_length=500)
+    referer: Optional[str] = Field(default=None, max_length=500)
+
+    # Estado para que el admin marque qué ya atendió
+    status: str = Field(
+        default="new", max_length=16, index=True,
+        description="'new' | 'read' | 'replied' | 'archived'",
+    )
+    read_at: Optional[str] = Field(default=None)
+    replied_at: Optional[str] = Field(default=None)
+
+    # Si el envío del email notificando al destinatario falló o el email
+    # bounceó, guardamos la razón para debug futuro.
+    email_status: str = Field(
+        default="pending", max_length=32,
+        description="'pending' | 'sent' | 'failed'",
+    )
+    email_error: str = Field(default="", max_length=400)
+
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), index=True)
