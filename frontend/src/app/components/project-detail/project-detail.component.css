@@ -101,11 +101,20 @@
 /* === Tabla tareas === */
 .action-table {
     width: 100%; border-collapse: collapse;
+    table-layout: auto;
 }
 .action-table th, .action-table td {
     text-align: left; padding: 0.5rem 0.65rem; font-size: 0.85rem;
     border-bottom: 1px solid #f1f5f9;
 }
+.action-table td:first-child {
+    /* Título de la tarea puede ser largo. Permitimos wrap para no
+       desbordar el contenedor en mobile. */
+    word-break: break-word;
+}
+/* El panel que envuelve la tabla en mobile permite scroll horizontal
+   como fallback (las columnas Responsable/Sesión pueden no caber). */
+.panel--scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .action-table th { color: #6b7280; font-weight: 600; background: #f9fafb; }
 .row-overdue { background: rgba(239, 68, 68, 0.05); }
 .row-upcoming { background: rgba(245, 158, 11, 0.05); }
@@ -121,3 +130,34 @@
     border-radius: 8px; border: 1px solid #e2e8f0;
 }
 .contact-meta { display: block; color: #64748b; font-size: 0.8rem; margin-top: 0.15rem; }
+
+/* === Responsive — mobile ≤768px ============================================
+ * En mobile el container .panel queda con padding que estruja la action-table.
+ * Permitimos scroll horizontal en el panel y compactamos paddings/fontsizes
+ * para que la tabla se vea sin desbordar el viewport.
+ */
+@media (max-width: 768px) {
+    .project-detail-container { padding: 1rem 1rem; }
+    .header { gap: 1rem; }
+    .header-meta { min-width: 0; width: 100%; }
+    .title { font-size: 1.4rem; }
+    .subtitle { font-size: 0.9rem; }
+
+    /* Paneles más compactos + permitir scroll horizontal por si el contenido
+       (tabla, código, decisiones) excede el ancho. */
+    .panel { padding: 0.85rem 0.85rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .panel h2 { font-size: 0.95rem; }
+
+    /* Tabla tareas: padding/font reducidos. Si aun así no cabe, el panel
+       hace scroll horizontal (touch friendly). */
+    .action-table th, .action-table td {
+        padding: 0.4rem 0.5rem; font-size: 0.8rem;
+    }
+    .action-table { min-width: 520px; }
+
+    /* Contactos: una sola columna llena. */
+    .contact-list { grid-template-columns: 1fr; }
+
+    /* Decisiones: el body monospace puede ser ancho — overflow-x ya estaba. */
+    .decision-body { font-size: 0.78rem; padding: 0.45rem 0.6rem; }
+}

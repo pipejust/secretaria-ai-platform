@@ -191,7 +191,8 @@
 /* ============================================================
    Search row + filters
    ============================================================ */
-.tn-search-row { display: flex; align-items: center; gap: 10px; }
+.tn-search-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tn-view-toggle { flex-shrink: 0; }
 .tn-search {
     position: relative;
     flex: 1;
@@ -1184,6 +1185,12 @@
         min-width: 0;
         box-sizing: border-box;
     }
+    /* Search row: en mobile el botón "Filtros" + el toggle de visualización
+       no caben al lado del search (240 + 120 + 84 = 444 > 430 viewport).
+       Search ocupa toda la primera fila; Filtros + Toggle van en la fila 2. */
+    .tn-search { flex: 1 1 100%; min-width: 0; }
+    .tn-filters-btn { flex: 1 1 auto; justify-content: center; }
+    .tn-view-toggle { margin-left: auto; }
 }
 
 /* ============================================================
