@@ -243,19 +243,58 @@
                     </footer>
                 </article>
 
-                <!-- Logo completo -->
+                <!-- Logo completo (versión clara, para fondos claros) -->
                 <article class="br-card br-card--logo" *ngIf="showSection('logo')">
                     <header class="br-card-head">
                         <div>
-                            <h2>Logo completo</h2>
-                            <p class="br-card-sub">Wordmark + monograma juntos. PNG/SVG/WEBP. Máx 2 MB.</p>
+                            <h2>Logo claro</h2>
+                            <p class="br-card-sub">Versión para fondos claros (admin, dashboards, emails). PNG/SVG/WEBP. Máx 2 MB.</p>
+                        </div>
+                    </header>
+                    <div class="br-logo-preview"
+                         [style.background]="'#FFFFFF'">
+                        <img *ngIf="form.logo_data_url" [src]="form.logo_data_url"
+                             [alt]="form.company_name || 'Acten'"/>
+                        <span *ngIf="!form.logo_data_url" class="br-logo-placeholder" style="color: #0F172A;">
+                            <svg viewBox="0 0 24 24" fill="#0F172A" stroke="none" class="br-logo-mark">
+                                <path d="M12 2L2 22h20L12 2zm0 5l6.5 13H5.5L12 7z"/>
+                            </svg>
+                            {{ form.company_name || 'Acten' }}
+                        </span>
+                    </div>
+                    <div class="br-uploader-actions">
+                        <label class="br-btn br-btn--ghost br-uploader">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" class="br-btn-ico">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            {{ isUploading ? 'Subiendo…' : (form.logo_data_url ? 'Reemplazar logo claro' : 'Subir logo claro') }}
+                            <input type="file" hidden
+                                   accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                   (change)="onLogoSelected($event)"/>
+                        </label>
+                        <button class="br-btn br-btn--danger-ghost" (click)="removeLogo()"
+                                *ngIf="form.logo_data_url" [disabled]="isUploading">
+                            Quitar
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Logo oscuro (para fondos oscuros — landing hero, dark mode) -->
+                <article class="br-card br-card--logo" *ngIf="showSection('logo')">
+                    <header class="br-card-head">
+                        <div>
+                            <h2>Logo oscuro</h2>
+                            <p class="br-card-sub">Versión para fondos oscuros (hero de la landing, dark mode). Si no la subís, los fondos oscuros usan el logo claro. PNG/SVG/WEBP. Máx 2 MB.</p>
                         </div>
                     </header>
                     <div class="br-logo-preview"
                          [style.background]="form.primary_color || '#031B34'">
-                        <img *ngIf="form.logo_data_url" [src]="form.logo_data_url"
-                             [alt]="form.company_name || 'Acten'"/>
-                        <span *ngIf="!form.logo_data_url" class="br-logo-placeholder">
+                        <img *ngIf="form.logo_dark_data_url" [src]="form.logo_dark_data_url"
+                             [alt]="(form.company_name || 'Acten') + ' (oscuro)'"/>
+                        <span *ngIf="!form.logo_dark_data_url" class="br-logo-placeholder">
                             <svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="none" class="br-logo-mark">
                                 <path d="M12 2L2 22h20L12 2zm0 5l6.5 13H5.5L12 7z"/>
                             </svg>
@@ -270,13 +309,13 @@
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            {{ isUploading ? 'Subiendo…' : (form.logo_data_url ? 'Reemplazar logo' : 'Subir logo') }}
+                            {{ isUploadingDark ? 'Subiendo…' : (form.logo_dark_data_url ? 'Reemplazar logo oscuro' : 'Subir logo oscuro') }}
                             <input type="file" hidden
                                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                                   (change)="onLogoSelected($event)"/>
+                                   (change)="onDarkLogoSelected($event)"/>
                         </label>
-                        <button class="br-btn br-btn--danger-ghost" (click)="removeLogo()"
-                                *ngIf="form.logo_data_url" [disabled]="isUploading">
+                        <button class="br-btn br-btn--danger-ghost" (click)="removeDarkLogo()"
+                                *ngIf="form.logo_dark_data_url" [disabled]="isUploadingDark">
                             Quitar
                         </button>
                     </div>

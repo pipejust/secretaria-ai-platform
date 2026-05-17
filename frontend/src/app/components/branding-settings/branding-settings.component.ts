@@ -51,12 +51,14 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
         secondary_color: '#1B7F67',
         accent_color: '#D9A441',
         logo_data_url: '',
+        logo_dark_data_url: '',
         icon_data_url: '',
         favicon_data_url: '',
     };
 
     isSaving = false;
     isUploading = false;
+    isUploadingDark = false;
     isUploadingIcon = false;
 
     // UI
@@ -114,10 +116,11 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     // ============================================================
     // Métricas — derivadas del estado actual del form.
     // ============================================================
-    /** Activos de marca: logo, icono, favicon. */
+    /** Activos de marca: logo, logo oscuro, icono, favicon. */
     get brandAssetsCount(): number {
         let n = 0;
         if (this.form.logo_data_url) n++;
+        if (this.form.logo_dark_data_url) n++;
         if (this.form.icon_data_url) n++;
         if (this.form.favicon_data_url) n++;
         // Identidad cuenta como 1 activo siempre.
@@ -162,6 +165,7 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     get logosUploaded(): number {
         let n = 0;
         if (this.form.logo_data_url) n++;
+        if (this.form.logo_dark_data_url) n++;
         if (this.form.icon_data_url) n++;
         return n;
     }
@@ -320,6 +324,42 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
             this.toast.error(err?.error?.detail || 'No se pudo eliminar el logo.');
         } finally {
             this.isUploading = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    // ============================================================
+    // Logo oscuro (para fondos oscuros — landing hero, dark mode)
+    // ============================================================
+    async onDarkLogoSelected(ev: Event): Promise<void> {
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        this.isUploadingDark = true;
+        try {
+            await this.branding.uploadDarkLogo(file, this.auth.token);
+            this.form.logo_dark_data_url = this.branding.brand().logo_dark_data_url;
+            this.toast.success('Logo oscuro subido correctamente.');
+        } catch (err: any) {
+            this.toast.error(err?.error?.detail || 'No se pudo subir el logo oscuro.');
+        } finally {
+            this.isUploadingDark = false;
+            input.value = '';
+            this.cdr.detectChanges();
+        }
+    }
+
+    async removeDarkLogo(): Promise<void> {
+        if (!confirm('¿Quitar el logo oscuro? Los fondos oscuros volverán a usar el logo regular.')) return;
+        this.isUploadingDark = true;
+        try {
+            await this.branding.deleteDarkLogo(this.auth.token);
+            this.form.logo_dark_data_url = '';
+            this.toast.success('Logo oscuro eliminado.');
+        } catch (err: any) {
+            this.toast.error(err?.error?.detail || 'No se pudo eliminar el logo oscuro.');
+        } finally {
+            this.isUploadingDark = false;
             this.cdr.detectChanges();
         }
     }

@@ -60,6 +60,7 @@ class BrandingPatch(BaseModel):
     # sin tener que invocar DELETE /logo o /icon. Aceptamos data URLs para
     # casos donde el cliente prefiere PATCH+body en vez de POST multipart.
     logo_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
+    logo_dark_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
     icon_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
 
 
@@ -166,7 +167,56 @@ def _invalidate_logo_cache(tenant_id: int) -> None:
     o borra el logo. Sin esto, los emails seguirían sirviendo la imagen
     vieja durante 24h (TTL del cache HTTP)."""
     _LOGO_BYTES_CACHE.pop((tenant_id, "logo"), None)
+    _LOGO_BYTES_CACHE.pop((tenant_id, "logo_dark"), None)
     _LOGO_BYTES_CACHE.pop((tenant_id, "icon"), None)
+
+
+@router.get("/{tenant_id}/logo-dark.png", include_in_schema=False)
+def get_tenant_logo_dark_binary(
+    tenant_id: int,
+    db: Session = Depends(get_session),
+) -> Response:
+    """Devuelve el logo OSCURO del tenant como imagen binaria (sin auth).
+    Pensado para sustituir el logo en fondos oscuros (hero de la landing,
+    dark mode). Si no hay logo oscuro subido, cae al `logo_data_url`
+    regular para no romper la UI."""
+    tenant = db.get(Tenant, tenant_id)
+    if not tenant:
+        return _serve_default_logo()
+
+    cached = _LOGO_BYTES_CACHE.get((tenant_id, "logo_dark"))
+    if cached is not None:
+        body, mime = cached
+        return Response(
+            content=body,
+            media_type=mime,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    branding = branding_service.get_branding(db, tenant_id)
+    raw = (branding.get("logo_dark_data_url") or "").strip()
+    # Fallback al logo regular si no hay versión oscura.
+    if not raw:
+        raw = (branding.get("logo_data_url") or "").strip()
+
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return RedirectResponse(url=raw, status_code=302)
+
+    m = _DATA_URL_RE.match(raw)
+    if not m:
+        return _serve_default_logo()
+    try:
+        body = base64.b64decode(m.group("data"))
+        mime = m.group("mime").strip() or "image/png"
+    except Exception:
+        return _serve_default_logo()
+
+    _LOGO_BYTES_CACHE[(tenant_id, "logo_dark")] = (body, mime)
+    return Response(
+        content=body,
+        media_type=mime,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @router.put("/")
@@ -178,7 +228,11 @@ def put_branding(
 ) -> dict[str, Any]:
     payload = {k: v for k, v in patch.model_dump().items() if v is not None}
     result = branding_service.update_branding(db, tenant.id, payload)
-    if "logo_data_url" in payload or "icon_data_url" in payload:
+    if (
+        "logo_data_url" in payload
+        or "logo_dark_data_url" in payload
+        or "icon_data_url" in payload
+    ):
         _invalidate_logo_cache(tenant.id)
     return result
 
@@ -215,6 +269,50 @@ def delete_logo(
     tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     result = branding_service.update_branding(db, tenant.id, {"logo_data_url": ""})
+    _invalidate_logo_cache(tenant.id)
+    return result
+
+
+@router.post("/logo-dark")
+async def upload_logo_dark(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    """Logo OSCURO — variante de la marca diseñada para fondos oscuros
+    (hero navy de la landing, dark mode). Mismo flujo que /logo:
+    validación de mime + tamaño + persistencia como data URL.
+    """
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Tipo no permitido. Acepto: {sorted(ALLOWED_MIME_TYPES)}",
+        )
+    data = await file.read()
+    if len(data) > MAX_LOGO_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Logo oscuro demasiado grande (>{MAX_LOGO_BYTES // 1024} KB).",
+        )
+    b64 = base64.b64encode(data).decode("ascii")
+    data_url = f"data:{file.content_type};base64,{b64}"
+    result = branding_service.update_branding(
+        db, tenant.id, {"logo_dark_data_url": data_url}
+    )
+    _invalidate_logo_cache(tenant.id)
+    return result
+
+
+@router.delete("/logo-dark")
+def delete_logo_dark(
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    result = branding_service.update_branding(
+        db, tenant.id, {"logo_dark_data_url": ""}
+    )
     _invalidate_logo_cache(tenant.id)
     return result
 

@@ -29,9 +29,13 @@ export interface Branding {
   primary_color: string;
   secondary_color: string;
   accent_color: string;
-  /** Logo "completo" — wordmark + monograma juntos. Usado en sidebar
-   *  expandido, login, emails, header de exports. */
+  /** Logo "completo" — wordmark + monograma juntos. Versión para
+   *  fondos CLAROS (admin, dashboards, emails con header blanco). */
   logo_data_url: string;
+  /** Logo OSCURO — variante alternativa para fondos oscuros (hero navy
+   *  de la landing pública, dark mode). Si está vacío, las superficies
+   *  oscuras caen al `logo_data_url` regular. */
+  logo_dark_data_url: string;
   /** Imagologo / icono cuadrado — versión compacta de la marca para
    *  espacios chicos: sidebar colapsado, favicon visual, avatar default. */
   icon_data_url: string;
@@ -52,6 +56,7 @@ const DEFAULT_BRAND: Branding = {
   secondary_color: '#1B7F67',
   accent_color: '#D9A441',
   logo_data_url: '',
+  logo_dark_data_url: '',
   icon_data_url: '',
   favicon_data_url: '',
 };
@@ -75,6 +80,8 @@ export class BrandingService {
   readonly platformName = computed(() => this.brand().platform_name || 'Acten');
   readonly logoUrl = computed(() => this.brand().logo_data_url || '');
   readonly hasLogo = computed(() => !!this.brand().logo_data_url);
+  readonly logoDarkUrl = computed(() => this.brand().logo_dark_data_url || '');
+  readonly hasLogoDark = computed(() => !!this.brand().logo_dark_data_url);
   readonly iconUrl = computed(() => this.brand().icon_data_url || '');
   readonly hasIcon = computed(() => !!this.brand().icon_data_url);
 
@@ -84,6 +91,15 @@ export class BrandingService {
    *  quedarse sin imagen aunque la marca no esté configurada. */
   readonly displayLogoUrl = computed(
     () => this.brand().logo_data_url || ACTEN_DEFAULT_LOGO_FULL,
+  );
+  /** Logo a usar sobre fondos OSCUROS (landing hero, dark mode).
+   *  Si el tenant subió un dark logo se prioriza; si no, cae al regular
+   *  o al asset estático Acten para no quedar sin imagen. */
+  readonly displayDarkLogoUrl = computed(
+    () =>
+      this.brand().logo_dark_data_url ||
+      this.brand().logo_data_url ||
+      ACTEN_DEFAULT_LOGO_FULL,
   );
   readonly displayIconUrl = computed(
     () =>
@@ -152,6 +168,33 @@ export class BrandingService {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token || ''}` });
     const updated = await firstValueFrom(
       this.http.delete<Branding>(`${this.apiUrl}/logo`, { headers }),
+    );
+    const merged: Branding = { ...DEFAULT_BRAND, ...updated };
+    this.brand.set(merged);
+    this.applyToRoot(merged);
+    this.applyDocumentMeta(merged);
+    return merged;
+  }
+
+  /** Sube el logo OSCURO (para fondos oscuros). Mismo contrato que /logo. */
+  async uploadDarkLogo(file: File, token: string | null): Promise<Branding> {
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token || ''}` });
+    const form = new FormData();
+    form.append('file', file);
+    const updated = await firstValueFrom(
+      this.http.post<Branding>(`${this.apiUrl}/logo-dark`, form, { headers }),
+    );
+    const merged: Branding = { ...DEFAULT_BRAND, ...updated };
+    this.brand.set(merged);
+    this.applyToRoot(merged);
+    this.applyDocumentMeta(merged);
+    return merged;
+  }
+
+  async deleteDarkLogo(token: string | null): Promise<Branding> {
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token || ''}` });
+    const updated = await firstValueFrom(
+      this.http.delete<Branding>(`${this.apiUrl}/logo-dark`, { headers }),
     );
     const merged: Branding = { ...DEFAULT_BRAND, ...updated };
     this.brand.set(merged);

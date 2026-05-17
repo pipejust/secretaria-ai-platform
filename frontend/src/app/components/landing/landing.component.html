@@ -13,8 +13,13 @@
     <div class="al-container al-header__inner">
       <a class="al-brand" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
         <!-- LCP candidate: above-the-fold + preloaded en index.html.
-             width/height explícitos previenen CLS (1.18 ratio del logo). -->
-        <img src="brand/acten-logo-full.svg" alt="Acten"
+             width/height explícitos previenen CLS (1.18 ratio del logo).
+             Cadena de fallback explícita:
+               1) logo oscuro del tenant (si lo subió)
+               2) logo regular del tenant
+               3) SVG estático Acten (lo que ya estaba antes — preloaded). -->
+        <img [src]="branding.hasLogoDark() ? branding.logoDarkUrl() : (branding.hasLogo() ? branding.logoUrl() : 'brand/acten-logo-full.svg')"
+             alt="Acten"
              class="al-brand__logo al-brand__logo--light"
              width="118" height="32" decoding="async" fetchpriority="high" />
       </a>

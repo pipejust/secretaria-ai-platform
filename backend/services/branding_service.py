@@ -46,12 +46,18 @@ DEFAULT_BRANDING: dict[str, Any] = {
     "secondary_color": "#1B7F67",
     "accent_color": "#D9A441",
     # Assets — data URLs (puede ser '')
-    # logo_data_url:    versión "completa" (wordmark + monograma juntos).
-    #                   Usado en sidebar expandido, login, headers de emails/PDFs.
-    # icon_data_url:    imagologo / monograma cuadrado. Usado en sidebar
-    #                   colapsado, avatares default, badges compactos.
-    # favicon_data_url: el .ico/.png chiquito que va en la pestaña del browser.
+    # logo_data_url:      versión "completa" (wordmark + monograma juntos)
+    #                     pensada para fondos CLAROS — admin, dashboard,
+    #                     emails con header blanco. La que se usa hoy.
+    # logo_dark_data_url: versión alternativa pensada para fondos OSCUROS
+    #                     (hero navy de la landing, modo dark del producto).
+    #                     Si el tenant no la sube, los componentes que la
+    #                     necesitan caen a `logo_data_url` para no romper.
+    # icon_data_url:      imagologo / monograma cuadrado. Usado en sidebar
+    #                     colapsado, avatares default, badges compactos.
+    # favicon_data_url:   el .ico/.png chiquito que va en la pestaña del browser.
     "logo_data_url": "",
+    "logo_dark_data_url": "",
     "icon_data_url": "",
     "favicon_data_url": "",
 }
