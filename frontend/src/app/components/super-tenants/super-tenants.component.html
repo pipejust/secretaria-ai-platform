@@ -622,8 +622,8 @@
                 <div class="tn-uploads">
                     <div class="tn-upload" (drop)="onLogoDrop($event)" (dragover)="onDragOver($event)">
                         <header class="tn-upload-head">
-                            <strong>Logo completo</strong>
-                            <span class="tn-upload-desc">Wordmark + monograma · ratio 4:1 ideal · usado en sidebar expandido</span>
+                            <strong>Logo claro</strong>
+                            <span class="tn-upload-desc">Para fondos claros · sidebar expandido, admin, emails</span>
                         </header>
                         <div class="tn-upload-drop">
                             <img *ngIf="form.logo_data_url" [src]="form.logo_data_url" alt="Logo preview"/>
@@ -637,6 +637,26 @@
                             </label>
                             <button type="button" class="tn-upload-clear" *ngIf="form.logo_data_url"
                                     (click)="clearLogo()">Quitar</button>
+                        </div>
+                    </div>
+
+                    <div class="tn-upload" (drop)="onLogoDarkDrop($event)" (dragover)="onDragOver($event)">
+                        <header class="tn-upload-head">
+                            <strong>Logo oscuro</strong>
+                            <span class="tn-upload-desc">Para fondos oscuros · hero de la landing, dark mode</span>
+                        </header>
+                        <div class="tn-upload-drop" style="background:#031B34;">
+                            <img *ngIf="form.logo_dark_data_url" [src]="form.logo_dark_data_url" alt="Logo oscuro preview"/>
+                            <span *ngIf="!form.logo_dark_data_url" class="tn-upload-empty" style="color:#94A3B8;">Sin logo oscuro</span>
+                        </div>
+                        <div class="tn-upload-foot">
+                            <label class="tn-btn tn-btn--ghost tn-upload-btn">
+                                {{ form.logo_dark_data_url ? 'Reemplazar' : 'Subir logo' }}
+                                <input type="file" hidden accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                       (change)="onLogoDarkSelected($event)"/>
+                            </label>
+                            <button type="button" class="tn-upload-clear" *ngIf="form.logo_dark_data_url"
+                                    (click)="clearLogoDark()">Quitar</button>
                         </div>
                     </div>
 
@@ -751,8 +771,8 @@
                 <div class="tn-uploads">
                     <div class="tn-upload">
                         <header class="tn-upload-head">
-                            <strong>Logo completo</strong>
-                            <span class="tn-upload-desc">Wordmark + monograma · ratio 4:1 ideal</span>
+                            <strong>Logo claro</strong>
+                            <span class="tn-upload-desc">Para fondos claros · sidebar expandido, admin, emails</span>
                         </header>
                         <div class="tn-upload-drop">
                             <img *ngIf="editForm.logo_data_url" [src]="editForm.logo_data_url" alt="Logo preview"/>
@@ -766,6 +786,26 @@
                             </label>
                             <button type="button" class="tn-upload-clear" *ngIf="editForm.logo_data_url"
                                     (click)="clearEditLogo()">Quitar</button>
+                        </div>
+                    </div>
+
+                    <div class="tn-upload">
+                        <header class="tn-upload-head">
+                            <strong>Logo oscuro</strong>
+                            <span class="tn-upload-desc">Para fondos oscuros · hero de la landing, dark mode</span>
+                        </header>
+                        <div class="tn-upload-drop" style="background:#031B34;">
+                            <img *ngIf="editForm.logo_dark_data_url" [src]="editForm.logo_dark_data_url" alt="Logo oscuro preview"/>
+                            <span *ngIf="!editForm.logo_dark_data_url" class="tn-upload-empty" style="color:#94A3B8;">Sin logo oscuro</span>
+                        </div>
+                        <div class="tn-upload-foot">
+                            <label class="tn-btn tn-btn--ghost tn-upload-btn">
+                                {{ editForm.logo_dark_data_url ? 'Reemplazar' : 'Subir logo' }}
+                                <input type="file" hidden accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                       (change)="onEditLogoDarkSelected($event)"/>
+                            </label>
+                            <button type="button" class="tn-upload-clear" *ngIf="editForm.logo_dark_data_url"
+                                    (click)="clearEditLogoDark()">Quitar</button>
                         </div>
                     </div>
 

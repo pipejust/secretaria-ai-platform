@@ -64,7 +64,11 @@ class TenantCreate(BaseModel):
     # multipart). Tope: 3 MB de string base64 por logo.
     logo_data_url: Optional[str] = Field(
         None, max_length=4 * 1024 * 1024,
-        description="Logo completo (wordmark+monograma) como data URL"
+        description="Logo claro (wordmark+monograma) para fondos claros — data URL"
+    )
+    logo_dark_data_url: Optional[str] = Field(
+        None, max_length=4 * 1024 * 1024,
+        description="Logo oscuro — variante para fondos oscuros (landing hero, dark mode)"
     )
     icon_data_url: Optional[str] = Field(
         None, max_length=4 * 1024 * 1024,
@@ -92,6 +96,14 @@ class TenantUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=120)
     domain: Optional[str] = Field(None, max_length=240)
     is_active: Optional[bool] = None
+    # Branding editable desde el super-admin. Si vienen, se aplican como
+    # patch parcial sobre branding_json del tenant target (sin necesidad
+    # de impersonar al admin del tenant).
+    company_name: Optional[str] = Field(None, max_length=120)
+    primary_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    logo_data_url: Optional[str] = Field(None, max_length=4 * 1024 * 1024)
+    logo_dark_data_url: Optional[str] = Field(None, max_length=4 * 1024 * 1024)
+    icon_data_url: Optional[str] = Field(None, max_length=4 * 1024 * 1024)
 
 
 class TenantOut(BaseModel):
@@ -104,6 +116,7 @@ class TenantOut(BaseModel):
     created_at: str
     # Branding extraído del JSON — útil para el dashboard de super-admin.
     logo_data_url: Optional[str] = None
+    logo_dark_data_url: Optional[str] = None
     icon_data_url: Optional[str] = None
     primary_color: Optional[str] = None
     company_name: Optional[str] = None
@@ -124,6 +137,7 @@ class TenantOut(BaseModel):
             user_count=user_count,
             created_at=t.created_at,
             logo_data_url=brand.get("logo_data_url"),
+            logo_dark_data_url=brand.get("logo_dark_data_url"),
             icon_data_url=brand.get("icon_data_url"),
             primary_color=brand.get("primary_color"),
             company_name=brand.get("company_name"),
@@ -214,6 +228,8 @@ def create_tenant(
     }
     if payload.logo_data_url and _is_valid_data_url(payload.logo_data_url):
         initial_branding["logo_data_url"] = payload.logo_data_url
+    if payload.logo_dark_data_url and _is_valid_data_url(payload.logo_dark_data_url):
+        initial_branding["logo_dark_data_url"] = payload.logo_dark_data_url
     if payload.icon_data_url and _is_valid_data_url(payload.icon_data_url):
         initial_branding["icon_data_url"] = payload.icon_data_url
 
@@ -341,6 +357,8 @@ def update_tenant(
     db: Session = Depends(get_session),
     _su: User = Depends(require_superadmin),
 ):
+    from services import branding_service  # local import: evita ciclo
+
     t = db.exec(select(Tenant).where(Tenant.slug == slug.lower())).first()
     if not t:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
@@ -360,6 +378,32 @@ def update_tenant(
     db.add(t)
     db.commit()
     db.refresh(t)
+
+    # Branding como patch parcial sobre branding_json del tenant target.
+    # Sólo enviamos los campos que vinieron en el body para no pisar el
+    # resto del branding (colores, contacto, taglines).
+    branding_fields = {
+        k: v
+        for k, v in {
+            "company_name": patch.company_name,
+            "primary_color": patch.primary_color,
+            "logo_data_url": patch.logo_data_url,
+            "logo_dark_data_url": patch.logo_dark_data_url,
+            "icon_data_url": patch.icon_data_url,
+        }.items()
+        if v is not None
+    }
+    if branding_fields:
+        branding_service.update_branding(db, t.id, branding_fields)
+        # Logos cambiaron → invalidar cache HTTP del endpoint binario para
+        # que los emails dejen de servir la imagen vieja durante 24h.
+        if any(k.startswith("logo") or k == "icon_data_url" for k in branding_fields):
+            try:
+                from routers.branding import _invalidate_logo_cache
+                _invalidate_logo_cache(t.id)
+            except Exception:
+                pass
+
     cnt = db.exec(select(User).where(User.tenant_id == t.id)).all()
     return TenantOut.from_db(t, len(cnt))
 

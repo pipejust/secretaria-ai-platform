@@ -17,6 +17,7 @@ interface TenantOut {
     created_at: string;
     /** Branding parseado del backend (data URLs base64 desde branding_json). */
     logo_data_url?: string | null;
+    logo_dark_data_url?: string | null;
     icon_data_url?: string | null;
     primary_color?: string | null;
     company_name?: string | null;
@@ -39,6 +40,7 @@ interface CreateForm {
     admin_password: string;
     admin_full_name: string;
     logo_data_url: string;
+    logo_dark_data_url: string;
     icon_data_url: string;
 }
 
@@ -79,11 +81,13 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         is_active: boolean;
         company_name: string;
         primary_color: string;
-        logo_data_url: string;    // si cambia, se envía PUT /api/branding/logo
-        icon_data_url: string;    // si cambia, se envía PUT /api/branding/icon
+        logo_data_url: string;         // logo claro
+        logo_dark_data_url: string;    // logo oscuro (variante para fondos dark)
+        icon_data_url: string;
     } = {
         slug: '', name: '', domain: '', is_active: true,
-        company_name: '', primary_color: '', logo_data_url: '', icon_data_url: '',
+        company_name: '', primary_color: '',
+        logo_data_url: '', logo_dark_data_url: '', icon_data_url: '',
     };
     /** Snapshot inicial para detectar qué cambió y solo mandar lo necesario. */
     private editFormInitial: any = null;
@@ -154,7 +158,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         return {
             slug: '', name: '', domain: '',
             admin_email: '', admin_password: '', admin_full_name: '',
-            logo_data_url: '', icon_data_url: '',
+            logo_data_url: '', logo_dark_data_url: '', icon_data_url: '',
         };
     }
 
@@ -184,6 +188,15 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         if (url) this.form.logo_data_url = url;
         input.value = '';
     }
+    async onLogoDarkSelected(ev: Event): Promise<void> {
+        this.errorMsg = '';
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.form.logo_dark_data_url = url;
+        input.value = '';
+    }
     async onIconSelected(ev: Event): Promise<void> {
         this.errorMsg = '';
         const input = ev.target as HTMLInputElement;
@@ -202,6 +215,13 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         const url = await this._fileToDataUrl(file);
         if (url) this.form.logo_data_url = url;
     }
+    async onLogoDarkDrop(ev: DragEvent): Promise<void> {
+        ev.preventDefault();
+        const file = ev.dataTransfer?.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.form.logo_dark_data_url = url;
+    }
     async onIconDrop(ev: DragEvent): Promise<void> {
         ev.preventDefault();
         const file = ev.dataTransfer?.files?.[0];
@@ -212,6 +232,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     onDragOver(ev: DragEvent): void { ev.preventDefault(); }
 
     clearLogo(): void { this.form.logo_data_url = ''; }
+    clearLogoDark(): void { this.form.logo_dark_data_url = ''; }
     clearIcon(): void { this.form.icon_data_url = ''; }
 
     // ============================================================
@@ -318,6 +339,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                     admin_password: this.form.admin_password,
                     admin_full_name: adminName,
                     logo_data_url: this.form.logo_data_url || undefined,
+                    logo_dark_data_url: this.form.logo_dark_data_url || undefined,
                     icon_data_url: this.form.icon_data_url || undefined,
                 }, { headers: this._headers() }),
             );
@@ -498,6 +520,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             company_name: t.company_name || '',
             primary_color: t.primary_color || '#155EEF',
             logo_data_url: t.logo_data_url || '',
+            logo_dark_data_url: t.logo_dark_data_url || '',
             icon_data_url: t.icon_data_url || '',
         };
         this.editForm = { ...initial };
@@ -524,6 +547,15 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         if (url) this.editForm.logo_data_url = url;
         input.value = '';
     }
+    async onEditLogoDarkSelected(ev: Event): Promise<void> {
+        this.errorMsg = '';
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.editForm.logo_dark_data_url = url;
+        input.value = '';
+    }
     async onEditIconSelected(ev: Event): Promise<void> {
         this.errorMsg = '';
         const input = ev.target as HTMLInputElement;
@@ -534,6 +566,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         input.value = '';
     }
     clearEditLogo(): void { this.editForm.logo_data_url = ''; }
+    clearEditLogoDark(): void { this.editForm.logo_dark_data_url = ''; }
     clearEditIcon(): void { this.editForm.icon_data_url = ''; }
 
     async saveEdit(): Promise<void> {
@@ -547,67 +580,47 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         this.isEditing = true;
         this.errorMsg = '';
         try {
-            // 1) Campos básicos del tenant (name, domain, is_active) → PUT /api/super/tenants/{slug}.
-            const basicChanged =
-                name !== init.name ||
-                (this.editForm.domain || '') !== (init.domain || '') ||
-                this.editForm.is_active !== init.is_active;
+            // Una sola llamada PUT /api/super/tenants/{slug} con TODO lo
+            // que cambió — el endpoint ahora acepta también campos de
+            // branding (company_name, primary_color, logo_data_url,
+            // logo_dark_data_url, icon_data_url) y los aplica como patch
+            // parcial sobre branding_json sin pisar el resto.
+            const body: Record<string, any> = {};
+            if (name !== init.name) body['name'] = name;
+            if ((this.editForm.domain || '') !== (init.domain || '')) {
+                body['domain'] = this.editForm.domain.trim() || null;
+            }
+            if (this.editForm.is_active !== init.is_active) {
+                body['is_active'] = this.editForm.is_active;
+            }
+            if ((this.editForm.company_name || '') !== (init.company_name || '')) {
+                body['company_name'] = this.editForm.company_name || '';
+            }
+            if ((this.editForm.primary_color || '') !== (init.primary_color || '')) {
+                body['primary_color'] = this.editForm.primary_color || '';
+            }
+            if (this.editForm.logo_data_url !== init.logo_data_url) {
+                body['logo_data_url'] = this.editForm.logo_data_url || '';
+            }
+            if (this.editForm.logo_dark_data_url !== init.logo_dark_data_url) {
+                body['logo_dark_data_url'] = this.editForm.logo_dark_data_url || '';
+            }
+            if (this.editForm.icon_data_url !== init.icon_data_url) {
+                body['icon_data_url'] = this.editForm.icon_data_url || '';
+            }
+
             let out: TenantOut | null = null;
-            if (basicChanged) {
+            if (Object.keys(body).length > 0) {
                 out = await firstValueFrom(
-                    this.http.put<TenantOut>(`${this.apiUrl}/${this.editForm.slug}`, {
-                        name,
-                        domain: this.editForm.domain.trim() || null,
-                        is_active: this.editForm.is_active,
-                    }, { headers: this._headers() }),
+                    this.http.put<TenantOut>(
+                        `${this.apiUrl}/${this.editForm.slug}`,
+                        body,
+                        { headers: this._headers() },
+                    ),
                 );
             }
 
-            // 2) Branding (company_name + primary_color) → PUT /api/branding/?tenant_slug=...
-            //    (esos campos viven en branding_json y los expone /api/branding/ para que el admin
-            //    de cada tenant los edite; aquí los enviamos en nombre del super-admin).
-            const brandChanged =
-                (this.editForm.company_name || '') !== (init.company_name || '') ||
-                (this.editForm.primary_color || '') !== (init.primary_color || '');
-            if (brandChanged) {
-                try {
-                    await firstValueFrom(
-                        this.http.put(`${environment.apiUrl}/api/branding/`, {
-                            company_name: this.editForm.company_name || '',
-                            primary_color: this.editForm.primary_color || '',
-                        }, {
-                            headers: this._headers(),
-                            params: { tenant_slug: this.editForm.slug },
-                        }),
-                    );
-                } catch (e) {
-                    // Si el endpoint no acepta query param tenant_slug, lo dejamos
-                    // pasar — el super-admin puede entrar al tenant para editar marca.
-                    console.warn('No se pudo actualizar marca desde super-admin:', e);
-                }
-            }
-
-            // 3) Logo / Icono → POST /api/branding/logo o /icon (también vía branding).
-            if (this.editForm.logo_data_url && this.editForm.logo_data_url !== init.logo_data_url) {
-                try {
-                    await firstValueFrom(
-                        this.http.post(`${environment.apiUrl}/api/branding/logo`, {
-                            data_url: this.editForm.logo_data_url,
-                        }, { headers: this._headers(), params: { tenant_slug: this.editForm.slug } }),
-                    );
-                } catch (e) { console.warn('logo update falló', e); }
-            }
-            if (this.editForm.icon_data_url && this.editForm.icon_data_url !== init.icon_data_url) {
-                try {
-                    await firstValueFrom(
-                        this.http.post(`${environment.apiUrl}/api/branding/icon`, {
-                            data_url: this.editForm.icon_data_url,
-                        }, { headers: this._headers(), params: { tenant_slug: this.editForm.slug } }),
-                    );
-                } catch (e) { console.warn('icon update falló', e); }
-            }
-
-            // 4) Reflejar cambios en la lista.
+            // Reflejar cambios en la lista.
             if (out) {
                 const idx = this.tenants.findIndex((x) => x.id === out!.id);
                 if (idx >= 0) this.tenants[idx] = { ...this.tenants[idx], ...out };
