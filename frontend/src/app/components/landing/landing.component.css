@@ -867,16 +867,19 @@
   gap: 64px;
   align-items: center;
 }
-/* Grid de 7 columnas: circle | arrow | circle | arrow | circle | arrow | circle.
-   Las flechas son elementos separados, NO pseudo-elementos: garantiza alineación
-   pixel-perfect con el centro vertical de los círculos. */
+/* Flexbox horizontal: cada step es 200px fijo, la flecha entre steps tiene la
+   misma altura que el circulo (88px) para que su linea media coincida con el
+   centro vertical del circulo. Tanto step como arrow arrancan en flex-start,
+   asi sus midlines a 44px se alinean automaticamente sin hacks. */
 .al-flow__steps {
-  display: grid;
-  grid-template-columns: auto 1fr auto 1fr auto 1fr auto;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   gap: 0;
+  flex-wrap: nowrap;
 }
 .al-flow__step {
+  flex: 0 1 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -885,15 +888,16 @@
   min-width: 0;
 }
 .al-flow__circle {
-  width: 96px; height: 96px;
-  display: inline-flex; align-items: center; justify-content: center;
+  width: 88px; height: 88px;
+  display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
   background: #F1F5F9;
   border: 1px solid #E2E8F0;
   color: #155EEF;
+  flex-shrink: 0;
 }
 .al-flow__label {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   color: #0F172A;
   letter-spacing: -0.01em;
@@ -904,17 +908,20 @@
   font-size: 13px;
   line-height: 1.45;
   color: #475569;
-  max-width: 180px;
+  max-width: 200px;
 }
-/* Flecha horizontal — sentada en la línea media de los círculos (48px = mitad
-   de 96px). Color azul de marca, sin padding-top hack. */
+/* Flecha horizontal — 88px de alto matchea el circulo, centro vertical en
+   y=44px, mismo que el centro del circulo. Color azul de marca. */
 .al-flow__arrow {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 96px;
+  height: 88px;
   color: #145DFF;
-  min-width: 32px;
+  padding-top: 0;
+  margin: 0 8px;
+  align-self: flex-start;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -984,7 +991,7 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * 10. Testimonials
+ * 10. Testimonials — cards elegantes con quote, populadas con personas reales
  * ────────────────────────────────────────────────────────────────────────── */
 .al-testimonials {
   padding: 100px 0;
@@ -996,81 +1003,104 @@
   margin-bottom: 50px;
   max-width: 720px;
 }
-/* People grid — personas reales del sistema. Layout simple: avatar + nombre + rol.
-   Sin quote, sin wordmark, sin carousel dots. */
-.al-people__grid {
-  margin: 0;
+.al-testimonial__grid {
+  margin: 0 auto;
   padding: 0;
   list-style: none;
+  max-width: 1100px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
-.al-people__card {
+.al-testimonial__card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 10px;
-  padding: 24px 16px;
+  gap: 20px;
+  padding: 32px;
   background: #fff;
-  border: 1px solid var(--ac-border-soft);
-  border-radius: 16px;
-  transition: border-color var(--ac-ease) 180ms,
-              transform var(--ac-ease) 180ms,
-              box-shadow var(--ac-ease) 180ms;
+  border: 1px solid var(--ac-border);
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform var(--ac-ease) 200ms,
+              box-shadow var(--ac-ease) 200ms,
+              border-color var(--ac-ease) 200ms;
 }
-.al-people__card:hover {
-  border-color: var(--ac-border);
+.al-testimonial__card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 22px -14px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 12px 30px -16px rgba(15, 23, 42, 0.18);
+  border-color: #D1DCE9;
 }
-.al-people__avatar,
-.al-people__avatar-img {
-  width: 72px; height: 72px;
+.al-testimonial__quote-ico {
+  color: var(--ac-emerald);
+  display: inline-flex;
+  width: 32px; height: 32px;
+}
+.al-testimonial__quote {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ac-fg-soft);
+  letter-spacing: -0.005em;
+  flex: 1;
+}
+.al-testimonial__author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--ac-border-soft);
+  margin-top: auto;
+  padding-top: 16px;
+}
+.al-testimonial__avatar,
+.al-testimonial__avatar-img {
+  width: 48px; height: 48px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.al-people__avatar {
+.al-testimonial__avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(140deg, var(--ac-blue) 0%, #4F8CFF 100%);
   color: #fff;
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-.al-people__avatar-img {
+.al-testimonial__avatar-img {
   object-fit: cover;
   background: var(--ac-border-soft);
 }
-.al-people__name {
-  margin-top: 4px;
-  font-size: 15px;
+.al-testimonial__meta { min-width: 0; }
+.al-testimonial__name {
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--ac-fg);
   letter-spacing: -0.005em;
+  line-height: 1.2;
 }
-.al-people__role {
-  font-size: 13px;
+.al-testimonial__role {
+  margin-top: 2px;
+  font-size: 12.5px;
   color: var(--ac-fg-muted);
   line-height: 1.35;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * 11. Contact
+ * 11. Contact — 2 col: copy izquierdo + form card derecho. Inputs polished.
  * ────────────────────────────────────────────────────────────────────────── */
 .al-contact {
-  padding: 100px 0;
-  background: #fff;
+  padding: 100px 0 80px;
+  background: #F8FAFC;
 }
 .al-contact__inner {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: 56px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 80px;
   align-items: start;
 }
+.al-contact__copy { padding-top: 8px; }
 .al-contact__meta {
   margin: 32px 0 0 0;
   padding: 0;
@@ -1082,8 +1112,8 @@
 .al-contact__meta li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
+  gap: 12px;
+  font-size: 14.5px;
   color: var(--ac-fg-muted);
 }
 .al-contact__meta a {
@@ -1095,46 +1125,53 @@
 .al-contact__meta svg { color: var(--ac-blue); flex-shrink: 0; }
 
 .al-contact__form {
-  background: var(--ac-surface-alt);
-  border: 1px solid var(--ac-border);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 20px;
-  padding: 32px;
+  padding: 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
+  gap: 18px 16px;
 }
 .al-field { display: flex; flex-direction: column; gap: 6px; }
 .al-field--full { grid-column: 1 / -1; }
 .al-field label {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--ac-fg-soft);
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
   letter-spacing: -0.005em;
 }
 .al-field input,
 .al-field textarea {
-  font: inherit;
+  font-family: var(--font-sans, 'Sora', system-ui, sans-serif);
   font-size: 14.5px;
-  padding: 11px 14px;
-  border: 1px solid var(--ac-border);
+  padding: 12px 14px;
+  border: 1px solid #CBD5E1;
   border-radius: 10px;
-  background: #fff;
-  color: var(--ac-fg);
-  transition: border-color var(--ac-ease) 160ms, box-shadow var(--ac-ease) 160ms;
+  background: #FFFFFF;
+  color: #0F172A;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
-.al-field textarea { resize: vertical; min-height: 110px; }
+.al-field textarea {
+  resize: vertical;
+  min-height: 96px;
+  font-family: inherit;
+}
 .al-field input:focus,
 .al-field textarea:focus {
   outline: none;
-  border-color: var(--ac-blue);
-  box-shadow: 0 0 0 3px var(--ac-blue-soft);
+  border-color: #145DFF;
+  box-shadow: 0 0 0 3px rgba(20, 93, 255, 0.12);
 }
 .al-honeypot {
   position: absolute !important;
+  left: -9999px !important;
   width: 1px !important; height: 1px !important;
   padding: 0 !important; margin: -1px !important;
   overflow: hidden !important;
-  clip: rect(0,0,0,0) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
   border: 0 !important;
 }
 .al-contact__submit {
@@ -1143,6 +1180,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 16px;
+  padding-top: 8px;
   flex-wrap: wrap;
 }
 /* Banner de error — rojo, full-width, visible. Reemplaza el <p> inline. */
@@ -1489,12 +1527,13 @@
   .al-feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .al-flow__circle { width: 84px; height: 84px; }
-  .al-flow__arrow { height: 84px; }
-  .al-flow__arrow svg { width: 40px; }
+  .al-flow__circle { width: 80px; height: 80px; }
+  .al-flow__arrow { height: 80px; margin: 0 4px; }
+  .al-flow__arrow svg { width: 32px; }
+  .al-flow__step { flex: 0 1 170px; }
 
-  /* People — 3 cols en tablet (1024) */
-  .al-people__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Testimonios — 2 cols en tablet */
+  .al-testimonial__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .al-contact__inner {
     grid-template-columns: minmax(0, 1fr);
@@ -1566,16 +1605,19 @@
   .al-feature-grid { grid-template-columns: minmax(0, 1fr); }
 
   /* Flow — stack vertical en mobile. Cada step en su propia fila, la flecha
-     rota 90deg apuntando hacia abajo, sentada entre filas. */
+     rota 90deg apuntando hacia abajo. Width 88px = altura del circulo, ahora
+     que la flecha es horizontal antes del rotate, su largo natural matchea. */
   .al-flow__steps {
-    grid-template-columns: 1fr;
-    gap: 18px 0;
+    flex-direction: column;
+    gap: 14px;
   }
+  .al-flow__step { flex: 0 0 auto; }
   .al-flow__arrow {
     height: auto;
-    padding: 4px 0;
+    width: 88px;
+    align-self: center;
     transform: rotate(90deg);
-    transform-origin: center;
+    margin: 0;
   }
   .al-flow__circle { width: 88px; height: 88px; }
   .al-flow__desc { max-width: 240px; }
@@ -1583,11 +1625,12 @@
   .al-integrations__head { flex-direction: column; align-items: flex-start; }
   .al-integrations__list { gap: 10px; justify-content: flex-start; }
 
-  /* People — 2 cols en mobile */
-  .al-people__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .al-people__card { padding: 20px 12px; }
+  /* Testimonios — 1 col en mobile */
+  .al-testimonial__grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .al-testimonial__card { padding: 24px; }
 
-  .al-contact__form { grid-template-columns: 1fr; padding: 24px; }
+  .al-contact__inner { gap: 32px; }
+  .al-contact__form { grid-template-columns: 1fr; padding: 28px; }
   .al-contact__success { padding: 40px 24px; }
 
   .al-finalcta__card { padding: 36px 24px; }

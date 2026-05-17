@@ -362,9 +362,10 @@
           <p class="al-section-subtitle">{{ c.flow.subtitle }}</p>
         </div>
 
-        <!-- Grid 7 columnas: circle | arrow | circle | arrow | circle | arrow | circle.
-             Cada circulo + arrow es un elemento separado para precision absoluta.
-             En mobile (<768px) cambia a stack vertical via media query. -->
+        <!-- Flexbox horizontal: step · arrow · step · arrow · step · arrow · step.
+             La flecha tiene la misma altura que el circulo (88px) y centra su
+             linea media exactamente con la linea media del circulo. En mobile
+             cambia a columna y la flecha rota 90deg. -->
         <div class="al-flow__steps" role="list">
           <ng-container *ngFor="let s of c.flow.steps; let i = index; let last = last">
             <div class="al-flow__step" role="listitem">
@@ -391,8 +392,8 @@
               <p class="al-flow__desc">{{ s.description }}</p>
             </div>
             <div *ngIf="!last" class="al-flow__arrow" aria-hidden="true">
-              <svg width="56" height="14" viewBox="0 0 56 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 7h48"/><path d="m46 2 8 5-8 5"/>
+              <svg width="40" height="14" viewBox="0 0 40 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 7h32"/><path d="m30 2 6 5-6 5"/>
               </svg>
             </div>
           </ng-container>
@@ -480,18 +481,28 @@
           <h2 id="al-test-title" class="al-section-title">{{ c.testimonials.title }}</h2>
         </div>
 
-        <ul class="al-people__grid">
-          <li class="al-people__card" *ngFor="let p of people.slice(0, 8)">
-            <img *ngIf="p.avatar_url; else peopleInitialsTpl"
-                 [src]="p.avatar_url"
-                 [alt]="p.name"
-                 class="al-people__avatar-img"
-                 loading="lazy" />
-            <ng-template #peopleInitialsTpl>
-              <span class="al-people__avatar" aria-hidden="true">{{ p.initials || initialsOf(p) }}</span>
-            </ng-template>
-            <div class="al-people__name">{{ p.name }}</div>
-            <div class="al-people__role">{{ p.role }}</div>
+        <ul class="al-testimonial__grid">
+          <li class="al-testimonial__card" *ngFor="let p of people.slice(0, 3); let i = index">
+            <span class="al-testimonial__quote-ico" aria-hidden="true">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z"/>
+              </svg>
+            </span>
+            <p class="al-testimonial__quote">{{ peopleQuote(i) }}</p>
+            <div class="al-testimonial__author">
+              <img *ngIf="p.avatar_url; else testInitialsTpl"
+                   [src]="p.avatar_url"
+                   [alt]="p.name"
+                   class="al-testimonial__avatar-img"
+                   loading="lazy" />
+              <ng-template #testInitialsTpl>
+                <span class="al-testimonial__avatar" aria-hidden="true">{{ p.initials || initialsOf(p) }}</span>
+              </ng-template>
+              <div class="al-testimonial__meta">
+                <div class="al-testimonial__name">{{ p.name }}</div>
+                <div class="al-testimonial__role">{{ p.role }}</div>
+              </div>
+            </div>
           </li>
         </ul>
       </div>
@@ -698,16 +709,19 @@
         </div>
 
         <nav class="al-footer__cols" aria-label="Enlaces de pie de página">
-          <div class="al-footer__col" *ngFor="let col of c.footer.columns">
-            <h3 class="al-footer__col-title">{{ col.title }}</h3>
-            <ul>
-              <ng-container *ngFor="let link of col.links">
-                <li *ngIf="isValidLink(link.url)">
-                  <a [href]="link.url" (click)="scrollTo(link.url, $event)">{{ link.label }}</a>
-                </li>
-              </ng-container>
-            </ul>
-          </div>
+          <ng-container *ngFor="let col of c.footer.columns">
+            <!-- Solo renderiza la columna si tiene al menos un link válido. -->
+            <div class="al-footer__col" *ngIf="hasValidLinks(col)">
+              <h3 class="al-footer__col-title">{{ col.title }}</h3>
+              <ul>
+                <ng-container *ngFor="let link of col.links">
+                  <li *ngIf="isValidLink(link.url)">
+                    <a [href]="link.url" (click)="navigateLink(link.url, $event)">{{ link.label }}</a>
+                  </li>
+                </ng-container>
+              </ul>
+            </div>
+          </ng-container>
         </nav>
       </div>
 
@@ -715,7 +729,7 @@
         <p class="al-footer__copy">© {{ year }} {{ c.footer.copyright }}</p>
         <ul class="al-footer__legal" *ngIf="c.footer.legal_links?.length">
           <li *ngFor="let l of c.footer.legal_links">
-            <a [href]="l.url">{{ l.label }}</a>
+            <a [href]="l.url" (click)="navigateLink(l.url, $event)">{{ l.label }}</a>
           </li>
         </ul>
       </div>

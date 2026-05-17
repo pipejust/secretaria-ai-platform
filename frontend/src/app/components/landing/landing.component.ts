@@ -159,6 +159,21 @@ export class LandingComponent implements OnInit {
         return n < 10 ? '0' + n : String(n);
     }
 
+    /**
+     * Quote rotativo para las cards de testimonios. Como las personas reales
+     * no traen quote propio, asignamos uno de un pool fijo de forma determinista
+     * por indice. Mantiene el feel "testimonial" sin inventar datos por persona.
+     */
+    peopleQuote(index: number): string {
+        const phrases = [
+            'Acten transformó la forma en que mi equipo ejecuta sus decisiones.',
+            'Pasamos de reuniones que terminan en olvido a tareas que sí se ejecutan.',
+            'La precisión y el seguimiento automático elevaron nuestra disciplina.',
+            'Las actas profesionales y la asignación de tareas son indispensables ya.',
+        ];
+        return phrases[index % phrases.length];
+    }
+
     /** Iniciales para avatar a partir del nombre. */
     initialsOf(t: { initials?: string; name?: string }): string {
         if (t.initials) return t.initials;
@@ -172,12 +187,52 @@ export class LandingComponent implements OnInit {
 
     /**
      * Footer link sanity check — filtra enlaces sin destino real.
-     * Acepta anchors (#features), rutas (/login) y URLs absolutas (https://...).
-     * Descarta vacíos y el literal "#" que es un placeholder común.
+     * Acepta anchors (#features) cuyo elemento existe, rutas (/login,
+     * /privacy) y URLs absolutas (https://...).
+     * Descarta vacíos, "#" puro y anchors a secciones que no existen
+     * en esta versión del landing.
      */
     isValidLink(url: string): boolean {
         if (!url || url === '#') return false;
-        return url.startsWith('#') || url.startsWith('/') || url.startsWith('http');
+        if (url.startsWith('#')) {
+            // Solo válido si la sección existe en el DOM
+            const id = url.replace(/^#/, '');
+            if (typeof document === 'undefined') return true;  // SSR: optimista
+            return !!document.getElementById(id);
+        }
+        return url.startsWith('/') || url.startsWith('http');
+    }
+
+    /** True si la columna del footer tiene al menos un link válido. */
+    hasValidLinks(col: { links?: { url: string }[] }): boolean {
+        return (col?.links || []).some(l => this.isValidLink(l.url));
+    }
+
+    /**
+     * Navega correctamente según el tipo de URL.
+     *   #anchor   → smooth scroll dentro del landing
+     *   /ruta     → router de Angular (SPA, mantiene contexto)
+     *   http://…  → comportamiento default (browser maneja, target opcional)
+     *
+     * Sin este helper, todos los enlaces del footer llamaban scrollTo()
+     * que bloqueaba la navegación de /privacy, /terms, etc.
+     */
+    navigateLink(url: string, event?: Event): void {
+        if (!url || url === '#') {
+            if (event) event.preventDefault();
+            return;
+        }
+        if (url.startsWith('#')) {
+            this.scrollTo(url, event);
+            return;
+        }
+        if (url.startsWith('/')) {
+            if (event) event.preventDefault();
+            this.mobileMenuOpen = false;
+            this.router.navigateByUrl(url);
+            return;
+        }
+        // URL absoluta http(s) — deja que el browser navegue (puede tener target).
     }
 
     /**

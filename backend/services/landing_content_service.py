@@ -433,41 +433,34 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             {"label": "YouTube", "icon": "youtube", "url": "https://youtube.com/@acten"},
             {"label": "GitHub", "icon": "github", "url": "https://github.com/acten"},
         ],
+        # Columnas del footer — solo enlaces a secciones REALES del landing,
+        # rutas existentes (/privacy, /terms) o el formulario de contacto.
+        # Si añades una nueva sección o página, agrega su link aquí (o desde
+        # el CMS admin). Anchors a secciones inexistentes se filtran en runtime
+        # con isValidLink() del componente.
         "columns": [
             {
                 "title": "Producto",
                 "links": [
-                    {"label": "Funciones", "url": "#features"},
-                    {"label": "Seguridad", "url": "#features"},
-                    {"label": "Roadmap", "url": "#flow"},
-                    {"label": "Precios", "url": "#pricing"},
-                ],
-            },
-            {
-                "title": "Soluciones",
-                "links": [
-                    {"label": "Equipos", "url": "#features"},
-                    {"label": "Empresas", "url": "#company"},
-                    {"label": "Instituciones", "url": "#contact"},
-                    {"label": "Casos de uso", "url": "#resources"},
-                ],
-            },
-            {
-                "title": "Recursos",
-                "links": [
-                    {"label": "Blog", "url": "#resources"},
-                    {"label": "Documentación", "url": "#"},
-                    {"label": "Webinars", "url": "#resources"},
-                    {"label": "Plantillas", "url": "#resources"},
+                    {"label": "Capacidades", "url": "#features"},
+                    {"label": "Cómo funciona", "url": "#flow"},
+                    {"label": "Integraciones", "url": "#integrations"},
+                    {"label": "Solicitar demo", "url": "#contact"},
                 ],
             },
             {
                 "title": "Empresa",
                 "links": [
-                    {"label": "Nosotros", "url": "#company"},
-                    {"label": "Carreras", "url": "#"},
-                    {"label": "Prensa", "url": "#"},
+                    {"label": "Quiénes somos", "url": "#testimonials"},
                     {"label": "Contacto", "url": "#contact"},
+                    {"label": "Iniciar sesión", "url": "/login"},
+                ],
+            },
+            {
+                "title": "Legal",
+                "links": [
+                    {"label": "Privacidad", "url": "/privacy"},
+                    {"label": "Términos", "url": "/terms"},
                 ],
             },
         ],
