@@ -567,13 +567,17 @@
 }
 .acn-donut-legend li {
     display: grid;
-    grid-template-columns: 14px 1fr auto auto;
+    /* 10px dot + 1fr label que puede encogerse + auto count + auto pct.
+       min-width:0 en label es CRÍTICO para que truncate funcione cuando
+       el contenedor (followup-body) es estrecho en 13"/14". */
+    grid-template-columns: 10px minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     font-size: 13px;
     color: var(--acn-text);
     transition: opacity 140ms ease;
     cursor: default;
+    overflow: hidden;
 }
 .acn-donut-legend li.is-dimmed { opacity: 0.55; }
 .acn-donut-legend .lg-dot {
@@ -581,10 +585,21 @@
     height: 10px;
     border-radius: 50%;
     display: inline-block;
+    flex-shrink: 0;
 }
-.acn-donut-legend .lg-label { color: var(--acn-text); }
+.acn-donut-legend .lg-label {
+    color: var(--acn-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
 .acn-donut-legend .lg-count { font-weight: 600; color: var(--acn-text); }
 .acn-donut-legend .lg-pct { font-size: 12px; color: var(--acn-text-muted); }
+/* Followup body: previene que la legend desborde sobre el contenedor.
+   Sin esto, en 13"/14" con la card de ~308px, la legend de "En procesamiento"
+   y similar overflowea y los porcentajes se cortan visualmente. */
+.acn-followup-body { overflow: hidden; }
 
 .acn-followup-cheer {
     display: flex;
@@ -964,9 +979,16 @@
 }
 .acn-quick-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    /* auto-fit con minmax permite que las 6 acciones quepan en una
+       fila en monitores >=1620px y wrappeen elegante en MacBook 13"/14"
+       (1440-1512 CSS px) donde 6 a 1fr sería 189px por botón → no
+       caben los labels completos. Con minmax(180, 1fr) wrappea a 5+1
+       en lugar de overflowing horizontal. */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
 }
+.acn-qa { min-width: 0; overflow: hidden; }
+.acn-qa > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .acn-qa {
     background: var(--acn-card-bg);
     border: 1px solid var(--acn-border);
