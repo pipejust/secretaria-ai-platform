@@ -108,10 +108,14 @@
   margin: 0;
   font-family: var(--font-display, 'Playfair Display', serif);
   font-weight: 500;
-  font-size: clamp(2rem, 1.4rem + 2.4vw, 3.25rem);
+  font-size: clamp(2rem, 1.2rem + 2vw, 2.75rem);
   line-height: 1.08;
   letter-spacing: -0.022em;
   color: var(--ac-fg);
+  /* Balance: distribuye palabras uniformemente. Antes en 1440 con
+     copy de ~400px el title "Un flujo inteligente que convierte
+     reuniones en resultados." wrappeaba palabra por palabra. */
+  text-wrap: balance;
 }
 .al-section-title--center { text-align: center; }
 
@@ -253,6 +257,11 @@
               border-color var(--ac-ease) 200ms,
               backdrop-filter var(--ac-ease) 200ms;
 }
+
+/* El header es fixed ~72px. Sin scroll-margin, al navegar a #features
+   desde URL directa el browser scrollea al borde superior de la sección
+   pero el header sticky la cubre. Aplica a todas las secciones con id. */
+section[id] { scroll-margin-top: 88px; }
 .al-header--scrolled {
   background: rgba(2, 8, 23, 0.78);
   backdrop-filter: saturate(150%) blur(14px);
@@ -400,8 +409,9 @@
 .al-hero__inner {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  gap: 56px;
+  /* Le damos un pelín más al copy para que el title respire en 1440. */
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 40px;
   align-items: center;
 }
 
@@ -409,9 +419,13 @@
   margin: 22px 0 0 0;
   font-family: var(--font-display, 'Playfair Display', serif);
   font-weight: 500;
-  font-size: clamp(2.5rem, 1.5rem + 4vw, 5rem);
-  line-height: 1.02;
+  /* Antes: clamp(2.5rem, 1.5rem + 4vw, 5rem) → 80px en 1440 que NO cabe
+     palabras como "conversación" en un copy de 554px → wrappea cada
+     palabra a su línea. Cap a 4rem (64px) y balance distribuye mejor. */
+  font-size: clamp(2.25rem, 0.8rem + 3.4vw, 4rem);
+  line-height: 1.06;
   letter-spacing: -0.028em;
+  text-wrap: balance;
 }
 .al-hero__title-lead,
 .al-hero__title-second {
@@ -844,6 +858,9 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--ac-fg);
+  /* Balance evita 'Captura e / interpreta' (palabra suelta en línea 2)
+     porque el grid de 3 cols a 1440 deja cards de ~280px. */
+  text-wrap: balance;
 }
 .al-feature-card__desc {
   margin: 0;
