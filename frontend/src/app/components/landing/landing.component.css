@@ -1813,8 +1813,23 @@ section[id] { scroll-margin-top: 88px; }
   .al-flow__circle { width: 88px; height: 88px; }
   .al-flow__desc { max-width: 240px; }
 
-  .al-integrations__head { flex-direction: column; align-items: flex-start; }
-  .al-integrations__list { gap: 10px; justify-content: flex-start; }
+  /* Mobile: head en columna pero centrado (no flex-start, que dejaba el
+     título pegado a la izquierda mientras el resto del bloque iba al medio).
+     Chips: justify-content center + max-width al wrap para mantener el
+     bloque visualmente centrado sin "huecos" a la derecha en la última fila. */
+  .al-integrations__head {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .al-integrations__title { max-width: 28ch; margin-left: auto; margin-right: auto; }
+  .al-integrations__list {
+    gap: 10px;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 520px;
+  }
 
   /* Testimonios — 1 col en mobile */
   .al-testimonial__grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
