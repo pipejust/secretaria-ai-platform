@@ -304,6 +304,10 @@ section[id] { scroll-margin-top: 88px; }
 .al-brand--dark { color: var(--ac-fg); }
 
 .al-nav { display: flex; }
+/* Acciones del drawer móvil (login + cta dentro del nav): SOLO visibles
+   en mobile. En desktop ya están en .al-header__actions y duplicarlas
+   acá rompe el menú (dos "Iniciar sesión" + dos "Solicitar demo"). */
+.al-nav__actions { display: none; }
 .al-nav__list {
   list-style: none;
   margin: 0;
