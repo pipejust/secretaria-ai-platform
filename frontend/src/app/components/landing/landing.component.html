@@ -25,6 +25,21 @@
             <a [href]="item.anchor" (click)="scrollTo(item.anchor, $event)">{{ item.label }}</a>
           </li>
         </ul>
+        <!-- Acciones dentro del drawer mobile: el botón "Iniciar sesión"
+             (ghost-light) está oculto en el header en ≤768px, así que lo
+             exponemos acá. Solo visible cuando el drawer está abierto. -->
+        <div class="al-nav__actions">
+          <a class="al-btn al-btn--ghost-light al-nav__login"
+             [href]="loginUrl"
+             (click)="closeMobileMenu()">
+            {{ c.nav.login_label }}
+          </a>
+          <a class="al-btn al-btn--primary al-nav__cta"
+             href="#contact"
+             (click)="scrollTo('#contact', $event)">
+            {{ c.nav.cta_label }}
+          </a>
+        </div>
       </nav>
 
       <div class="al-header__actions">

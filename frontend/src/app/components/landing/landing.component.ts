@@ -165,6 +165,11 @@ export class LandingComponent implements OnInit {
         this.mobileMenuOpen = !this.mobileMenuOpen;
     }
 
+    /** Cierra el drawer móvil. Lo usan los links/CTAs dentro del menú. */
+    closeMobileMenu(): void {
+        this.mobileMenuOpen = false;
+    }
+
     /** Pad de número a 2 dígitos: 1 → "01", 12 → "12". Helper de template. */
     pad2(n: number): string {
         return n < 10 ? '0' + n : String(n);

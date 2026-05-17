@@ -1636,6 +1636,28 @@ section[id] { scroll-margin-top: 88px; }
   .al-header__burger { display: inline-flex; }
   .al-header__actions .al-btn--ghost-light { display: none; }
 
+  /* Acciones DENTRO del drawer móvil: visible solo cuando .al-nav está
+     abierto. En desktop están en .al-header__actions; en mobile pasan
+     acá para que el usuario tenga acceso a "Iniciar sesión" + CTA. */
+  .al-nav__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .al-nav__actions .al-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+  /* CTA primary "Solicitar demo": en mobile se mantiene en el header bar
+     (es la acción principal, siempre visible). NO la duplicamos en el
+     drawer — solo Iniciar sesión va dentro. */
+  .al-nav__actions .al-nav__cta { display: none; }
+
   .al-hero { padding: 56px 0 36px; }
   /* Centramos copy + CTAs + chips en mobile — el split visual del
      desktop no aplica acá, todo apilado se ve mejor centrado. */
