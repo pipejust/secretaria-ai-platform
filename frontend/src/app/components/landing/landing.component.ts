@@ -43,6 +43,17 @@ export class LandingComponent implements OnInit {
     /** Año actual para footer. */
     year = new Date().getFullYear();
 
+    /**
+     * Compone la línea de copyright sin duplicar el símbolo © ni el año.
+     * Algunos tenants tienen guardado "© 2024 Acten.ai..." en el CMS;
+     * esta helper detecta el prefijo "© AAAA " o "© " y lo strippea,
+     * para evitar el bug visible "© 2026 © 2024 Acten.ai..." en el render.
+     */
+    copyrightLine(raw: string | null | undefined): string {
+      const body = (raw ?? '').replace(/^\s*©\s*\d{4}\s*/u, '').replace(/^\s*©\s*/u, '').trim();
+      return body ? `© ${this.year} ${body}` : `© ${this.year}`;
+    }
+
     /** Contenido dinámico del backend. Null mientras carga. */
     content: LandingContent | null = null;
     contentLoading = true;

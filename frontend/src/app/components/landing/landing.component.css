@@ -1850,7 +1850,16 @@ section[id] { scroll-margin-top: 88px; }
     gap: 32px;
   }
   .al-footer__brand-col { grid-column: 1 / -1; }
-  .al-footer__bottom { justify-content: flex-start; gap: 18px; }
+  /* Bottom row del footer (copyright + legal): en tablet/mobile siempre
+     centrado y en columna para que ambas filas queden visualmente al medio
+     (antes era justify-content flex-start, pegado a la izquierda). */
+  .al-footer__bottom {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+  }
+  .al-footer__legal { justify-content: center; }
 }
 
 /* --- 640px: ultra-compact tuning ----------------------------------------- */
@@ -1930,8 +1939,19 @@ section[id] { scroll-margin-top: 88px; }
   .al-trust__logos { gap: 24px 32px; }
   .al-trust__logo { font-size: 16px; }
 
-  .al-finalcta__ctas { flex-direction: column; align-items: stretch; }
-  .al-finalcta__ctas .al-btn { width: 100%; justify-content: center; }
+  /* Final CTA: en mobile stack vertical pero CENTRADOS (era align-items
+     stretch que con el max-width: 320px del @1024 dejaba botones de 320px
+     pegados al borde izquierdo del card en vez de al medio). */
+  .al-finalcta__ctas {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .al-finalcta__ctas .al-btn {
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+  }
   .al-finalcta__card { padding: 30px 20px; border-radius: 22px; }
   .al-finalcta__statuses li { grid-template-columns: 1fr; gap: 4px; }
   .al-finalcta__status-check { display: none; }

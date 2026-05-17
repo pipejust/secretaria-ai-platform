@@ -779,7 +779,7 @@
       </div>
 
       <div class="al-footer__bottom">
-        <p class="al-footer__copy">© {{ year }} {{ c.footer.copyright }}</p>
+        <p class="al-footer__copy">{{ copyrightLine(c.footer.copyright) }}</p>
         <ul class="al-footer__legal" *ngIf="c.footer.legal_links?.length">
           <li *ngFor="let l of c.footer.legal_links">
             <a [href]="l.url" (click)="navigateLink(l.url, $event)">{{ l.label }}</a>

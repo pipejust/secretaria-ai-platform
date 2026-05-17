@@ -458,7 +458,7 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             {"label": "Cookies", "url": "/privacy"},
         ],
         "language_label": "Español (ES)",
-        "copyright": "© 2024 Acten.ai. Todos los derechos reservados.",
+        "copyright": "Acten.ai. Todos los derechos reservados.",
     },
 }
 
