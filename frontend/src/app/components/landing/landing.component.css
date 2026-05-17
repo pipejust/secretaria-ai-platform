@@ -1895,6 +1895,38 @@ section[id] { scroll-margin-top: 88px; }
   .al-mock__chip { padding: 3px 8px; font-size: 10.5px; }
   .al-mock__btn { padding: 4px 9px; font-size: 11px; }
 
+  /* KPIs: 4 columnas en 330px de ancho = ~75px por card. Labels como
+     "Elementos de acción" (19 chars) sin word-break se salían del card.
+     Reducimos padding, font-size y forzamos hyphenation/word-break. */
+  .al-mock__metrics { gap: 6px; }
+  .al-mock__metric { padding: 8px 8px 9px; border-radius: 10px; min-width: 0; }
+  .al-mock__metric-ico { width: 20px; height: 20px; margin-bottom: 6px; }
+  .al-mock__metric-num { font-size: 16px; }
+  .al-mock__metric-lbl {
+    font-size: 9.5px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
+  /* Body: 1.65fr + 1fr en mockup angosto deja la side col en ~120px,
+     donde nombres como "Cristian Hernández" se cortan. Stack vertical:
+     main col arriba (full width), side col debajo. */
+  .al-mock__body { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .al-mock__section { padding: 10px 12px; }
+  .al-mock__section-title { font-size: 11px; }
+
+  /* Person rows: nombre puede ser largo. min-width:0 + truncate. */
+  .al-mock__person { min-width: 0; font-size: 11.5px; }
+  .al-mock__person-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .al-mock__task { min-width: 0; }
+  .al-mock__date { font-size: 10px; }
+
   .al-trust__logos { gap: 24px 32px; }
   .al-trust__logo { font-size: 16px; }
 
