@@ -450,34 +450,57 @@ async def submit_contact_form(
 
 
 @public_router.get("/landing/_email_test_send")
-async def landing_email_test_send(db: Session = Depends(get_session)) -> Dict[str, Any]:
+async def landing_email_test_send(
+    to: str | None = None,
+    db: Session = Depends(get_session),
+) -> Dict[str, Any]:
     """DIAGNOSTIC — fuerza un envío REAL con la config actual y devuelve el
-    resultado exacto (incluso el error de Resend si lo hay). Solo para
-    diagnosticar el form de contacto que dice 'ok' pero no llega.
+    resultado exacto. Acepta ?to= para probar contra un buzón controlado
+    (útil para descartar si el destinatario por defecto no existe).
     """
     tenant = _resolve_acten_tenant(db)
     from services.email_service import EmailService
     es = EmailService(db=db, tenant_id=tenant.id)
     content = landing_content_service.get_landing_content(db, tenant.id)
-    target = (content.get("contact", {}).get("email") or "").strip() or "hola@acten.app"
+    default_target = (content.get("contact", {}).get("email") or "").strip() or "hola@acten.app"
+    target = (to or default_target).strip()
+
+    # Validación mínima de email para no llamar Resend con basura
+    if "@" not in target or "." not in target.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Param ?to= con email inválido.")
 
     result: Dict[str, Any] = {
         "from_email": es.from_email,
         "to_email": target,
+        "used_default_to": to is None,
         "api_key_set": bool(es.api_key),
     }
     try:
-        sent = await es._send_html_email(
-            to_email=target,
-            subject="[DIAG] Test de envío desde landing/_email_test_send",
-            html_content="<p>Diagnóstico del form de contacto — si recibes esto, Resend funciona.</p>",
-        )
-        result["status"] = "sent" if sent else "simulated"
-        result["error"] = None
+        # Llamamos directo a Resend para capturar el response ID y poder
+        # cruzarlo con el dashboard si hace falta.
+        import resend
+        if es.api_key:
+            resend.api_key = es.api_key
+            response = resend.Emails.send({
+                "from": es.from_email,
+                "to": target,
+                "subject": "[DIAG] Test desde Acten landing — diagnóstico",
+                "html": (
+                    "<p>Si recibes este correo, el form de contacto está OK "
+                    "para el destinatario configurado.</p>"
+                    f"<p>From: {es.from_email}<br>To: {target}</p>"
+                ),
+            })
+            result["status"] = "sent"
+            result["resend_id"] = response.get("id") if isinstance(response, dict) else str(response)
+            result["error"] = None
+        else:
+            result["status"] = "no_api_key"
+            result["error"] = "EmailService.api_key vacío — modo simulación"
     except Exception as exc:
         result["status"] = "exception"
         result["error_type"] = type(exc).__name__
-        result["error_message"] = str(exc)[:500]
+        result["error_message"] = str(exc)[:800]
     return result
 
 
