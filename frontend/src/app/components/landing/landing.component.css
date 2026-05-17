@@ -1537,6 +1537,20 @@ section[id] { scroll-margin-top: 88px; }
     grid-template-columns: minmax(0, 1fr);
     gap: 36px;
   }
+  /* Cuando el hero stackea (1024 y abajo) el copy queda full-width.
+     Centramos su contenido + CTAs para que no se vean estirados. */
+  .al-hero__copy { text-align: center; }
+  .al-hero__ctas {
+    justify-content: center;
+    align-items: center;
+  }
+  .al-hero__attrs { justify-content: center; }
+  /* En tablet (641-1024) los CTAs siguen en fila pero con tamaño
+     natural (no stretch) y centrados gracias al justify-content. */
+  .al-hero__ctas .al-btn {
+    width: auto;
+    max-width: 320px;
+  }
   /* Mockup en tablet: max-height + scroll interno para que la pile vertical
      del dashboard no infle el hero arbitrariamente. */
   .al-hero__mockup {
@@ -1826,8 +1840,19 @@ section[id] { scroll-margin-top: 88px; }
 
 /* --- 640px: ultra-compact tuning ----------------------------------------- */
 @media (max-width: 640px) {
-  .al-hero__ctas { flex-direction: column; align-items: stretch; }
-  .al-hero__ctas .al-btn { width: 100%; justify-content: center; }
+  /* CTAs stack vertical y CENTRADOS (era stretch full-width feo,
+     visible cuando el viewport está entre 561-1024 y el container
+     era >700px). Ahora cap a 340px y center horizontal. */
+  .al-hero__ctas {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .al-hero__ctas .al-btn {
+    width: 100%;
+    max-width: 340px;
+    justify-content: center;
+  }
   .al-hero__title { font-size: clamp(2.2rem, 1.6rem + 4vw, 3.2rem); }
 
   .al-mock__main { padding: 14px 14px 18px; }
