@@ -449,6 +449,38 @@ async def submit_contact_form(
     return {"status": "ok"}
 
 
+@public_router.get("/landing/_email_test_send")
+async def landing_email_test_send(db: Session = Depends(get_session)) -> Dict[str, Any]:
+    """DIAGNOSTIC — fuerza un envío REAL con la config actual y devuelve el
+    resultado exacto (incluso el error de Resend si lo hay). Solo para
+    diagnosticar el form de contacto que dice 'ok' pero no llega.
+    """
+    tenant = _resolve_acten_tenant(db)
+    from services.email_service import EmailService
+    es = EmailService(db=db, tenant_id=tenant.id)
+    content = landing_content_service.get_landing_content(db, tenant.id)
+    target = (content.get("contact", {}).get("email") or "").strip() or "hola@acten.app"
+
+    result: Dict[str, Any] = {
+        "from_email": es.from_email,
+        "to_email": target,
+        "api_key_set": bool(es.api_key),
+    }
+    try:
+        sent = await es._send_html_email(
+            to_email=target,
+            subject="[DIAG] Test de envío desde landing/_email_test_send",
+            html_content="<p>Diagnóstico del form de contacto — si recibes esto, Resend funciona.</p>",
+        )
+        result["status"] = "sent" if sent else "simulated"
+        result["error"] = None
+    except Exception as exc:
+        result["status"] = "exception"
+        result["error_type"] = type(exc).__name__
+        result["error_message"] = str(exc)[:500]
+    return result
+
+
 @public_router.get("/landing/_email_status")
 def landing_email_status(db: Session = Depends(get_session)) -> Dict[str, Any]:
     """DIAGNOSTIC — endpoint público que reporta si el email del tenant 'acten'
