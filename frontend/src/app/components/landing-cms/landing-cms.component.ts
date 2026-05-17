@@ -7,6 +7,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
 
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
@@ -65,7 +66,7 @@ interface SectionMeta {
 @Component({
     selector: 'app-landing-cms',
     standalone: true,
-    imports: [CommonModule, FormsModule, HttpClientModule],
+    imports: [CommonModule, FormsModule, HttpClientModule, RouterModule],
     templateUrl: './landing-cms.component.html',
     styleUrls: ['./landing-cms.component.css'],
 })
@@ -363,6 +364,31 @@ export class LandingCmsComponent implements OnInit {
         this.content?.integrations.items.splice(idx, 1);
     }
 
+    // ── Testimonios ────────────────────────────────────────────────────
+    // El landing público ya NO usa testimonios estáticos del CMS — pinta
+    // personas reales del sistema con las frases rotativas de `quotes[]`.
+    // Conservamos add/removeTestimonial por backwards-compat para tenants
+    // con items legacy guardados, pero el form admin nuevo solo expone el
+    // editor de frases rotativas (más simple y alineado con lo que el
+    // landing realmente renderiza).
+
+    addTestimonialQuote(): void {
+        if (!this.content) return;
+        if (!this.content.testimonials.quotes) this.content.testimonials.quotes = [];
+        this.content.testimonials.quotes.push('');
+    }
+    removeTestimonialQuote(idx: number): void {
+        this.content?.testimonials.quotes?.splice(idx, 1);
+    }
+    /** NgModel two-way no funciona bien sobre un primitive en un array;
+     *  usamos one-way + setter explícito por índice. */
+    updateTestimonialQuote(idx: number, value: string): void {
+        if (!this.content?.testimonials.quotes) return;
+        this.content.testimonials.quotes[idx] = value;
+    }
+
+    // Legacy — se mantienen por backwards-compat (no se exponen en el
+    // form actual, pero el modelo todavía los acepta).
     addTestimonial(): void {
         if (!this.content) return;
         const item: Testimonial = {

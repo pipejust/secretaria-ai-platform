@@ -186,41 +186,28 @@ DEFAULT_CONTENT: Dict[str, Any] = {
     },
 
     # ─── Testimonios ─────────────────────────────────────────────────────
+    # Las personas que aparecen en esta sección son REALES del sistema —
+    # se traen de /api/public/landing/people (owners de tareas + project
+    # contacts) con avatar si existe. Aquí solo se administra el copy de
+    # la sección y las frases rotativas que se asignan determinísticamente
+    # a cada card (por índice). `items` queda como legacy para no romper
+    # tenants que ya guardaron contenido, pero el frontend lo ignora.
     "testimonials": {
         "eyebrow": "EMPRESAS QUE YA TRANSFORMARON SUS REUNIONES",
         "title": "Más claridad. Más acción. Mejores resultados.",
-        "items": [
-            {
-                "quote": "Acten nos ahorra horas cada semana. Las reuniones ahora terminan con claridad y las tareas realmente se ejecutan.",
-                "name": "Maya Patel",
-                "role": "CEO, TechNova",
-                "company": "TechNova",
-                "brand_wordmark": "TECHNOVA",
-                "avatar_url": "",  # opcional, https://...
-                "company_logo_url": "",  # opcional, https://...
-                "initials": "MP",
-            },
-            {
-                "quote": "La precisión de las minutas y la asignación automática de tareas ha elevado nuestra disciplina de ejecución.",
-                "name": "Ariyan Mehta",
-                "role": "Product Manager, BuildFast",
-                "company": "BuildFast",
-                "brand_wordmark": "BUILDFAST",
-                "avatar_url": "",
-                "company_logo_url": "",
-                "initials": "AM",
-            },
-            {
-                "quote": "La integración con Jira y ClickUp nos permite llevar lo discutido directamente a nuestro flujo de trabajo.",
-                "name": "Lisa Chen",
-                "role": "Head of Operations, DataCore",
-                "company": "DataCore",
-                "brand_wordmark": "DATACORE",
-                "avatar_url": "",
-                "company_logo_url": "",
-                "initials": "LC",
-            },
+        # Pool de frases rotativas. La card N usa quotes[N % len(quotes)].
+        # Mantener mínimo 3 para que las 3 cards visibles tengan frases
+        # distintas.
+        "quotes": [
+            "Acten transformó la forma en que mi equipo ejecuta sus decisiones.",
+            "Pasamos de reuniones que terminan en olvido a tareas que sí se ejecutan.",
+            "La precisión y el seguimiento automático elevaron nuestra disciplina.",
+            "Las actas profesionales y la asignación de tareas son indispensables ya.",
         ],
+        # Legacy — testimonios estáticos. El frontend ya no los usa porque
+        # ahora muestra personas reales del sistema. Conservados solo para
+        # backwards-compat con tenants que guardaron este JSON.
+        "items": [],
     },
 
     # ─── Precios ─────────────────────────────────────────────────────────

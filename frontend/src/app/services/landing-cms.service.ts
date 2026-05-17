@@ -122,6 +122,12 @@ export interface LandingContent {
   testimonials: {
     eyebrow: string;
     title: string;
+    /** Pool de frases rotativas que se asignan a cada persona por índice.
+     *  El landing usa quotes[i % quotes.length]. Editable desde el CMS. */
+    quotes?: string[];
+    /** Legacy — testimonios estáticos. Frontend nuevo NO los usa (muestra
+     *  personas reales de /api/public/landing/people). Conservado por
+     *  backwards-compat. */
     items: Testimonial[];
   };
   pricing: {

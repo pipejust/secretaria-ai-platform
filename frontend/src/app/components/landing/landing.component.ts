@@ -160,18 +160,19 @@ export class LandingComponent implements OnInit {
     }
 
     /**
-     * Quote rotativo para las cards de testimonios. Como las personas reales
-     * no traen quote propio, asignamos uno de un pool fijo de forma determinista
-     * por indice. Mantiene el feel "testimonial" sin inventar datos por persona.
+     * Quote rotativo para las cards de testimonios. Lee el pool desde el CMS
+     * (`content.testimonials.quotes`) y cae a defaults locales si el admin
+     * borró todas las frases o el tenant es legacy. Determinista por índice.
      */
     peopleQuote(index: number): string {
-        const phrases = [
+        const fromCms = this.content?.testimonials?.quotes?.filter(q => q && q.trim()) ?? [];
+        const pool = fromCms.length > 0 ? fromCms : [
             'Acten transformó la forma en que mi equipo ejecuta sus decisiones.',
             'Pasamos de reuniones que terminan en olvido a tareas que sí se ejecutan.',
             'La precisión y el seguimiento automático elevaron nuestra disciplina.',
             'Las actas profesionales y la asignación de tareas son indispensables ya.',
         ];
-        return phrases[index % phrases.length];
+        return pool[index % pool.length];
     }
 
     /** Iniciales para avatar a partir del nombre. */

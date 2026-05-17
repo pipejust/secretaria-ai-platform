@@ -317,6 +317,45 @@
   cursor: pointer;
 }
 
+/* ── Info banners / help text ───────────────────────────────────────── */
+
+.lcms-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 20px 0 16px;
+  background: rgba(47, 109, 190, 0.06);
+  border: 1px solid rgba(47, 109, 190, 0.20);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-13);
+  line-height: 1.55;
+  color: var(--color-fg-default);
+}
+.lcms-info-banner svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-info);
+}
+.lcms-info-banner strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: var(--fw-semibold);
+}
+.lcms-info-banner a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lcms-help-text {
+  margin: 0 0 12px;
+  font-size: var(--text-13);
+  color: var(--color-fg-muted);
+  line-height: 1.55;
+  max-width: 70ch;
+}
+
 /* ── List rows (arrays simples) ──────────────────────────────────────── */
 
 .lcms-list {

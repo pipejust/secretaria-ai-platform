@@ -379,7 +379,7 @@
             <section *ngIf="activeSection === 'testimonials'" class="lcms-section">
                 <header class="lcms-section-header">
                     <h2>Testimonios</h2>
-                    <p>Citas de clientes reales. Más alto el impacto, mejor.</p>
+                    <p>Las personas que aparecen en esta sección son reales y se traen del sistema. Aquí editas solo el encabezado y las frases rotativas.</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
@@ -393,52 +393,48 @@
                     </label>
                 </div>
 
-                <h3 class="lcms-subheading">Citas</h3>
-                <div class="lcms-cards">
-                    <div class="lcms-card" *ngFor="let t of content.testimonials.items; let i = index; trackBy: trackByIndex">
-                        <header class="lcms-card-header">
-                            <span class="lcms-card-index">Testimonio {{ i + 1 }}</span>
-                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTestimonial(i)" title="Eliminar">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
-                                </svg>
-                            </button>
-                        </header>
-                        <label class="lcms-field">
-                            <span class="lcms-field-label">Cita</span>
-                            <textarea [(ngModel)]="t.quote" rows="4" maxlength="600"></textarea>
-                        </label>
-                        <div class="lcms-grid lcms-grid-2">
-                            <label class="lcms-field">
-                                <span class="lcms-field-label">Nombre completo</span>
-                                <input type="text" [(ngModel)]="t.name" maxlength="80" />
-                            </label>
-                            <label class="lcms-field">
-                                <span class="lcms-field-label">Iniciales (avatar)</span>
-                                <input type="text" [(ngModel)]="t.initials" maxlength="4" />
-                            </label>
-                            <label class="lcms-field">
-                                <span class="lcms-field-label">URL de avatar (opcional)</span>
-                                <input type="url" [(ngModel)]="t.avatar_url" placeholder="https://..." maxlength="500" />
-                            </label>
-                            <label class="lcms-field">
-                                <span class="lcms-field-label">URL de logo de empresa (opcional)</span>
-                                <input type="url" [(ngModel)]="t.company_logo_url" placeholder="https://..." maxlength="500" />
-                            </label>
-                            <label class="lcms-field">
-                                <span class="lcms-field-label">Cargo</span>
-                                <input type="text" [(ngModel)]="t.role" maxlength="80" />
-                            </label>
-                            <label class="lcms-field">
-                                <span class="lcms-field-label">Empresa</span>
-                                <input type="text" [(ngModel)]="t.company" maxlength="80" />
-                            </label>
-                        </div>
+                <!-- Info: explica de dónde salen las personas -->
+                <div class="lcms-info-banner">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+                    </svg>
+                    <div>
+                        <strong>De dónde salen las personas</strong>
+                        Se traen automáticamente de tu sistema: usuarios activos de la plataforma
+                        y contactos registrados en proyectos. Si tienen avatar subido, aparece su foto;
+                        si no, sus iniciales. Para actualizar un cargo (por ejemplo "CEO de Acten"),
+                        edita el perfil del usuario en
+                        <a routerLink="/admin/users">/admin/usuarios</a>.
                     </div>
                 </div>
-                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addTestimonial()">
-                    + Añadir testimonio
+
+                <h3 class="lcms-subheading">Frases rotativas</h3>
+                <p class="lcms-help-text">
+                    Cada card del landing muestra una de estas frases (rotando por orden). Mínimo 3
+                    para que las 3 cards visibles tengan textos distintos. Las personas reales del
+                    sistema se pintan debajo con su nombre y cargo.
+                </p>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let q of (content.testimonials.quotes || []); let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow">
+                            <span class="lcms-field-label">Frase {{ i + 1 }}</span>
+                            <textarea [ngModel]="q"
+                                      (ngModelChange)="updateTestimonialQuote(i, $event)"
+                                      rows="2"
+                                      maxlength="320"
+                                      placeholder="Una cita corta sobre el valor de Acten"></textarea>
+                        </label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTestimonialQuote(i)" title="Eliminar">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addTestimonialQuote()">
+                    + Añadir frase
                 </button>
             </section>
 
