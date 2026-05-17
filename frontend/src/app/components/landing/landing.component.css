@@ -1622,25 +1622,66 @@ section[id] { scroll-margin-top: 88px; }
   .al-header__burger { display: inline-flex; }
   .al-header__actions .al-btn--ghost-light { display: none; }
 
-  .al-hero { padding: 76px 0 48px; }
-  /* Permitimos wrap a 2 líneas en mobile. */
-  .al-hero__attrs { flex-wrap: wrap; gap: 12px 18px; }
-  /* Hero title MUY conservador en mobile (<=560) — el container es
-     ~390-430px y serif a 38px ocupaba toda la línea para 'conversación'.
-     Bajamos cap a 2rem (32px) → 'De conversación a claridad. / De claridad
-     a impacto.' cabe en 2 líneas. */
+  .al-hero { padding: 56px 0 36px; }
+  /* Centramos copy + CTAs + chips en mobile — el split visual del
+     desktop no aplica acá, todo apilado se ve mejor centrado. */
+  .al-hero__copy { text-align: center; max-width: 100%; }
+  .al-hero__attrs {
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    justify-content: center;
+  }
+  .al-hero__ctas { justify-content: center; }
+  .al-hero__ctas .al-btn { width: 100%; max-width: 320px; justify-content: center; }
+  /* Title cap 32px (era 42.8 en 430 viewport): 'De conversación a
+     claridad. / De claridad a impacto.' cabe en 2-3 líneas. */
   .al-hero__title {
     font-size: clamp(1.6rem, 1rem + 3.2vw, 2rem) !important;
-    line-height: 1.12 !important;
+    line-height: 1.15 !important;
   }
-  .al-hero__subtitle { font-size: 15px; }
-  /* Mockup OCULTO en mobile real: medía 1082px de alto en 430px
-     viewport (apilado vertical, sidebar+tabs+métricas+2-col body) y
-     inflaba el hero a 1851px. En mobile el copy + CTAs son suficientes
-     para conversión; el mockup vuelve en tablet. */
-  .al-hero__mockup { display: none; }
-  /* Hero inner: una sola columna ya, sin gap por el mockup ausente. */
-  .al-hero__inner { gap: 0; }
+  .al-hero__subtitle {
+    font-size: 15px;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 38ch;
+  }
+  /* Mockup VISIBLE pero compacto en mobile (max-height limitado + mask).
+     Antes medía 1082px de alto (sin restricción) → inflaba el hero a
+     1851px. Ahora max 360px con mask fade-out elegante. */
+  .al-hero__mockup {
+    max-width: 360px;
+    margin: 0 auto;
+    width: 100%;
+    max-height: 360px;
+    overflow: hidden;
+    position: relative;
+    border-radius: 16px;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 75%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 75%, transparent 100%);
+  }
+  /* Padding lateral de container un poco más generoso para que el copy
+     no se pegue al borde. */
+  .al-container { padding-left: 20px; padding-right: 20px; }
+  .al-hero__inner { gap: 36px; }
+  /* Centrar también el eyebrow + título + subtítulos de secciones
+     siguientes en mobile (Capacidades / Flujo / Integraciones / etc). */
+  .al-section-title, .al-eyebrow, .al-section-subtitle {
+    text-align: center;
+  }
+  .al-section-subtitle { margin-left: auto; margin-right: auto; }
+  .al-arrow-link, .al-feature-link {
+    display: inline-flex;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  /* Padding vertical de TODAS las secciones más conservador en mobile. */
+  .al-features,
+  .al-flow,
+  .al-integrations,
+  .al-testimonials,
+  .al-contact,
+  .al-finalcta { padding-top: 56px !important; padding-bottom: 56px !important; }
 
   .al-features,
   .al-testimonials,
