@@ -297,10 +297,29 @@ export class LandingComponent implements OnInit {
                     name: '', email: '', company: '', role: '', message: '', website: '',
                 };
             }, 6000);
-        } catch (err) {
+        } catch (err: any) {
             console.error('[Landing] Error enviando contacto', err);
-            this.contactError = this.content?.contact.form_error
-                || 'No se pudo enviar el mensaje. Intenta de nuevo en unos minutos.';
+            // Mensajes específicos por tipo de error — antes era genérico para
+            // todo, lo que confundía cuando el problema era rate limit o
+            // validación (cosas que el usuario puede solucionar).
+            const status = err?.status;
+            const detail = err?.error?.detail;
+            if (status === 429) {
+                this.contactError = typeof detail === 'string' && detail
+                    ? detail
+                    : 'Estás enviando demasiados mensajes. Espera unos minutos y vuelve a intentar.';
+            } else if (status === 422) {
+                // Pydantic devuelve detail como array de objetos {loc, msg, ...}.
+                const first = Array.isArray(detail) ? detail[0] : null;
+                this.contactError = first?.msg
+                    ? `Revisa el campo "${(first.loc || []).slice(-1)[0] || 'formulario'}": ${first.msg}.`
+                    : 'Hay algún dato inválido en el formulario.';
+            } else if (status === 0 || !status) {
+                this.contactError = 'No pudimos conectar con el servidor. Verifica tu conexión e intenta de nuevo.';
+            } else {
+                this.contactError = this.content?.contact.form_error
+                    || 'No se pudo enviar el mensaje. Intenta de nuevo en unos minutos.';
+            }
         } finally {
             this.contactLoading = false;
         }

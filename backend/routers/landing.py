@@ -121,7 +121,9 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
     # SPA del landing corre en acten.app pero los avatares viven en api.acten.app,
     # así que sin absolutización el browser pega 404 contra acten.app/static/...
     import os
+    import unicodedata
     api_base = (os.environ.get("PUBLIC_BASE_URL") or "https://api.acten.app").rstrip("/")
+    tenant_company = (tenant.name or "Acten").strip()
 
     def _absolutize(url: str) -> str:
         if not url:
@@ -145,7 +147,8 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
                 if full_name and (not by_email[key]["name"] or len(full_name) > len(by_email[key]["name"])):
                     by_email[key]["name"] = full_name
                 if position and not by_email[key]["role"]:
-                    by_email[key]["role"] = position
+                    # Suffix con la compañía del tenant — "CEO" → "CEO de Acten".
+                    by_email[key]["role"] = f"{position} de {tenant_company}"
 
     def _initials(n: str) -> str:
         parts = [p for p in n.strip().split() if p]
@@ -155,12 +158,39 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
             return parts[0][:2].upper()
         return (parts[0][0] + parts[-1][0]).upper()
 
-    out: list[dict[str, Any]] = []
+    # 4) Dedup secundario por nombre normalizado. Cubre el caso típico:
+    #    "Alejandro Cortes" (action_item) y "Alejandro Cortés Burgos"
+    #    (project_contact) son la misma persona pero con email distinto.
+    #    Agrupamos por primeros 2 tokens del nombre sin acentos/case y
+    #    nos quedamos con la entrada más completa (avatar > role > nombre largo).
+    def _normalize_name(n: str) -> str:
+        s = unicodedata.normalize("NFKD", n or "").encode("ascii", "ignore").decode().lower()
+        parts = [p for p in s.split() if p]
+        return " ".join(parts[:2])
+
+    by_norm_name: dict[str, dict[str, Any]] = {}
     for person in by_email.values():
+        name = (person.get("name") or "").strip() or "Persona"
+        key = _normalize_name(name) or name.lower()
+        if key not in by_norm_name:
+            by_norm_name[key] = {**person, "name": name}
+            continue
+        existing = by_norm_name[key]
+        # Mejorar entrada: tomar avatar si la nueva lo tiene, role si falta,
+        # nombre más largo (más completo) si aplica.
+        if person.get("avatar_url") and not existing.get("avatar_url"):
+            existing["avatar_url"] = person["avatar_url"]
+        if person.get("role") and not existing.get("role"):
+            existing["role"] = person["role"]
+        if name and len(name) > len(existing.get("name") or ""):
+            existing["name"] = name
+
+    out: list[dict[str, Any]] = []
+    for person in by_norm_name.values():
         name = person.get("name") or "Persona"
         out.append({
             "name": name,
-            "role": person.get("role") or "Equipo Acten",
+            "role": person.get("role") or f"Equipo {tenant_company}",
             "avatar_url": person.get("avatar_url") or "",
             "initials": _initials(name),
         })
@@ -215,8 +245,11 @@ def get_public_trust_logos(db: Session = Depends(get_session)) -> Dict[str, Any]
 # por slowapi o Redis, pero para un form de contacto del landing alcanza con
 # evitar spam burst desde un solo origen.
 _CONTACT_RATE: Dict[str, list[float]] = defaultdict(list)
-_CONTACT_RATE_WINDOW_SECONDS = 60 * 10  # 10 minutos
-_CONTACT_RATE_MAX = 3  # máximo 3 mensajes por IP en 10 min
+_CONTACT_RATE_WINDOW_SECONDS = 60 * 15   # 15 minutos
+_CONTACT_RATE_MAX = 10                    # máximo 10 mensajes por IP / 15 min
+# Subido de 3/10min → 10/15min. El límite anterior se disparaba con poca
+# actividad legítima (usuario interno probando, equipo demo, IP compartida
+# de oficina). 10 es seguro contra spam burst sin frustrar uso normal.
 
 
 # Validación de email casera para evitar la dependencia `email-validator`
