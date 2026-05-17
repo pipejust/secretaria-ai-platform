@@ -1874,6 +1874,27 @@ section[id] { scroll-margin-top: 88px; }
   .al-mock__tabs { gap: 16px; overflow-x: auto; scrollbar-width: none; }
   .al-mock__tabs::-webkit-scrollbar { display: none; }
 
+  /* Topbar del mockup: en mobile no caben título + acciones en la
+     misma línea (300px no alcanza). El título wrappea a 3 líneas y
+     el chip "Completada" quedaba flotando vertically-centered ENCIMA
+     del texto. Solución: stack vertical — título arriba, acciones
+     debajo justificadas a la derecha. */
+  .al-mock__topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .al-mock__title-wrap { align-items: flex-start; }
+  .al-mock__title { font-size: 13px; line-height: 1.25; }
+  .al-mock__meta { font-size: 11px; line-height: 1.35; }
+  .al-mock__top-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .al-mock__chip { padding: 3px 8px; font-size: 10.5px; }
+  .al-mock__btn { padding: 4px 9px; font-size: 11px; }
+
   .al-trust__logos { gap: 24px 32px; }
   .al-trust__logo { font-size: 16px; }
 
