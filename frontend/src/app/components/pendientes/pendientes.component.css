@@ -1129,6 +1129,87 @@
     /* En tablet apretado el panel de filtros pasa a 3 columnas. */
     .mt-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* 13"/14" (1101-1560): el panel der de 320px + 5 KPI cards + tabla de
+   8 columnas dejan todo apretado. Las pills de proyecto/responsable
+   overflowean visualmente al panel der. Fix: shrink panel, KPI cards
+   compactas, tabla con table-layout fixed + ellipsis + pills clip. */
+@media (max-width: 1560px) and (min-width: 1101px) {
+    .tk-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+        gap: 16px;
+    }
+    /* 5 KPI cards muy estrechas: comprimir interior */
+    .tk-metric {
+        padding: 12px 10px;
+        gap: 8px;
+        min-width: 0;
+    }
+    .tk-metric .metric-icon {
+        width: 32px; height: 32px;
+        flex-shrink: 0;
+    }
+    .tk-metric .metric-icon svg {
+        width: 18px; height: 18px;
+    }
+    .tk-metric .metric-content {
+        min-width: 0;
+        flex: 1;
+    }
+    .tk-metric .metric-title {
+        font-size: 11px;
+        line-height: 1.15;
+    }
+    .tk-metric .metric-value {
+        font-size: 22px;
+        line-height: 1;
+    }
+    .tk-metric .metric-foot {
+        font-size: 10.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    /* Tabla: clip overflow + columnas porcentuales */
+    .tk-table-wrap,
+    .tk-table {
+        overflow-x: hidden;
+        max-width: 100%;
+    }
+    .tk-table {
+        table-layout: fixed;
+        width: 100%;
+        min-width: 0;
+    }
+    .tk-table th,
+    .tk-table td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+    .tk-table th {
+        font-size: 10.5px;
+    }
+    .tk-table [class*="pill"],
+    .tk-table [class*="tag"],
+    .tk-table [class*="badge"] {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    /* Distribución 8 cols: tarea / proyecto / resp / prio / fecha / estado / progreso / acciones */
+    .tk-table th:nth-child(1), .tk-table td:nth-child(1) { width: auto; }
+    .tk-table th:nth-child(2), .tk-table td:nth-child(2) { width: 13%; }
+    .tk-table th:nth-child(3), .tk-table td:nth-child(3) { width: 14%; }
+    .tk-table th:nth-child(4), .tk-table td:nth-child(4) { width: 8%; }
+    .tk-table th:nth-child(5), .tk-table td:nth-child(5) { width: 12%; }
+    .tk-table th:nth-child(6), .tk-table td:nth-child(6) { width: 9%; }
+    .tk-table th:nth-child(7), .tk-table td:nth-child(7) { width: 12%; }
+    .tk-table th:nth-child(8), .tk-table td:nth-child(8) { width: 5%; }
+}
 @media (max-width: 768px) {
     .acten-tasks { padding: 16px; }
     .tk-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

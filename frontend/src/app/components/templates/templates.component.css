@@ -1220,6 +1220,46 @@
         max-height: none;
     }
 }
+
+/* 13"/14" (1201-1560) con preview abierto: el grid original
+   (240 + main + 380) deja solo ~476px para la tabla central de 6
+   columnas (necesita ~750px) → la tabla overflowea ~355px sobre el
+   preview. Fix: shrink categorías + preview, tabla con clip + columnas
+   reescaladas + ellipsis. Mantenemos el layout side-by-side. */
+@media (max-width: 1560px) and (min-width: 1201px) {
+    .tpl-grid.has-detail {
+        grid-template-columns: 200px minmax(0, 1fr) minmax(320px, 360px);
+        gap: 16px;
+    }
+    .tpl-list-wrap {
+        overflow-x: hidden;
+        max-width: 100%;
+        min-width: 0;
+    }
+    .tpl-tr {
+        grid-template-columns: minmax(0, 1.8fr) 90px 64px 78px 90px 36px;
+        gap: 8px;
+        overflow: hidden;
+    }
+    .tpl-tr > * {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+    .tpl-tr.tpl-th > * {
+        font-size: 10.5px;
+    }
+    /* Pills "Reunión", "Gestión de proyectos": clip si no caben */
+    .tpl-tr [class*="pill"],
+    .tpl-tr [class*="tag"],
+    .tpl-tr [class*="badge"] {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: inline-block;
+    }
+}
 /* Padding mobile alineado al resto de vistas (dashboard, projects, reportes).
    .tpl-page tenía padding: 32px FIJO sin override mobile → se veía con
    "más aire" que /reuniones, /resumen, /proyectos, /reportes (que todas

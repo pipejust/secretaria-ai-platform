@@ -1295,6 +1295,87 @@
     .meetings-detail { position: static; max-height: none; }
 }
 
+/* ────────────────────────────────────────────────────────────────────
+   13"/14" CON DETALLE ABIERTO (1201-1560)
+   El layout original `main + 440px detail` deja ~700px para el main
+   en MacBook Air M2/M3 (1512 CSS px). Sin ajustes:
+     - KPI labels "Reuniones totales" wrappean feo en cards de ~187px
+     - "Aisladas por empresa" tag wrappea en 3-4 líneas
+     - La tabla de 7 columnas se traslapa visualmente con el panel detalle
+   Fix: comprimir el panel (440→400), apretar KPIs (icono + paddings +
+   font), reescalar columnas con clip + ellipsis. NO cambia el layout
+   side-by-side ni reordena nada — solo ajusta tamaños y permite
+   truncate limpio. */
+@media (max-width: 1560px) and (min-width: 1201px) {
+    .meetings-page.has-detail {
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
+        gap: var(--space-16, 16px);
+    }
+    /* KPIs: layout horizontal compacto */
+    .meetings-page.has-detail .mt-metric {
+        padding: 12px 10px;
+        gap: 8px;
+        min-width: 0;
+    }
+    .meetings-page.has-detail .mt-metric .metric-icon {
+        width: 32px; height: 32px;
+        flex-shrink: 0;
+    }
+    .meetings-page.has-detail .mt-metric .metric-icon svg {
+        width: 18px; height: 18px;
+    }
+    .meetings-page.has-detail .mt-metric .metric-content {
+        min-width: 0;
+        flex: 1;
+    }
+    .meetings-page.has-detail .metric-title {
+        font-size: 11px;
+        line-height: 1.15;
+    }
+    .meetings-page.has-detail .metric-value {
+        font-size: 22px;
+        line-height: 1;
+        margin-top: 2px;
+    }
+    .meetings-page.has-detail .metric-foot {
+        font-size: 10.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+    }
+    /* Tabla: clip + columnas más compactas + truncate texto en celdas */
+    .meetings-page.has-detail .mt-table,
+    .meetings-page.has-detail .mt-table-wrap {
+        overflow: hidden;
+        max-width: 100%;
+    }
+    .meetings-page.has-detail .mt-tr {
+        grid-template-columns: minmax(0, 1.6fr) 86px 92px 50px 64px 80px 32px;
+        gap: 8px;
+        overflow: hidden;
+    }
+    .meetings-page.has-detail .mt-tr > * {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+    }
+    .meetings-page.has-detail .mt-tr.mt-row-head > * {
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+    }
+    .meetings-page.has-detail .mt-title-cell strong,
+    .meetings-page.has-detail .mt-title-cell small,
+    .meetings-page.has-detail .mt-title-cell span,
+    .meetings-page.has-detail .mt-title-cell b {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+}
+
 /* Mid breakpoint — antes de mobile total, ya empiezan a apretarse las
    métricas y el header. Filas siguen siendo grid de 7 columnas. */
 @media (max-width: 980px) {
