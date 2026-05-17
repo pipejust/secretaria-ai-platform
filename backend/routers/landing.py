@@ -18,6 +18,7 @@ Tres superficies:
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from collections import defaultdict
@@ -351,29 +352,52 @@ def _check_rate_limit(ip: str) -> None:
     _CONTACT_RATE[ip] = hits
 
 
-_EMAIL_HTML_TEMPLATE = """<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:24px auto;padding:24px;background:#f7f4ee;color:#111318;">
-<h2 style="color:#223148;margin:0 0 16px;">Nuevo mensaje desde el landing</h2>
-<table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;">
-  <tr><td style="padding:12px;border-bottom:1px solid #eee;"><strong>Nombre:</strong></td><td style="padding:12px;border-bottom:1px solid #eee;">{name}</td></tr>
-  <tr><td style="padding:12px;border-bottom:1px solid #eee;"><strong>Email:</strong></td><td style="padding:12px;border-bottom:1px solid #eee;"><a href="mailto:{email}">{email}</a></td></tr>
-  <tr><td style="padding:12px;border-bottom:1px solid #eee;"><strong>Empresa:</strong></td><td style="padding:12px;border-bottom:1px solid #eee;">{company}</td></tr>
-  <tr><td style="padding:12px;border-bottom:1px solid #eee;"><strong>Cargo:</strong></td><td style="padding:12px;border-bottom:1px solid #eee;">{role}</td></tr>
-</table>
-<h3 style="color:#223148;margin:20px 0 8px;">Mensaje</h3>
-<div style="background:#fff;padding:16px;border-radius:8px;white-space:pre-wrap;line-height:1.5;">{message}</div>
-<p style="color:#687280;font-size:12px;margin-top:24px;">IP: {ip} · Origen: acten.app/#contact</p>
-</body></html>"""
+def _render_contact_email_html(
+    db: Session,
+    tenant: Tenant,
+    payload: "ContactSubmission",
+    client_ip: str,
+    msg_id: int,
+) -> str:
+    """Renderiza el correo de contacto usando el template branded común
+    (email_base.html + email_landing_contact.html). Mismo look que los
+    correos de sesiones — header con logo del tenant, paleta de marca,
+    footer con datos corporativos.
 
-
-def _escape(text: str | None) -> str:
-    if not text:
-        return "—"
-    return (
-        text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-    )
+    Si el render del template falla por cualquier razón, cae a un HTML
+    mínimo para que el admin reciba algo y pueda atender al contacto.
+    """
+    import datetime as _dt
+    try:
+        from services.email_service import EmailService
+        es = EmailService(db=db, tenant_id=tenant.id)
+        template = es.jinja_env.get_template("email_landing_contact.html")
+        admin_inbox_url = os.environ.get("ADMIN_BASE_URL", "https://admin.acten.app").rstrip("/") \
+            + "/admin/landing-cms/mensajes"
+        return template.render(
+            brand=es.branding,
+            current_year=_dt.datetime.now().year,
+            contact_name=payload.name,
+            contact_email=payload.email,
+            contact_company=payload.company or "",
+            contact_role=payload.role or "",
+            contact_message=payload.message,
+            contact_ip=client_ip,
+            contact_created_at=_dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            admin_inbox_url=admin_inbox_url,
+        )
+    except Exception:
+        logger.exception("contact form: render del template falló — fallback HTML mínimo.")
+        # Fallback simple para no perder el envío si el template está roto.
+        safe = lambda s: (s or "—").replace("<", "&lt;").replace(">", "&gt;")
+        return (
+            f"<h2>Nuevo mensaje desde el landing</h2>"
+            f"<p><b>Nombre:</b> {safe(payload.name)}</p>"
+            f"<p><b>Email:</b> {safe(payload.email)}</p>"
+            f"<p><b>Empresa:</b> {safe(payload.company)}</p>"
+            f"<p><b>Cargo:</b> {safe(payload.role)}</p>"
+            f"<p><b>Mensaje:</b></p><pre>{safe(payload.message)}</pre>"
+        )
 
 
 @public_router.post("/landing/contact")
@@ -401,15 +425,6 @@ async def submit_contact_form(
     content = landing_content_service.get_landing_content(db, tenant.id)
     contact_block = content.get("contact", {}) or {}
     target_email = (contact_block.get("email") or "").strip() or "hola@acten.app"
-
-    html = _EMAIL_HTML_TEMPLATE.format(
-        name=_escape(payload.name),
-        email=_escape(payload.email),
-        company=_escape(payload.company),
-        role=_escape(payload.role),
-        message=_escape(payload.message),
-        ip=_escape(client_ip),
-    )
 
     subject = f"[Contacto Landing] {payload.name} — {payload.company or 'Sin empresa'}"
 
@@ -452,6 +467,10 @@ async def submit_contact_form(
                 "— se simula en consola. Configurar en /admin/settings.",
                 tenant.slug,
             )
+        # Render del email con el template branded común (email_base.html +
+        # email_landing_contact.html). Mismo look que el resto de los correos
+        # de la plataforma (sesiones, action items, welcome, etc.).
+        html = _render_contact_email_html(db, tenant, payload, client_ip, cm.id)
         sent_flag = await email_service._send_html_email(
             to_email=target_email,
             subject=subject,

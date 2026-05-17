@@ -1,0 +1,76 @@
+{% extends "email_base.html" %}
+
+{# ──────────────────────────────────────────────────────────────────────────
+   Email al admin del tenant cuando alguien envía el formulario de contacto
+   del landing público (acten.app/#contact). Usa el chrome estándar
+   (email_base.html) — header gradient con logo + footer con datos de la
+   empresa + paleta del tenant. Mismo look que los correos de sesiones.
+   ────────────────────────────────────────────────────────────────────────── #}
+
+{% block content %}
+  <h2>Nuevo mensaje desde el landing</h2>
+
+  <p>Hola,</p>
+
+  <p>
+    Acaba de llegar un mensaje nuevo desde el formulario de contacto público
+    de <strong>{{ brand.platform_name | default('Acten') }}</strong>. Aquí van
+    los datos del contacto y el mensaje completo.
+  </p>
+
+  <div class="box">
+    <p class="box-title">{{ contact_name }}</p>
+    <p class="box-text">
+      <strong>Correo:</strong>
+      <a href="mailto:{{ contact_email }}" style="color: {{ brand.primary_color | default('#4F46E5') }};">{{ contact_email }}</a>
+      <br>
+      {% if contact_company %}
+        <strong>Empresa:</strong> {{ contact_company }}<br>
+      {% endif %}
+      {% if contact_role %}
+        <strong>Cargo:</strong> {{ contact_role }}<br>
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="box" style="border-left-color: {{ brand.secondary_color | default('#06B6D4') }}; background: #ffffff; border: 1px solid #e5e7eb;">
+    <p class="box-title">Mensaje</p>
+    <p class="box-text" style="white-space: pre-wrap; line-height: 1.6;">{{ contact_message }}</p>
+  </div>
+
+  <div class="button-container" style="text-align: center; margin: 30px 0;">
+    <a href="mailto:{{ contact_email }}?subject=Re%3A%20Contacto%20desde%20{{ brand.platform_name | default('Acten') | urlencode }}&body=Hola%20{{ contact_name | urlencode }}%2C%0A%0AGracias%20por%20escribirnos."
+       class="button"
+       style="background: linear-gradient(135deg,
+                {{ brand.primary_color | default('#4F46E5') }} 0%,
+                {{ brand.secondary_color | default('#06B6D4') }} 100%);
+              color: #ffffff; padding: 14px 32px; border-radius: 10px;
+              text-decoration: none; font-weight: 700; font-size: 15px;
+              display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+      Responder a {{ contact_name }}
+    </a>
+  </div>
+
+  {% if admin_inbox_url %}
+    <p style="text-align: center; margin: 0 0 24px;">
+      <a href="{{ admin_inbox_url }}"
+         style="color: {{ brand.primary_color | default('#4F46E5') }};
+                text-decoration: underline; font-weight: 600; font-size: 14px;">
+        Ver todos los mensajes en el panel admin →
+      </a>
+    </p>
+  {% endif %}
+
+  <p style="color: #6b7280; font-size: 13px; line-height: 1.55; margin-top: 28px;">
+    <strong>Tip:</strong> el mensaje quedó persistido en la bandeja del
+    admin con su estado (nuevo / leído / respondido / archivado), incluso si
+    este correo no se entrega correctamente. Acción de seguimiento:
+    cambia el estado a "respondido" después de responderle.
+  </p>
+
+  <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f3f4f6;">
+    <strong>Metadata técnica</strong><br>
+    IP del visitante: {{ contact_ip | default('—') }}<br>
+    Fecha de envío: {{ contact_created_at | default('—') }}
+  </p>
+{% endblock %}
