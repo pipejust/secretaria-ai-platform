@@ -560,19 +560,39 @@ async def landing_email_test_send(
         # cruzarlo con el dashboard si hace falta.
         import resend
         if es.api_key:
+            # Usamos el MISMO template branded que recibe el admin en producción.
+            # Antes este endpoint mandaba HTML inline crudo y el test no
+            # reflejaba el look real → la verificación visual no servía.
+            mock_payload = ContactSubmission(
+                name="Visitante de prueba",
+                email="diagnostic@example.com",
+                company="Empresa de Prueba",
+                role="Cargo de prueba",
+                message=(
+                    "Este es un envío DE DIAGNÓSTICO disparado desde "
+                    "/api/public/landing/_email_test_send. Si recibes este "
+                    "correo con la marca de Acten (logo + colores + footer), "
+                    "el form de contacto del landing está bien configurado.\n\n"
+                    "Datos del envío:\n"
+                    f"  · From: {es.from_email}\n"
+                    f"  · To:   {target}\n"
+                ),
+                website="",
+            )
+            html_body = _render_contact_email_html(
+                db=db, tenant=tenant, payload=mock_payload,
+                client_ip="diagnostic", msg_id=0,
+            )
             resend.api_key = es.api_key
             response = resend.Emails.send({
                 "from": es.from_email,
                 "to": target,
                 "subject": "[DIAG] Test desde Acten landing — diagnóstico",
-                "html": (
-                    "<p>Si recibes este correo, el form de contacto está OK "
-                    "para el destinatario configurado.</p>"
-                    f"<p>From: {es.from_email}<br>To: {target}</p>"
-                ),
+                "html": html_body,
             })
             result["status"] = "sent"
             result["resend_id"] = response.get("id") if isinstance(response, dict) else str(response)
+            result["template"] = "email_landing_contact.html (branded)"
             result["error"] = None
         else:
             result["status"] = "no_api_key"
