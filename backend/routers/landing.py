@@ -146,9 +146,15 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
                     by_email[key]["avatar_url"] = _absolutize(avatar_url)
                 if full_name and (not by_email[key]["name"] or len(full_name) > len(by_email[key]["name"])):
                     by_email[key]["name"] = full_name
-                if position and not by_email[key]["role"]:
-                    # Suffix con la compañía del tenant — "CEO" → "CEO de Acten".
+                # User.position SOBRESCRIBE el role de project_contact — el perfil
+                # de usuario de plataforma es la verdad sobre el cargo de esa
+                # persona, vs un role específico de proyecto. Antes solo seteaba
+                # cuando el role venía vacío y Felipe (CEO en User, Líder Técnico
+                # en project_contact) salía con "Líder Técnico".
+                if position:
                     by_email[key]["role"] = f"{position} de {tenant_company}"
+                # Flag: es usuario real de la plataforma (no solo project_contact).
+                by_email[key]["is_platform_user"] = True
 
     def _initials(n: str) -> str:
         parts = [p for p in n.strip().split() if p]
@@ -185,18 +191,52 @@ def get_public_landing_people(db: Session = Depends(get_session)) -> Dict[str, A
         if name and len(name) > len(existing.get("name") or ""):
             existing["name"] = name
 
+    # 5) Filtro de calidad — el landing es vitrina pública, evitamos nombres
+    #    que no se ven serios en un sitio comercial:
+    #    - 1 sola palabra ("Angiecita", "Federico") suele ser nickname interno
+    #    - Que empiezan con "Equipo " ("Equipo de Infraestructura") son
+    #      grupos no personas.
+    def _is_display_worthy(name: str) -> bool:
+        name = (name or "").strip()
+        if not name:
+            return False
+        parts = name.split()
+        if len(parts) < 2:
+            return False
+        if name.lower().startswith(("equipo ", "grupo ", "team ")):
+            return False
+        return True
+
     out: list[dict[str, Any]] = []
     for person in by_norm_name.values():
         name = person.get("name") or "Persona"
+        if not _is_display_worthy(name):
+            continue
         out.append({
             "name": name,
             "role": person.get("role") or f"Equipo {tenant_company}",
             "avatar_url": person.get("avatar_url") or "",
             "initials": _initials(name),
+            "_is_platform_user": person.get("is_platform_user", False),
+            "_has_real_role": bool(person.get("role")),
         })
 
-    # Prioriza los que tienen avatar (visual más rico) y limita a 8.
-    out.sort(key=lambda p: (0 if p["avatar_url"] else 1, p["name"].lower()))
+    # Sort de "prueba social":
+    #   1. Avatar real primero (visual más rico)
+    #   2. Usuarios de plataforma (Felipe → CEO de Acten) antes que solo
+    #      project_contacts (sin User detrás)
+    #   3. Que tengan un role real (no el default genérico)
+    #   4. Alfabético como tiebreaker
+    out.sort(key=lambda p: (
+        0 if p["avatar_url"] else 1,
+        0 if p["_is_platform_user"] else 1,
+        0 if p["_has_real_role"] else 1,
+        p["name"].lower(),
+    ))
+    # Limpia los flags internos antes de devolver
+    for p in out:
+        p.pop("_is_platform_user", None)
+        p.pop("_has_real_role", None)
     return {"items": out[:8]}
 
 
