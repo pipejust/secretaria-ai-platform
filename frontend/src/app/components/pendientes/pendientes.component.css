@@ -1117,13 +1117,11 @@
 .tk-upcoming-meta { font-size: 11px; color: var(--tk-text-muted); }
 
 /* ===================== Responsive =====================
-   Layout principal: tabla (main) + 320px (sidebar derecho con cards de
-   carga, vencidas, próximos). Sin override esto exigiría ~1300px de
-   contenido — en MacBook 13" (1280/1366) el sidebar global se come ~250
-   y la tabla queda apretadísima con la columna derecha al costado.
-   Por eso stackeamos a 1440px (incluye MacBook 13" y 14" típicos).
+   Layout: tabla (main) + 320px (sidebar derecho). Stackeamos a 1600
+   para cubrir MacBook 13"/14" en cualquier scaling (incluye Air M2/M3
+   con default scaling a 1470-1512 CSS px). Sobre 1600 sigue el split.
    ===================================================== */
-@media (max-width: 1440px) {
+@media (max-width: 1600px) {
     .tk-layout { grid-template-columns: 1fr; }
     .tk-side {
         flex-direction: row;

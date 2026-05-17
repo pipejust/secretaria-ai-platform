@@ -736,10 +736,10 @@
 
 /* ====== Responsive ======
    Stack del panel derecho (sync + resumen + insights) bajo el contenido
-   principal en pantallas de 13" (≤1366). Antes el breakpoint era 1180px
-   y la tabla de proyectos quedaba apretada con la columna de 320px al
-   costado en MacBook 13" (1280/1366). */
-@media (max-width: 1366px) {
+   principal. Cubre TODAS las MacBook 13"/14" (incluyendo Air M2/M3 a
+   1470-1512 CSS px en default scaling). Sobre 1600 (monitor 24"+) sigue
+   el split clásico. */
+@media (max-width: 1600px) {
     .ap-layout { grid-template-columns: 1fr; }
     .ap-side { flex-direction: row; flex-wrap: wrap; gap: var(--space-16); }
     .ap-side .ap-card { flex: 1 1 280px; }
