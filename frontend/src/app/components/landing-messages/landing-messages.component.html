@@ -1,0 +1,275 @@
+<div class="lmsg-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────── -->
+    <header class="lmsg-header">
+        <div class="lmsg-header-left">
+            <span class="lmsg-eyebrow">Landing público</span>
+            <h1 class="lmsg-title">Mensajes del landing</h1>
+            <p class="lmsg-subtitle">
+                Bandeja de contactos recibidos desde el formulario público de acten.app.
+                Marca como leídos, respondidos o archivados a medida que los procesas.
+            </p>
+
+            <div class="lmsg-filters" role="tablist" aria-label="Filtrar por estado">
+                <button
+                    *ngFor="let f of filters"
+                    type="button"
+                    role="tab"
+                    [attr.aria-selected]="activeFilter === f.key"
+                    class="lmsg-chip"
+                    [class.active]="activeFilter === f.key"
+                    (click)="selectFilter(f.key)"
+                    [disabled]="isLoading">
+                    {{ f.label }}
+                    <span *ngIf="f.key === 'new' && unreadCount > 0" class="lmsg-chip-badge">{{ unreadCount }}</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="lmsg-header-actions">
+            <div class="lmsg-counter" *ngIf="!isLoading && !loadError">
+                <span class="lmsg-counter-item lmsg-counter-new">
+                    <strong>{{ unreadCount }}</strong> nuevos
+                </span>
+                <span class="lmsg-counter-sep" aria-hidden="true">·</span>
+                <span class="lmsg-counter-item">
+                    <strong>{{ readCount }}</strong> leídos
+                </span>
+                <span class="lmsg-counter-sep" aria-hidden="true">·</span>
+                <span class="lmsg-counter-item">
+                    <strong>{{ archivedCount }}</strong> archivados
+                </span>
+            </div>
+            <button type="button" class="lmsg-btn lmsg-btn-ghost lmsg-btn-sm" (click)="reload()" [disabled]="isLoading"
+                    title="Recargar mensajes">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path>
+                    <path d="M21 3v5h-5"></path>
+                </svg>
+                <span>Recargar</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── Error banner ────────────────────────────────────────────────── -->
+    <div class="lmsg-error-banner" *ngIf="loadError && !isLoading">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ loadError }}</span>
+    </div>
+
+    <!-- ── Loading ─────────────────────────────────────────────────────── -->
+    <div class="lmsg-loading" *ngIf="isLoading">
+        <div class="lmsg-spinner" aria-hidden="true"></div>
+        <p>Cargando bandeja de mensajes…</p>
+    </div>
+
+    <!-- ── Shell: lista + detalle ──────────────────────────────────────── -->
+    <div class="lmsg-shell" *ngIf="!isLoading && !loadError" [class.detail-open]="isDetailOpenMobile">
+
+        <!-- LEFT: lista ──────────────────────────────────────────────── -->
+        <aside class="lmsg-list-pane">
+            <ng-container *ngIf="messages.length > 0; else emptyTpl">
+                <ul class="lmsg-list" role="list">
+                    <li *ngFor="let m of messages; trackBy: trackById">
+                        <button
+                            type="button"
+                            class="lmsg-card"
+                            [class.unread]="m.status === 'new'"
+                            [class.selected]="selected?.id === m.id"
+                            (click)="openMessage(m)">
+
+                            <div class="lmsg-card-top">
+                                <div class="lmsg-card-id">
+                                    <span class="lmsg-card-name">{{ m.name }}</span>
+                                    <span class="lmsg-card-company" *ngIf="m.company">· {{ m.company }}</span>
+                                </div>
+                                <div class="lmsg-card-meta">
+                                    <span class="lmsg-card-time">{{ timeAgo(m.created_at) }}</span>
+                                    <span class="lmsg-badge"
+                                          [class.badge-new]="m.status === 'new'"
+                                          [class.badge-read]="m.status === 'read'"
+                                          [class.badge-replied]="m.status === 'replied'"
+                                          [class.badge-archived]="m.status === 'archived'">
+                                        {{ statusLabel(m.status) }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p class="lmsg-card-snippet">{{ snippet(m.message) }}</p>
+
+                            <div class="lmsg-card-bottom">
+                                <span class="lmsg-card-email">{{ m.email }}</span>
+                                <span class="lmsg-card-email-status" *ngIf="m.email_status === 'sent'"
+                                      title="Notificación enviada correctamente">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2.5"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </span>
+                                <span class="lmsg-card-email-status lmsg-card-email-failed"
+                                      *ngIf="m.email_status === 'failed'"
+                                      title="Fallo enviando la notificación por email">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                </span>
+                            </div>
+                        </button>
+                    </li>
+                </ul>
+            </ng-container>
+
+            <ng-template #emptyTpl>
+                <div class="lmsg-empty">
+                    <div class="lmsg-empty-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 12h-6l-2 3h-4l-2-3H2"></path>
+                            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+                        </svg>
+                    </div>
+                    <h3>Sin mensajes por ahora</h3>
+                    <p>
+                        Cuando alguien escriba desde el formulario del landing público,
+                        aparecerá aquí.
+                    </p>
+                </div>
+            </ng-template>
+        </aside>
+
+        <!-- RIGHT: detalle ───────────────────────────────────────────── -->
+        <section class="lmsg-detail-pane" *ngIf="selected; else noSelectionTpl">
+
+            <header class="lmsg-detail-header">
+                <button type="button" class="lmsg-back-btn" (click)="closeMobileDetail()" title="Volver a la lista">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    <span>Volver</span>
+                </button>
+
+                <div class="lmsg-detail-id">
+                    <h2 class="lmsg-detail-name">
+                        {{ selected.name }}
+                        <span class="lmsg-badge lmsg-badge-inline"
+                              [class.badge-new]="selected.status === 'new'"
+                              [class.badge-read]="selected.status === 'read'"
+                              [class.badge-replied]="selected.status === 'replied'"
+                              [class.badge-archived]="selected.status === 'archived'">
+                            {{ statusLabel(selected.status) }}
+                        </span>
+                    </h2>
+                    <div class="lmsg-detail-sub">
+                        <a [href]="'mailto:' + selected.email" class="lmsg-detail-email">{{ selected.email }}</a>
+                        <span *ngIf="selected.company">· {{ selected.company }}</span>
+                        <span *ngIf="selected.role">· {{ selected.role }}</span>
+                    </div>
+                </div>
+            </header>
+
+            <dl class="lmsg-meta">
+                <div class="lmsg-meta-row">
+                    <dt>Recibido</dt>
+                    <dd>{{ formatDateTime(selected.created_at) }}</dd>
+                </div>
+                <div class="lmsg-meta-row" *ngIf="selected.read_at">
+                    <dt>Leído</dt>
+                    <dd>{{ formatDateTime(selected.read_at) }}</dd>
+                </div>
+                <div class="lmsg-meta-row" *ngIf="selected.replied_at">
+                    <dt>Respondido</dt>
+                    <dd>{{ formatDateTime(selected.replied_at) }}</dd>
+                </div>
+                <div class="lmsg-meta-row" *ngIf="selected.ip">
+                    <dt>IP origen</dt>
+                    <dd><code>{{ selected.ip }}</code></dd>
+                </div>
+                <div class="lmsg-meta-row">
+                    <dt>Notificación email</dt>
+                    <dd>
+                        <span class="lmsg-email-pill"
+                              [class.pill-sent]="selected.email_status === 'sent'"
+                              [class.pill-failed]="selected.email_status === 'failed'"
+                              [class.pill-pending]="selected.email_status === 'pending'">
+                            <ng-container [ngSwitch]="selected.email_status">
+                                <span *ngSwitchCase="'sent'">Enviada</span>
+                                <span *ngSwitchCase="'failed'">Falló</span>
+                                <span *ngSwitchCase="'pending'">Pendiente</span>
+                                <span *ngSwitchDefault>{{ selected.email_status }}</span>
+                            </ng-container>
+                        </span>
+                        <small *ngIf="selected.email_status === 'failed' && selected.email_error"
+                               class="lmsg-email-error">
+                            {{ selected.email_error }}
+                        </small>
+                    </dd>
+                </div>
+            </dl>
+
+            <div class="lmsg-body">
+                <h3 class="lmsg-subheading">Mensaje</h3>
+                <pre class="lmsg-body-text">{{ selected.message }}</pre>
+            </div>
+
+            <footer class="lmsg-detail-actions">
+                <a class="lmsg-btn lmsg-btn-primary" [href]="mailtoLink(selected)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span>Responder por email</span>
+                </a>
+                <button type="button" class="lmsg-btn lmsg-btn-ghost"
+                        (click)="setStatus('replied')"
+                        [disabled]="isUpdating || selected.status === 'replied'">
+                    Marcar como respondido
+                </button>
+                <button type="button" class="lmsg-btn lmsg-btn-ghost"
+                        (click)="setStatus('archived')"
+                        [disabled]="isUpdating || selected.status === 'archived'">
+                    Archivar
+                </button>
+                <button type="button" class="lmsg-btn lmsg-btn-danger"
+                        (click)="deleteSelected()"
+                        [disabled]="isUpdating">
+                    Eliminar
+                </button>
+            </footer>
+        </section>
+
+        <ng-template #noSelectionTpl>
+            <section class="lmsg-detail-pane lmsg-detail-empty">
+                <div class="lmsg-empty">
+                    <div class="lmsg-empty-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                    </div>
+                    <h3>Selecciona un mensaje</h3>
+                    <p *ngIf="messages.length > 0">
+                        Elige un mensaje de la lista para ver el detalle completo y responder.
+                    </p>
+                    <p *ngIf="messages.length === 0">
+                        Aún no hay mensajes que mostrar con este filtro.
+                    </p>
+                </div>
+            </section>
+        </ng-template>
+    </div>
+</div>

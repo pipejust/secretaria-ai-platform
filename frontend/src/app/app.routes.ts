@@ -129,6 +129,12 @@ export const routes: Routes = [
                 data: { description: 'Edita el contenido del landing público de acten.app — sólo super-admin del tenant Acten.', robots: 'noindex, nofollow' },
             },
             {
+                path: 'landing-cms/mensajes',
+                loadComponent: () => import('./components/landing-messages/landing-messages.component').then(m => m.LandingMessagesComponent),
+                title: 'Mensajes del landing | Acten',
+                data: { description: 'Bandeja de mensajes del formulario público.', robots: 'noindex, nofollow' },
+            },
+            {
                 path: 'profile',
                 component: ProfileComponent,
                 title: 'Mi Perfil | Acten',
