@@ -534,6 +534,29 @@
     border-color: #155EEF;
     box-shadow: 0 0 0 3px rgba(21, 94, 239, 0.12);
 }
+.br-required {
+    color: #EF4444;
+    margin-left: 2px;
+    font-weight: 700;
+}
+.br-input--invalid {
+    border-color: #FCA5A5 !important;
+    background: #FEF2F2;
+}
+.br-field-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748B;
+    line-height: 1.45;
+}
+.br-field-hint code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    background: #F1F5F9;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
 
 /* Logo preview */
 .br-logo-preview {

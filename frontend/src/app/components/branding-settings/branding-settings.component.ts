@@ -269,6 +269,24 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     togglePanel(): void { this.panelCollapsed = !this.panelCollapsed; }
 
     async save(): Promise<void> {
+        // Validación cliente: el sitio web es obligatorio. Sin él, los admins
+        // no pueden crear usuarios (el backend valida que el email de cada
+        // usuario nuevo pertenezca al mismo SLD que company_website).
+        const website = (this.form.company_website || '').trim();
+        if (!website) {
+            this.toast.error(
+                'El sitio web es obligatorio. Se usa para validar el dominio de los usuarios que creás.',
+            );
+            return;
+        }
+        // Mini-check de formato: necesita al menos un punto y caracteres válidos.
+        const looksValid = /^(https?:\/\/)?[a-z0-9.-]+\.[a-z]{2,}/i.test(website);
+        if (!looksValid) {
+            this.toast.error(
+                'El sitio web no tiene un formato válido. Ejemplo: https://tuempresa.com',
+            );
+            return;
+        }
         this.isSaving = true;
         try {
             const patch = {
@@ -276,7 +294,7 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
                 company_tagline: this.form.company_tagline,
                 company_email: this.form.company_email,
                 company_address: this.form.company_address,
-                company_website: this.form.company_website,
+                company_website: website,
                 company_phone: this.form.company_phone,
                 primary_color: this.form.primary_color,
                 secondary_color: this.form.secondary_color,

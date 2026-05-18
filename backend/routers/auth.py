@@ -37,6 +37,56 @@ def _normalize_email(v: str) -> str:
     return (v or "").strip().lower()
 
 
+# Subdominios públicos / sufijos compuestos que NO son SLD por sí mismos.
+# Lista mínima — solo lo que aparece en clientes hispanos típicos. Para
+# casos complejos (gov.uk, etc.) habría que migrar a la lib `tldextract`.
+_TWO_PART_TLDS = {
+    "com.ar", "com.br", "com.co", "com.mx", "com.pe", "com.uy", "com.ve",
+    "co.uk", "org.uk", "ac.uk", "gob.ar", "gob.mx", "edu.co", "edu.mx",
+}
+
+
+def extract_sld(value: str) -> str:
+    """Extrae el "second-level domain" (SLD) de una URL, dominio o email.
+
+    Ejemplos:
+        https://www.acten.app          → "acten"
+        https://acten.co.uk            → "acten"
+        user@mail.acten.com.mx         → "acten"
+        acten.app                      → "acten"
+        @acten.net                     → "acten"
+
+    Se usa para validar que un email de usuario nuevo coincide con el
+    dominio de la empresa, sin importar el TLD (la misma empresa puede
+    usar acten.app + acten.co + acten.net indistintamente).
+
+    Devuelve "" si no logra parsear nada útil.
+    """
+    raw = (value or "").strip().lower()
+    if not raw:
+        return ""
+    # Si viene "user@host", agarrar solo el host.
+    if "@" in raw:
+        raw = raw.rsplit("@", 1)[-1]
+    # Quitar esquema y path/query: "https://www.acten.app/foo" → "www.acten.app"
+    if "://" in raw:
+        raw = raw.split("://", 1)[1]
+    raw = raw.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+    # Quitar puerto: "acten.app:8000" → "acten.app"
+    raw = raw.split(":", 1)[0]
+    # Quitar "www." prefix — es el subdominio público más común.
+    if raw.startswith("www."):
+        raw = raw[4:]
+    if not raw or "." not in raw:
+        # Si no hay TLD, asumimos que ya es el SLD plano ("acten").
+        return raw
+    parts = raw.split(".")
+    # Caso TLD compuesto (.com.co, .co.uk, etc.) → el SLD es el tercero del final.
+    if len(parts) >= 3 and ".".join(parts[-2:]) in _TWO_PART_TLDS:
+        return parts[-3]
+    return parts[-2]
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -289,6 +339,61 @@ def verify_login_2fa(
     return _login_success_payload(user, tenant, request, db)
 
 
+def _resolve_tenant_sld(db: Session, tenant: Tenant) -> str:
+    """SLD de un tenant resuelto desde su branding. Mira primero el campo
+    `company_website` (la fuente oficial del usuario en branding-settings),
+    luego cae al `domain` técnico de la tabla tenant (custom-domain en
+    Coolify). Devuelve "" si no hay nada configurado."""
+    import json as _json
+    raw = ""
+    if tenant.branding_json:
+        try:
+            data = _json.loads(tenant.branding_json) or {}
+            raw = (data.get("company_website") or "").strip()
+        except (_json.JSONDecodeError, TypeError):
+            raw = ""
+    if not raw:
+        raw = (tenant.domain or "").strip()
+    return extract_sld(raw)
+
+
+def _validate_email_matches_tenant_domain(db: Session, tenant: Tenant, email: str) -> None:
+    """Aborta con 400 si el email no comparte SLD con la empresa.
+
+    Sin importar el TLD: con `acten.app` configurado en company_website,
+    se aceptan @acten.app, @acten.co, @acten.com, etc.; pero NO @gmail.com
+    ni @other-company.com. El check es opcional — si el tenant aún no tiene
+    `company_website` configurado, no rechazamos para no bloquear flujos
+    legacy (pero advertimos en logs)."""
+    tenant_sld = _resolve_tenant_sld(db, tenant)
+    if not tenant_sld:
+        logger.warning(
+            "Tenant '%s' no tiene company_website ni domain configurado; "
+            "no se puede validar dominio del email %s",
+            tenant.slug, email,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "La empresa no tiene página web configurada. "
+                "Pedile al administrador que configure la URL en "
+                "Personalización de marca antes de crear usuarios."
+            ),
+        )
+    email_sld = extract_sld(email)
+    if not email_sld:
+        raise HTTPException(status_code=400, detail="Email inválido.")
+    if email_sld != tenant_sld:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"El dominio del email no coincide con el de la empresa. "
+                f"Solo se aceptan correos del dominio '{tenant_sld}' "
+                f"(cualquier extensión: .com, .co, .net, .app, etc.)."
+            ),
+        )
+
+
 @router.post("/register/admin-only")
 def register_user(
     user_in: UserCreate,
@@ -304,7 +409,16 @@ def register_user(
       · enlace al login de la plataforma
     El email NO bloquea la respuesta al admin: si el SMTP falla, se loggea
     pero el usuario igual queda creado.
+
+    Validación de dominio: el email debe pertenecer al mismo SLD que el
+    `company_website` del tenant — ver `_validate_email_matches_tenant_domain`.
     """
+    # Resolvemos el tenant del admin para validar el dominio.
+    admin_tenant = db.get(Tenant, admin_user.tenant_id)
+    if admin_tenant is None:
+        raise HTTPException(status_code=500, detail="Tenant del admin no existe.")
+    _validate_email_matches_tenant_domain(db, admin_tenant, user_in.email)
+
     existing_user = db.exec(
         select(User)
         .where(User.email == user_in.email)

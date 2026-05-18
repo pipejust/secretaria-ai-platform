@@ -219,8 +219,17 @@
                             <input type="email" [(ngModel)]="form.company_email" placeholder="contacto@tuempresa.com"/>
                         </label>
                         <label class="br-field">
-                            <span>Sitio web</span>
-                            <input type="url" [(ngModel)]="form.company_website" placeholder="https://tuempresa.com"/>
+                            <span>Sitio web <span class="br-required" aria-label="obligatorio">*</span></span>
+                            <input #websiteInput type="url" required
+                                   [(ngModel)]="form.company_website"
+                                   placeholder="https://tuempresa.com"
+                                   name="company_website"
+                                   [class.br-input--invalid]="!form.company_website || !form.company_website.trim()"/>
+                            <small class="br-field-hint">
+                                Obligatorio. El dominio se usa para validar el email de los usuarios que
+                                creés (ej. <code>tuempresa.com</code> → solo se aceptan correos
+                                <code>&#64;tuempresa.app</code>, <code>&#64;tuempresa.co</code>, etc.).
+                            </small>
                         </label>
                         <label class="br-field">
                             <span>Teléfono</span>

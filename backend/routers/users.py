@@ -123,6 +123,10 @@ def update_user(
         new_email = payload.email.strip().lower()
         if not new_email:
             raise HTTPException(status_code=400, detail="El email no puede estar vacío")
+        # Validar dominio: solo emails del mismo SLD que company_website del tenant.
+        # Importamos acá para evitar ciclo de imports a nivel módulo.
+        from routers.auth import _validate_email_matches_tenant_domain
+        _validate_email_matches_tenant_domain(db, tenant, new_email)
         # Unicidad por tenant.
         clash = db.exec(
             select(User)

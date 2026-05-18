@@ -499,7 +499,20 @@
                     <input type="email" name="email" [(ngModel)]="newUser.email" required
                            autocomplete="email"
                            pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
-                           placeholder="ejemplo@empresa.com"/>
+                           [placeholder]="tenantDomainHint"/>
+                    <!-- Hint del dominio permitido para la empresa actual.
+                         Si el admin no configuró sitio web aún, mostramos un
+                         banner rojo redirigiéndolo a /admin/branding. -->
+                    <small class="us-field-hint" *ngIf="tenantSld">
+                        Solo se aceptan correos del dominio <strong>{{ tenantSld }}</strong>
+                        con cualquier extensión: <code>&#64;{{ tenantSld }}.com</code>,
+                        <code>&#64;{{ tenantSld }}.co</code>, <code>&#64;{{ tenantSld }}.net</code>, etc.
+                    </small>
+                    <small class="us-field-hint us-field-hint--error" *ngIf="!tenantSld">
+                        ⚠ La empresa no tiene página web configurada. Andá a
+                        <a routerLink="/admin/branding">Personalización de marca</a>
+                        y cargá la URL antes de crear usuarios.
+                    </small>
                 </div>
                 <div class="us-field">
                     <label>Contraseña inicial <span class="us-req">*</span></label>

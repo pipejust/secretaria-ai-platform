@@ -1,12 +1,43 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { BrandingService } from '../../services/branding.service';
 import { environment } from '../../../environments/environment';
+
+/**
+ * Extrae el SLD (segundo nivel de dominio) de una URL/dominio/email.
+ * Mismo algoritmo que `extract_sld` del backend en `auth.py` para que la
+ * validación cliente sea consistente con la del servidor.
+ *
+ * Ejemplos:
+ *   https://www.acten.app  → "acten"
+ *   user@mail.acten.com.mx → "acten"
+ *   acten.co               → "acten"
+ */
+const TWO_PART_TLDS = new Set([
+    'com.ar', 'com.br', 'com.co', 'com.mx', 'com.pe', 'com.uy', 'com.ve',
+    'co.uk', 'org.uk', 'ac.uk', 'gob.ar', 'gob.mx', 'edu.co', 'edu.mx',
+]);
+function extractSld(value: string): string {
+    let raw = (value || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw.includes('@')) raw = raw.split('@').pop()!;
+    if (raw.includes('://')) raw = raw.split('://')[1];
+    raw = raw.split('/')[0].split('?')[0].split('#')[0].split(':')[0];
+    if (raw.startsWith('www.')) raw = raw.slice(4);
+    if (!raw || !raw.includes('.')) return raw;
+    const parts = raw.split('.');
+    if (parts.length >= 3 && TWO_PART_TLDS.has(parts.slice(-2).join('.'))) {
+        return parts[parts.length - 3];
+    }
+    return parts[parts.length - 2];
+}
 
 interface UserRow {
     id: number;
@@ -53,11 +84,24 @@ interface ActivityEntry {
 @Component({
     selector: 'app-users',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, RouterModule],
     templateUrl: './users.component.html',
     styleUrls: ['./users.component.css'],
 })
 export class UsersComponent implements OnInit, OnDestroy {
+    private readonly branding = inject(BrandingService);
+
+    /** SLD del dominio del tenant — derivado del company_website del branding.
+     *  Vacío si el admin no configuró aún la página web. */
+    get tenantSld(): string {
+        return extractSld(this.branding.brand().company_website || '');
+    }
+    /** Mismo dominio usado en el placeholder del campo email del modal. */
+    get tenantDomainHint(): string {
+        const sld = this.tenantSld;
+        return sld ? `usuario@${sld}.com` : 'usuario@empresa.com';
+    }
+
     users: UserRow[] = [];
     roles: any[] = [];
     isLoading = false;
@@ -259,6 +303,23 @@ export class UsersComponent implements OnInit, OnDestroy {
         if (!u.email || !u.email.trim()) return 'El correo electrónico es obligatorio.';
         const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(u.email.trim());
         if (!emailOk) return 'El correo electrónico no tiene un formato válido.';
+        // Validación de dominio: el email debe pertenecer al mismo SLD que el
+        // sitio web de la empresa (sin importar el TLD). El backend también
+        // valida — esto es solo para feedback inmediato sin round-trip.
+        const tenantSld = this.tenantSld;
+        if (!tenantSld) {
+            return (
+                'La empresa no tiene página web configurada. Pedile al administrador ' +
+                'que cargue la URL en Personalización de marca antes de crear usuarios.'
+            );
+        }
+        const emailSld = extractSld(u.email);
+        if (emailSld !== tenantSld) {
+            return (
+                `El email debe ser del dominio '${tenantSld}' (con cualquier extensión: ` +
+                `.com, .co, .net, .app, etc.). El que ingresaste pertenece a '${emailSld || 'otro'}'.`
+            );
+        }
         if (!u.password || u.password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
         if (u.password !== u.confirm_password) return 'La confirmación de contraseña no coincide.';
         if (!u.role_id) return 'Debes seleccionar un rol.';
