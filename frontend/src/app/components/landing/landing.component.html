@@ -14,11 +14,10 @@
       <a class="al-brand" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
         <!-- LCP candidate: above-the-fold + preloaded en index.html.
              width/height explícitos previenen CLS (1.18 ratio del logo).
-             Cadena de fallback explícita:
-               1) logo oscuro del tenant (si lo subió)
-               2) logo regular del tenant
-               3) SVG estático Acten (lo que ya estaba antes — preloaded). -->
-        <img [src]="branding.hasLogoDark() ? branding.logoDarkUrl() : (branding.hasLogo() ? branding.logoUrl() : 'brand/acten-logo-full.svg')"
+             REGLA DEL LANDING: hero navy → SOLO logo oscuro o el SVG estático
+             (que ya está diseñado para fondos oscuros). NO caer al logo claro
+             del tenant porque tipografía oscura en navy es ilegible. -->
+        <img [src]="branding.hasLogoDark() ? branding.logoDarkUrl() : 'brand/acten-logo-full.svg'"
              alt="Acten"
              class="al-brand__logo al-brand__logo--light"
              width="118" height="32" decoding="async" fetchpriority="high" />
