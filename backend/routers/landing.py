@@ -289,7 +289,13 @@ def get_public_trust_logos(db: Session = Depends(get_session)) -> Dict[str, Any]
             except (json.JSONDecodeError, TypeError):
                 brand = {}
         display_name = (brand.get("company_name") or t.name or t.slug).strip()
-        logo = (brand.get("logo_data_url") or "").strip()
+        # La trust band se renderiza sobre fondo navy. Priorizamos el
+        # logo OSCURO si el tenant lo subió (variante diseñada para fondos
+        # oscuros). Solo si no hay dark, caemos al logo regular; y si
+        # tampoco hay, al wordmark.
+        logo_dark = (brand.get("logo_dark_data_url") or "").strip()
+        logo_light = (brand.get("logo_data_url") or "").strip()
+        logo = logo_dark or logo_light
         # Si es data URL o URL absoluta servible, la pasamos. Cualquier otro
         # valor raro queda como cadena vacía → el frontend cae a wordmark.
         if not (logo.startswith("data:") or logo.startswith("http")):
@@ -298,6 +304,7 @@ def get_public_trust_logos(db: Session = Depends(get_session)) -> Dict[str, Any]
             "slug": t.slug,
             "name": display_name,
             "logo_url": logo,
+            "has_dark_variant": bool(logo_dark),
         })
     # Ordenamos: primero los que tienen logo (jerarquía visual), luego alfabético.
     out.sort(key=lambda x: (0 if x["logo_url"] else 1, x["name"].lower()))

@@ -30,8 +30,14 @@ export interface Testimonial {
 export interface TrustLogoItem {
   slug: string;
   name: string;
-  /** Vacío si el tenant no subió logo; el frontend cae a wordmark. */
+  /** Logo a renderizar — prioriza logo_dark_data_url del tenant para
+   *  que se vea bien sobre el fondo navy de la trust band. Vacío si el
+   *  tenant no subió ningún logo; en ese caso el frontend cae a wordmark. */
   logo_url: string;
+  /** True si lo que viene en logo_url es la variante oscura del tenant
+   *  (subida específicamente para fondos oscuros). False si tuvo que
+   *  caer al logo regular. Permite ajustar estilos por tenant. */
+  has_dark_variant?: boolean;
 }
 
 /** Persona real del sistema — endpoint /api/public/landing/people */

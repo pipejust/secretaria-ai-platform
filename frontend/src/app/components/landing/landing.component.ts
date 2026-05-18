@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem, LandingPerson } from '../../services/landing-cms.service';
-import { BrandingService } from '../../services/branding.service';
 
 /**
  * Landing pública de Acten — rediseño "Acten Premium" 2026-Q2.
@@ -31,11 +30,6 @@ import { BrandingService } from '../../services/branding.service';
 export class LandingComponent implements OnInit {
     private readonly router = inject(Router);
     private readonly cms = inject(LandingCmsService);
-    /** Branding del tenant (Acten en producción). Lo exponemos público
-     *  para que el template pueda leer `branding.displayDarkLogoUrl()`
-     *  en el header del hero. Si el tenant subió un logo oscuro, se
-     *  prioriza; si no, cae al logo regular o al asset estático. */
-    readonly branding = inject(BrandingService);
 
     /** URL del admin (admin.acten.app en producción, mismo origen en dev). */
     adminUrl = this.resolveAdminUrl();
