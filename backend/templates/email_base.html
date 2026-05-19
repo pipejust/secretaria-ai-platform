@@ -27,14 +27,13 @@
     text-align: center;
     color: white;
   }
-  /* Container FIJO 224×56 — ratio 4:1, derivado del logo Acten oficial
-     (1102×270). object-fit: contain escala logos chicos hasta tocar el
-     borde sin deformar el aspect ratio. Soportado por Gmail, Apple Mail,
-     Outlook 365, Outlook iOS/Android y todos los clientes modernos. */
+  /* Alto FIJO 56px, ancho auto con tope 260px. El backend autocropea el
+     padding transparente al upload, así que TODOS los logos se ven
+     prominentes acá sin importar su aspect ratio. */
   .header img.logo {
-    width: 224px;
     height: 56px;
-    object-fit: contain;
+    width: auto;
+    max-width: 260px;
     margin: 0 auto 12px;
     display: block;
     filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
@@ -117,8 +116,8 @@
         <img class="logo"
              src="{{ brand.logo_data_url }}"
              alt="{{ brand.company_name | default('Acten') }}"
-             width="224" height="56"
-             style="width:224px; height:56px; object-fit:contain; margin:0 auto 12px; display:block;">
+             height="56"
+             style="height:56px; width:auto; max-width:260px; margin:0 auto 12px; display:block;">
       {% else %}
         <h1>{{ brand.company_name | default('Acten') }}</h1>
       {% endif %}

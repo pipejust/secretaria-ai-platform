@@ -17,6 +17,7 @@ POST /api/branding/favicon                  admin del tenant — sube favicon.
 from __future__ import annotations
 
 import base64
+import io
 import logging
 import os
 import re
@@ -44,6 +45,87 @@ ALLOWED_MIME_TYPES = {
     "image/x-icon",
     "image/vnd.microsoft.icon",
 }
+
+# MIMEs sobre los que SÍ podemos autocropear (raster). SVG/ICO se dejan
+# tal cual — su "padding" interno se controla por el viewBox del autor.
+_RASTER_MIMES = {"image/png", "image/jpeg", "image/webp"}
+
+
+def _autocrop_raster(raw: bytes, mime: str) -> tuple[bytes, str]:
+    """Recorta el padding transparente/uniforme alrededor del contenido
+    visible de una imagen raster. Devuelve (bytes_nuevos, mime_efectivo).
+
+    Caso típico: un PNG de 553×237 con el wordmark real ocupando solo el
+    centro 200×80 — el resto es alpha=0. Al renderizar con object-fit:
+    contain en un container 320×80, el navegador escala los 553px → muy
+    chico el contenido visible. Con autocrop, el PNG queda 200×80 y se
+    renderiza prominente.
+
+    Si la imagen no es raster, no tiene alpha, o el crop falla por
+    cualquier motivo, devuelve los bytes originales sin tocar.
+    """
+    if mime not in _RASTER_MIMES:
+        return raw, mime
+    try:
+        from PIL import Image  # import local para evitar costo en boot
+    except ImportError:
+        logger.warning("Pillow no instalado, salto autocrop")
+        return raw, mime
+    try:
+        img = Image.open(io.BytesIO(raw))
+        img.load()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Autocrop: no pude abrir la imagen: %s", exc)
+        return raw, mime
+
+    # Para detectar el bbox del contenido, necesitamos alpha. Si el JPEG
+    # no tiene alpha, convertimos a RGBA y detectamos por contraste con
+    # el color de fondo más común en las esquinas (típicamente blanco).
+    has_alpha = img.mode in ("RGBA", "LA") or "transparency" in img.info
+    if not has_alpha:
+        img = img.convert("RGBA")
+        # Heurística: si el color promedio de las 4 esquinas es uniforme,
+        # asumimos que es el background y lo hacemos transparente.
+        corners = [img.getpixel((0, 0)), img.getpixel((img.width - 1, 0)),
+                   img.getpixel((0, img.height - 1)),
+                   img.getpixel((img.width - 1, img.height - 1))]
+        if all(c == corners[0] for c in corners) and corners[0][3] == 255:
+            bg = corners[0][:3]
+            # Convertir bg a alpha=0 — pero solo si es un color "uniforme"
+            # (no gradiente). Tolerancia ±5 por canal para PNGs con jpg-like noise.
+            datas = list(img.getdata())
+            new_data = [
+                (0, 0, 0, 0)
+                if all(abs(p[i] - bg[i]) <= 5 for i in range(3))
+                else p
+                for p in datas
+            ]
+            img.putdata(new_data)
+    else:
+        img = img.convert("RGBA") if img.mode != "RGBA" else img
+
+    bbox = img.getbbox()
+    if not bbox:
+        return raw, mime  # imagen totalmente transparente, no toco
+    # Si el bbox ya cubre >95% del área, no hay padding significativo.
+    bw, bh = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    if bw * bh >= 0.95 * img.width * img.height:
+        return raw, mime
+    try:
+        cropped = img.crop(bbox)
+        buf = io.BytesIO()
+        # PNG preserva alpha — único formato seguro para logos con transparencia.
+        cropped.save(buf, format="PNG", optimize=True)
+        new_bytes = buf.getvalue()
+        logger.info(
+            "Autocrop OK: %dx%d → %dx%d (%d → %d bytes)",
+            img.width, img.height, cropped.width, cropped.height,
+            len(raw), len(new_bytes),
+        )
+        return new_bytes, "image/png"
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Autocrop falló en save: %s", exc)
+        return raw, mime
 
 
 class BrandingPatch(BaseModel):
@@ -255,8 +337,9 @@ async def upload_logo(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Logo demasiado grande (>{MAX_LOGO_BYTES // 1024} KB).",
         )
+    data, mime = _autocrop_raster(data, file.content_type)
     b64 = base64.b64encode(data).decode("ascii")
-    data_url = f"data:{file.content_type};base64,{b64}"
+    data_url = f"data:{mime};base64,{b64}"
     result = branding_service.update_branding(db, tenant.id, {"logo_data_url": data_url})
     _invalidate_logo_cache(tenant.id)
     return result
@@ -295,8 +378,9 @@ async def upload_logo_dark(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Logo oscuro demasiado grande (>{MAX_LOGO_BYTES // 1024} KB).",
         )
+    data, mime = _autocrop_raster(data, file.content_type)
     b64 = base64.b64encode(data).decode("ascii")
-    data_url = f"data:{file.content_type};base64,{b64}"
+    data_url = f"data:{mime};base64,{b64}"
     result = branding_service.update_branding(
         db, tenant.id, {"logo_dark_data_url": data_url}
     )
@@ -338,8 +422,9 @@ async def upload_icon(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Imagologo demasiado grande (>{MAX_LOGO_BYTES // 1024} KB).",
         )
+    data, mime = _autocrop_raster(data, file.content_type)
     b64 = base64.b64encode(data).decode("ascii")
-    data_url = f"data:{file.content_type};base64,{b64}"
+    data_url = f"data:{mime};base64,{b64}"
     return branding_service.update_branding(db, tenant.id, {"icon_data_url": data_url})
 
 
@@ -373,6 +458,75 @@ async def upload_favicon(
     b64 = base64.b64encode(data).decode("ascii")
     data_url = f"data:{file.content_type};base64,{b64}"
     return branding_service.update_branding(db, tenant.id, {"favicon_data_url": data_url})
+
+
+@router.post("/migrate_autocrop")
+def migrate_autocrop_all_logos(
+    db: Session = Depends(get_session),
+    _admin: User = Depends(require_admin),
+) -> dict[str, Any]:
+    """One-shot: re-procesa TODOS los logos ya guardados en branding_json
+    aplicando autocrop. Útil tras la introducción del autocrop al upload,
+    para limpiar logos viejos con padding transparente (caso CCIS).
+
+    Solo accesible a admin (no superadmin) — pero recorre todos los
+    tenants. La justificación: es un endpoint de mantenimiento ejecutado
+    una sola vez tras el deploy. No hay riesgo de leak entre tenants
+    porque solo MODIFICA su propio branding_json.
+
+    Devuelve el resumen: cuántos tenants procesados y cuántos crops
+    efectivos por slot (logo / logo_dark / icon).
+    """
+    import json as _json
+    from sqlmodel import select as _select
+
+    tenants = db.exec(_select(Tenant)).all()
+    summary = {
+        "processed": 0,
+        "logo_cropped": 0,
+        "logo_dark_cropped": 0,
+        "icon_cropped": 0,
+        "details": [],
+    }
+
+    for t in tenants:
+        if not t.branding_json:
+            continue
+        try:
+            brand: dict[str, Any] = _json.loads(t.branding_json) or {}
+        except (_json.JSONDecodeError, TypeError):
+            continue
+        changed_fields: list[str] = []
+        for slot in ("logo_data_url", "logo_dark_data_url", "icon_data_url"):
+            raw = (brand.get(slot) or "").strip()
+            m = _DATA_URL_RE.match(raw)
+            if not m:
+                continue
+            mime = m.group("mime").strip()
+            try:
+                blob = base64.b64decode(m.group("data"))
+            except Exception:
+                continue
+            new_blob, new_mime = _autocrop_raster(blob, mime)
+            if new_blob is blob or new_blob == blob:
+                continue
+            new_b64 = base64.b64encode(new_blob).decode("ascii")
+            brand[slot] = f"data:{new_mime};base64,{new_b64}"
+            changed_fields.append(slot)
+            summary[f"{slot.replace('_data_url', '')}_cropped"] = (
+                summary.get(f"{slot.replace('_data_url', '')}_cropped", 0) + 1
+            )
+        if changed_fields:
+            t.branding_json = _json.dumps(brand, ensure_ascii=False)
+            db.add(t)
+            summary["processed"] += 1
+            summary["details"].append({
+                "tenant_id": t.id, "slug": t.slug,
+                "cropped": changed_fields,
+            })
+            _invalidate_logo_cache(t.id)
+    db.commit()
+    return summary
 
 
 class TestEmailPayload(BaseModel):
