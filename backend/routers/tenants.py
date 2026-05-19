@@ -551,10 +551,28 @@ def _hard_delete_tenant_cascade(db: Session, tenant_id: int) -> dict:
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Skip %s: %s", table_key, exc)
 
-    # 4) Tablas dependientes de user.
+    # 4) Tablas dependientes de user. IMPORTANTE: auditlog, notification,
+    #    askhistory, apikey, comment, project (owner), roleactivity,
+    #    meetingsessionversion (editor), sessionoutput (creator),
+    #    sessionpermission y calendaraccount tienen FKs a user(id) que NO
+    #    cascadean. Si solo borramos por tenant_id, quedan rows huérfanas
+    #    apuntando a estos users (ej. auditlog con tenant_id=NULL o de un
+    #    super-admin distinto) → al borrar el user falla la FK.
+    #    Solución: borrar por user_id IN los_users_del_tenant ANTES de
+    #    intentar borrar el user.
     if user_ids:
         for table_key, sql in [
-            ("calendaraccount", f"DELETE FROM calendaraccount WHERE {user_clause}"),
+            ("auditlog",                f"DELETE FROM auditlog                WHERE {user_clause}"),
+            ("notification",            f"DELETE FROM notification            WHERE {user_clause}"),
+            ("askhistory",              f"DELETE FROM askhistory              WHERE {user_clause}"),
+            ("apikey",                  f"DELETE FROM apikey                  WHERE {user_clause}"),
+            ("calendaraccount",         f"DELETE FROM calendaraccount         WHERE {user_clause}"),
+            ("sessionpermission",       f"DELETE FROM sessionpermission       WHERE {user_clause}"),
+            ("sessionoutput_by_user",   f"UPDATE sessionoutput SET created_by_user_id = NULL WHERE created_by_user_id = ANY(:user_ids)"),
+            ("comment_by_user",         f"UPDATE comment SET author_user_id = NULL WHERE author_user_id = ANY(:user_ids)"),
+            ("meetingsessionversion_by", f"UPDATE meetingsessionversion SET edited_by_user_id = NULL WHERE edited_by_user_id = ANY(:user_ids)"),
+            ("project_owner",           f"UPDATE project SET owner_user_id = NULL WHERE owner_user_id = ANY(:user_ids)"),
+            ("roleactivity",            f"DELETE FROM roleactivity            WHERE actor_user_id = ANY(:user_ids)"),
         ]:
             try:
                 _exec(sql, {"user_ids": user_ids}, key=table_key)
@@ -563,6 +581,10 @@ def _hard_delete_tenant_cascade(db: Session, tenant_id: int) -> dict:
 
     # 5) Tablas con tenant_id directo. ORDEN IMPORTA — primero las que
     #    referencian users/projects/sessions, después las independientes.
+    #    NOTA: auditlog/notification/askhistory/apikey ya fueron limpiados
+    #    arriba por user_id (paso 4); igual los reincluimos por tenant_id
+    #    para borrar rows del tenant que no tienen user_id (ej. logs de
+    #    sistema con user_id=NULL).
     for table_key, sql in [
         ("actionitem",        "DELETE FROM actionitem        WHERE tenant_id = :t"),
         ("meetingsession",    "DELETE FROM meetingsession    WHERE tenant_id = :t"),
