@@ -610,6 +610,86 @@
                            placeholder="Juan Pérez" autocomplete="name" required/>
                 </div>
 
+                <!-- ============================================================
+                     Identidad de la empresa — espejo del editor /admin/branding
+                     ============================================================ -->
+                <div class="tn-section-divider">
+                    <span class="tn-section-title">Identidad de la empresa</span>
+                </div>
+
+                <div class="tn-field">
+                    <label>Sitio web <span class="tn-req">*</span></label>
+                    <input type="url" name="company_website" [(ngModel)]="form.company_website"
+                           placeholder="https://tuempresa.com" required/>
+                    <small class="tn-field-hint">
+                        Obligatorio. Su dominio se usa para validar el email de los usuarios que el
+                        admin cree después (acepta cualquier extensión del mismo SLD).
+                    </small>
+                </div>
+
+                <div class="tn-field">
+                    <label>Tagline <span class="tn-opt">(opcional)</span></label>
+                    <input type="text" name="company_tagline" [(ngModel)]="form.company_tagline"
+                           placeholder="Inteligencia para tus reuniones" maxlength="240"/>
+                </div>
+
+                <div class="tn-grid-2">
+                    <div class="tn-field">
+                        <label>Email corporativo <span class="tn-opt">(opcional)</span></label>
+                        <input type="email" name="company_email" [(ngModel)]="form.company_email"
+                               placeholder="contacto@tuempresa.com"/>
+                    </div>
+                    <div class="tn-field">
+                        <label>Teléfono <span class="tn-opt">(opcional)</span></label>
+                        <input type="tel" name="company_phone" [(ngModel)]="form.company_phone"
+                               placeholder="+57 300 123 4567"/>
+                    </div>
+                </div>
+
+                <div class="tn-field">
+                    <label>Dirección <span class="tn-opt">(opcional)</span></label>
+                    <input type="text" name="company_address" [(ngModel)]="form.company_address"
+                           placeholder="Cra 7 # 80-30, Bogotá, Colombia"/>
+                </div>
+
+                <!-- ============================================================
+                     Tema visual — 3 colores (primario / secundario / acento)
+                     ============================================================ -->
+                <div class="tn-section-divider">
+                    <span class="tn-section-title">Tema visual</span>
+                    <span class="tn-section-tag">Defaults Acten — editables</span>
+                </div>
+
+                <div class="tn-grid-2">
+                    <div class="tn-field">
+                        <label>Color primario</label>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="color" name="primary_color" [(ngModel)]="form.primary_color"
+                                   style="width:48px; height:38px; padding:2px; border-radius:8px; cursor:pointer;"/>
+                            <input type="text" [(ngModel)]="form.primary_color"
+                                   placeholder="#1F2A52" maxlength="7" style="flex:1; font-family:monospace;"/>
+                        </div>
+                    </div>
+                    <div class="tn-field">
+                        <label>Color secundario</label>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="color" name="secondary_color" [(ngModel)]="form.secondary_color"
+                                   style="width:48px; height:38px; padding:2px; border-radius:8px; cursor:pointer;"/>
+                            <input type="text" [(ngModel)]="form.secondary_color"
+                                   placeholder="#3D6B5E" maxlength="7" style="flex:1; font-family:monospace;"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="tn-field">
+                    <label>Color acento</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="color" name="accent_color" [(ngModel)]="form.accent_color"
+                               style="width:48px; height:38px; padding:2px; border-radius:8px; cursor:pointer;"/>
+                        <input type="text" [(ngModel)]="form.accent_color"
+                               placeholder="#C8993B" maxlength="7" style="flex:1; font-family:monospace; max-width:120px;"/>
+                    </div>
+                </div>
+
                 <div class="tn-section-divider">
                     <span class="tn-section-title">Marca de la empresa</span>
                     <span class="tn-section-tag">Opcional</span>
@@ -677,6 +757,26 @@
                             </label>
                             <button type="button" class="tn-upload-clear" *ngIf="form.icon_data_url"
                                     (click)="clearIcon()">Quitar</button>
+                        </div>
+                    </div>
+
+                    <div class="tn-upload">
+                        <header class="tn-upload-head">
+                            <strong>Favicon</strong>
+                            <span class="tn-upload-desc">.ico/.png · pestaña del navegador</span>
+                        </header>
+                        <div class="tn-upload-drop tn-upload-drop--square">
+                            <img *ngIf="form.favicon_data_url" [src]="form.favicon_data_url" alt="Favicon preview"/>
+                            <span *ngIf="!form.favicon_data_url" class="tn-upload-empty">Sin favicon</span>
+                        </div>
+                        <div class="tn-upload-foot">
+                            <label class="tn-btn tn-btn--ghost tn-upload-btn">
+                                {{ form.favicon_data_url ? 'Reemplazar' : 'Subir favicon' }}
+                                <input type="file" hidden accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml"
+                                       (change)="onFaviconSelected($event)"/>
+                            </label>
+                            <button type="button" class="tn-upload-clear" *ngIf="form.favicon_data_url"
+                                    (click)="clearFavicon()">Quitar</button>
                         </div>
                     </div>
                 </div>

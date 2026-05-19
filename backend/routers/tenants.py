@@ -74,6 +74,29 @@ class TenantCreate(BaseModel):
         None, max_length=4 * 1024 * 1024,
         description="Imagologo / icono cuadrado como data URL"
     )
+    favicon_data_url: Optional[str] = Field(
+        None, max_length=4 * 1024 * 1024,
+        description="Favicon (.ico/.png) para la pestaña del browser"
+    )
+    # Identidad extra de la empresa — espejo de los campos editables en
+    # /admin/branding. Si vienen, se guardan en branding_json desde el
+    # día 1 (no obliga al admin del tenant a entrar a configurarlos).
+    company_tagline: Optional[str] = Field(None, max_length=240)
+    company_email: Optional[str] = Field(None, max_length=240)
+    # OBLIGATORIO — el SLD del website se usa para validar el dominio de
+    # los usuarios que el admin cree. Sin esto, register_user falla con
+    # 400 "configurá el sitio web primero".
+    company_website: str = Field(
+        ..., min_length=4, max_length=240,
+        description="Sitio web (URL). El dominio valida el email de cada usuario nuevo."
+    )
+    company_phone: Optional[str] = Field(None, max_length=60)
+    company_address: Optional[str] = Field(None, max_length=500)
+    # Paleta visual editable (hex #RRGGBB). Si no vienen, se usan los
+    # defaults Acten (#1F2A52 navy / #3D6B5E teal / #C8993B gold).
+    primary_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    secondary_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    accent_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
 
     @field_validator("admin_email")
     @classmethod
@@ -216,22 +239,36 @@ def create_tenant(
     if payload.domain and db.exec(select(Tenant).where(Tenant.domain == payload.domain)).first():
         raise HTTPException(status_code=409, detail="Ese dominio ya está mapeado a otro tenant.")
 
-    # Crear tenant — branding inicial usa la paleta Acten (navy/teal/gold).
-    # Si el super-admin subió logo/icono al crear la empresa, los embebemos
-    # como data URLs desde ya — quedan listos sin que el admin del tenant
-    # tenga que entrar a /admin/branding para subirlos manualmente.
+    # Crear tenant — branding inicial usa la paleta Acten (navy/teal/gold)
+    # como fallback de los 3 colores, sobreescribibles desde el payload.
+    # Si el super-admin subió logos/icono al crear, los embebemos como data
+    # URLs desde ya — quedan listos sin que el admin del tenant tenga que
+    # entrar a /admin/branding para subirlos manualmente.
     initial_branding: dict[str, Any] = {
         "company_name": payload.name.strip(),
-        "primary_color": "#1F2A52",
-        "secondary_color": "#3D6B5E",
-        "accent_color": "#C8993B",
+        "company_website": (payload.company_website or "").strip(),
+        "primary_color": payload.primary_color or "#1F2A52",
+        "secondary_color": payload.secondary_color or "#3D6B5E",
+        "accent_color": payload.accent_color or "#C8993B",
     }
+    # Texto / contacto opcional — solo se persisten si vinieron con valor.
+    if payload.company_tagline:
+        initial_branding["company_tagline"] = payload.company_tagline.strip()
+    if payload.company_email:
+        initial_branding["company_email"] = payload.company_email.strip()
+    if payload.company_phone:
+        initial_branding["company_phone"] = payload.company_phone.strip()
+    if payload.company_address:
+        initial_branding["company_address"] = payload.company_address.strip()
+    # Assets gráficos — validados por _is_valid_data_url para evitar basura.
     if payload.logo_data_url and _is_valid_data_url(payload.logo_data_url):
         initial_branding["logo_data_url"] = payload.logo_data_url
     if payload.logo_dark_data_url and _is_valid_data_url(payload.logo_dark_data_url):
         initial_branding["logo_dark_data_url"] = payload.logo_dark_data_url
     if payload.icon_data_url and _is_valid_data_url(payload.icon_data_url):
         initial_branding["icon_data_url"] = payload.icon_data_url
+    if payload.favicon_data_url and _is_valid_data_url(payload.favicon_data_url):
+        initial_branding["favicon_data_url"] = payload.favicon_data_url
 
     tenant = Tenant(
         slug=slug,

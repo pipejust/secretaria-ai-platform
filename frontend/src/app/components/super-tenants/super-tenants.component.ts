@@ -39,9 +39,21 @@ interface CreateForm {
     admin_email: string;
     admin_password: string;
     admin_full_name: string;
+    // Identidad de la empresa (espejo de /admin/branding).
+    company_tagline: string;
+    company_email: string;
+    company_website: string;       // OBLIGATORIO — su SLD valida usuarios
+    company_phone: string;
+    company_address: string;
+    // Paleta visual.
+    primary_color: string;
+    secondary_color: string;
+    accent_color: string;
+    // Assets gráficos.
     logo_data_url: string;
     logo_dark_data_url: string;
     icon_data_url: string;
+    favicon_data_url: string;
 }
 
 const MAX_BRAND_FILE_BYTES = 2 * 1024 * 1024;
@@ -158,7 +170,12 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         return {
             slug: '', name: '', domain: '',
             admin_email: '', admin_password: '', admin_full_name: '',
-            logo_data_url: '', logo_dark_data_url: '', icon_data_url: '',
+            company_tagline: '', company_email: '', company_website: '',
+            company_phone: '', company_address: '',
+            // Defaults Acten — el admin puede sobreescribirlos al crear.
+            primary_color: '#1F2A52', secondary_color: '#3D6B5E', accent_color: '#C8993B',
+            logo_data_url: '', logo_dark_data_url: '',
+            icon_data_url: '', favicon_data_url: '',
         };
     }
 
@@ -231,9 +248,19 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     }
     onDragOver(ev: DragEvent): void { ev.preventDefault(); }
 
+    async onFaviconSelected(ev: Event): Promise<void> {
+        this.errorMsg = '';
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        const url = await this._fileToDataUrl(file);
+        if (url) this.form.favicon_data_url = url;
+        input.value = '';
+    }
     clearLogo(): void { this.form.logo_data_url = ''; }
     clearLogoDark(): void { this.form.logo_dark_data_url = ''; }
     clearIcon(): void { this.form.icon_data_url = ''; }
+    clearFavicon(): void { this.form.favicon_data_url = ''; }
 
     // ============================================================
     // Backend
@@ -279,6 +306,15 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             return 'El slug solo admite minúsculas, números y guiones.';
         }
         if (!f.name.trim()) return 'El nombre legible es obligatorio.';
+        // Sitio web obligatorio — su SLD se usa luego para validar el email
+        // de los usuarios que el admin del tenant cree.
+        const website = (f.company_website || '').trim();
+        if (!website) {
+            return 'El sitio web de la empresa es obligatorio (se usa para validar el dominio de los usuarios).';
+        }
+        if (!/^(https?:\/\/)?[a-z0-9.-]+\.[a-z]{2,}/i.test(website)) {
+            return 'El sitio web no tiene formato válido. Ejemplo: https://tuempresa.com';
+        }
         if (!f.admin_email.trim()) return 'El email del primer admin es obligatorio.';
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.admin_email.trim())) {
             return 'El email del primer admin no tiene un formato válido.';
@@ -287,6 +323,17 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             return 'La contraseña inicial debe tener al menos 8 caracteres.';
         }
         if (!f.admin_full_name.trim()) return 'El nombre del admin es obligatorio.';
+        // Color hex check — solo si vienen no-vacíos (defaults Acten ya son válidos).
+        const hex = /^#[0-9A-Fa-f]{6}$/;
+        for (const [k, v] of [
+            ['primario', f.primary_color],
+            ['secundario', f.secondary_color],
+            ['acento', f.accent_color],
+        ] as const) {
+            if (v && !hex.test(v)) {
+                return `El color ${k} no es un hex válido (#RRGGBB).`;
+            }
+        }
         return null;
     }
 
@@ -338,9 +385,21 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                     admin_email: adminEmail,
                     admin_password: this.form.admin_password,
                     admin_full_name: adminName,
+                    // Identidad de la empresa (espejo de /admin/branding).
+                    company_website: this.form.company_website.trim(),
+                    company_tagline: this.form.company_tagline.trim() || undefined,
+                    company_email: this.form.company_email.trim() || undefined,
+                    company_phone: this.form.company_phone.trim() || undefined,
+                    company_address: this.form.company_address.trim() || undefined,
+                    // Paleta (siempre con defaults Acten en el form).
+                    primary_color: this.form.primary_color || undefined,
+                    secondary_color: this.form.secondary_color || undefined,
+                    accent_color: this.form.accent_color || undefined,
+                    // Assets gráficos.
                     logo_data_url: this.form.logo_data_url || undefined,
                     logo_dark_data_url: this.form.logo_dark_data_url || undefined,
                     icon_data_url: this.form.icon_data_url || undefined,
+                    favicon_data_url: this.form.favicon_data_url || undefined,
                 }, { headers: this._headers() }),
             );
             this.tenants = [...this.tenants, out];
