@@ -47,12 +47,14 @@
 }
 
 /* Sidebar expandido — logo completo (wordmark + monograma).
-   El PNG ya viene transparente; no aplicamos filters ni blend modes. */
+   CONTAINER de tamaño FIJO (160×36) + object-fit: contain para que TODOS
+   los logos se vean iguales sin importar la resolución del archivo. Antes
+   con height:36 + width:auto, un logo de 40×40 quedaba como 36×36 (un
+   cuarto del ancho útil del sidebar); ahora se escala proporcionalmente
+   hasta tocar el borde de 160×36. */
 .sidebar-logo-full {
+    width: 160px;
     height: 36px;
-    max-height: 100%;
-    width: auto;
-    max-width: 100%;
     object-fit: contain;
     object-position: left center;
     display: block;
