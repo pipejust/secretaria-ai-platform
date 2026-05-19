@@ -47,14 +47,12 @@
 }
 
 /* Sidebar expandido — logo completo (wordmark + monograma).
-   CONTAINER de tamaño FIJO (160×36) + object-fit: contain para que TODOS
-   los logos se vean iguales sin importar la resolución del archivo. Antes
-   con height:36 + width:auto, un logo de 40×40 quedaba como 36×36 (un
-   cuarto del ancho útil del sidebar); ahora se escala proporcionalmente
-   hasta tocar el borde de 160×36. */
+   CONTAINER fijo 160×40 — ratio 4:1, mismo que el logo Acten oficial
+   (1102×270 ≈ 4.08:1). Logos chicos se escalan proporcionalmente para
+   llenar el container; grandes se reducen; ratio del archivo se respeta. */
 .sidebar-logo-full {
     width: 160px;
-    height: 36px;
+    height: 40px;
     object-fit: contain;
     object-position: left center;
     display: block;

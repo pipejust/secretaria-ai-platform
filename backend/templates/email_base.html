@@ -27,13 +27,12 @@
     text-align: center;
     color: white;
   }
-  /* Container FIJO de 220×56 + object-fit: contain. Antes con
-     max-height/max-width un logo de 60×40 quedaba minúsculo arriba del
-     correo. Ahora se escala proporcionalmente hasta tocar 220×56 sin
-     deformar el aspect ratio. Soportado por Gmail, Apple Mail, Outlook
-     365, Outlook iOS/Android y todos los clientes modernos. */
+  /* Container FIJO 224×56 — ratio 4:1, derivado del logo Acten oficial
+     (1102×270). object-fit: contain escala logos chicos hasta tocar el
+     borde sin deformar el aspect ratio. Soportado por Gmail, Apple Mail,
+     Outlook 365, Outlook iOS/Android y todos los clientes modernos. */
   .header img.logo {
-    width: 220px;
+    width: 224px;
     height: 56px;
     object-fit: contain;
     margin: 0 auto 12px;
@@ -118,8 +117,8 @@
         <img class="logo"
              src="{{ brand.logo_data_url }}"
              alt="{{ brand.company_name | default('Acten') }}"
-             width="220" height="56"
-             style="width:220px; height:56px; object-fit:contain; margin:0 auto 12px; display:block;">
+             width="224" height="56"
+             style="width:224px; height:56px; object-fit:contain; margin:0 auto 12px; display:block;">
       {% else %}
         <h1>{{ brand.company_name | default('Acten') }}</h1>
       {% endif %}

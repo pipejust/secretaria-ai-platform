@@ -70,13 +70,14 @@
 }
 
 /* Logo del tenant en el aside del login. CONTAINER de dimensiones FIJAS
-   (280×80) + object-fit: contain para que TODOS los logos se vean del
-   mismo tamaño sin importar la resolución del archivo subido. Los logos
-   chicos se escalan proporcionalmente; los grandes se reducen; el
-   aspect ratio siempre se respeta. */
+   con ratio 4:1 — derivado del logo Acten oficial (1102×270 ≈ 4.08:1).
+   Cualquier logo (chico o grande, subido por cualquier tenant) se renderiza
+   exactamente igual de prominente que el Acten default, sin barras
+   verticales/horizontales por letterbox. object-fit: contain garantiza
+   que el aspect ratio del archivo original se respeta. */
 .aside-logo,
 .aside-logo-client {
-    width: 280px;
+    width: 320px;
     height: 80px;
     object-fit: contain;
     object-position: left center;
@@ -669,7 +670,7 @@
     }
     .aside-brand { margin-bottom: var(--space-24); }
     .aside-logo,
-    .aside-logo-client { width: 200px; height: 56px; }
+    .aside-logo-client { width: 240px; height: 60px; }
     .aside-constellation { display: none; }
     .login-main { padding: var(--space-24); }
     .login-card { padding: var(--space-24); }
