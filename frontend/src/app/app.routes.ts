@@ -250,5 +250,56 @@ export const routes: Routes = [
             robots: 'index, follow',
         },
     },
+    // ─── Páginas dedicadas de la landing ─────────────────────────────────
+    // Cada una vive en una ruta propia, usa LandingShellComponent para el
+    // header/footer comunes, y lee el contenido del CMS (LandingCmsService).
+    {
+        path: 'producto',
+        loadComponent: () => import('./components/landing-pages/product-page.component').then(m => m.ProductPageComponent),
+        title: 'Producto | Acten',
+        data: { description: 'Todo lo que Acten hace para transformar tus reuniones en resultados accionables.', robots: 'index, follow' },
+    },
+    {
+        path: 'soluciones',
+        loadComponent: () => import('./components/landing-pages/solutions-page.component').then(m => m.SolutionsPageComponent),
+        title: 'Soluciones | Acten',
+        data: { description: 'Acten se adapta a cada equipo, industria y necesidad — desde startups hasta sector público.', robots: 'index, follow' },
+    },
+    {
+        path: 'precios',
+        loadComponent: () => import('./components/landing-pages/pricing-page.component').then(m => m.PricingPageComponent),
+        title: 'Precios | Acten',
+        data: { description: 'Planes de Acten para equipos de cualquier tamaño. Sin contratos largos.', robots: 'index, follow' },
+    },
+    {
+        path: 'recursos',
+        loadComponent: () => import('./components/landing-pages/resources-page.component').then(m => m.ResourcesPageComponent),
+        title: 'Recursos | Acten',
+        data: { description: 'Guías, casos de uso, webinars y plantillas para que tu equipo le saque el máximo a Acten.', robots: 'index, follow' },
+    },
+    {
+        path: 'empresa',
+        loadComponent: () => import('./components/landing-pages/company-page.component').then(m => m.CompanyPageComponent),
+        title: 'Empresas | Acten',
+        data: { description: 'Historias reales de empresas que ya transformaron sus reuniones con Acten.', robots: 'index, follow' },
+    },
+    {
+        path: 'casos/:slug',
+        loadComponent: () => import('./components/landing-pages/case-detail-page.component').then(m => m.CaseDetailPageComponent),
+        title: 'Caso de uso | Acten',
+        data: { description: 'Detalle de cómo una empresa transformó sus reuniones usando Acten.', robots: 'index, follow' },
+    },
+    {
+        path: 'demo',
+        loadComponent: () => import('./components/landing-pages/demo-page.component').then(m => m.DemoPageComponent),
+        title: 'Solicitar demo | Acten',
+        data: { description: 'Solicita una demo personalizada de Acten y descubre cómo impacta tu equipo.', robots: 'index, follow' },
+    },
+    {
+        path: 'contacto',
+        loadComponent: () => import('./components/landing-pages/contact-page.component').then(m => m.ContactPageComponent),
+        title: 'Contacto | Acten',
+        data: { description: 'Hablemos. Estamos aquí para ayudarte con preguntas, soporte o información sobre Acten.', robots: 'index, follow' },
+    },
     { path: '**', redirectTo: '/' }
 ];

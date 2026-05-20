@@ -1,0 +1,180 @@
+/* Landing shell — header + footer comunes a las páginas dedicadas.
+   Inspirado en la estética de landing.component.css pero scoped y simple. */
+
+:host {
+  --acs-bg: #FFFFFF;
+  --acs-bg-soft: #F8FAFC;
+  --acs-fg: #0F172A;
+  --acs-fg-soft: #475569;
+  --acs-fg-muted: #64748B;
+  --acs-border: #E2E8F0;
+  --acs-blue: #145DFF;
+  --acs-blue-soft: #DBEAFE;
+  --acs-radius: 12px;
+  --acs-radius-lg: 18px;
+  --acs-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  display: block;
+  background: var(--acs-bg);
+  color: var(--acs-fg);
+  font-family: 'Sora', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+.al-shell { display: flex; flex-direction: column; min-height: 100vh; }
+.al-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* ─── Header ─────────────────────────────────────────────────────── */
+.al-shell-header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 180ms var(--acs-ease), background 180ms var(--acs-ease);
+}
+.al-shell-header.is-scrolled {
+  border-bottom-color: var(--acs-border);
+  background: rgba(255, 255, 255, 0.98);
+}
+.al-shell-header__inner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 72px; gap: 24px;
+}
+.al-shell-brand { display: inline-flex; align-items: center; text-decoration: none; }
+.al-shell-logo { height: 32px; width: auto; max-width: 140px; object-fit: contain; }
+
+.al-shell-nav { display: flex; align-items: center; gap: 28px; flex: 1; justify-content: center; }
+.al-shell-nav__list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; gap: 28px; align-items: center;
+}
+.al-shell-nav__list a {
+  font-size: 14px; font-weight: 500; color: var(--acs-fg-soft);
+  text-decoration: none; transition: color 150ms var(--acs-ease);
+}
+.al-shell-nav__list a:hover { color: var(--acs-fg); }
+.al-shell-nav__actions { display: none; }
+
+.al-shell-actions { display: flex; align-items: center; gap: 10px; }
+.al-shell-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 9px 16px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 600;
+  text-decoration: none; cursor: pointer; border: 1px solid transparent;
+  transition: all 150ms var(--acs-ease);
+}
+.al-shell-btn--ghost {
+  color: var(--acs-fg-soft); background: transparent;
+}
+.al-shell-btn--ghost:hover { color: var(--acs-fg); background: var(--acs-bg-soft); }
+.al-shell-btn--primary {
+  color: #fff; background: var(--acs-blue);
+}
+.al-shell-btn--primary:hover { background: #0F4ACC; }
+
+.al-shell-burger {
+  display: none;
+  width: 40px; height: 40px;
+  background: transparent; border: 1px solid var(--acs-border); border-radius: 8px;
+  cursor: pointer; padding: 0;
+  flex-direction: column; gap: 4px; align-items: center; justify-content: center;
+}
+.al-shell-burger span {
+  display: block; width: 18px; height: 2px;
+  background: var(--acs-fg-soft); border-radius: 2px;
+}
+
+/* ─── Main ──────────────────────────────────────────────────────── */
+.al-shell-main { flex: 1; }
+
+/* ─── Footer ────────────────────────────────────────────────────── */
+.al-shell-footer {
+  margin-top: 80px; padding: 56px 0 32px;
+  background: var(--acs-bg-soft);
+  border-top: 1px solid var(--acs-border);
+}
+.al-shell-footer__grid {
+  display: grid; grid-template-columns: 1.5fr 2fr; gap: 56px;
+  margin-bottom: 40px;
+}
+.al-shell-footer__brand { display: flex; flex-direction: column; gap: 16px; }
+.al-shell-footer__logo { height: 36px; width: auto; max-width: 140px; object-fit: contain; }
+.al-shell-footer__tagline {
+  font-size: 14px; color: var(--acs-fg-muted); line-height: 1.5; margin: 0;
+  max-width: 360px;
+}
+.al-shell-footer__cols {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 32px;
+}
+.al-shell-footer__col h3 {
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--acs-fg); margin: 0 0 12px;
+}
+.al-shell-footer__col ul {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.al-shell-footer__col a {
+  font-size: 14px; color: var(--acs-fg-soft); text-decoration: none;
+  transition: color 150ms var(--acs-ease);
+}
+.al-shell-footer__col a:hover { color: var(--acs-blue); }
+
+.al-shell-footer__bottom {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+  padding-top: 24px; border-top: 1px solid var(--acs-border);
+}
+.al-shell-footer__copy { margin: 0; font-size: 13px; color: var(--acs-fg-muted); }
+.al-shell-footer__legal {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; gap: 20px; flex-wrap: wrap;
+}
+.al-shell-footer__legal a { font-size: 13px; color: var(--acs-fg-muted); text-decoration: none; }
+.al-shell-footer__legal a:hover { color: var(--acs-blue); }
+
+/* ─── Skeleton mientras carga ──────────────────────────────────── */
+.al-shell-skeleton {
+  max-width: 600px; margin: 120px auto; padding: 0 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.al-shell-skeleton__bar {
+  height: 24px; border-radius: 8px;
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 200% 100%;
+  animation: al-shell-shimmer 1.5s infinite;
+}
+.al-shell-skeleton__bar--sm { width: 60%; }
+@keyframes al-shell-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Mobile ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .al-shell-nav {
+    position: fixed; inset: 72px 0 auto 0;
+    background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(14px);
+    padding: 20px 24px; border-bottom: 1px solid var(--acs-border);
+    flex-direction: column; align-items: stretch; gap: 16px;
+    transform: translateY(-12px); opacity: 0; pointer-events: none;
+    transition: all 220ms var(--acs-ease);
+  }
+  .al-shell-nav.is-open {
+    transform: translateY(0); opacity: 1; pointer-events: auto;
+  }
+  .al-shell-nav__list { flex-direction: column; gap: 4px; }
+  .al-shell-nav__list a { display: block; padding: 12px 0; font-size: 15px; }
+  .al-shell-nav__actions {
+    display: flex; flex-direction: column; gap: 10px;
+    padding-top: 16px; border-top: 1px solid var(--acs-border);
+  }
+  .al-shell-nav__actions .al-shell-btn { width: 100%; justify-content: center; padding: 12px; }
+  .al-shell-burger { display: inline-flex; }
+  .al-shell-actions .al-shell-btn--ghost { display: none; }
+  .al-shell-footer__grid { grid-template-columns: 1fr; gap: 40px; }
+}
+@media (max-width: 640px) {
+  .al-shell-header__inner { height: 64px; }
+  .al-shell-nav { inset: 64px 0 auto 0; }
+}

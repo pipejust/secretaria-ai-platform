@@ -41,14 +41,19 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONTENT: Dict[str, Any] = {
     # ─── Header / Navegación ─────────────────────────────────────────────
     "nav": {
+        # Items del menú principal. El frontend interpreta:
+        #   - anchor empezando con "#" → smooth-scroll a sección de la home
+        #   - anchor empezando con "/" → routerLink a página independiente
+        # Las nuevas páginas (/producto, /soluciones, /precios, etc.) tienen
+        # contenido editable más abajo (product_page, solutions_page, etc.).
         "items": [
-            {"label": "Producto", "anchor": "#features"},
-            {"label": "Cómo funciona", "anchor": "#flow"},
+            {"label": "Producto", "anchor": "/producto"},
+            {"label": "Soluciones", "anchor": "/soluciones"},
             {"label": "Integraciones", "anchor": "#integrations"},
-            {"label": "Precios", "anchor": "#pricing"},
-            {"label": "Recursos", "anchor": "#resources"},
-            {"label": "Empresa", "anchor": "#company"},
-            {"label": "Contacto", "anchor": "#contact"},
+            {"label": "Precios", "anchor": "/precios"},
+            {"label": "Recursos", "anchor": "/recursos"},
+            {"label": "Empresa", "anchor": "/empresa"},
+            {"label": "Contacto", "anchor": "/contacto"},
         ],
         "cta_label": "Solicitar demo",
         "login_label": "Iniciar sesión",
@@ -399,6 +404,214 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             {"label": "Riesgo identificado", "tone": "warning"},
             {"label": "Documento generado", "tone": "success"},
         ],
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # PÁGINAS DEDICADAS — cada una se renderiza en su propia ruta
+    # (/producto, /soluciones, /precios, /recursos, /empresa, /casos/:slug,
+    # /demo, /contacto) por componentes Angular que leen estas keys.
+    # ─────────────────────────────────────────────────────────────────────
+
+    # ─── /producto ───────────────────────────────────────────────────────
+    "product_page": {
+        "eyebrow": "Producto",
+        "title": "Todo lo que necesitas para transformar reuniones en resultados accionables.",
+        "subtitle": (
+            "Acten conecta cada etapa de la conversación con su impacto: captura, "
+            "interpreta, organiza y da seguimiento. Sin trabajo manual."
+        ),
+        "blocks": [
+            {
+                "title": "Captura e inteligencia",
+                "items": [
+                    "Transcripción multilenguaje",
+                    "Identificación de hablantes, temas y contexto",
+                    "Detección de momentos clave",
+                    "Reconocimiento de intenciones",
+                ],
+            },
+            {
+                "title": "Estructura y organización",
+                "items": [
+                    "Resúmenes ejecutivos",
+                    "Decisiones y riesgos",
+                    "Tareas con responsables",
+                    "Línea de tiempo",
+                ],
+            },
+            {
+                "title": "Documentos y comunicación",
+                "items": [
+                    "Actas profesionales",
+                    "Reportes personalizados",
+                    "Plantillas reutilizables",
+                    "Envío automático por correo",
+                ],
+            },
+            {
+                "title": "Seguimiento y control",
+                "items": [
+                    "Estado de tareas",
+                    "Recordatorios automáticos",
+                    "Historial completo",
+                    "Métricas y analítica",
+                ],
+            },
+        ],
+        "cta_title": "Conoce Acten en acción",
+        "cta_subtitle": "Pídenos una demo y vemos cómo aplica a tu equipo.",
+        "cta_label": "Solicitar demo",
+        "cta_url": "/demo",
+    },
+
+    # ─── /soluciones ─────────────────────────────────────────────────────
+    "solutions_page": {
+        "eyebrow": "Soluciones",
+        "title": "Acten se adapta a cada equipo, industria y necesidad.",
+        "subtitle": "",
+        "audiences": [
+            {
+                "key": "equipos",
+                "title": "Equipos de trabajo",
+                "description": "Reuniones internas que terminan en decisiones y compromisos claros.",
+                "icon": "users",
+            },
+            {
+                "key": "empresas",
+                "title": "Empresas",
+                "description": "Visibilidad cross-equipo, trazabilidad para liderazgo, governance.",
+                "icon": "building",
+            },
+            {
+                "key": "publico",
+                "title": "Instituciones públicas",
+                "description": "Cumplimiento, auditoría y memoria institucional de cada sesión.",
+                "icon": "shield",
+            },
+        ],
+        "use_cases_title": "Casos de uso populares",
+        "use_cases": [
+            {"title": "Reuniones de proyecto", "description": "Alineación, decisiones y entregables."},
+            {"title": "Comités ejecutivos", "description": "Memoria institucional y trazabilidad."},
+            {"title": "Ventas y cliente", "description": "Followup automático tras cada llamada."},
+            {"title": "Recursos humanos", "description": "Procesos de selección y feedback estructurado."},
+            {"title": "Producto / Discovery", "description": "Captura de insights y prioridades."},
+            {"title": "Atención al cliente", "description": "Casos resueltos con contexto completo."},
+        ],
+        "industries_title": "Soluciones para cada industria",
+        "industries": [
+            {"key": "tech", "title": "Tecnología", "icon": "code"},
+            {"key": "fin", "title": "Finanzas", "icon": "chart"},
+            {"key": "health", "title": "Salud", "icon": "health"},
+            {"key": "edu", "title": "Educación", "icon": "book"},
+            {"key": "manu", "title": "Manufactura", "icon": "factory"},
+            {"key": "public", "title": "Sector público", "icon": "gov"},
+        ],
+    },
+
+    # ─── /empresa  ─── (case studies grid) ───────────────────────────────
+    "case_studies": {
+        "eyebrow": "Empresas",
+        "title": "Historias reales que confían en Acten.",
+        "subtitle": "",
+        "items": [
+            {
+                "slug": "technova",
+                "company": "TechNova",
+                "logo_url": "",
+                "tagline": "Reuniones de proyecto",
+                "summary": "MTPs nuevas llegaban sin seguimiento. Ahora cada acción se ejecuta.",
+                "kpis": [
+                    {"label": "Usuarios activos", "value": "10K+"},
+                    {"label": "Reuniones procesadas", "value": "2.5M+"},
+                    {"label": "Satisfacción", "value": "98%"},
+                    {"label": "Países", "value": "120+"},
+                ],
+                "sectors_served": ["Comités ejecutivos", "Ventas y cliente", "Recursos humanos", "Educación"],
+            },
+            {
+                "slug": "buildfast",
+                "company": "BuildFast",
+                "logo_url": "",
+                "tagline": "Toma de decisiones",
+                "summary": "Reuniones de equipo con seguimiento real y trazabilidad ejecutiva.",
+                "kpis": [],
+                "sectors_served": [],
+            },
+            {
+                "slug": "datacore",
+                "company": "DataCore",
+                "logo_url": "",
+                "tagline": "Atención al cliente",
+                "summary": "Calls comerciales que terminan con followup automático en CRM.",
+                "kpis": [],
+                "sectors_served": [],
+            },
+        ],
+    },
+
+    # ─── /casos/:slug — detalle de caso de uso ─────────────────────────
+    "case_study_detail": {
+        "eyebrow": "Caso de uso",
+        # Plantilla genérica — el componente popula con el caso real
+        # buscando por slug en case_studies.items. Estos campos son los
+        # labels editables.
+        "challenge_label": "El desafío",
+        "solution_label": "Con Acten",
+        "results_label": "Resultados",
+        "other_cases_label": "Otros casos de uso",
+    },
+
+    # ─── /demo ──────────────────────────────────────────────────────────
+    "demo_page": {
+        "eyebrow": "Solicita una demo personalizada",
+        "title": "Descubre cómo Acten puede transformar la productividad de tu equipo.",
+        "subtitle": "",
+        "bullets": [
+            "Cómo funciona Acten en tiempo real",
+            "Cómo se adapta a tu operación",
+            "Cómo lo integramos con tus herramientas",
+            "Plan de implementación recomendado",
+        ],
+        "form_name_label": "Nombre completo",
+        "form_email_label": "Correo corporativo",
+        "form_company_label": "Empresa",
+        "form_role_label": "Cargo",
+        "form_team_size_label": "Tamaño del equipo",
+        "form_team_size_options": ["1-10", "11-50", "51-200", "201-1000", "1000+"],
+        "form_use_case_label": "¿Cuál es tu caso de uso principal?",
+        "form_message_label": "Mensaje (opcional)",
+        "form_cta_label": "Solicitar demo",
+        "form_success": "¡Recibimos tu solicitud! Te contactamos en menos de 24h hábiles.",
+        "form_error": "No pudimos enviar tu mensaje. Escríbenos directo a hola@acten.app.",
+        "privacy_label": "Acepto la Política de Privacidad",
+        "privacy_url": "/privacy",
+    },
+
+    # ─── /contacto ──────────────────────────────────────────────────────
+    "contact_page": {
+        "eyebrow": "Hablemos",
+        "title": "¿Tienes preguntas o quieres saber más?",
+        "subtitle": "Estamos aquí para ayudarte.",
+        "channels": [
+            {"label": "Ventas",   "value": "ventas@acten.app",    "icon": "mail"},
+            {"label": "Soporte",  "value": "soporte@acten.app",   "icon": "support"},
+            {"label": "WhatsApp", "value": "+1 (555) 123-4567",   "icon": "whatsapp"},
+        ],
+        "offices_title": "Oficinas",
+        "offices": [
+            {"city": "Madrid, España", "address": "Calle de Serrano 123"},
+            {"city": "Barcelona, España", "address": "Avenida Diagonal 456"},
+            {"city": "Ciudad de México, México", "address": "Av. Reforma 789"},
+        ],
+        "form_name_label": "Nombre completo",
+        "form_email_label": "Correo electrónico",
+        "form_company_label": "Empresa",
+        "form_message_label": "Mensaje",
+        "form_cta_label": "Enviar mensaje",
+        "form_success": "¡Mensaje enviado! Te respondemos pronto.",
+        "form_error": "No pudimos enviar tu mensaje. Intenta de nuevo o escríbenos a hola@acten.app.",
+        "privacy_label": "Acepto la Política de Privacidad",
     },
 
     # ─── Footer ──────────────────────────────────────────────────────────

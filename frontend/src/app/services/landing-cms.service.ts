@@ -199,6 +199,83 @@ export interface LandingContent {
     language_label?: string;
     copyright: string;
   };
+  // ─── Páginas dedicadas (rutas /producto, /soluciones, etc.) ─────────
+  product_page?: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    blocks: { title: string; items: string[] }[];
+    cta_title?: string;
+    cta_subtitle?: string;
+    cta_label?: string;
+    cta_url?: string;
+  };
+  solutions_page?: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    audiences: { key: string; title: string; description: string; icon: string }[];
+    use_cases_title?: string;
+    use_cases: { title: string; description: string }[];
+    industries_title?: string;
+    industries: { key: string; title: string; icon: string }[];
+  };
+  case_studies?: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    items: {
+      slug: string;
+      company: string;
+      logo_url?: string;
+      tagline: string;
+      summary: string;
+      kpis?: { label: string; value: string }[];
+      sectors_served?: string[];
+    }[];
+  };
+  case_study_detail?: {
+    eyebrow: string;
+    challenge_label: string;
+    solution_label: string;
+    results_label: string;
+    other_cases_label: string;
+  };
+  demo_page?: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    bullets: string[];
+    form_name_label: string;
+    form_email_label: string;
+    form_company_label: string;
+    form_role_label: string;
+    form_team_size_label?: string;
+    form_team_size_options?: string[];
+    form_use_case_label?: string;
+    form_message_label: string;
+    form_cta_label: string;
+    form_success: string;
+    form_error: string;
+    privacy_label?: string;
+    privacy_url?: string;
+  };
+  contact_page?: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    channels: { label: string; value: string; icon: string }[];
+    offices_title?: string;
+    offices: { city: string; address: string }[];
+    form_name_label: string;
+    form_email_label: string;
+    form_company_label: string;
+    form_message_label: string;
+    form_cta_label: string;
+    form_success: string;
+    form_error: string;
+    privacy_label?: string;
+  };
 }
 
 export interface ContactSubmission {
