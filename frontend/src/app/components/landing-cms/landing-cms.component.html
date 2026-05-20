@@ -887,6 +887,259 @@
                 </label>
             </section>
 
+            <!-- ═══════════════════════════════════════════════════════════
+                 PÁGINAS DEDICADAS — editores para las rutas /producto,
+                 /soluciones, /precios (ya editable en sección "Precios"),
+                 /recursos (ya editable en "Recursos"), /empresa (case
+                 studies), /casos/:slug, /demo, /contacto.
+                 ═══════════════════════════════════════════════════════════ -->
+
+            <!-- /producto -->
+            <section *ngIf="activeSection === 'product_page'" class="lcms-section">
+                <header class="lcms-section-head">
+                    <h2>/producto — Página de Producto</h2>
+                    <p class="lcms-section-hint">Bloques de capacidades agrupadas (4 secciones temáticas).</p>
+                </header>
+                <label class="lcms-field"><span class="lcms-field-label">Eyebrow</span>
+                    <input type="text" [(ngModel)]="productPage.eyebrow" maxlength="60"/>
+                </label>
+                <label class="lcms-field"><span class="lcms-field-label">Título</span>
+                    <input type="text" [(ngModel)]="productPage.title" maxlength="200"/>
+                </label>
+                <label class="lcms-field"><span class="lcms-field-label">Subtítulo</span>
+                    <textarea rows="2" [(ngModel)]="productPage.subtitle" maxlength="400"></textarea>
+                </label>
+                <h3 class="lcms-subheading">Bloques de capacidades</h3>
+                <div class="lcms-list lcms-list-cards">
+                    <div class="lcms-card" *ngFor="let b of productPage.blocks; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field"><span class="lcms-field-label">Título del bloque</span>
+                            <input type="text" [(ngModel)]="b.title" maxlength="80"/>
+                        </label>
+                        <h4 class="lcms-subheading-sm">Items</h4>
+                        <div class="lcms-list">
+                            <div class="lcms-list-row" *ngFor="let it of b.items; let j = index; trackBy: trackByIndex">
+                                <label class="lcms-field lcms-field-grow">
+                                    <input type="text" [(ngModel)]="b.items[j]" placeholder="Capacidad" maxlength="120"/>
+                                </label>
+                                <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeProductBlockItem(i, j)">×</button>
+                            </div>
+                        </div>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addProductBlockItem(i)">+ Añadir item</button>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" style="color:#c00;" (click)="removeProductBlock(i)">Eliminar bloque</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addProductBlock()">+ Añadir bloque</button>
+                <h3 class="lcms-subheading">CTA final</h3>
+                <label class="lcms-field"><span class="lcms-field-label">Título</span><input type="text" [(ngModel)]="productPage.cta_title" maxlength="120"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Subtítulo</span><input type="text" [(ngModel)]="productPage.cta_subtitle" maxlength="200"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Texto botón</span><input type="text" [(ngModel)]="productPage.cta_label" maxlength="40"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">URL botón</span><input type="text" [(ngModel)]="productPage.cta_url" placeholder="/demo"/></label>
+            </section>
+
+            <!-- /soluciones -->
+            <section *ngIf="activeSection === 'solutions_page'" class="lcms-section">
+                <header class="lcms-section-head">
+                    <h2>/soluciones — Audiencias, casos e industrias</h2>
+                    <p class="lcms-section-hint">3 audiencias arriba, grid de casos y grid oscuro de industrias.</p>
+                </header>
+                <label class="lcms-field"><span class="lcms-field-label">Eyebrow</span><input type="text" [(ngModel)]="solutionsPage.eyebrow" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Título</span><input type="text" [(ngModel)]="solutionsPage.title" maxlength="200"/></label>
+                <h3 class="lcms-subheading">Audiencias</h3>
+                <div class="lcms-list lcms-list-cards">
+                    <div class="lcms-card" *ngFor="let a of solutionsPage.audiences; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field"><span class="lcms-field-label">Título</span><input type="text" [(ngModel)]="a.title" maxlength="60"/></label>
+                        <label class="lcms-field"><span class="lcms-field-label">Descripción</span><input type="text" [(ngModel)]="a.description" maxlength="200"/></label>
+                        <label class="lcms-field"><span class="lcms-field-label">Icono</span>
+                            <select [(ngModel)]="a.icon">
+                                <option value="users">👥 users</option>
+                                <option value="building">🏢 building</option>
+                                <option value="shield">🛡 shield</option>
+                            </select>
+                        </label>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-sm" style="color:#c00;" (click)="removeAudience(i)">Eliminar</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addAudience()">+ Añadir audiencia</button>
+
+                <h3 class="lcms-subheading">Casos de uso</h3>
+                <label class="lcms-field"><span class="lcms-field-label">Título de la sección</span><input type="text" [(ngModel)]="solutionsPage.use_cases_title" maxlength="120"/></label>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let u of solutionsPage.use_cases; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="u.title" placeholder="Título" maxlength="80"/></label>
+                        <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="u.description" placeholder="Descripción" maxlength="160"/></label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeUseCase(i)">×</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addUseCase()">+ Añadir caso</button>
+
+                <h3 class="lcms-subheading">Industrias</h3>
+                <label class="lcms-field"><span class="lcms-field-label">Título de la sección</span><input type="text" [(ngModel)]="solutionsPage.industries_title" maxlength="120"/></label>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let ind of solutionsPage.industries; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="ind.title" placeholder="Título" maxlength="60"/></label>
+                        <label class="lcms-field">
+                            <select [(ngModel)]="ind.icon">
+                                <option value="code">💻 code</option>
+                                <option value="chart">📊 chart</option>
+                                <option value="health">🩺 health</option>
+                                <option value="book">📚 book</option>
+                                <option value="factory">🏭 factory</option>
+                                <option value="gov">🏛 gov</option>
+                            </select>
+                        </label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeIndustry(i)">×</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addIndustry()">+ Añadir industria</button>
+            </section>
+
+            <!-- /empresa — case studies grid -->
+            <section *ngIf="activeSection === 'case_studies'" class="lcms-section">
+                <header class="lcms-section-head">
+                    <h2>/empresa — Casos de éxito</h2>
+                    <p class="lcms-section-hint">Cada caso aparece como card en /empresa y tiene su propia página /casos/:slug.</p>
+                </header>
+                <label class="lcms-field"><span class="lcms-field-label">Eyebrow</span><input type="text" [(ngModel)]="caseStudies.eyebrow" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Título</span><input type="text" [(ngModel)]="caseStudies.title" maxlength="200"/></label>
+
+                <h3 class="lcms-subheading">Casos</h3>
+                <div class="lcms-list lcms-list-cards">
+                    <div class="lcms-card" *ngFor="let cs of caseStudies.items; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field"><span class="lcms-field-label">Empresa</span><input type="text" [(ngModel)]="cs.company" maxlength="80"/></label>
+                        <label class="lcms-field"><span class="lcms-field-label">Slug (URL)</span><input type="text" [(ngModel)]="cs.slug" pattern="[a-z0-9-]+" maxlength="60"/></label>
+                        <label class="lcms-field"><span class="lcms-field-label">Tagline</span><input type="text" [(ngModel)]="cs.tagline" maxlength="120"/></label>
+                        <label class="lcms-field"><span class="lcms-field-label">Resumen</span><textarea rows="2" [(ngModel)]="cs.summary" maxlength="500"></textarea></label>
+
+                        <h4 class="lcms-subheading-sm">KPIs</h4>
+                        <div class="lcms-list">
+                            <div class="lcms-list-row" *ngFor="let k of cs.kpis; let j = index; trackBy: trackByIndex">
+                                <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="k.value" placeholder="Valor (10K+)" maxlength="20"/></label>
+                                <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="k.label" placeholder="Etiqueta" maxlength="60"/></label>
+                                <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeCaseKpi(i, j)">×</button>
+                            </div>
+                        </div>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addCaseKpi(i)">+ KPI</button>
+
+                        <h4 class="lcms-subheading-sm">Sectores impactados</h4>
+                        <div class="lcms-list">
+                            <div class="lcms-list-row" *ngFor="let s of cs.sectors_served; let j = index; trackBy: trackByIndex">
+                                <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="cs.sectors_served![j]" placeholder="Sector" maxlength="80"/></label>
+                                <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeCaseSector(i, j)">×</button>
+                            </div>
+                        </div>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addCaseSector(i)">+ Sector</button>
+
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-sm" style="color:#c00; margin-top:12px;" (click)="removeCaseStudy(i)">Eliminar caso completo</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addCaseStudy()">+ Añadir caso</button>
+            </section>
+
+            <!-- /casos/:slug — labels del template de detalle -->
+            <section *ngIf="activeSection === 'case_study_detail'" class="lcms-section">
+                <header class="lcms-section-head">
+                    <h2>/casos/:slug — Plantilla de detalle</h2>
+                    <p class="lcms-section-hint">Labels editables del template — el contenido viene del case study seleccionado.</p>
+                </header>
+                <label class="lcms-field"><span class="lcms-field-label">Eyebrow</span><input type="text" [(ngModel)]="caseStudyDetail.eyebrow" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Etiqueta "Desafío"</span><input type="text" [(ngModel)]="caseStudyDetail.challenge_label" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Etiqueta "Solución"</span><input type="text" [(ngModel)]="caseStudyDetail.solution_label" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Etiqueta "Resultados"</span><input type="text" [(ngModel)]="caseStudyDetail.results_label" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Etiqueta "Otros casos"</span><input type="text" [(ngModel)]="caseStudyDetail.other_cases_label" maxlength="60"/></label>
+            </section>
+
+            <!-- /demo -->
+            <section *ngIf="activeSection === 'demo_page'" class="lcms-section">
+                <header class="lcms-section-head">
+                    <h2>/demo — Solicitar demo</h2>
+                    <p class="lcms-section-hint">Form de solicitud + bullets + labels.</p>
+                </header>
+                <label class="lcms-field"><span class="lcms-field-label">Eyebrow</span><input type="text" [(ngModel)]="demoPage.eyebrow" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Título</span><input type="text" [(ngModel)]="demoPage.title" maxlength="200"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Subtítulo</span><textarea rows="2" [(ngModel)]="demoPage.subtitle" maxlength="400"></textarea></label>
+
+                <h3 class="lcms-subheading">Bullets (lo que verás en la demo)</h3>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let b of demoPage.bullets; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="demoPage.bullets[i]" placeholder="Beneficio" maxlength="160"/></label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeDemoBullet(i)">×</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addDemoBullet()">+ Bullet</button>
+
+                <h3 class="lcms-subheading">Labels del formulario</h3>
+                <label class="lcms-field"><span class="lcms-field-label">Nombre</span><input type="text" [(ngModel)]="demoPage.form_name_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Email</span><input type="text" [(ngModel)]="demoPage.form_email_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Empresa</span><input type="text" [(ngModel)]="demoPage.form_company_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Cargo</span><input type="text" [(ngModel)]="demoPage.form_role_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Mensaje</span><input type="text" [(ngModel)]="demoPage.form_message_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Tamaño equipo (label)</span><input type="text" [(ngModel)]="demoPage.form_team_size_label" maxlength="80"/></label>
+
+                <h4 class="lcms-subheading-sm">Opciones de tamaño de equipo</h4>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let o of demoPage.form_team_size_options; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="demoPage.form_team_size_options![i]" placeholder="1-10" maxlength="20"/></label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeDemoTeamSize(i)">×</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addDemoTeamSize()">+ Opción</button>
+
+                <h3 class="lcms-subheading">Botón y mensajes</h3>
+                <label class="lcms-field"><span class="lcms-field-label">Texto botón</span><input type="text" [(ngModel)]="demoPage.form_cta_label" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Mensaje éxito</span><input type="text" [(ngModel)]="demoPage.form_success" maxlength="240"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Mensaje error</span><input type="text" [(ngModel)]="demoPage.form_error" maxlength="240"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Texto consent privacidad</span><input type="text" [(ngModel)]="demoPage.privacy_label" maxlength="200"/></label>
+            </section>
+
+            <!-- /contacto -->
+            <section *ngIf="activeSection === 'contact_page'" class="lcms-section">
+                <header class="lcms-section-head">
+                    <h2>/contacto — Hablemos</h2>
+                    <p class="lcms-section-hint">Canales (email/soporte/whatsapp), oficinas y formulario.</p>
+                </header>
+                <label class="lcms-field"><span class="lcms-field-label">Eyebrow</span><input type="text" [(ngModel)]="contactPage.eyebrow" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Título</span><input type="text" [(ngModel)]="contactPage.title" maxlength="200"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Subtítulo</span><input type="text" [(ngModel)]="contactPage.subtitle" maxlength="240"/></label>
+
+                <h3 class="lcms-subheading">Canales</h3>
+                <div class="lcms-list lcms-list-cards">
+                    <div class="lcms-card" *ngFor="let ch of contactPage.channels; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field"><span class="lcms-field-label">Etiqueta</span><input type="text" [(ngModel)]="ch.label" maxlength="40"/></label>
+                        <label class="lcms-field"><span class="lcms-field-label">Valor</span><input type="text" [(ngModel)]="ch.value" placeholder="email@empresa.com o +1 555..."/></label>
+                        <label class="lcms-field"><span class="lcms-field-label">Icono</span>
+                            <select [(ngModel)]="ch.icon">
+                                <option value="mail">✉ mail</option>
+                                <option value="support">🎧 support</option>
+                                <option value="whatsapp">💬 whatsapp</option>
+                            </select>
+                        </label>
+                        <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-sm" style="color:#c00;" (click)="removeContactChannel(i)">Eliminar</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addContactChannel()">+ Canal</button>
+
+                <h3 class="lcms-subheading">Oficinas</h3>
+                <label class="lcms-field"><span class="lcms-field-label">Título "Oficinas"</span><input type="text" [(ngModel)]="contactPage.offices_title" maxlength="60"/></label>
+                <div class="lcms-list">
+                    <div class="lcms-list-row" *ngFor="let o of contactPage.offices; let i = index; trackBy: trackByIndex">
+                        <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="o.city" placeholder="Ciudad" maxlength="80"/></label>
+                        <label class="lcms-field lcms-field-grow"><input type="text" [(ngModel)]="o.address" placeholder="Dirección" maxlength="200"/></label>
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeContactOffice(i)">×</button>
+                    </div>
+                </div>
+                <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addContactOffice()">+ Oficina</button>
+
+                <h3 class="lcms-subheading">Labels del formulario</h3>
+                <label class="lcms-field"><span class="lcms-field-label">Nombre</span><input type="text" [(ngModel)]="contactPage.form_name_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Email</span><input type="text" [(ngModel)]="contactPage.form_email_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Empresa</span><input type="text" [(ngModel)]="contactPage.form_company_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Mensaje</span><input type="text" [(ngModel)]="contactPage.form_message_label" maxlength="80"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Texto botón</span><input type="text" [(ngModel)]="contactPage.form_cta_label" maxlength="60"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Mensaje éxito</span><input type="text" [(ngModel)]="contactPage.form_success" maxlength="240"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Mensaje error</span><input type="text" [(ngModel)]="contactPage.form_error" maxlength="240"/></label>
+                <label class="lcms-field"><span class="lcms-field-label">Texto consent privacidad</span><input type="text" [(ngModel)]="contactPage.privacy_label" maxlength="200"/></label>
+            </section>
+
         </main>
     </div>
 
