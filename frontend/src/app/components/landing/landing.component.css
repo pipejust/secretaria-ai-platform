@@ -1020,6 +1020,196 @@ section[id] { scroll-margin-top: 88px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+ * 9.5. PRICING — sección de planes (one-page, anchor #pricing)
+ * ────────────────────────────────────────────────────────────────────────── */
+.al-pricing {
+  padding: 100px 0;
+  background: #fff;
+}
+.al-pricing__head { text-align: center; margin-bottom: 48px; max-width: 720px;
+                    margin-left: auto; margin-right: auto; }
+.al-pricing__head .al-section-title { margin: 12px 0 16px; }
+.al-pricing__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+.al-pricing__plan {
+  display: flex; flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--ac-border);
+  border-radius: 18px;
+  padding: 32px 28px;
+  transition: all 200ms var(--ac-ease);
+}
+.al-pricing__plan.is-featured {
+  border-color: var(--ac-blue);
+  box-shadow: 0 16px 40px -12px rgba(20, 93, 255, 0.22);
+  transform: translateY(-4px);
+}
+.al-pricing__plan-head h3 {
+  font-size: 1.35rem; font-weight: 700; color: var(--ac-fg);
+  margin: 0 0 8px; letter-spacing: -0.01em;
+}
+.al-pricing__plan-desc { font-size: 13.5px; color: var(--ac-fg-muted);
+                         line-height: 1.5; margin: 0 0 24px; }
+.al-pricing__price {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 20px 0; border-bottom: 1px solid var(--ac-border-soft); margin-bottom: 22px;
+}
+.al-pricing__amount {
+  font-size: 2.5rem; font-weight: 700;
+  color: var(--ac-fg); letter-spacing: -0.025em; line-height: 1;
+}
+.al-pricing__billing { font-size: 13px; color: var(--ac-fg-muted); }
+.al-pricing__features {
+  list-style: none; margin: 0 0 28px; padding: 0;
+  display: flex; flex-direction: column; gap: 12px; flex: 1;
+}
+.al-pricing__features li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 14px; color: var(--ac-fg-soft); line-height: 1.4;
+}
+.al-pricing__features svg { color: var(--ac-emerald); flex-shrink: 0; margin-top: 3px; }
+.al-pricing__cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 13px 18px; border-radius: 12px;
+  text-decoration: none; font-weight: 600; font-size: 14px;
+  background: var(--ac-surface-alt); color: var(--ac-fg);
+  border: 1px solid var(--ac-border);
+  transition: all 150ms var(--ac-ease);
+}
+.al-pricing__cta:hover { background: #E2E8F0; }
+.al-pricing__cta.is-featured {
+  background: var(--ac-blue); color: #fff; border-color: var(--ac-blue);
+}
+.al-pricing__cta.is-featured:hover { background: #0F4ACC; }
+.al-pricing__footnote {
+  text-align: center; font-size: 13px; color: var(--ac-fg-muted);
+  margin: 40px 0 0; padding-top: 28px;
+  border-top: 1px solid var(--ac-border-soft);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 9.6. RESOURCES — guías/casos/videos/blog (one-page, anchor #resources)
+ * ────────────────────────────────────────────────────────────────────────── */
+.al-resources {
+  padding: 100px 0;
+  background: var(--ac-surface-alt);
+}
+.al-resources__head { text-align: center; margin-bottom: 48px; max-width: 720px;
+                      margin-left: auto; margin-right: auto; }
+.al-resources__head .al-section-title { margin: 12px 0 16px; }
+.al-resources__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.al-resources__card {
+  background: #fff; border: 1px solid var(--ac-border); border-radius: 16px;
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 12px;
+  transition: all 200ms var(--ac-ease);
+}
+.al-resources__card:hover {
+  transform: translateY(-3px);
+  border-color: var(--ac-blue);
+  box-shadow: 0 12px 28px -12px rgba(15, 23, 42, 0.14);
+}
+.al-resources__cat {
+  display: inline-block; padding: 4px 12px;
+  background: var(--ac-blue-soft); color: var(--ac-blue);
+  font-size: 11.5px; font-weight: 600; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  width: fit-content;
+}
+.al-resources__title {
+  font-size: 1.1rem; font-weight: 600; color: var(--ac-fg);
+  margin: 0; line-height: 1.3;
+}
+.al-resources__desc {
+  font-size: 14px; color: var(--ac-fg-muted); line-height: 1.5;
+  margin: 0; flex: 1;
+}
+.al-resources__link {
+  font-size: 14px; font-weight: 600; color: var(--ac-blue);
+  text-decoration: none; margin-top: 4px;
+}
+.al-resources__link:hover { text-decoration: underline; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 9.7. COMPANY — empresas que confían (case studies grid, anchor #company)
+ * ────────────────────────────────────────────────────────────────────────── */
+.al-company {
+  padding: 100px 0;
+  background: #fff;
+}
+.al-company__head { text-align: center; margin-bottom: 48px; max-width: 720px;
+                    margin-left: auto; margin-right: auto; }
+.al-company__head .al-section-title { margin: 12px 0 16px; }
+.al-company__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+.al-company__card {
+  background: var(--ac-surface-alt);
+  border: 1px solid var(--ac-border);
+  border-radius: 16px;
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 16px;
+  transition: all 200ms var(--ac-ease);
+}
+.al-company__card:hover {
+  transform: translateY(-3px);
+  border-color: #CBD5E1;
+  box-shadow: 0 12px 28px -12px rgba(15, 23, 42, 0.16);
+}
+.al-company__card-head {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.al-company__card-head h3 {
+  font-size: 1.25rem; font-weight: 700; color: var(--ac-fg); margin: 0;
+}
+.al-company__tag {
+  background: var(--ac-blue-soft); color: var(--ac-blue);
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
+}
+.al-company__summary {
+  font-size: 14.5px; color: var(--ac-fg-soft); line-height: 1.5; margin: 0;
+}
+.al-company__kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+  padding: 16px 0; border-top: 1px solid var(--ac-border-soft);
+  border-bottom: 1px solid var(--ac-border-soft);
+}
+.al-company__kpi { display: flex; flex-direction: column; gap: 2px; }
+.al-company__kpi-val {
+  font-size: 1.5rem; font-weight: 700; color: var(--ac-fg);
+  letter-spacing: -0.02em; line-height: 1;
+}
+.al-company__kpi-lbl {
+  font-size: 12px; color: var(--ac-fg-muted); line-height: 1.2;
+}
+.al-company__sectors {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.al-company__sector {
+  background: #fff; color: var(--ac-fg-soft);
+  padding: 4px 10px; border-radius: 6px; font-size: 12px;
+  border: 1px solid var(--ac-border);
+}
+
+/* Responsive: paddings y grids 1-col en mobile para las 3 secciones nuevas. */
+@media (max-width: 768px) {
+  .al-pricing, .al-resources, .al-company { padding: 70px 0; }
+  .al-pricing__plan { padding: 26px 22px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
  * 10. Testimonials — cards elegantes con quote, populadas con personas reales
  * ────────────────────────────────────────────────────────────────────────── */
 .al-testimonials {

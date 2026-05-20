@@ -41,19 +41,17 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONTENT: Dict[str, Any] = {
     # ─── Header / Navegación ─────────────────────────────────────────────
     "nav": {
-        # Items del menú principal. El frontend interpreta:
-        #   - anchor empezando con "#" → smooth-scroll a sección de la home
-        #   - anchor empezando con "/" → routerLink a página independiente
-        # Las nuevas páginas (/producto, /soluciones, /precios, etc.) tienen
-        # contenido editable más abajo (product_page, solutions_page, etc.).
+        # One-page landing: todos los items son scroll-anchors a secciones
+        # que existen dentro de landing.component.html (#features, #flow,
+        # #integrations, #pricing, #resources, #company, #contact).
         "items": [
-            {"label": "Producto", "anchor": "/producto"},
-            {"label": "Soluciones", "anchor": "/soluciones"},
+            {"label": "Producto", "anchor": "#features"},
+            {"label": "Cómo funciona", "anchor": "#flow"},
             {"label": "Integraciones", "anchor": "#integrations"},
-            {"label": "Precios", "anchor": "/precios"},
-            {"label": "Recursos", "anchor": "/recursos"},
-            {"label": "Empresa", "anchor": "/empresa"},
-            {"label": "Contacto", "anchor": "/contacto"},
+            {"label": "Precios", "anchor": "#pricing"},
+            {"label": "Recursos", "anchor": "#resources"},
+            {"label": "Empresa", "anchor": "#company"},
+            {"label": "Contacto", "anchor": "#contact"},
         ],
         "cta_label": "Solicitar demo",
         "login_label": "Iniciar sesión",
@@ -407,12 +405,17 @@ DEFAULT_CONTENT: Dict[str, Any] = {
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # PÁGINAS DEDICADAS — cada una se renderiza en su propia ruta
-    # (/producto, /soluciones, /precios, /recursos, /empresa, /casos/:slug,
-    # /demo, /contacto) por componentes Angular que leen estas keys.
+    # ONE-PAGE: secciones #pricing, #resources, #company viven inline en
+    # landing.component.html. La sección #company renderiza el grid de
+    # `case_studies.items` (editable desde el CMS, tab "Casos de éxito").
+    #
+    # NOTA: product_page / solutions_page / case_study_detail / demo_page /
+    # contact_page existen en este DEFAULT_CONTENT por compatibilidad con
+    # tenants viejos que los tengan persistidos en landing_content_json,
+    # pero la UI actual NO los renderiza (la landing es one-page).
     # ─────────────────────────────────────────────────────────────────────
 
-    # ─── /producto ───────────────────────────────────────────────────────
+    # ─── product_page (legacy, no se renderiza) ──────────────────────────
     "product_page": {
         "eyebrow": "Producto",
         "title": "Todo lo que necesitas para transformar reuniones en resultados accionables.",

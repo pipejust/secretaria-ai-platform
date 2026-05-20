@@ -52,16 +52,10 @@ type SectionKey =
     | 'pricing'
     | 'resources'
     | 'company'
+    | 'case_studies'  // grid de empresas que aparece en la sección #company
     | 'contact'
     | 'final_cta'
-    | 'footer'
-    // ─── Páginas dedicadas (nuevas rutas /producto, /soluciones, etc) ───
-    | 'product_page'
-    | 'solutions_page'
-    | 'case_studies'
-    | 'case_study_detail'
-    | 'demo_page'
-    | 'contact_page';
+    | 'footer';
 
 interface SectionMeta {
     key: SectionKey;
@@ -204,42 +198,11 @@ export class LandingCmsComponent implements OnInit {
                 'M3 6h18',
             ],
         },
-        // ─── Páginas dedicadas — separador visual antes de estas. ─────
-        {
-            key: 'product_page',
-            label: '/producto',
-            hint: 'Página de Producto — bloques de capacidades',
-            iconPaths: ['M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'],
-        },
-        {
-            key: 'solutions_page',
-            label: '/soluciones',
-            hint: 'Audiencias + casos de uso + industrias',
-            iconPaths: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'],
-        },
         {
             key: 'case_studies',
-            label: '/empresa',
-            hint: 'Grid de case studies (visibles en /empresa)',
+            label: 'Casos de éxito',
+            hint: 'Grid de empresas que confían (sección #company de la home)',
             iconPaths: ['M3 21h18', 'M5 21V7l8-4v18', 'M19 21V11l-6-4'],
-        },
-        {
-            key: 'case_study_detail',
-            label: '/casos/:slug',
-            hint: 'Plantilla de detalle de caso de uso',
-            iconPaths: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6'],
-        },
-        {
-            key: 'demo_page',
-            label: '/demo',
-            hint: 'Página de solicitar demo (form)',
-            iconPaths: ['M22 11.08V12a10 10 0 1 1-5.93-9.14', 'M22 4L12 14.01l-3-3'],
-        },
-        {
-            key: 'contact_page',
-            label: '/contacto',
-            hint: 'Página de Hablemos (channels + oficinas + form)',
-            iconPaths: ['M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z'],
         },
     ];
 
@@ -561,67 +524,14 @@ export class LandingCmsComponent implements OnInit {
     }
 
     // ────────────────────────────────────────────────────────────────────
-    // Helpers para las páginas dedicadas — initialize-if-missing porque
-    // tenants viejos pueden no tener estas keys en su landing_content_json
-    // (los defaults nuevos se inyectan solo en la primera lectura del
-    // backend). Defensive: garantizan la shape antes de mutar.
+    // Helpers para case_studies (sección #company de la home one-page).
+    // ensureCaseStudies garantiza shape antes de mutar (tenants viejos
+    // pueden no tener la key en su landing_content_json todavía).
     // ────────────────────────────────────────────────────────────────────
-    /** Getter público para el template — garantiza shape. */
-    get productPage(): NonNullable<LandingContent['product_page']> { return this.ensureProductPage(); }
-    get solutionsPage(): NonNullable<LandingContent['solutions_page']> { return this.ensureSolutionsPage(); }
     get caseStudies(): NonNullable<LandingContent['case_studies']> { return this.ensureCaseStudies(); }
-    get caseStudyDetail(): NonNullable<LandingContent['case_study_detail']> { return this.ensureCaseStudyDetail(); }
-    get demoPage(): NonNullable<LandingContent['demo_page']> { return this.ensureDemoPage(); }
-    get contactPage(): NonNullable<LandingContent['contact_page']> { return this.ensureContactPage(); }
 
-    private ensureProductPage(): NonNullable<LandingContent['product_page']> {
-        if (!this.content!.product_page) {
-            this.content!.product_page = {
-                eyebrow: '', title: '', subtitle: '', blocks: [],
-                cta_title: '', cta_subtitle: '', cta_label: '', cta_url: '/demo',
-            };
-        }
-        return this.content!.product_page!;
-    }
-    addProductBlock(): void {
-        if (!this.content) return;
-        this.ensureProductPage().blocks.push({ title: 'Nuevo bloque', items: ['Capacidad 1'] });
-    }
-    removeProductBlock(idx: number): void {
-        this.ensureProductPage().blocks.splice(idx, 1);
-    }
-    addProductBlockItem(blockIdx: number): void {
-        this.ensureProductPage().blocks[blockIdx]?.items.push('');
-    }
-    removeProductBlockItem(blockIdx: number, itemIdx: number): void {
-        this.ensureProductPage().blocks[blockIdx]?.items.splice(itemIdx, 1);
-    }
 
-    private ensureSolutionsPage(): NonNullable<LandingContent['solutions_page']> {
-        if (!this.content!.solutions_page) {
-            this.content!.solutions_page = {
-                eyebrow: '', title: '', subtitle: '',
-                audiences: [], use_cases: [], industries: [],
-                use_cases_title: '', industries_title: '',
-            };
-        }
-        return this.content!.solutions_page!;
-    }
-    addAudience(): void {
-        this.ensureSolutionsPage().audiences.push({
-            key: 'nueva', title: 'Nueva audiencia', description: '', icon: 'users',
-        });
-    }
-    removeAudience(idx: number): void { this.ensureSolutionsPage().audiences.splice(idx, 1); }
-    addUseCase(): void {
-        this.ensureSolutionsPage().use_cases.push({ title: 'Nuevo caso', description: '' });
-    }
-    removeUseCase(idx: number): void { this.ensureSolutionsPage().use_cases.splice(idx, 1); }
-    addIndustry(): void {
-        this.ensureSolutionsPage().industries.push({ key: 'nueva', title: 'Nueva industria', icon: 'code' });
-    }
-    removeIndustry(idx: number): void { this.ensureSolutionsPage().industries.splice(idx, 1); }
-
+    // ── Helpers case_studies ──────────────────────────────────────
     private ensureCaseStudies(): NonNullable<LandingContent['case_studies']> {
         if (!this.content!.case_studies) {
             this.content!.case_studies = { eyebrow: '', title: '', subtitle: '', items: [] };
@@ -656,76 +566,5 @@ export class LandingCmsComponent implements OnInit {
     }
     removeCaseSector(caseIdx: number, secIdx: number): void {
         this.ensureCaseStudies().items[caseIdx]?.sectors_served?.splice(secIdx, 1);
-    }
-
-    private ensureDemoPage(): NonNullable<LandingContent['demo_page']> {
-        if (!this.content!.demo_page) {
-            this.content!.demo_page = {
-                eyebrow: '', title: '', subtitle: '', bullets: [],
-                form_name_label: 'Nombre completo',
-                form_email_label: 'Correo corporativo',
-                form_company_label: 'Empresa',
-                form_role_label: 'Cargo',
-                form_message_label: 'Mensaje',
-                form_cta_label: 'Solicitar demo',
-                form_success: '¡Recibimos tu solicitud!',
-                form_error: 'No pudimos enviar tu mensaje.',
-                form_team_size_options: [], privacy_label: '',
-            };
-        }
-        return this.content!.demo_page!;
-    }
-    addDemoBullet(): void { this.ensureDemoPage().bullets.push(''); }
-    removeDemoBullet(idx: number): void { this.ensureDemoPage().bullets.splice(idx, 1); }
-    addDemoTeamSize(): void {
-        const dp = this.ensureDemoPage();
-        dp.form_team_size_options = dp.form_team_size_options || [];
-        dp.form_team_size_options.push('');
-    }
-    removeDemoTeamSize(idx: number): void {
-        this.ensureDemoPage().form_team_size_options?.splice(idx, 1);
-    }
-
-    private ensureContactPage(): NonNullable<LandingContent['contact_page']> {
-        if (!this.content!.contact_page) {
-            this.content!.contact_page = {
-                eyebrow: '', title: '', subtitle: '',
-                channels: [], offices: [],
-                form_name_label: 'Nombre completo',
-                form_email_label: 'Correo electrónico',
-                form_company_label: 'Empresa',
-                form_message_label: 'Mensaje',
-                form_cta_label: 'Enviar mensaje',
-                form_success: '¡Mensaje enviado!',
-                form_error: 'No pudimos enviar tu mensaje.',
-                offices_title: 'Oficinas', privacy_label: '',
-            };
-        }
-        return this.content!.contact_page!;
-    }
-    addContactChannel(): void {
-        this.ensureContactPage().channels.push({ label: 'Nuevo canal', value: '', icon: 'mail' });
-    }
-    removeContactChannel(idx: number): void {
-        this.ensureContactPage().channels.splice(idx, 1);
-    }
-    addContactOffice(): void {
-        this.ensureContactPage().offices.push({ city: 'Nueva ciudad', address: '' });
-    }
-    removeContactOffice(idx: number): void {
-        this.ensureContactPage().offices.splice(idx, 1);
-    }
-
-    private ensureCaseStudyDetail(): NonNullable<LandingContent['case_study_detail']> {
-        if (!this.content!.case_study_detail) {
-            this.content!.case_study_detail = {
-                eyebrow: 'Caso de uso',
-                challenge_label: 'El desafío',
-                solution_label: 'Con Acten',
-                results_label: 'Resultados',
-                other_cases_label: 'Otros casos de uso',
-            };
-        }
-        return this.content!.case_study_detail!;
     }
 }

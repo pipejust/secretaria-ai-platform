@@ -152,13 +152,6 @@ export class LandingComponent implements OnInit {
         if (event) event.preventDefault();
         this.mobileMenuOpen = false;
         if (!anchor) return;
-        // Rutas absolutas (/producto, /soluciones, etc.) → router navigate.
-        // Esto permite que el CMS use el mismo array nav.items para anchors
-        // a secciones de la home (#features) Y para páginas dedicadas (/precios).
-        if (anchor.startsWith('/')) {
-            this.router.navigateByUrl(anchor);
-            return;
-        }
         const id = anchor.replace(/^#/, '');
         const el = document.getElementById(id);
         if (el) {

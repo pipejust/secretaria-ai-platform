@@ -537,6 +537,107 @@
     </section>
 
     <!-- ================================================================
+         PRICING — planes de la plataforma. Contenido en c.pricing.
+         Se oculta entera si no hay planes en el CMS.
+         ================================================================ -->
+    <section *ngIf="c.pricing?.plans?.length"
+             id="pricing" class="al-pricing" aria-labelledby="al-pricing-title">
+      <div class="al-container">
+        <div class="al-pricing__head">
+          <span class="al-eyebrow">{{ c.pricing.eyebrow }}</span>
+          <h2 id="al-pricing-title" class="al-section-title">{{ c.pricing.title }}</h2>
+          <p class="al-section-subtitle" *ngIf="c.pricing.subtitle">{{ c.pricing.subtitle }}</p>
+        </div>
+        <div class="al-pricing__grid">
+          <article *ngFor="let p of c.pricing.plans"
+                   class="al-pricing__plan" [class.is-featured]="p.featured">
+            <header class="al-pricing__plan-head">
+              <h3>{{ p.name }}</h3>
+              <p class="al-pricing__plan-desc">{{ p.description }}</p>
+            </header>
+            <div class="al-pricing__price">
+              <span class="al-pricing__amount">{{ p.price }}</span>
+              <span class="al-pricing__billing">{{ p.billing }}</span>
+            </div>
+            <ul class="al-pricing__features">
+              <li *ngFor="let f of p.features">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>{{ f }}</span>
+              </li>
+            </ul>
+            <a [href]="p.cta_anchor || '#contact'"
+               (click)="scrollTo(p.cta_anchor || '#contact', $event)"
+               class="al-pricing__cta" [class.is-featured]="p.featured">
+              {{ p.cta_label }}
+            </a>
+          </article>
+        </div>
+        <p class="al-pricing__footnote" *ngIf="c.pricing.footnote">{{ c.pricing.footnote }}</p>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         RESOURCES — guías, casos, videos, blog. Contenido en c.resources.
+         ================================================================ -->
+    <section *ngIf="c.resources?.items?.length"
+             id="resources" class="al-resources" aria-labelledby="al-resources-title">
+      <div class="al-container">
+        <div class="al-resources__head">
+          <span class="al-eyebrow">{{ c.resources.eyebrow }}</span>
+          <h2 id="al-resources-title" class="al-section-title">{{ c.resources.title }}</h2>
+          <p class="al-section-subtitle" *ngIf="c.resources.subtitle">{{ c.resources.subtitle }}</p>
+        </div>
+        <div class="al-resources__grid">
+          <article *ngFor="let r of c.resources.items" class="al-resources__card">
+            <span class="al-resources__cat">{{ r.category }}</span>
+            <h3 class="al-resources__title">{{ r.title }}</h3>
+            <p class="al-resources__desc">{{ r.description }}</p>
+            <a *ngIf="r.url && r.url !== '#'"
+               [href]="r.url" class="al-resources__link" target="_blank" rel="noopener">
+              Leer más →
+            </a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         COMPANY — empresas que confían en Acten (case studies grid).
+         Contenido en c.case_studies. Editable desde el CMS.
+         ================================================================ -->
+    <section *ngIf="c.case_studies?.items?.length"
+             id="company" class="al-company" aria-labelledby="al-company-title">
+      <div class="al-container">
+        <div class="al-company__head">
+          <span class="al-eyebrow">{{ c.case_studies.eyebrow }}</span>
+          <h2 id="al-company-title" class="al-section-title">{{ c.case_studies.title }}</h2>
+          <p class="al-section-subtitle" *ngIf="c.case_studies.subtitle">{{ c.case_studies.subtitle }}</p>
+        </div>
+        <div class="al-company__grid">
+          <article *ngFor="let cs of c.case_studies.items" class="al-company__card">
+            <div class="al-company__card-head">
+              <h3>{{ cs.company }}</h3>
+              <span class="al-company__tag">{{ cs.tagline }}</span>
+            </div>
+            <p class="al-company__summary">{{ cs.summary }}</p>
+            <div class="al-company__kpis" *ngIf="cs.kpis?.length">
+              <div *ngFor="let k of cs.kpis" class="al-company__kpi">
+                <span class="al-company__kpi-val">{{ k.value }}</span>
+                <span class="al-company__kpi-lbl">{{ k.label }}</span>
+              </div>
+            </div>
+            <div class="al-company__sectors" *ngIf="cs.sectors_served?.length">
+              <span *ngFor="let s of cs.sectors_served" class="al-company__sector">{{ s }}</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
          TESTIMONIALS — personas reales del sistema (endpoint /people).
          Si no hay personas, la sección se oculta completa.
          ================================================================ -->
