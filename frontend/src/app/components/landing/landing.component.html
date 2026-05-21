@@ -290,7 +290,7 @@
          Si no hay tenants con logo subido, ocultamos la sección entera
          en vez de mostrar wordmarks placeholder.
          ================================================================ -->
-    <section class="al-trust" aria-labelledby="al-trust-title" *ngIf="trustLogos.length > 0">
+    <section id="trust" class="al-trust" aria-labelledby="al-trust-title" *ngIf="trustLogos.length > 0">
       <div class="al-container">
         <p id="al-trust-title" class="al-trust__title">{{ c.trust.eyebrow }}</p>
         <ul class="al-trust__logos">
