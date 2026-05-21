@@ -50,9 +50,6 @@ type SectionKey =
     | 'integrations'
     | 'testimonials'
     | 'pricing'
-    | 'resources'
-    | 'company'
-    | 'case_studies'  // grid de empresas que aparece en la sección #company
     | 'contact'
     | 'final_cta'
     | 'footer';
@@ -153,25 +150,6 @@ export class LandingCmsComponent implements OnInit {
             ],
         },
         {
-            key: 'resources',
-            label: 'Recursos',
-            hint: 'Blog, guías, videos, casos',
-            iconPaths: [
-                'M4 19.5A2.5 2.5 0 0 1 6.5 17H20',
-                'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
-            ],
-        },
-        {
-            key: 'company',
-            label: 'Empresa',
-            hint: 'Quiénes somos, misión, valores, stats',
-            iconPaths: [
-                'M3 21h18',
-                'M5 21V7l8-4v18',
-                'M19 21V11l-6-4',
-            ],
-        },
-        {
             key: 'contact',
             label: 'Contacto',
             hint: 'Email, teléfono, formulario',
@@ -197,12 +175,6 @@ export class LandingCmsComponent implements OnInit {
                 'M3 12h18',
                 'M3 6h18',
             ],
-        },
-        {
-            key: 'case_studies',
-            label: 'Casos de éxito',
-            hint: 'Grid de empresas que confían (sección #company de la home)',
-            iconPaths: ['M3 21h18', 'M5 21V7l8-4v18', 'M19 21V11l-6-4'],
         },
     ];
 

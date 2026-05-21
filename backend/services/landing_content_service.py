@@ -43,14 +43,16 @@ DEFAULT_CONTENT: Dict[str, Any] = {
     "nav": {
         # One-page landing: todos los items son scroll-anchors a secciones
         # que existen dentro de landing.component.html (#features, #flow,
-        # #integrations, #pricing, #resources, #company, #contact).
+        # #integrations, #pricing, #trust, #contact).
+        # "Empresa" apunta a #trust ("Equipos de alto rendimiento que ya
+        # confían en Acten") porque es lo más cercano a una sección de
+        # casos de éxito en la home.
         "items": [
             {"label": "Producto", "anchor": "#features"},
             {"label": "Cómo funciona", "anchor": "#flow"},
             {"label": "Integraciones", "anchor": "#integrations"},
             {"label": "Precios", "anchor": "#pricing"},
-            {"label": "Recursos", "anchor": "#resources"},
-            {"label": "Empresa", "anchor": "#company"},
+            {"label": "Empresa", "anchor": "#trust"},
             {"label": "Contacto", "anchor": "#contact"},
         ],
         "cta_label": "Solicitar demo",
@@ -235,7 +237,7 @@ DEFAULT_CONTENT: Dict[str, Any] = {
                     "Correo a cada participante",
                     "Soporte por email",
                 ],
-                "cta_label": "Empezar prueba",
+                "cta_label": "Solicitar demo",
                 "cta_anchor": "#contact",
                 "featured": False,
             },
@@ -270,7 +272,7 @@ DEFAULT_CONTENT: Dict[str, Any] = {
                     "Onboarding dedicado",
                     "SLA de soporte 24/7",
                 ],
-                "cta_label": "Hablar con ventas",
+                "cta_label": "Solicitar demo",
                 "cta_anchor": "#contact",
                 "featured": False,
             },
