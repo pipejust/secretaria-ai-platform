@@ -87,8 +87,8 @@ services:
       # ── URLs públicas ───────────────────────────────────────────────
       # Estas URLs DEBEN coincidir con los dominios que Coolify (o Caddy)
       # apunta a cada servicio. Ej:
-      #   PUBLIC_BASE_URL = https://api.acten.ai
-      #   FRONTEND_URL    = https://app.acten.ai
+      #   PUBLIC_BASE_URL = https://api.acten.app
+      #   FRONTEND_URL    = https://app.acten.app
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set la URL pública del backend}
       FRONTEND_URL: ${FRONTEND_URL:?Set la URL pública del frontend}
 

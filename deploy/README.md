@@ -86,7 +86,7 @@ muestra el log. Si funciona → swap atómico, cero downtime.
 
 ## Pasos siguientes inmediatos
 
-1. **Decide tu dominio** (ej: `acten.ai`, `app.acten.com`, etc.).
+1. **Decide tu dominio** (ej: `acten.app`, `app.acten.com`, etc.).
 2. Lee [`HETZNER_COOLIFY.md`](./HETZNER_COOLIFY.md) — dura ~30 minutos
    leerlo y ~1 hora ejecutarlo end-to-end.
 3. Avísame cuando tengas el servidor creado y te ayudo con la config
