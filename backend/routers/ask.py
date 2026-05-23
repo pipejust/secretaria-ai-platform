@@ -622,7 +622,7 @@ async def ask(
     # el modelo ya verá esos mensajes en el array `messages` (más abajo) y
     # tratará la nueva pregunta como SEGUIMIENTO del hilo.
     convo_hint = ""
-    if req.prior_turns:
+    if payload.prior_turns:
         convo_hint = (
             "\nEsta es una pregunta de SEGUIMIENTO dentro de un hilo "
             "conversacional. Antes te llegarán los turnos previos del mismo "
@@ -719,8 +719,8 @@ async def ask(
     # user + assistant. Limitamos a los últimos 8 turnos para no inflar el
     # token budget; los más recientes son más relevantes para seguimientos.
     convo_messages = []
-    if req.prior_turns:
-        for t in req.prior_turns[-8:]:
+    if payload.prior_turns:
+        for t in payload.prior_turns[-8:]:
             convo_messages.append({"role": "user", "content": t.question})
             convo_messages.append({"role": "assistant", "content": t.answer})
 
