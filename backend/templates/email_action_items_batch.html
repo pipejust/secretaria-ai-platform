@@ -56,8 +56,8 @@
   {% if summary %}
   <div style="margin-top: 28px;">
     <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Resumen ejecutivo</h4>
-    <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-      {{ summary | linkify | safe }}
+    <div class="md-body" style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px 14px; border-radius: 6px; border: 1px solid #e5e7eb;">
+      {{ summary | markdown | safe }}
     </div>
   </div>
   {% endif %}
@@ -65,8 +65,8 @@
   {% if decisions %}
   <div style="margin-top: 18px;">
     <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Decisiones clave</h4>
-    <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-      {{ decisions | linkify | safe }}
+    <div class="md-body" style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px 14px; border-radius: 6px; border: 1px solid #e5e7eb;">
+      {{ decisions | markdown | safe }}
     </div>
   </div>
   {% endif %}
@@ -74,8 +74,8 @@
   {% if risks %}
   <div style="margin-top: 18px;">
     <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Riesgos identificados</h4>
-    <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-      {{ risks | linkify | safe }}
+    <div class="md-body" style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px 14px; border-radius: 6px; border: 1px solid #e5e7eb;">
+      {{ risks | markdown | safe }}
     </div>
   </div>
   {% endif %}
@@ -83,8 +83,8 @@
   {% if agreements %}
   <div style="margin-top: 18px;">
     <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Acuerdos</h4>
-    <div style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-      {{ agreements | linkify | safe }}
+    <div class="md-body" style="font-size: 14px; color: #4a4a4a; line-height: 1.6; background: #fafbfc; padding: 12px 14px; border-radius: 6px; border: 1px solid #e5e7eb;">
+      {{ agreements | markdown | safe }}
     </div>
   </div>
   {% endif %}
@@ -92,13 +92,20 @@
   {% if raw_transcript %}
   <div style="margin-top: 24px;">
     <h4 style="margin-bottom: 6px; color: #1f2937; font-size: 15px;">Transcripción de la reunión</h4>
+    {# NOTA: quitamos max-height + overflow-y:auto. Los clientes de email
+       (Gmail, Outlook, Apple Mail) no respetan overflow scroll dentro de
+       un correo, y el bloque renderizaba SU contenido completo PERO con
+       altura visual recortada → el siguiente <p> ("Se adjunta el acta")
+       se solapaba visualmente sobre la transcripción. Ahora la
+       transcripción se expande naturalmente y el contenido posterior fluye
+       debajo limpio. #}
     <div style="font-size: 13px; color: #4a4a4a; line-height: 1.55; background: #fafbfc;
                 padding: 14px; border-radius: 6px; border: 1px solid #e5e7eb;
-                max-height: 480px; overflow-y: auto; white-space: pre-wrap;">{{ raw_transcript }}</div>
+                white-space: pre-wrap; word-wrap: break-word;">{{ raw_transcript }}</div>
   </div>
   {% endif %}
 
-  <p style="margin-top: 24px; margin-bottom: 8px; font-size: 13px; color: #4b5563;">
+  <p style="margin-top: 24px; margin-bottom: 8px; font-size: 13px; color: #4b5563; clear: both;">
     Se adjunta el <strong>acta completa</strong> de la sesión en formato Word/PDF.
     El documento incluye resumen, decisiones, riesgos, acuerdos y tareas —
     <strong>sin la transcripción</strong> (esa la tienes arriba en el correo).

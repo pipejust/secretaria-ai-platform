@@ -124,7 +124,28 @@ class EmailService:
             return re.sub(regex, replacer, safe_text)
             
         self.jinja_env.filters['linkify'] = filter_linkify
-        
+
+        # Filtro `markdown`: convierte texto markdown a HTML usando markdown-it.
+        # Lo usamos para los campos summary/decisions/risks/agreements que el
+        # pipeline IA genera con sintaxis MD (**bold**, listas con -, ###).
+        # Antes salían como texto plano con asteriscos visibles en el email.
+        def filter_markdown(text):
+            if not text:
+                return ''
+            try:
+                from markdown_it import MarkdownIt
+                md = MarkdownIt('commonmark').enable('table').enable('strikethrough')
+                # markdown_it ya escapa HTML inseguro por default (html=False).
+                # Aplicamos linkify después para enriquecer emails/teléfonos
+                # que el markdown no detecta como links.
+                html_out = md.render(str(text))
+                return html_out
+            except Exception as exc:
+                logger.warning('markdown filter failed: %s', exc)
+                # Fallback: escape + nl2br + linkify (comportamiento previo).
+                return filter_linkify(text)
+        self.jinja_env.filters['markdown'] = filter_markdown
+
         self.api_key = None
         self.from_email = DEFAULT_FROM_EMAIL
         # Branding (white-label) — siempre presente en el contexto de Jinja
