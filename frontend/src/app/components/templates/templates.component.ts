@@ -498,13 +498,18 @@ export class TemplatesComponent implements OnInit {
     }
 
     // ============================================================
-    // VISTA PREVIA — Office Online Viewer
+    // VISTA PREVIA — Google Docs Viewer
     // ============================================================
 
-    /** URL del Office Online embed viewer para un .docx público.
-     *  Microsoft hostea un viewer gratuito que renderiza Word docs
-     *  cuando se le pasa el URL del archivo encoded. Funciona con
-     *  cualquier URL accesible públicamente (Supabase Storage lo es).
+    /** Google Docs Viewer reemplaza al viewer de Microsoft Office Online
+     *  (view.officeapps.live.com) porque éste era LENTO (latency desde
+     *  servidores de MS), tiraba 404s constantes a /res.public.onecdn/
+     *  segoeui.woff y disparaba telemetría BSSO/ChromeBrowserCore que
+     *  ensucia la consola. Google's viewer:
+     *   - Renderiza .docx/.xlsx/.pptx/.pdf en segundos
+     *   - No requiere extensiones, no tira 404s
+     *   - URL: https://docs.google.com/gview?url=...&embedded=true
+     *  Funciona con cualquier URL públicamente accesible (igual que MS).
      *
      *  IMPORTANTE: cacheamos el SafeResourceUrl por id de plantilla.
      *  Sin esto, cada change-detection generaría una instancia nueva del
@@ -535,7 +540,7 @@ export class TemplatesComponent implements OnInit {
     }
 
     private _buildPreviewUrl(filePath: string): string {
-        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(filePath)}`;
+        return `https://docs.google.com/gview?url=${encodeURIComponent(filePath)}&embedded=true`;
     }
 
     /** Invalida el cache cuando una plantilla se actualiza (file_replaced

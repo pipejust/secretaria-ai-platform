@@ -324,16 +324,22 @@
             </nav>
 
             <div *ngIf="detailTab === 'preview'" class="tpl-detail-body">
-                <!-- Vista previa real del .docx vía Microsoft Office Online
-                     Viewer. El iframe se renderiza al 167% y se escala a
-                     0.6 (CSS) → fuerza al viewer a usar un zoom interno
-                     mayor que muestra la página completa sin scroll, todo
-                     dentro del footprint visible. -->
+                <!-- Vista previa real del .docx vía Google Docs Viewer
+                     (más rápido que Office Online, sin 404s ni BSSO).
+                     loading="lazy" defer el iframe hasta que entra al
+                     viewport, y muestra un skeleton mientras carga. -->
                 <div class="tpl-preview-frame" *ngIf="officePreviewUrl(selectedTemplate) as previewUrl; else previewUnavailable">
+                    <div class="tpl-preview-skeleton" aria-hidden="true">
+                        <div class="tpl-preview-skeleton-bar"></div>
+                        <div class="tpl-preview-skeleton-bar tpl-preview-skeleton-bar--short"></div>
+                        <div class="tpl-preview-skeleton-bar"></div>
+                        <div class="tpl-preview-skeleton-bar tpl-preview-skeleton-bar--shorter"></div>
+                    </div>
                     <iframe [src]="previewUrl"
                             title="Vista previa de la plantilla"
                             frameborder="0"
                             allowfullscreen
+                            loading="lazy"
                             scrolling="no"></iframe>
                 </div>
                 <ng-template #previewUnavailable>
@@ -832,6 +838,12 @@
             </button>
         </header>
         <div class="tpl-modal-body tpl-preview-body" *ngIf="officePreviewUrl(previewTemplate) as url">
+            <div class="tpl-preview-skeleton" aria-hidden="true">
+                <div class="tpl-preview-skeleton-bar"></div>
+                <div class="tpl-preview-skeleton-bar tpl-preview-skeleton-bar--short"></div>
+                <div class="tpl-preview-skeleton-bar"></div>
+                <div class="tpl-preview-skeleton-bar tpl-preview-skeleton-bar--shorter"></div>
+            </div>
             <iframe [src]="url"
                     title="Vista previa de la plantilla"
                     frameborder="0"

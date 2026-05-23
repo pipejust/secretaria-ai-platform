@@ -759,10 +759,37 @@
     border-bottom: 1px solid var(--color-border);
     overflow: hidden;
 }
+/* Skeleton mientras carga el viewer externo (Google Docs Viewer).
+   Posicionado absoluto debajo del iframe — el iframe lo "tapa" al
+   terminar de cargar. Animación shimmer sutil para indicar progreso. */
+.tpl-preview-skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    padding: 32px 24px;
+    background: var(--color-bg-panel);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.tpl-preview-skeleton-bar {
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
+    background-size: 200% 100%;
+    animation: tpl-preview-shimmer 1.4s infinite linear;
+}
+.tpl-preview-skeleton-bar--short { width: 65%; }
+.tpl-preview-skeleton-bar--shorter { width: 40%; }
+@keyframes tpl-preview-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
 .tpl-preview-frame iframe {
     position: absolute;
     top: 0;
     left: 0;
+    z-index: 1;  /* por encima del skeleton */
     /* Scale 0.6 → iframe en internal-space ocupa 1/0.6 = 166.667% del
        wrapper. Le sumamos +100px de alto para sacar el chrome inferior
        del Office Viewer fuera del área visible (queda recortado por el
@@ -857,6 +884,7 @@
     background: var(--brand-cream-50);
     overflow: hidden;
     min-height: 60vh;
+    position: relative;  /* para que el skeleton absoluto tenga referencia */
 }
 .tpl-modal-preview .tpl-preview-body iframe {
     width: 100%;
@@ -865,6 +893,8 @@
     border: 0;
     background: var(--color-bg-panel);
     display: block;
+    position: relative;
+    z-index: 1;
 }
 
 /* ============================================================
