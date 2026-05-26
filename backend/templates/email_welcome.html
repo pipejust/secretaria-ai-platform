@@ -25,13 +25,26 @@
   <div class="box" style="margin-top: 16px;">
     <h3 class="box-title">Tus credenciales</h3>
     <ul style="color: #4b5563; margin: 0; padding-left: 20px;">
-      <li style="margin-bottom: 8px;"><strong>Correo:</strong> {{ email }}</li>
+      <li style="margin-bottom: 8px;"><strong>Usuario (email):</strong> <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">{{ email }}</code></li>
+      {% if temp_password %}
+      <li style="margin-bottom: 8px;"><strong>Contraseña temporal:</strong>
+        <code style="background:#fef3c7; padding:4px 10px; border-radius:4px; font-family:'SF Mono',Consolas,monospace; font-size:14px; color:#78350f; font-weight:600; letter-spacing:0.5px;">{{ temp_password }}</code>
+      </li>
+      {% endif %}
       <li><strong>Rol asignado:</strong> {{ role }}</li>
     </ul>
+    {% if temp_password and must_change_password %}
+    <p style="margin-top: 14px; padding: 12px 14px; background:#fffbeb; border:1px solid #fbbf24; border-radius: 6px; font-size: 13px; color: #78350f; line-height: 1.55;">
+      <strong>Importante:</strong> Esta contraseña es <strong>temporal</strong>.
+      Apenas entres al sistema, te pediremos que la cambies por una propia
+      antes de poder usar la plataforma.
+    </p>
+    {% elif not temp_password %}
     <p class="box-text" style="margin-top: 12px; font-size: 13px; color: #64748b;">
       La contraseña inicial te la entregó el administrador que creó la
       cuenta. Podés cambiarla desde "Mi perfil" una vez dentro.
     </p>
+    {% endif %}
   </div>
 
   <div class="button-container">

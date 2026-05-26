@@ -54,7 +54,12 @@ class TenantCreate(BaseModel):
     # Validamos email manualmente para no añadir dep `email-validator`.
     admin_email: str = Field(min_length=3, max_length=240, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
                               description="Email del PRIMER admin del tenant")
-    admin_password: str = Field(min_length=8, max_length=128, description="Password inicial")
+    # Password opcional. Si admin_must_change_password=True y este campo
+    # viene vacío, el backend genera una password temporal segura, la
+    # devuelve en la respuesta y la incluye en el email de bienvenida con
+    # aviso de cambio obligatorio en el primer login.
+    admin_password: Optional[str] = Field(default=None, max_length=128, description="Password inicial — opcional si admin_must_change_password=True")
+    admin_must_change_password: bool = Field(default=False, description="Si True, el admin debe cambiar su password en el primer login.")
     admin_full_name: str = Field(min_length=2, max_length=120)
     # Branding inicial — opcional. Si vienen, los persistimos en branding_json
     # del tenant nuevo. Aceptamos data URLs `data:image/...;base64,...` (lo que
@@ -289,13 +294,27 @@ def create_tenant(
         db.commit()
         db.refresh(admin_role)
 
+    # Resolver password del admin: si must_change=True + no viene → autogenerar.
+    from routers.auth import _generate_temporary_password as _gen_temp_pw
+    admin_plain_password = (payload.admin_password or "").strip()
+    if not admin_plain_password:
+        if not payload.admin_must_change_password:
+            raise HTTPException(
+                status_code=400,
+                detail="admin_password requerido o activá admin_must_change_password.",
+            )
+        admin_plain_password = _gen_temp_pw()
+    elif len(admin_plain_password) < 8:
+        raise HTTPException(status_code=400, detail="admin_password debe tener al menos 8 caracteres.")
+
     user = User(
         tenant_id=tenant.id,
         email=str(payload.admin_email).lower(),
-        hashed_password=get_password_hash(payload.admin_password),
+        hashed_password=get_password_hash(admin_plain_password),
         full_name=payload.admin_full_name.strip(),
         role_id=admin_role.id,
         is_superadmin=False,
+        must_change_password=payload.admin_must_change_password,
     )
     db.add(user)
 
@@ -331,12 +350,23 @@ def create_tenant(
         _send_tenant_welcome_safe,
         user_id=user.id,
         tenant_id=tenant.id,
+        temp_password=admin_plain_password if payload.admin_must_change_password else None,
     )
 
-    return TenantOut.from_db(tenant, 1)
+    # Devolvemos shape extendido: además del TenantOut, la temporary_password
+    # generada (si aplica) — la UI la muestra al super-admin por si quiere
+    # comunicarla manualmente al admin del tenant.
+    out = TenantOut.from_db(tenant, 1).model_dump()
+    if payload.admin_must_change_password:
+        out["temporary_password"] = admin_plain_password
+    return out
 
 
-async def _send_tenant_welcome_safe(user_id: int, tenant_id: int) -> None:
+async def _send_tenant_welcome_safe(
+    user_id: int,
+    tenant_id: int,
+    temp_password: Optional[str] = None,
+) -> None:
     """Envía email de bienvenida al admin del tenant recién provisionado.
     Best-effort: si falla, se loggea pero NO rompe la creación del tenant.
 
@@ -377,6 +407,8 @@ async def _send_tenant_welcome_safe(user_id: int, tenant_id: int) -> None:
                 user_name=user.full_name or user.email,
                 role=role_name,
                 login_url=tenant_login_url,
+                temp_password=temp_password,
+                must_change_password=user.must_change_password,
             )
             logger.info(
                 "tenant welcome email enviado a %s (tenant_id=%s, url=%s)",
@@ -385,6 +417,59 @@ async def _send_tenant_welcome_safe(user_id: int, tenant_id: int) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.exception("tenant welcome email FALLÓ user=%s tenant=%s: %s",
                          user_id, tenant_id, exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Super-admin: reenviar invitación al PRIMER admin de un tenant. Genera
+# una password temporal nueva y se la envía por correo. La password vieja
+# queda invalidada inmediatamente.
+# ─────────────────────────────────────────────────────────────────────────
+@router.post("/{slug}/resend-invitation")
+def resend_tenant_invitation(
+    slug: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_session),
+    _su: User = Depends(require_superadmin),
+):
+    from routers.auth import _generate_temporary_password as _gen_temp_pw
+
+    t = db.exec(select(Tenant).where(Tenant.slug == slug.lower())).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada.")
+    # Tomamos el primer admin creado (el provisionado en create_tenant).
+    # Si hay varios admins, el más viejo (id más bajo) — convención.
+    from models import Role as _Role
+    admin_role = db.exec(select(_Role).where(_Role.name == "admin")).first()
+    if not admin_role:
+        raise HTTPException(status_code=500, detail="Rol 'admin' no existe en la plataforma.")
+    admin = db.exec(
+        select(User)
+        .where(User.tenant_id == t.id)
+        .where(User.role_id == admin_role.id)
+        .order_by(User.id.asc())
+    ).first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Esta empresa no tiene admin registrado.")
+
+    new_temp = _gen_temp_pw()
+    admin.hashed_password = get_password_hash(new_temp)
+    admin.must_change_password = True
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    background_tasks.add_task(
+        _send_tenant_welcome_safe,
+        user_id=admin.id,
+        tenant_id=t.id,
+        temp_password=new_temp,
+    )
+    return {
+        "ok": True,
+        "msg": f"Invitación reenviada a {admin.email}.",
+        "admin_email": admin.email,
+        "temporary_password": new_temp,
+    }
 
 
 @router.put("/{slug}")

@@ -131,6 +131,12 @@ class User(SQLModel, table=True):
     notif_weekly_report:           bool = Field(default=False)
     notif_security_alerts:         bool = Field(default=True)
 
+    # Si True, el usuario DEBE cambiar su password en el próximo login antes
+    # de poder usar la plataforma. Se setea cuando un admin crea/reenvía la
+    # invitación con password temporal; el primer login responde un payload
+    # con must_change_password=true y el frontend redirige a /change-password.
+    must_change_password: bool = Field(default=False, description="Fuerza cambio de password en el próximo login.")
+
     # Autenticación en dos pasos (2FA) — método email-OTP.
     two_factor_enabled: bool = Field(default=False, description="Si True, el login exige verificación adicional por email.")
     two_factor_method: Optional[str] = Field(default="email", description="'email' por ahora; reservado para TOTP futuro.")

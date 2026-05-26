@@ -480,7 +480,18 @@ class EmailService:
         )
         await self._send_html_email(to_email, subject, html_content)
 
-    async def send_welcome_email(self, to_email: str, user_name: str, role: str, login_url: str = ""):
+    async def send_welcome_email(
+        self,
+        to_email: str,
+        user_name: str,
+        role: str,
+        login_url: str = "",
+        temp_password: Optional[str] = None,
+        must_change_password: bool = False,
+    ):
+        """Email de bienvenida. Si temp_password viene, se incluye en el
+        correo dentro de un bloque destacado con el aviso de que debe
+        cambiarse en el primer login (cuando must_change_password=True)."""
         template = self.jinja_env.get_template('email_welcome.html')
         frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip('/')
         html_content = template.render(
@@ -488,6 +499,8 @@ class EmailService:
             email=to_email,
             role=role,
             login_url=login_url or f"{frontend_url}/login",
+            temp_password=temp_password,
+            must_change_password=must_change_password,
             current_year=2026,
             brand=self.branding,
         )

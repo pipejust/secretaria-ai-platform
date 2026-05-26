@@ -102,14 +102,41 @@ class LoginRequest(BaseModel):
 
 class UserCreate(BaseModel):
     email: str
-    password: str
+    # password: opcional. Si viene vacío Y must_change_password=true, el
+    # backend autogenera una password temporal aleatoria (segura) y la
+    # devuelve en el response + la incluye en el email de bienvenida.
+    # Si viene con valor: se usa tal cual.
+    password: Optional[str] = None
     full_name: str
     role_id: int
+    # Si True, el usuario será obligado a cambiar la password en el primer
+    # login. Recomendado para invitaciones (la password temporal solo dura
+    # hasta que el user entra por primera vez).
+    must_change_password: bool = False
 
     @field_validator("email")
     @classmethod
     def _norm_email(cls, v: str) -> str:
         return _normalize_email(v)
+
+
+def _generate_temporary_password(length: int = 14) -> str:
+    """Genera una password temporal humana-friendly y segura.
+
+    Pattern: 4 grupos de 3 chars alfanuméricos separados por '-'. Ej:
+      'aB3-pQr-9Kw-2tF'
+    Easy to type / dictar por teléfono, 14 chars, ~80 bits de entropía
+    con alfabeto de 62 chars (suficiente para password temporal de un solo
+    uso). Solo se usa cuando must_change_password=True, donde se invalidará
+    apenas el user entre por primera vez.
+    """
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits
+    chunks = []
+    for _ in range(4):
+        chunks.append(''.join(secrets.choice(alphabet) for _ in range(3)))
+    return '-'.join(chunks)[:length]
 
 
 # ----------------------------------------------------------------------------
@@ -254,6 +281,10 @@ def _login_success_payload(user: User, tenant: Tenant, request: Optional[Request
         "access_token": _issue_access_token(user, tenant),
         "token_type": "bearer",
         "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+        # Si True, el frontend debe redirigir a /change-password obligatorio
+        # antes de mostrar el dashboard. El endpoint POST /auth/me/change-
+        # password-forced se encarga de validar y limpiar el flag.
+        "must_change_password": bool(user.must_change_password),
     }
 
 
@@ -427,32 +458,152 @@ def register_user(
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered en esta empresa")
 
+    # Resolver password: si must_change_password=true y no se proveyó,
+    # autogeneramos una temporal. Si se proveyó manualmente, se respeta.
+    plain_password = (user_in.password or "").strip()
+    if not plain_password:
+        if not user_in.must_change_password:
+            raise HTTPException(
+                status_code=400,
+                detail="La contraseña es obligatoria, o activá 'forzar cambio' para generar una temporal.",
+            )
+        plain_password = _generate_temporary_password()
+    elif len(plain_password) < 8:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+
     user = User(
         tenant_id=admin_user.tenant_id,
         email=user_in.email,
-        hashed_password=get_password_hash(user_in.password),
+        hashed_password=get_password_hash(plain_password),
         full_name=user_in.full_name,
         role_id=user_in.role_id,
+        must_change_password=user_in.must_change_password,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    # Email de bienvenida — best-effort en background.
+    # Email de bienvenida con credenciales — best-effort en background.
+    # Solo incluye la password en el correo si fue generada por el sistema
+    # o si must_change_password=true (en cuyo caso el user ya sabe que la
+    # va a cambiar al primer login).
     background_tasks.add_task(
         _send_welcome_email_safe,
         user_id=user.id,
         tenant_id=admin_user.tenant_id,
+        temp_password=plain_password if user_in.must_change_password else None,
     )
 
-    return {"msg": "User created successfully", "user_id": user.id}
+    return {
+        "msg": "User created successfully",
+        "user_id": user.id,
+        "temporary_password": plain_password if user_in.must_change_password else None,
+        "must_change_password": user_in.must_change_password,
+    }
 
 
-async def _send_welcome_email_safe(user_id: int, tenant_id: int) -> None:
+# ─────────────────────────────────────────────────────────────────────────
+# Cambio de password — voluntario o forzado (tras login con flag).
+# ─────────────────────────────────────────────────────────────────────────
+class ChangePasswordPayload(BaseModel):
+    """Para cambio voluntario, current_password es obligatorio. Para cambio
+    forzado (tras un primer login con must_change_password=True), se omite
+    porque el user ya validó la temporal al hacer login."""
+    current_password: Optional[str] = None
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+@router.post("/me/change-password")
+def change_password(
+    payload: ChangePasswordPayload,
+    db: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    """Cambia la contraseña del usuario autenticado.
+
+    Modo 1 (forzado): si user.must_change_password=True, NO se exige
+    current_password. El user ya validó la temporal en el login y este
+    endpoint solo limpia el flag.
+    Modo 2 (voluntario): user.must_change_password=False → exige
+    current_password para verificar identidad.
+    """
+    new_pw = (payload.new_password or "").strip()
+    if len(new_pw) < 8:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 8 caracteres.")
+
+    if not user.must_change_password:
+        # Cambio voluntario: validar current_password.
+        if not payload.current_password or not verify_password(payload.current_password, user.hashed_password):
+            raise HTTPException(status_code=400, detail="Contraseña actual incorrecta.")
+        if payload.current_password == new_pw:
+            raise HTTPException(status_code=400, detail="La nueva contraseña debe ser distinta a la actual.")
+    # En modo forzado igual exigimos que la nueva sea distinta de la temporal
+    # — verificar si coincide con la actual hasheada.
+    elif verify_password(new_pw, user.hashed_password):
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe ser distinta a la temporal recibida.")
+
+    user.hashed_password = get_password_hash(new_pw)
+    user.must_change_password = False  # limpiar el flag
+    db.add(user)
+    db.commit()
+    return {"ok": True, "msg": "Contraseña actualizada."}
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Reenviar invitación: genera nueva password temporal + envía email.
+# Admin reenvía para usuarios de SU tenant; super-admin reenvía para
+# cualquier admin de cualquier tenant (endpoint en routers/tenants.py).
+# ─────────────────────────────────────────────────────────────────────────
+@router.post("/users/{user_id}/resend-invitation")
+def resend_invitation(
+    user_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+):
+    """Reenviar email de invitación al usuario `user_id` (mismo tenant).
+
+    Genera una password temporal NUEVA, la asigna al usuario y la envía
+    por correo con must_change_password=True. La password vieja queda
+    invalidada inmediatamente.
+    """
+    user = db.get(User, user_id)
+    if not user or user.tenant_id != admin.tenant_id:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado en esta empresa.")
+
+    new_temp = _generate_temporary_password()
+    user.hashed_password = get_password_hash(new_temp)
+    user.must_change_password = True
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    background_tasks.add_task(
+        _send_welcome_email_safe,
+        user_id=user.id,
+        tenant_id=admin.tenant_id,
+        temp_password=new_temp,
+    )
+    return {
+        "ok": True,
+        "msg": f"Invitación reenviada a {user.email}.",
+        "temporary_password": new_temp,
+    }
+
+
+async def _send_welcome_email_safe(
+    user_id: int,
+    tenant_id: int,
+    temp_password: Optional[str] = None,
+) -> None:
     """Envía el email de bienvenida en background. Swallow errors —
     nunca debe romper el flow de creación del user. El branding y el
     sender SMTP se resuelven dentro del EmailService desde la DB del
-    tenant correspondiente."""
+    tenant correspondiente.
+
+    Si temp_password viene, se incluye en el correo como credencial
+    temporal (con aviso de que debe cambiarse en el primer login).
+    """
     from sqlmodel import Session as _Session
     from database import engine as _engine
     from services.email_service import EmailService
@@ -469,6 +620,8 @@ async def _send_welcome_email_safe(user_id: int, tenant_id: int) -> None:
                 to_email=user.email,
                 user_name=user.full_name or user.email,
                 role=role_name,
+                temp_password=temp_password,
+                must_change_password=user.must_change_password,
             )
             logger.info("welcome email enviado a %s (tenant=%s)", user.email, tenant_id)
     except Exception as exc:  # noqa: BLE001
