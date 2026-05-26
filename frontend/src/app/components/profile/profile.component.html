@@ -626,8 +626,11 @@
       </p>
       <div class="pr-field">
         <label for="pr-2fa-pwd">Contraseña actual</label>
-        <input id="pr-2fa-pwd" type="password" autocomplete="current-password"
-               [(ngModel)]="twoFactorPassword" placeholder="••••••••">
+        <app-password-input id="pr-2fa-pwd"
+                            name="twoFactorPassword"
+                            [(ngModel)]="twoFactorPassword"
+                            autocomplete="current-password"
+                            placeholder="••••••••"></app-password-input>
       </div>
       <div class="pr-msg pr-msg--error" *ngIf="twoFactorError">{{ twoFactorError }}</div>
       <div class="pr-modal-actions">

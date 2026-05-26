@@ -8,6 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { NotificationService } from '../../services/notification.service';
 import { PreferencesService } from '../../services/preferences.service';
+import { PasswordInputComponent } from '../shared/password-input/password-input.component';
 import { environment } from '../../../environments/environment';
 
 interface ActivityEntry {
@@ -46,7 +47,7 @@ type TwoFactorModalStep = 'idle' | 'enable-code' | 'disable-password';
 @Component({
     selector: 'app-profile',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, PasswordInputComponent],
     templateUrl: './profile.component.html',
     styleUrls: ['./profile.component.css'],
 })
