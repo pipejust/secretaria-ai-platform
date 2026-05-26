@@ -105,6 +105,12 @@ export class LoginComponent implements OnInit {
                     return;
                 }
                 this.branding.loadFromServer();
+                // Si el backend devuelve must_change_password=true, redirigir
+                // a la pantalla de cambio obligatorio antes del dashboard.
+                if (res?.must_change_password) {
+                    this.router.navigate(['/change-password']);
+                    return;
+                }
                 this.router.navigate(['/admin/dashboard']);
             },
             error: (err) => {
@@ -128,9 +134,13 @@ export class LoginComponent implements OnInit {
         this.isVerifying2FA = true;
         this.errorMessage = '';
         this.authService.verifyLogin2FA(this.email, this.code2FA.trim(), this.tenantSlug).subscribe({
-            next: () => {
+            next: (res) => {
                 this.isVerifying2FA = false;
                 this.branding.loadFromServer();
+                if (res?.must_change_password) {
+                    this.router.navigate(['/change-password']);
+                    return;
+                }
                 this.router.navigate(['/admin/dashboard']);
             },
             error: (err) => {

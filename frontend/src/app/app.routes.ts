@@ -37,6 +37,15 @@ export const routes: Routes = [
         data: { robots: 'noindex, nofollow' }
     },
     {
+        // Cambio obligatorio tras primer login (must_change_password=true).
+        // No usa AdminLayout porque el user todavía no debe acceder al
+        // resto de la app — esta es la "puerta" entre el login y el dashboard.
+        path: 'change-password',
+        loadComponent: () => import('./components/change-password/change-password.component').then(m => m.ChangePasswordComponent),
+        title: 'Cambiar contraseña | Acten',
+        data: { robots: 'noindex, nofollow' }
+    },
+    {
         path: 'help',
         loadComponent: () => import('./components/help-center/help-center.component').then(m => m.HelpCenterComponent),
         title: 'Centro de Ayuda | Acten',

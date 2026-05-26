@@ -82,6 +82,17 @@ export class AuthService {
         }, { headers: this.getAuthHeaders() });
     }
 
+    /** Cambio de password vía POST /auth/me/change-password. Si el user tiene
+     *  must_change_password=true, omitir current_password (el backend acepta).
+     *  Devuelve { ok: true } al éxito. */
+    changePasswordForced(new_password: string, current_password?: string): Observable<any> {
+        const body: any = { new_password };
+        if (current_password) body.current_password = current_password;
+        return this.http.post(`${this.apiUrl}/me/change-password`, body, {
+            headers: this.getAuthHeaders(),
+        });
+    }
+
     /** Actualiza los campos editables del perfil (PUT /auth/me).
      *  Devuelve el shape completo del perfil y refresca el currentUser$ stream. */
     updateProfile(payload: Partial<{

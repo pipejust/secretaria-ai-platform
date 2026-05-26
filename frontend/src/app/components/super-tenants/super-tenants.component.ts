@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { PasswordInputComponent } from '../shared/password-input/password-input.component';
 
 interface TenantOut {
     id: number;
@@ -39,6 +40,9 @@ interface CreateForm {
     admin_email: string;
     admin_password: string;
     admin_full_name: string;
+    /** Si true: el backend autogenera password temporal + el admin debe
+     *  cambiarla en el primer login. Si false: admin_password es manual. */
+    admin_must_change_password: boolean;
     // Identidad de la empresa (espejo de /admin/branding).
     company_tagline: string;
     company_email: string;
@@ -61,7 +65,7 @@ const MAX_BRAND_FILE_BYTES = 2 * 1024 * 1024;
 @Component({
     selector: 'app-super-tenants',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, PasswordInputComponent],
     templateUrl: './super-tenants.component.html',
     styleUrls: ['./super-tenants.component.css'],
 })
@@ -170,6 +174,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         return {
             slug: '', name: '', domain: '',
             admin_email: '', admin_password: '', admin_full_name: '',
+            admin_must_change_password: true,  // recomendado para invitaciones
             company_tagline: '', company_email: '', company_website: '',
             company_phone: '', company_address: '',
             // Defaults Acten — el admin puede sobreescribirlos al crear.
@@ -319,8 +324,12 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.admin_email.trim())) {
             return 'El email del primer admin no tiene un formato válido.';
         }
-        if (!f.admin_password || f.admin_password.length < 8) {
-            return 'La contraseña inicial debe tener al menos 8 caracteres.';
+        // Si NO está activado "forzar cambio", admin_password es obligatorio
+        // y mínimo 8 chars. Si SÍ está activado, el backend autogenera.
+        if (!f.admin_must_change_password) {
+            if (!f.admin_password || f.admin_password.length < 8) {
+                return 'La contraseña inicial debe tener al menos 8 caracteres (o activá "forzar cambio").';
+            }
         }
         if (!f.admin_full_name.trim()) return 'El nombre del admin es obligatorio.';
         // Color hex check — solo si vienen no-vacíos (defaults Acten ya son válidos).
@@ -343,15 +352,20 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         accessUrl: string;
         adminEmail: string;
         adminName: string;
+        /** Password temporal generada por el backend si admin_must_change_password=true */
+        temporaryPassword: string | null;
         copiedUrl: boolean;
         copiedEmail: boolean;
+        copiedPassword: boolean;
     } = {
         tenant: null,
         accessUrl: '',
         adminEmail: '',
         adminName: '',
+        temporaryPassword: null,
         copiedUrl: false,
         copiedEmail: false,
+        copiedPassword: false,
     };
 
     /** Construye la URL pública de acceso para un tenant nuevo.
@@ -378,12 +392,14 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             const adminEmail = this.form.admin_email.trim().toLowerCase();
             const adminName = this.form.admin_full_name.trim();
             const out = await firstValueFrom(
-                this.http.post<TenantOut>(`${this.apiUrl}/`, {
+                this.http.post<TenantOut & { temporary_password?: string }>(`${this.apiUrl}/`, {
                     slug: this.form.slug.trim().toLowerCase(),
                     name: this.form.name.trim(),
                     domain: this.form.domain.trim() || null,
                     admin_email: adminEmail,
-                    admin_password: this.form.admin_password,
+                    // En modo "forzar cambio" no mandamos password — backend la genera.
+                    admin_password: this.form.admin_must_change_password ? undefined : this.form.admin_password,
+                    admin_must_change_password: this.form.admin_must_change_password,
                     admin_full_name: adminName,
                     // Identidad de la empresa (espejo de /admin/branding).
                     company_website: this.form.company_website.trim(),
@@ -408,13 +424,17 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             this.showCreate = false;
             this.form = this._emptyForm();
             // Abrir modal de éxito con la URL de acceso prominente.
+            // Si el backend autogeneró password, la mostramos prominente para
+            // que el super-admin la copie y la pueda compartir si el email no llega.
             this.createdSuccess = {
                 tenant: out,
                 accessUrl: this._buildTenantAccessUrl(out.slug),
                 adminEmail,
                 adminName,
+                temporaryPassword: out?.temporary_password ?? null,
                 copiedUrl: false,
                 copiedEmail: false,
+                copiedPassword: false,
             };
         } catch (err: any) {
             this.errorMsg = err?.error?.detail || 'No se pudo crear la empresa.';
@@ -424,11 +444,53 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         }
     }
 
+    /** Reenvía invitación al primer admin de un tenant — regenera password
+     *  temporal y envía email. Useful cuando el admin perdió el correo
+     *  original o no le llegó. */
+    resendTenantInvitation(t: TenantOut, evt?: Event): void {
+        if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+        this.closeRowMenu();
+        if (!confirm(
+            `Se generará una NUEVA contraseña temporal para el admin de "${t.name}" ` +
+            `y se enviará por correo. La actual quedará invalidada. ¿Continuar?`,
+        )) return;
+        firstValueFrom(
+            this.http.post<{ admin_email?: string; temporary_password?: string }>(
+                `${this.apiUrl}/${t.slug}/resend-invitation`,
+                {},
+                { headers: this._headers() },
+            ),
+        ).then((res) => {
+            this.toast.success(
+                `Invitación reenviada a ${res?.admin_email || 'el admin'}. ` +
+                'Contraseña temporal regenerada.',
+            );
+            if (res?.temporary_password) {
+                // Mostramos el banner con la temp password para que el super-admin
+                // la copie si necesita comunicarla manualmente.
+                this.createdSuccess = {
+                    tenant: t,
+                    accessUrl: this._buildTenantAccessUrl(t.slug),
+                    adminEmail: res.admin_email || '',
+                    adminName: '',
+                    temporaryPassword: res.temporary_password,
+                    copiedUrl: false,
+                    copiedEmail: false,
+                    copiedPassword: false,
+                };
+            }
+            this.cdr.detectChanges();
+        }).catch((err) => {
+            this.toast.error(err?.error?.detail || 'No se pudo reenviar la invitación.');
+        });
+    }
+
     /** Copia un texto al clipboard y muestra confirmación temporal. */
-    async _copyToClipboard(text: string, kind: 'url' | 'email'): Promise<void> {
+    async _copyToClipboard(text: string, kind: 'url' | 'email' | 'password'): Promise<void> {
         try {
             await navigator.clipboard.writeText(text);
             if (kind === 'url') this.createdSuccess.copiedUrl = true;
+            else if (kind === 'password') this.createdSuccess.copiedPassword = true;
             else this.createdSuccess.copiedEmail = true;
             this.cdr.detectChanges();
             setTimeout(() => {
@@ -444,7 +506,8 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     closeCreatedSuccessModal(): void {
         this.createdSuccess = {
             tenant: null, accessUrl: '', adminEmail: '',
-            adminName: '', copiedUrl: false, copiedEmail: false,
+            adminName: '', temporaryPassword: null,
+            copiedUrl: false, copiedEmail: false, copiedPassword: false,
         };
         this.cdr.detectChanges();
     }

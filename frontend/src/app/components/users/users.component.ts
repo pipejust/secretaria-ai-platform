@@ -8,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { BrandingService } from '../../services/branding.service';
+import { PasswordInputComponent } from '../shared/password-input/password-input.component';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -84,7 +85,7 @@ interface ActivityEntry {
 @Component({
     selector: 'app-users',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, PasswordInputComponent],
     templateUrl: './users.component.html',
     styleUrls: ['./users.component.css'],
 })
@@ -118,11 +119,17 @@ export class UsersComponent implements OnInit, OnDestroy {
         phone: string;
         department: string;
         position: string;
+        must_change_password: boolean;
     } = {
         email: '', password: '', confirm_password: '',
         full_name: '', role_id: '',
         phone: '', department: '', position: '',
+        must_change_password: true,  // default ON — es el caso recomendado para invitaciones
     };
+    /** Banner de éxito post-creación con credenciales temporales para que
+     *  el admin las copie y las comparta manualmente si el email no llega. */
+    lastCreatedTempPassword: string | null = null;
+    lastCreatedEmail: string | null = null;
 
     /** Lista curada de departamentos comunes en empresas SaaS. El backend
      *  acepta cualquier string; este listado es solo una UX guiada. */
@@ -291,7 +298,10 @@ export class UsersComponent implements OnInit, OnDestroy {
             email: '', password: '', confirm_password: '',
             full_name: '', role_id: '',
             phone: '', department: '', position: '',
+            must_change_password: true,
         };
+        this.lastCreatedTempPassword = null;
+        this.lastCreatedEmail = null;
         this.errorMsg = ''; this.successMsg = '';
         this.showCreateModal = true;
     }
@@ -320,8 +330,13 @@ export class UsersComponent implements OnInit, OnDestroy {
                 `.com, .co, .net, .app, etc.). El que ingresaste pertenece a '${emailSld || 'otro'}'.`
             );
         }
-        if (!u.password || u.password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
-        if (u.password !== u.confirm_password) return 'La confirmación de contraseña no coincide.';
+        // Modo "forzar cambio": el backend autogenera la password temporal,
+        // así que NO exigimos password en el form. Solo se valida cuando el
+        // admin elige password manual (toggle off).
+        if (!u.must_change_password) {
+            if (!u.password || u.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+            if (u.password !== u.confirm_password) return 'La confirmación de contraseña no coincide.';
+        }
         if (!u.role_id) return 'Debes seleccionar un rol.';
         if (u.phone) {
             // Validación laxa: dígitos, +, espacios y guiones; mínimo 7 dígitos.
@@ -338,30 +353,94 @@ export class UsersComponent implements OnInit, OnDestroy {
         this.errorMsg = '';
         this.successMsg = '';
         const { confirm_password, ...rest } = this.newUser;
-        const payload = {
+        // En modo "forzar cambio" no mandamos password — el backend la
+        // autogenera y la devuelve en la respuesta + en el email.
+        const payload: any = {
             ...rest,
             role_id: parseInt(this.newUser.role_id, 10),
         };
-        this.http.post(
+        if (this.newUser.must_change_password) {
+            delete payload.password;
+        }
+        this.http.post<{ user_id: number; temporary_password?: string; must_change_password?: boolean }>(
             `${environment.apiUrl}/auth/register/admin-only`,
             payload,
             { headers: this.authService.getAuthHeaders() },
         ).pipe(takeUntil(this.destroy$))
         .subscribe({
-            next: () => {
-                this.successMsg = 'Usuario registrado exitosamente.';
+            next: (res) => {
+                this.successMsg = res?.temporary_password
+                    ? 'Usuario creado. Mirá abajo la contraseña temporal generada.'
+                    : 'Usuario registrado exitosamente.';
                 this.loadData();
                 this.isCreating = false;
-                setTimeout(() => {
-                    this.showCreateModal = false;
-                    this.successMsg = '';
-                    this.cdr.detectChanges();
-                }, 1200);
+                // Si vino password temporal, la guardamos para mostrar el banner
+                // de éxito con copy-to-clipboard. El modal NO se cierra solo —
+                // el admin la lee y la cierra manualmente.
+                if (res?.temporary_password) {
+                    this.lastCreatedTempPassword = res.temporary_password;
+                    this.lastCreatedEmail = this.newUser.email;
+                } else {
+                    setTimeout(() => {
+                        this.showCreateModal = false;
+                        this.successMsg = '';
+                        this.cdr.detectChanges();
+                    }, 1200);
+                }
+                this.cdr.detectChanges();
             },
             error: (err) => {
                 this.errorMsg = err?.error?.detail || 'Error al registrar el usuario.';
                 this.isCreating = false;
                 this.cdr.detectChanges();
+            },
+        });
+    }
+
+    /** Copia la password temporal al clipboard (banner post-create). */
+    async copyTempPassword(): Promise<void> {
+        if (!this.lastCreatedTempPassword) return;
+        try {
+            await navigator.clipboard.writeText(this.lastCreatedTempPassword);
+            this.toast.success('Contraseña copiada al portapapeles.');
+        } catch {
+            this.toast.error('No pudimos copiar. Seleccionala manualmente.');
+        }
+    }
+
+    /** Reenvía la invitación a un usuario existente — regenera password
+     *  temporal y envía email con must_change=true. */
+    resendInvitation(user: UserRow): void {
+        this.confirmAction({
+            title: 'Reenviar invitación',
+            message: `Se generará una NUEVA contraseña temporal para ${user.full_name || user.email} y se le enviará por correo. La contraseña actual quedará invalidada inmediatamente. ¿Continuar?`,
+            confirmLabel: 'Reenviar',
+            confirmVariant: 'warning',
+            action: () => {
+                this.http.post<{ temporary_password?: string }>(
+                    `${environment.apiUrl}/auth/users/${user.id}/resend-invitation`,
+                    {},
+                    { headers: this.authService.getAuthHeaders() },
+                ).pipe(takeUntil(this.destroy$)).subscribe({
+                    next: (res) => {
+                        this.toast.success(
+                            `Invitación reenviada a ${user.email}. Contraseña temporal generada.`,
+                        );
+                        if (res?.temporary_password) {
+                            this.lastCreatedTempPassword = res.temporary_password;
+                            this.lastCreatedEmail = user.email;
+                            this.showCreateModal = false;
+                            // Pequeño hack: re-abrimos el modal pero solo
+                            // para mostrar el banner de password temporal.
+                            // En el HTML controlamos visibilidad con
+                            // *ngIf=lastCreatedTempPassword.
+                        }
+                        this.cdr.detectChanges();
+                    },
+                    error: (err) => {
+                        this.toast.error(err?.error?.detail || 'No se pudo reenviar.');
+                    },
+                });
             },
         });
     }

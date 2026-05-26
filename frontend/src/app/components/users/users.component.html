@@ -253,6 +253,13 @@
                                 </svg>
                                 Editar usuario
                             </button>
+                            <button (click)="resendInvitation(u); closeRowMenu()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                                Reenviar invitación
+                            </button>
                             <button (click)="toggleStatus(u, $event); closeRowMenu()">
                                 <svg *ngIf="u.is_active" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -488,6 +495,32 @@
             <div class="us-alert us-alert--error" *ngIf="errorMsg">{{ errorMsg }}</div>
             <div class="us-alert us-alert--success" *ngIf="successMsg">{{ successMsg }}</div>
 
+            <!-- Banner post-creación: muestra la contraseña temporal generada
+                 para que el admin la copie y se la comparta manualmente al
+                 usuario si el email no llega. -->
+            <div *ngIf="lastCreatedTempPassword as tp" class="us-temp-banner"
+                 style="background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; padding:14px 16px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                    <div style="flex:1;">
+                        <strong style="color:#78350f; display:block; margin-bottom:6px;">Invitación enviada a {{ lastCreatedEmail }}</strong>
+                        <small style="color:#92400e; display:block; margin-bottom:8px;">
+                            El usuario recibe la contraseña temporal por correo. Si no le llega,
+                            podés compartírsela manualmente. Cambiarla será obligatorio al primer login.
+                        </small>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <code style="background:#fef3c7; padding:6px 10px; border-radius:4px; font-family:'SF Mono',Consolas,monospace; font-size:14px; color:#78350f; font-weight:600; letter-spacing:0.5px;">{{ tp }}</code>
+                            <button type="button" (click)="copyTempPassword()"
+                                    style="padding:6px 12px; background:#fff; border:1px solid #fbbf24; color:#78350f; border-radius:6px; font-size:12.5px; font-weight:600; cursor:pointer;">
+                                Copiar
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" (click)="lastCreatedTempPassword = null; lastCreatedEmail = null"
+                            style="background:transparent; border:0; color:#92400e; cursor:pointer; font-size:18px; line-height:1;"
+                            aria-label="Cerrar">×</button>
+                </div>
+            </div>
+
             <form (ngSubmit)="createUser()" #createForm="ngForm" class="us-form-grid">
                 <div class="us-field us-field--full">
                     <label>Nombre completo <span class="us-req">*</span></label>
@@ -514,18 +547,47 @@
                         y cargá la URL antes de crear usuarios.
                     </small>
                 </div>
-                <div class="us-field">
-                    <label>Contraseña inicial <span class="us-req">*</span></label>
-                    <input type="password" name="password" [(ngModel)]="newUser.password" required
-                           autocomplete="new-password"
-                           placeholder="Mínimo 6 caracteres" minlength="6"/>
+                <!-- Toggle "forzar cambio en primer login". Por default ON
+                     (caso recomendado para invitaciones). Si ON: el backend
+                     genera la password temporal y los inputs se ocultan.
+                     Si OFF: el admin tipea la password manualmente. -->
+                <div class="us-field us-field--full" style="background:#f8fafc; padding:14px 16px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                        <input type="checkbox" name="must_change_password"
+                               [(ngModel)]="newUser.must_change_password"
+                               style="margin-top:3px;"/>
+                        <span style="flex:1;">
+                            <strong style="display:block; color:#0f172a; font-size:14px;">Forzar cambio de contraseña en el primer login</strong>
+                            <small style="display:block; color:#64748b; font-size:12.5px; margin-top:2px;">
+                                Recomendado para invitaciones. El sistema genera una contraseña temporal,
+                                la envía por email y obliga al usuario a cambiarla al entrar por primera vez.
+                                Si desactivás esto, podés establecer una contraseña permanente manualmente.
+                            </small>
+                        </span>
+                    </label>
                 </div>
-                <div class="us-field">
-                    <label>Confirmar contraseña <span class="us-req">*</span></label>
-                    <input type="password" name="confirm_password" [(ngModel)]="newUser.confirm_password" required
-                           autocomplete="new-password"
-                           placeholder="Repite la contraseña" minlength="6"/>
-                </div>
+
+                <!-- Password manual SOLO cuando must_change_password=false. -->
+                <ng-container *ngIf="!newUser.must_change_password">
+                    <div class="us-field">
+                        <label>Contraseña <span class="us-req">*</span></label>
+                        <app-password-input name="password"
+                                            [(ngModel)]="newUser.password"
+                                            placeholder="Mínimo 8 caracteres"
+                                            autocomplete="new-password"
+                                            [minlength]="8"
+                                            [required]="true"></app-password-input>
+                    </div>
+                    <div class="us-field">
+                        <label>Confirmar contraseña <span class="us-req">*</span></label>
+                        <app-password-input name="confirm_password"
+                                            [(ngModel)]="newUser.confirm_password"
+                                            placeholder="Repite la contraseña"
+                                            autocomplete="new-password"
+                                            [minlength]="8"
+                                            [required]="true"></app-password-input>
+                    </div>
+                </ng-container>
                 <div class="us-field">
                     <label>Rol de sistema <span class="us-req">*</span></label>
                     <select name="role_id" [(ngModel)]="newUser.role_id" required>
