@@ -1,4 +1,4 @@
-<div class="toast-stack" role="region" aria-label="Notificaciones" aria-live="polite">
+<div class="toast-stack" role="region" [attr.aria-label]="'profile.notifications' | translate" aria-live="polite">
     <article
         *ngFor="let toast of toasts; trackBy: trackById"
         class="toast toast--{{ toast.kind }}"

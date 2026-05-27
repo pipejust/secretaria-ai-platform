@@ -669,8 +669,8 @@
                     <li *ngFor="let a of recentActivity; trackBy: trackActivity" class="br-activity-item">
                         <span class="br-activity-dot br-activity-dot--{{ a.tone }}"></span>
                         <div class="br-activity-body">
-                            <span class="br-activity-title">{{ a.title }}</span>
-                            <span class="br-activity-meta">{{ a.meta }}</span>
+                            <span class="br-activity-title">{{ a.title | translate }}</span>
+                            <span class="br-activity-meta">{{ a.meta | translate }}</span>
                         </div>
                     </li>
                 </ul>

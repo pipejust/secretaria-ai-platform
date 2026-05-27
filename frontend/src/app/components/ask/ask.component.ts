@@ -2,7 +2,7 @@ import {
     Component, OnDestroy, OnInit, ChangeDetectorRef, ViewChild, ElementRef, HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -151,6 +151,7 @@ export class AskComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
+        private translate: TranslateService,
     ) {}
 
     ngOnInit(): void {
@@ -386,10 +387,17 @@ export class AskComponent implements OnInit, OnDestroy {
             });
     }
 
-    /** Click en una sugerencia: pone el texto en el input y dispara submit. */
-    usePrompt(text: string): void {
+    /** Click en una sugerencia: resuelve la KEY i18n contra el idioma
+     *  activo y la pone en el input antes de enviar. Las prompts son
+     *  KEYS (`ask.prompt_meetings_1`) no texto literal — ver
+     *  `suggestedPrompts` abajo. */
+    usePrompt(keyOrText: string): void {
         if (this.isAsking) return;
-        this.question = text;
+        const resolved = this.translate.instant(keyOrText);
+        // Si la traducción no existe, `instant` devuelve la key tal cual:
+        // detectamos ese caso y caemos al input original para no enviar
+        // "ask.prompt_meetings_1" como pregunta literal al backend.
+        this.question = (resolved && resolved !== keyOrText) ? resolved : keyOrText;
         this.submit();
     }
 
@@ -707,35 +715,37 @@ export class AskComponent implements OnInit, OnDestroy {
     // Helpers de presentación
     // ============================================================
 
-    /** Las 3 categorías de prompts del panel izquierdo. Mismo set para
-     *  todos los users — el componente no persiste favoritos por ahora. */
+    /** Las 3 categorías de prompts del panel izquierdo. Los `label` y
+     *  los `prompts` son CLAVES i18n — se resuelven en el template via
+     *  `| translate`. Antes estaban hardcoded en español, lo que dejaba
+     *  el panel entero en ES aunque el usuario estuviera en CA/EN. */
     readonly suggestedPrompts: SuggestedCategory[] = [
         {
-            label: 'Reuniones',
+            label: 'ask.cat_meetings',
             icon: 'meeting',
             prompts: [
-                '¿Cuáles fueron las decisiones clave de las reuniones recientes?',
-                'Resume la última reunión con el equipo de producto.',
-                '¿Qué tareas tengo asignadas?',
-                'Muestra reuniones sobre el roadmap del producto.',
+                'ask.prompt_meetings_1',
+                'ask.prompt_meetings_2',
+                'ask.prompt_meetings_3',
+                'ask.prompt_meetings_4',
             ],
         },
         {
-            label: 'Riesgos',
+            label: 'ask.cat_risks',
             icon: 'risk',
             prompts: [
-                '¿Cuáles son los principales riesgos del roadmap Q2?',
-                '¿Qué riesgos están vencidos o sin actualización?',
-                'Muestra riesgos relacionados con integraciones.',
+                'ask.prompt_risks_1',
+                'ask.prompt_risks_2',
+                'ask.prompt_risks_3',
             ],
         },
         {
-            label: 'Decisiones',
+            label: 'ask.cat_decisions',
             icon: 'decision',
             prompts: [
-                '¿Qué decisiones están pendientes de aprobación?',
-                'Muestra decisiones tomadas sobre las prioridades Q2.',
-                '¿Quién aprobó el presupuesto de los ítems del roadmap?',
+                'ask.prompt_decisions_1',
+                'ask.prompt_decisions_2',
+                'ask.prompt_decisions_3',
             ],
         },
     ];

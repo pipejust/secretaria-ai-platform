@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -117,6 +117,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         private toast: ToastService,
         private userDirectory: UserDirectoryService,
         private branding: BrandingService,
+        private translate: TranslateService,
     ) {
         // Re-render cuando el directorio resuelve nuevos emails (auto-refresh
         // de avatares en participantes y owners de tareas).
@@ -421,12 +422,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // OVERVIEW — propiedades derivadas para los widgets del handoff
     // ========================================================================
 
-    /** Saludo según hora local. UI completa en español. */
+    /** Saludo según hora local. Resuelto contra ngx-translate para que
+     *  siga el idioma activo del usuario (es/ca/en). Antes era español
+     *  hardcoded — usuarios en CA/EN veían "Buenos días" siempre. */
     get greeting(): string {
         const h = new Date().getHours();
-        if (h < 12) return 'Buenos días';
-        if (h < 19) return 'Buenas tardes';
-        return 'Buenas noches';
+        const key = h < 12 ? 'dashboard.greeting_morning'
+                  : h < 19 ? 'dashboard.greeting_afternoon'
+                           : 'dashboard.greeting_evening';
+        // `instant` evita un async pipe acá — el get se invoca per change-
+        // detection cycle, así que sale gratis. Fallback al key crudo si
+        // todavía no cargó el i18n.
+        return this.translate.instant(key);
     }
 
     get userFirstName(): string {
@@ -1186,13 +1193,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // ========================================================================
     // Quick Actions — navegan a vistas ya existentes
     // ========================================================================
+    // Las quick actions usan KEYS i18n en `label` y `sub`. El template
+    // las resuelve con `| translate`. Antes estaban hardcoded en ES.
     private readonly _allQuickActions = [
-        { id: 'new-meeting',  label: 'Iniciar reunión',       sub: 'Subir audio o texto',         icon: 'mic',      action: 'upload',                                       requires: 'writer'  },
-        { id: 'upload',       label: 'Subir transcripción',   sub: 'Analizar reunión pasada',     icon: 'upload',   action: 'upload',                                       requires: 'writer'  },
-        { id: 'projects',     label: 'Crear proyecto',        sub: 'Organiza trabajo y equipos',  icon: 'folder',   action: 'goto', target: '/admin/projects',              requires: 'admin'   },
-        { id: 'ask',          label: 'Preguntá a Acten',      sub: 'Insights con IA',             icon: 'sparkle',  action: 'goto', target: '/admin/ask',                   requires: 'any'     },
-        { id: 'calendar',     label: 'Ver mi calendario',     sub: 'Sincronizado con Google/MS',  icon: 'calendar', action: 'goto', target: '/admin/calendar',              requires: 'any'     },
-        { id: 'reports',      label: 'Ver reportes',          sub: 'Explora analíticas',          icon: 'chart',    action: 'goto', target: '/admin/reportes',              requires: 'any'     },
+        { id: 'new-meeting',  label: 'dashboard.qa_new_meeting_label',  sub: 'dashboard.qa_new_meeting_sub',  icon: 'mic',      action: 'upload',                                       requires: 'writer'  },
+        { id: 'upload',       label: 'dashboard.qa_upload_label',       sub: 'dashboard.qa_upload_sub',       icon: 'upload',   action: 'upload',                                       requires: 'writer'  },
+        { id: 'projects',     label: 'dashboard.qa_projects_label',     sub: 'dashboard.qa_projects_sub',     icon: 'folder',   action: 'goto', target: '/admin/projects',              requires: 'admin'   },
+        { id: 'ask',          label: 'dashboard.qa_ask_label',          sub: 'dashboard.qa_ask_sub',          icon: 'sparkle',  action: 'goto', target: '/admin/ask',                   requires: 'any'     },
+        { id: 'calendar',     label: 'dashboard.qa_calendar_label',     sub: 'dashboard.qa_calendar_sub',     icon: 'calendar', action: 'goto', target: '/admin/calendar',              requires: 'any'     },
+        { id: 'reports',      label: 'dashboard.qa_reports_label',      sub: 'dashboard.qa_reports_sub',      icon: 'chart',    action: 'goto', target: '/admin/reportes',              requires: 'any'     },
     ];
 
     /** Sólo devuelve las quick actions que el rol actual puede ejecutar. */

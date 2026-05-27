@@ -80,11 +80,15 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     readonly accentName = 'Amber';
 
     // Activity (placeholder local — el backend aún no expone bitácora de marca).
+    // `title` y `meta` son CLAVES i18n; el template las resuelve con
+    // `| translate`. Las fechas/nombres en `meta` siguen embebidos en
+    // la clave porque es contenido demo estático (cuando el backend
+    // exponga bitácora real, esto cambiará a datos del API).
     readonly recentActivity: BrandActivityItem[] = [
-        { id: 1, title: 'Logo actualizado',         meta: 'Hoy, 09:42 · System Admin',   tone: 'green' },
-        { id: 2, title: 'Colores modificados',      meta: 'Ayer, 11:18 · Carlos Neura',  tone: 'orange' },
-        { id: 3, title: 'Vista previa enviada',     meta: '15 may, 10:21 · Maya Patel',  tone: 'blue' },
-        { id: 4, title: 'Datos de contacto editados', meta: '3 may, 09:16 · Maya Patel', tone: 'gray' },
+        { id: 1, title: 'branding.activity_logo_updated_title',     meta: 'branding.activity_logo_updated_meta',     tone: 'green'  },
+        { id: 2, title: 'branding.activity_colors_changed_title',   meta: 'branding.activity_colors_changed_meta',   tone: 'orange' },
+        { id: 3, title: 'branding.activity_preview_sent_title',     meta: 'branding.activity_preview_sent_meta',     tone: 'blue'   },
+        { id: 4, title: 'branding.activity_contact_edited_title',   meta: 'branding.activity_contact_edited_meta',   tone: 'gray'   },
     ];
 
     ngOnInit(): void {

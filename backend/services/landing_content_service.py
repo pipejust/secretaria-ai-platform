@@ -917,38 +917,46 @@ DEFAULT_CONTENT: Dict[str, Any] = {
         # con isValidLink() del componente.
         "columns": [
             {
-                "title": "Producto",
+                "title": {"es": "Producto", "ca": "Producte", "en": "Product"},
                 "links": [
-                    {"label": "Capacidades", "url": "#features"},
-                    {"label": "Cómo funciona", "url": "#flow"},
-                    {"label": "Integraciones", "url": "#integrations"},
-                    {"label": "Solicitar demo", "url": "#contact"},
+                    {"label": {"es": "Capacidades", "ca": "Capacitats", "en": "Features"}, "url": "#features"},
+                    {"label": {"es": "Cómo funciona", "ca": "Com funciona", "en": "How it works"}, "url": "#flow"},
+                    {"label": {"es": "Integraciones", "ca": "Integracions", "en": "Integrations"}, "url": "#integrations"},
+                    {"label": {"es": "Solicitar demo", "ca": "Demana demo", "en": "Request a demo"}, "url": "#contact"},
                 ],
             },
             {
-                "title": "Empresa",
+                "title": {"es": "Empresa", "ca": "Empresa", "en": "Company"},
                 "links": [
-                    {"label": "Quiénes somos", "url": "#testimonials"},
-                    {"label": "Contacto", "url": "#contact"},
-                    {"label": "Iniciar sesión", "url": "/login"},
+                    {"label": {"es": "Quiénes somos", "ca": "Qui som", "en": "About us"}, "url": "#testimonials"},
+                    {"label": {"es": "Contacto", "ca": "Contacte", "en": "Contact"}, "url": "#contact"},
+                    {"label": {"es": "Iniciar sesión", "ca": "Inicia sessió", "en": "Log in"}, "url": "/login"},
                 ],
             },
             {
-                "title": "Legal",
+                "title": {"es": "Legal", "ca": "Legal", "en": "Legal"},
                 "links": [
-                    {"label": "Privacidad", "url": "/privacy"},
-                    {"label": "Términos", "url": "/terms"},
+                    {"label": {"es": "Privacidad", "ca": "Privadesa", "en": "Privacy"}, "url": "/privacy"},
+                    {"label": {"es": "Términos", "ca": "Termes", "en": "Terms"}, "url": "/terms"},
                 ],
             },
         ],
         "legal_links": [
-            {"label": "Privacidad", "url": "/privacy"},
-            {"label": "Términos", "url": "/terms"},
-            {"label": "Seguridad", "url": "/privacy"},
-            {"label": "Cookies", "url": "/privacy"},
+            {"label": {"es": "Privacidad", "ca": "Privadesa", "en": "Privacy"}, "url": "/privacy"},
+            {"label": {"es": "Términos", "ca": "Termes", "en": "Terms"}, "url": "/terms"},
+            {"label": {"es": "Seguridad", "ca": "Seguretat", "en": "Security"}, "url": "/privacy"},
+            {"label": {"es": "Cookies", "ca": "Galetes", "en": "Cookies"}, "url": "/privacy"},
         ],
-        "language_label": "Español (ES)",
-        "copyright": "Acten.ai. Todos los derechos reservados.",
+        "language_label": {
+            "es": "Español (ES)",
+            "ca": "Català (CA)",
+            "en": "English (EN)",
+        },
+        "copyright": {
+            "es": "Acten.ai. Todos los derechos reservados.",
+            "ca": "Acten.ai. Tots els drets reservats.",
+            "en": "Acten.ai. All rights reserved.",
+        },
     },
 }
 

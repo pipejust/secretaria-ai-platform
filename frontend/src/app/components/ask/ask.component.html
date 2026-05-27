@@ -109,7 +109,7 @@
             </div>
 
             <ng-container *ngFor="let cat of suggestedPrompts">
-                <h3 class="aa-cat-label">{{ cat.label | uppercase }}</h3>
+                <h3 class="aa-cat-label">{{ cat.label | translate | uppercase }}</h3>
                 <ul class="aa-prompt-list">
                     <li *ngFor="let p of cat.prompts">
                         <button type="button" class="aa-prompt"
@@ -132,7 +132,7 @@
                                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                                 </svg>
                             </span>
-                            <span class="aa-prompt-text">{{ p }}</span>
+                            <span class="aa-prompt-text">{{ p | translate }}</span>
                         </button>
                     </li>
                 </ul>

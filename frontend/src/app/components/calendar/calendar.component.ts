@@ -10,6 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { UserDirectoryService } from '../../services/user-directory.service';
+import { LanguageService } from '../../services/language.service';
 
 interface CalAccount {
     id: number;
@@ -71,12 +72,38 @@ interface NoteItem {
 
 type ViewMode = 'month' | 'week' | 'agenda';
 
-const DAY_LABELS = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
-const DAY_LABELS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const MONTH_LABELS = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
+// Etiquetas de día/mes por idioma. El calendario antes hardcodeaba ES,
+// así que un usuario en CA o EN veía "Mayo 2026" y "Miércoles" como
+// títulos. Ahora resolvemos el array según el idioma activo del cliente.
+const DAY_LABELS_BY_LANG: Record<string, string[]> = {
+    es: ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'],
+    ca: ['DG', 'DL', 'DT', 'DC', 'DJ', 'DV', 'DS'],
+    en: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
+};
+const DAY_LABELS_FULL_BY_LANG: Record<string, string[]> = {
+    es: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+    ca: ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'],
+    en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+};
+const MONTH_LABELS_BY_LANG: Record<string, string[]> = {
+    es: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+    ca: ['Gener', 'Febrer', 'Març', 'Abril', 'Maig', 'Juny',
+         'Juliol', 'Agost', 'Setembre', 'Octubre', 'Novembre', 'Desembre'],
+    en: ['January', 'February', 'March', 'April', 'May', 'June',
+         'July', 'August', 'September', 'October', 'November', 'December'],
+};
+// Default 'es' para callers que no quieran lidiar con el idioma.
+const DAY_LABELS = DAY_LABELS_BY_LANG.es;
+const DAY_LABELS_FULL = DAY_LABELS_FULL_BY_LANG.es;
+const MONTH_LABELS = MONTH_LABELS_BY_LANG.es;
+// "de" conector entre día y mes en formato largo. CA y EN no usan
+// el mismo patrón pero damos algo razonable para los 3.
+const DATE_CONNECTORS: Record<string, { de: string }> = {
+    es: { de: 'de' },
+    ca: { de: 'de' },
+    en: { de: '' },  // En inglés "Wednesday, 27 May 2026" — sin "of".
+};
 const EVENT_PALETTE = ['indigo', 'emerald', 'amber', 'rose', 'sky', 'violet'];
 const NOTES_STORAGE_KEY = 'acten.calendar.notes.v1';
 
@@ -132,8 +159,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
     newNoteText = '';
     showNoteEditor = false;
 
-    readonly DAY_LABELS = DAY_LABELS;
-    readonly MONTH_LABELS = MONTH_LABELS;
+    /** Etiquetas reactivas al idioma del cliente — usadas por el template
+     *  (`*ngFor="let dayName of DAY_LABELS"`). Getter en vez de constante
+     *  para que un cambio de idioma sin reload se propague en el próximo
+     *  change-detection cycle. */
+    get DAY_LABELS(): string[] {
+        const lang = (this.lang?.currentLang() || 'es');
+        return DAY_LABELS_BY_LANG[lang] || DAY_LABELS_BY_LANG.es;
+    }
+    get MONTH_LABELS(): string[] {
+        const lang = (this.lang?.currentLang() || 'es');
+        return MONTH_LABELS_BY_LANG[lang] || MONTH_LABELS_BY_LANG.es;
+    }
     readonly EVENT_PALETTE = EVENT_PALETTE;
 
     // ============================================================
@@ -162,6 +199,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         private cdr: ChangeDetectorRef,
         private route: ActivatedRoute,
         private userDirectory: UserDirectoryService,
+        public lang: LanguageService,
     ) {
         // Re-render del calendario cuando el directorio resuelve nuevos
         // emails (la foto del dueño aparece en cuanto está disponible).
@@ -906,8 +944,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
 
     longDateLabel(d: Date): string {
-        const wd = DAY_LABELS_FULL[d.getDay()];
-        return `${wd}, ${d.getDate()} de ${MONTH_LABELS[d.getMonth()].toLowerCase()} de ${d.getFullYear()}`;
+        // Formato "Miércoles, 27 de mayo de 2026" / "Dimecres, 27 de maig de
+        // 2026" / "Wednesday, May 27 2026" según idioma activo. ES/CA usan
+        // mes en minúsculas con conector "de"; EN preserva capitalización.
+        const lang = (this.lang?.currentLang() || 'es');
+        const wd = (DAY_LABELS_FULL_BY_LANG[lang] || DAY_LABELS_FULL_BY_LANG.es)[d.getDay()];
+        const monthsArr = (MONTH_LABELS_BY_LANG[lang] || MONTH_LABELS_BY_LANG.es);
+        if (lang === 'en') {
+            return `${wd}, ${monthsArr[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}`;
+        }
+        const mn = monthsArr[d.getMonth()].toLowerCase();
+        const de = (DATE_CONNECTORS[lang] || DATE_CONNECTORS.es).de;
+        return `${wd}, ${d.getDate()} ${de} ${mn} ${de} ${d.getFullYear()}`;
     }
 
     shortDateLabel(d: Date): string {
