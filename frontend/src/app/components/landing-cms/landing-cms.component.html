@@ -13,6 +13,21 @@
             </div>
         </div>
         <div class="lcms-header-actions">
+            <!-- Selector de IDIOMA DE EDICIÓN — alterna el contenido del
+                 formulario entre Es/Ca/En. Cada cambio recarga el form con
+                 las traducciones del idioma elegido. Al guardar, solo ese
+                 idioma se actualiza en el JSON; los demás se preservan. -->
+            <div class="lcms-edit-lang" role="group" aria-label="Idioma de edición">
+                <span class="lcms-edit-lang-label">Editar en:</span>
+                <button *ngFor="let l of availableEditLangs" type="button"
+                        class="lcms-edit-lang-btn"
+                        [class.is-active]="editLang === l.code"
+                        (click)="changeEditLang(l.code)"
+                        [attr.aria-pressed]="editLang === l.code"
+                        [disabled]="isLoading || isSaving">
+                    {{ l.label }}
+                </button>
+            </div>
             <button type="button" class="lcms-btn lcms-btn-ghost" (click)="openLanding()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

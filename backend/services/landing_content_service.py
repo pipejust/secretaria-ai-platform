@@ -730,6 +730,64 @@ def get_landing_content(db: Session, tenant_id: int) -> Dict[str, Any]:
     return _deep_merge(DEFAULT_CONTENT, overrides)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# i18n helpers — resuelven contenido multilenguaje del CMS.
+#
+# Cada string del CMS puede estar guardado como:
+#   - String plano: "Hola"                        → backward-compat, ES default
+#   - Dict idioma:  {"es": "Hola", "ca": "Hola",  → multilenguaje
+#                    "en": "Hi"}
+#
+# `resolve_i18n_in_tree` recorre todo el árbol del content y reemplaza los
+# dicts {es,ca,en,…} por la string del idioma pedido. Si el idioma pedido
+# no está, cae a 'es' como fallback (siempre presente en defaults).
+# ─────────────────────────────────────────────────────────────────────────────
+
+_LANG_KEYS = {"es", "ca", "en"}
+
+
+def _is_i18n_dict(value: Any) -> bool:
+    """True si el value parece un dict de traducciones (las claves coinciden
+    con los códigos de idioma soportados y NADA más)."""
+    if not isinstance(value, dict) or not value:
+        return False
+    keys = set(value.keys())
+    # Permitimos subconjunto de los idiomas soportados, pero NO claves extras
+    # (eso indicaría que es un dict de negocio, no de traducción).
+    return keys.issubset(_LANG_KEYS) and all(isinstance(v, str) for v in value.values())
+
+
+def _resolve_i18n_value(value: Any, lang: str) -> Any:
+    """Resuelve un único valor. Si es un i18n dict, devuelve la traducción;
+    si es cualquier otra cosa, lo devuelve tal cual (lo procesa el caller
+    si es lista/dict anidado)."""
+    if _is_i18n_dict(value):
+        return value.get(lang) or value.get("es") or next(iter(value.values()), "")
+    return value
+
+
+def resolve_i18n_in_tree(node: Any, lang: str = "es") -> Any:
+    """Recorre recursivamente un árbol (dict / list / scalar) y resuelve
+    cada i18n dict al idioma pedido. Devuelve una NUEVA estructura (no
+    muta el input)."""
+    if _is_i18n_dict(node):
+        return _resolve_i18n_value(node, lang)
+    if isinstance(node, dict):
+        return {k: resolve_i18n_in_tree(v, lang) for k, v in node.items()}
+    if isinstance(node, list):
+        return [resolve_i18n_in_tree(item, lang) for item in node]
+    return node
+
+
+def get_landing_content_localized(
+    db: Session, tenant_id: int, lang: str = "es",
+) -> Dict[str, Any]:
+    """Versión localizada del get_landing_content: resuelve i18n dicts a
+    un único idioma. Pensado para el endpoint público (visitor)."""
+    raw = get_landing_content(db, tenant_id)
+    return resolve_i18n_in_tree(raw, lang)
+
+
 def update_landing_content(
     db: Session, tenant_id: int, patch: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -751,6 +809,66 @@ def update_landing_content(
     db.refresh(tenant)
 
     return _deep_merge(DEFAULT_CONTENT, merged)
+
+
+def _wrap_strings_with_lang(node: Any, lang: str, base: Any = None) -> Any:
+    """Recorre un patch y envuelve cada string en {lang: value}, preservando
+    las traducciones que `base` ya tenga en otros idiomas.
+
+    - String suelto en el patch → {lang: value} (o si base[key] ya es i18n
+      dict, mergea agregando/actualizando solo la clave lang).
+    - Dict: recurse en cada hijo.
+    - Lista de objetos (items): recurse en cada item posicionalmente contra
+      el base correspondiente.
+    - Otros tipos (bool/int/None/lista de strings simples): se devuelven
+      tal cual — no son traducibles."""
+    if isinstance(node, str):
+        if _is_i18n_dict(base):
+            # Mantiene las traducciones existentes, solo actualiza la del lang
+            updated = dict(base)
+            updated[lang] = node
+            return updated
+        return {lang: node}
+    if isinstance(node, dict):
+        out: Dict[str, Any] = {}
+        base_dict = base if isinstance(base, dict) else {}
+        for k, v in node.items():
+            out[k] = _wrap_strings_with_lang(v, lang, base_dict.get(k))
+        return out
+    if isinstance(node, list):
+        out_list = []
+        base_list = base if isinstance(base, list) else []
+        for i, item in enumerate(node):
+            sub_base = base_list[i] if i < len(base_list) else None
+            out_list.append(_wrap_strings_with_lang(item, lang, sub_base))
+        return out_list
+    return node
+
+
+def update_landing_content_i18n(
+    db: Session, tenant_id: int, patch: Dict[str, Any], edit_lang: str,
+) -> Dict[str, Any]:
+    """Variante i18n del update: envuelve strings en {lang: value} sobre el
+    contenido existente, luego mergea. Garantiza que editando solo en 'ca'
+    no se pisen las traducciones en 'es' y 'en' previamente guardadas.
+
+    Devuelve el contenido LOCALIZADO al edit_lang (para que el form se
+    refresque con lo recién guardado en ese idioma)."""
+    tenant = db.get(Tenant, tenant_id)
+    if not tenant:
+        raise ValueError(f"Tenant {tenant_id} no existe.")
+
+    current = _safe_load(tenant.landing_content_json)
+    wrapped = _wrap_strings_with_lang(patch, edit_lang, current)
+    merged = _deep_merge(current, wrapped)
+    tenant.landing_content_json = json.dumps(merged, ensure_ascii=False)
+    db.add(tenant)
+    db.commit()
+    db.refresh(tenant)
+
+    # Devolvemos el contenido localizado al edit_lang, igual que admin_get_landing.
+    full = _deep_merge(DEFAULT_CONTENT, merged)
+    return resolve_i18n_in_tree(full, edit_lang)
 
 
 def reset_landing_content(db: Session, tenant_id: int) -> Dict[str, Any]:

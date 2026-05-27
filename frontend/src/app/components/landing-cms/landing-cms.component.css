@@ -67,6 +67,47 @@
   flex-shrink: 0;
 }
 
+/* Selector de idioma de edición — toggle segmentado con 3 opciones. */
+.lcms-edit-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+.lcms-edit-lang-label {
+  padding: 0 8px 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.lcms-edit-lang-btn {
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+.lcms-edit-lang-btn:hover:not(:disabled):not(.is-active) {
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+.lcms-edit-lang-btn.is-active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+.lcms-edit-lang-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ── Loading / error ─────────────────────────────────────────────────── */
 
 .lcms-loading {

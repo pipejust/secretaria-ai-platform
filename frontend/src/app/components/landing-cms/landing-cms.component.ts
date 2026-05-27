@@ -182,6 +182,16 @@ export class LandingCmsComponent implements OnInit {
     // Lifecycle
     // ────────────────────────────────────────────────────────────────────
 
+    /** Idioma de EDICIÓN del CMS. Independiente del idioma de la UI del
+     *  admin — el admin puede editar el landing en catalán mientras la
+     *  interfaz está en español. Default 'es'. */
+    editLang: 'es' | 'ca' | 'en' = 'es';
+    readonly availableEditLangs: { code: 'es' | 'ca' | 'en'; label: string }[] = [
+        { code: 'es', label: 'Español' },
+        { code: 'ca', label: 'Català' },
+        { code: 'en', label: 'English' },
+    ];
+
     async ngOnInit(): Promise<void> {
         const token = this.auth.token;
         if (!token) {
@@ -189,8 +199,13 @@ export class LandingCmsComponent implements OnInit {
             this.isLoading = false;
             return;
         }
+        await this._reloadForLang(token);
+    }
+
+    private async _reloadForLang(token: string): Promise<void> {
+        this.isLoading = true;
         try {
-            const data = await this.cms.loadAdmin(token);
+            const data = await this.cms.loadAdmin(token, this.editLang);
             this.content = data;
             this.originalSnapshot = JSON.stringify(data);
         } catch (err: any) {
@@ -201,6 +216,19 @@ export class LandingCmsComponent implements OnInit {
             this.isLoading = false;
             this.cdr.detectChanges();
         }
+    }
+
+    /** Cambia el idioma de edición. Si hay cambios sin guardar, pide
+     *  confirmación antes de descartar (el GET re-carga el form con las
+     *  traducciones del nuevo idioma desde server). */
+    async changeEditLang(newLang: 'es' | 'ca' | 'en'): Promise<void> {
+        if (newLang === this.editLang) return;
+        if (this.isDirty && !confirm(
+            'Tenés cambios sin guardar en este idioma. Si cambiás de idioma se descartarán. ¿Continuar?',
+        )) return;
+        this.editLang = newLang;
+        const token = this.auth.token;
+        if (token) await this._reloadForLang(token);
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -233,10 +261,10 @@ export class LandingCmsComponent implements OnInit {
         }
         this.isSaving = true;
         try {
-            const updated = await this.cms.save(this.content, token);
+            const updated = await this.cms.save(this.content, token, this.editLang);
             this.content = updated;
             this.originalSnapshot = JSON.stringify(updated);
-            this.toast.success('Contenido del landing guardado correctamente.');
+            this.toast.success(`Contenido del landing guardado en ${this.editLang.toUpperCase()}.`);
         } catch (err: any) {
             const detail = err?.error?.detail || err?.message || 'Error desconocido.';
             this.toast.error(`No se pudo guardar: ${detail}`);

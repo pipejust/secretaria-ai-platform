@@ -295,9 +295,12 @@ export class LandingCmsService {
   private readonly adminUrl  = `${environment.apiUrl}/api/landing-cms`;
   private readonly publicUrl = `${environment.apiUrl}/api/public/landing`;
 
-  /** GET público — usado por el landing en acten.app. Sin token. */
-  async loadPublic(): Promise<LandingContent> {
-    return firstValueFrom(this.http.get<LandingContent>(this.publicUrl));
+  /** GET público — usado por el landing en acten.app. Sin token.
+   *  Acepta `lang` para que el backend resuelva los i18n dicts del CMS
+   *  al idioma pedido (es | ca | en). Default 'es' si no se pasa. */
+  async loadPublic(lang: string = 'es'): Promise<LandingContent> {
+    const url = `${this.publicUrl}?lang=${encodeURIComponent(lang)}`;
+    return firstValueFrom(this.http.get<LandingContent>(url));
   }
 
   /** GET público — tenants reales del sistema para la trust band. */
@@ -316,16 +319,26 @@ export class LandingCmsService {
     return resp?.items ?? [];
   }
 
-  /** GET admin — devuelve el mismo shape que loadPublic. Requiere token + tenant 'acten'. */
-  async loadAdmin(token: string): Promise<LandingContent> {
+  /** GET admin — devuelve el mismo shape que loadPublic, ya resuelto al
+   *  idioma de edición. El admin alterna entre idiomas con un toggle UI;
+   *  cada cambio recarga el form con esas traducciones. */
+  async loadAdmin(token: string, editLang: string = 'es'): Promise<LandingContent> {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
-    return firstValueFrom(this.http.get<LandingContent>(`${this.adminUrl}/`, { headers }));
+    const url = `${this.adminUrl}/?edit_lang=${encodeURIComponent(editLang)}`;
+    return firstValueFrom(this.http.get<LandingContent>(url, { headers }));
   }
 
-  /** PUT admin — patch parcial. El backend deep-mergea sobre lo que ya estaba. */
-  async save(patch: Partial<LandingContent>, token: string): Promise<LandingContent> {
+  /** PUT admin — patch parcial. El backend lo envuelve en {edit_lang: value}
+   *  y mergea sobre el JSON guardado, preservando traducciones de otros
+   *  idiomas. */
+  async save(
+    patch: Partial<LandingContent>,
+    token: string,
+    editLang: string = 'es',
+  ): Promise<LandingContent> {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
-    return firstValueFrom(this.http.put<LandingContent>(`${this.adminUrl}/`, patch, { headers }));
+    const url = `${this.adminUrl}/?edit_lang=${encodeURIComponent(editLang)}`;
+    return firstValueFrom(this.http.put<LandingContent>(url, patch, { headers }));
   }
 
   /** Reset duro al contenido default. */

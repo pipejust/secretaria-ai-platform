@@ -11,6 +11,8 @@ import { PermissionsService } from '../../services/permissions.service';
 import { SearchService, SearchGroup } from '../../services/search.service';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer } from '@angular/platform-browser';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
 interface CurrentUser {
     email?: string;
@@ -24,7 +26,7 @@ interface CurrentUser {
 @Component({
     selector: 'app-admin-layout',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
     templateUrl: './admin-layout.component.html',
     styleUrls: ['./admin-layout.component.css']
 })

@@ -60,13 +60,38 @@ def _resolve_acten_tenant(db: Session) -> Tenant:
 
 
 @public_router.get("/landing")
-def get_public_landing_content(db: Session = Depends(get_session)) -> Dict[str, Any]:
-    """Devuelve el contenido del landing público.
+def get_public_landing_content(
+    request: Request,
+    lang: str = "es",
+    db: Session = Depends(get_session),
+) -> Dict[str, Any]:
+    """Devuelve el contenido del landing público localizado al idioma pedido.
 
-    Sin auth — lo consume el SPA que sirve acten.app sin token.
+    - Sin auth — lo consume el SPA que sirve acten.app sin token.
+    - `?lang=es|ca|en` decide en qué idioma resolver los i18n dicts del CMS.
+      Si el param no viene, se intenta inferir de `Accept-Language`; default 'es'.
+    - Los strings planos del CMS antiguo se devuelven como están (backward-
+      compat). Los i18n dicts {es,ca,en} se resuelven al lang pedido con
+      fallback a 'es'.
     """
+    safe_lang = (lang or "").lower().strip() or _infer_lang_from_header(request)
+    if safe_lang not in ("es", "ca", "en"):
+        safe_lang = "es"
     tenant = _resolve_acten_tenant(db)
-    return landing_content_service.get_landing_content(db, tenant.id)
+    return landing_content_service.get_landing_content_localized(db, tenant.id, safe_lang)
+
+
+def _infer_lang_from_header(request: Request) -> str:
+    """Lee Accept-Language y elige el primer match soportado.
+    Ej.: 'ca-ES,ca;q=0.9,es;q=0.8' → 'ca'."""
+    raw = (request.headers.get("accept-language") or "").lower()
+    if not raw:
+        return "es"
+    for token in raw.split(","):
+        code = token.split(";", 1)[0].strip().split("-", 1)[0]
+        if code in ("es", "ca", "en"):
+            return code
+    return "es"
 
 
 @public_router.get("/landing/people")
@@ -655,30 +680,45 @@ def _require_acten_tenant(tenant: Tenant = Depends(get_current_tenant)) -> Tenan
 
 @router.get("/")
 def admin_get_landing(
+    edit_lang: str = "es",
     db: Session = Depends(get_session),
     admin: User = Depends(require_admin),
     tenant: Tenant = Depends(_require_acten_tenant),
 ) -> Dict[str, Any]:
-    """Versión admin del GET — devuelve el mismo shape que /api/public/landing."""
-    return landing_content_service.get_landing_content(db, tenant.id)
+    """Versión admin del GET. Por defecto devuelve los strings RESUELTOS al
+    idioma `edit_lang` (es|ca|en) para que el formulario del CMS edite de
+    a un idioma por vez. El admin alterna entre idiomas con un toggle UI."""
+    safe = (edit_lang or "es").lower()
+    if safe not in ("es", "ca", "en"):
+        safe = "es"
+    return landing_content_service.get_landing_content_localized(db, tenant.id, safe)
 
 
 @router.put("/")
 def admin_put_landing(
     patch: Dict[str, Any],
+    edit_lang: str = "es",
     db: Session = Depends(get_session),
     admin: User = Depends(require_admin),
     tenant: Tenant = Depends(_require_acten_tenant),
 ) -> Dict[str, Any]:
-    """Patch parcial sobre el contenido. Acepta sección a sección o el JSON
-    completo — sólo las claves presentes en `patch` se sobrescriben.
+    """Patch parcial sobre el contenido, respetando i18n.
+
+    El patch viene con strings PLANOS (el CMS edita un idioma a la vez).
+    El backend los "promociona" a dicts {edit_lang: value} antes de mergear
+    sobre el JSON guardado, preservando las traducciones de otros idiomas
+    ya existentes. Logos / colores / arrays de items NO se i18n-izan
+    (siguen siendo el mismo en todos los idiomas).
     """
     if not isinstance(patch, dict):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El payload debe ser un objeto JSON.",
         )
-    return landing_content_service.update_landing_content(db, tenant.id, patch)
+    safe = (edit_lang or "es").lower()
+    if safe not in ("es", "ca", "en"):
+        safe = "es"
+    return landing_content_service.update_landing_content_i18n(db, tenant.id, patch, safe)
 
 
 @router.post("/reset")

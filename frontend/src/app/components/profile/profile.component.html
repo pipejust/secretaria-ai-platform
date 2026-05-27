@@ -247,16 +247,13 @@
         </header>
         <div class="pr-form-grid">
           <div class="pr-field">
-            <label for="pr-language">Idioma</label>
-            <select id="pr-language"
-                    [ngModel]="uiPrefs.language"
-                    (ngModelChange)="onUiPrefChange('language', $event)"
-                    name="language">
-              <option value="es-CO">Español (Colombia)</option>
-              <option value="es-ES">Español (España)</option>
-              <option value="es-MX">Español (México)</option>
-              <option value="en-US">English (US)</option>
-            </select>
+            <label for="pr-language">Idioma de la interfaz</label>
+            <app-language-selector variant="full"
+                                   id="pr-language"></app-language-selector>
+            <small style="display:block; margin-top:6px; color:#64748b; font-size:12px;">
+              Se aplica en toda la plataforma. La preferencia se guarda en tu cuenta
+              y se sincroniza entre dispositivos al iniciar sesión.
+            </small>
           </div>
           <div class="pr-field">
             <label for="pr-timezone">Zona horaria</label>

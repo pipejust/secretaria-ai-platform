@@ -5,6 +5,8 @@ import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem, LandingPerson } from '../../services/landing-cms.service';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { LanguageService } from '../../services/language.service';
+import { effect } from '@angular/core';
 
 /**
  * Landing pública de Acten — rediseño "Acten Premium" 2026-Q2.
@@ -31,6 +33,23 @@ import { LanguageSelectorComponent } from '../shared/language-selector/language-
 export class LandingComponent implements OnInit {
     private readonly router = inject(Router);
     private readonly cms = inject(LandingCmsService);
+    private readonly langService = inject(LanguageService);
+
+    constructor() {
+        // Reactivamos al cambio de idioma: cuando el usuario cambia el
+        // selector en el header, re-pedimos el contenido del CMS al backend
+        // con el nuevo ?lang= para que los textos (hero, features, etc.)
+        // se re-rendericen en el idioma elegido.
+        effect(() => {
+            const lang = this.langService.currentLang();
+            // Solo recargamos si ya teníamos contenido cargado (skip primera carga).
+            if (this.content) {
+                this.cms.loadPublic(lang)
+                    .then(c => { this.content = c; })
+                    .catch(err => console.warn('[Landing] reload por cambio de idioma falló', err));
+            }
+        });
+    }
 
     /** URL del admin (admin.acten.app en producción, mismo origen en dev). */
     adminUrl = this.resolveAdminUrl();
@@ -97,7 +116,7 @@ export class LandingComponent implements OnInit {
         }
 
         try {
-            this.content = await this.cms.loadPublic();
+            this.content = await this.cms.loadPublic(this.langService.currentLang());
         } catch (err) {
             console.error('[Landing] No se pudo cargar contenido público', err);
             this.contentError = true;
