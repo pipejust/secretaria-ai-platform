@@ -151,7 +151,8 @@
     "load_error": "No pudimos cargar el contenido. Recarga la página.",
     "task_assigned_notif": "Te asignamos una nueva tarea en el acta del proyecto",
     "review_architecture_doc": "Revisar el documento de arquitectura",
-    "view_minutes": "Ver acta →"
+    "view_minutes": "Ver acta →",
+    "back_to_login": "Volver al inicio de sesión"
   },
   "lang": {
     "es": "Español",
@@ -186,7 +187,17 @@
       "code_required": "Introduce el código de 6 dígitos que te enviamos por correo.",
       "code_invalid": "Código incorrecto. Inténtalo nuevamente."
     },
-    "2fa_sent_to": "Te enviamos un código de 6 dígitos a"
+    "2fa_sent_to": "Te enviamos un código de 6 dígitos a",
+    "aside_eyebrow_platform": "Inteligencia para reuniones empresariales",
+    "hero_line_1": "De la conversación a la claridad.",
+    "hero_line_2": "De la claridad al impacto.",
+    "aside_eyebrow_client": "Bienvenido",
+    "aside_hero_client_1": "A tu espacio",
+    "aside_hero_client_2": "de trabajo.",
+    "aside_sub_platform": "El asistente de IA para reuniones que transforma las\n                    conversaciones en decisiones, responsabilidades y\n                    entregables profesionales.",
+    "aside_sub_client": "Inteligencia artificial para tus reuniones —\n                    operado con",
+    "entering_as_company": "Entrando como empresa",
+    "signing_in": "Iniciando sesión…"
   },
   "forgot_password": {
     "title": "Recupera tu contraseña",
@@ -199,7 +210,16 @@
     "errors": {
       "email_required": "El correo es obligatorio.",
       "server_error": "No pudimos enviar el correo. Reintentá."
-    }
+    },
+    "q_title": "¿Olvidaste tu contraseña?",
+    "help_recover": "Te ayudamos a recuperarla.",
+    "subtitle_long": "Te enviaremos un enlace seguro para que vuelvas a tu espacio\n                de trabajo en",
+    "recover_title": "Recuperar contraseña",
+    "enter_email": "Escribe el correo de tu cuenta en",
+    "well_send_link": "y te enviaremos un enlace para crear una nueva contraseña.",
+    "indicate_workspace": "Indica el workspace al que pertenece tu cuenta.",
+    "send_link": "Enviar enlace",
+    "change_company": "Cambiar de empresa"
   },
   "reset_password": {
     "title": "Restablecé tu contraseña",
@@ -213,8 +233,13 @@
     "errors": {
       "invalid_token": "El enlace expiró o no es válido. Pedí uno nuevo.",
       "mismatch": "Las contraseñas no coinciden.",
-      "min_length": "La contraseña debe tener al menos 8 caracteres."
-    }
+      "min_length": "La contraseña debe tener al menos 8 caracteres.",
+      "mismatch_simple": "Las contraseñas no coinciden."
+    },
+    "define_new": "Define una nueva",
+    "secure_password": "contraseña segura.",
+    "create_secure": "Crea una contraseña segura para tu cuenta de",
+    "you_will_be_logged_in": ".\n                            Tendrás sesión iniciada en cuanto la confirmes."
   },
   "change_password": {
     "title": "Establecé tu contraseña",
@@ -564,16 +589,34 @@
     "title": "Centro de ayuda",
     "subtitle": "Encontrá guías, tutoriales y respuestas frecuentes.",
     "contact_support": "Contactar soporte",
-    "search_placeholder": "Buscar en la ayuda…"
+    "search_placeholder": "Buscar en la ayuda…",
+    "how_can_we_help": "¿En qué podemos ayudarte?",
+    "subtitle_long": "Guías rápidas, preguntas frecuentes y contacto con soporte humano.\n            Si no encuentras lo que necesitas, escríbenos.",
+    "main_topics": "Temas principales",
+    "faq": "Preguntas frecuentes",
+    "need_human": "¿Necesitas hablar con un humano?",
+    "support_response_time": "Nuestro equipo de soporte responde en menos de 4 horas hábiles.",
+    "write_to_support": "Escribir a soporte"
   },
   "privacy": {
     "title": "Política de privacidad",
     "back": "Volver",
-    "intro_subtitle": "Tu información, bajo tu control."
+    "intro_subtitle": "Tu información, bajo tu control.",
+    "section_intro": "1. Introducción",
+    "section_what_we_collect": "2. Qué información recogemos",
+    "section_how_we_use": "3. Cómo usamos tus datos",
+    "section_legal_bases": "4. Bases legales",
+    "section_who_we_share_with": "5. Con quién compartimos datos",
+    "section_security": "6. Seguridad técnica",
+    "section_your_rights": "7. Tus derechos",
+    "section_retention": "8. Retención y borrado",
+    "section_contact": "9. Contacto"
   },
   "terms": {
     "title": "Términos y condiciones",
-    "back": "Volver"
+    "back": "Volver",
+    "title_long": "Términos y condiciones de uso",
+    "subtitle_short": "Reglas claras para trabajar juntos."
   },
   "roles": {
     "role_name": "Nombre del rol",
@@ -583,5 +626,8 @@
     "empty_no_account": "Aún no has conectado ningún calendario.",
     "no_meetings_today": "No hay reuniones programadas para este día.",
     "no_tasks_today": "No hay tareas con fecha en este día."
+  },
+  "landing": {
+    "plus_n_more": "+2 más"
   }
 }

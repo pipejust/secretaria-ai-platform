@@ -151,7 +151,8 @@
     "load_error": "Couldn't load content. Reload the page.",
     "task_assigned_notif": "We assigned you a new task in the project minutes",
     "review_architecture_doc": "Review the architecture document",
-    "view_minutes": "View minutes →"
+    "view_minutes": "View minutes →",
+    "back_to_login": "Back to login"
   },
   "lang": {
     "es": "Español",
@@ -186,7 +187,17 @@
       "code_required": "Enter the 6-digit code we emailed you.",
       "code_invalid": "Incorrect code. Try again."
     },
-    "2fa_sent_to": "We sent a 6-digit code to"
+    "2fa_sent_to": "We sent a 6-digit code to",
+    "aside_eyebrow_platform": "Intelligence for business meetings",
+    "hero_line_1": "From conversation to clarity.",
+    "hero_line_2": "From clarity to impact.",
+    "aside_eyebrow_client": "Welcome",
+    "aside_hero_client_1": "To your",
+    "aside_hero_client_2": "workspace.",
+    "aside_sub_platform": "The AI assistant for meetings that turns conversations into decisions, responsibilities and professional deliverables.",
+    "aside_sub_client": "Artificial intelligence for your meetings — powered by",
+    "entering_as_company": "Entering as company",
+    "signing_in": "Signing in…"
   },
   "forgot_password": {
     "title": "Recover your password",
@@ -199,7 +210,16 @@
     "errors": {
       "email_required": "Email is required.",
       "server_error": "Could not send the email. Try again."
-    }
+    },
+    "q_title": "Forgot your password?",
+    "help_recover": "We'll help you recover it.",
+    "subtitle_long": "We'll send you a secure link to get back to your workspace at",
+    "recover_title": "Recover password",
+    "enter_email": "Enter the email of your account at",
+    "well_send_link": "and we'll send you a link to create a new password.",
+    "indicate_workspace": "Indicate the workspace your account belongs to.",
+    "send_link": "Send link",
+    "change_company": "Change company"
   },
   "reset_password": {
     "title": "Reset your password",
@@ -213,8 +233,13 @@
     "errors": {
       "invalid_token": "Link expired or invalid. Request a new one.",
       "mismatch": "Passwords do not match.",
-      "min_length": "Password must be at least 8 characters."
-    }
+      "min_length": "Password must be at least 8 characters.",
+      "mismatch_simple": "Passwords do not match."
+    },
+    "define_new": "Define a new",
+    "secure_password": "secure password.",
+    "create_secure": "Create a secure password for your account at",
+    "you_will_be_logged_in": ". You'll be signed in as soon as you confirm it."
   },
   "change_password": {
     "title": "Set your password",
@@ -564,16 +589,34 @@
     "title": "Help center",
     "subtitle": "Find guides, tutorials, and frequent answers.",
     "contact_support": "Contact support",
-    "search_placeholder": "Search the help…"
+    "search_placeholder": "Search the help…",
+    "how_can_we_help": "How can we help you?",
+    "subtitle_long": "Quick guides, FAQs and contact with human support. If you can't find what you need, write to us.",
+    "main_topics": "Main topics",
+    "faq": "Frequently asked questions",
+    "need_human": "Need to talk to a human?",
+    "support_response_time": "Our support team responds within 4 business hours.",
+    "write_to_support": "Write to support"
   },
   "privacy": {
     "title": "Privacy policy",
     "back": "Back",
-    "intro_subtitle": "Your information, under your control."
+    "intro_subtitle": "Your information, under your control.",
+    "section_intro": "1. Introduction",
+    "section_what_we_collect": "2. What information we collect",
+    "section_how_we_use": "3. How we use your data",
+    "section_legal_bases": "4. Legal bases",
+    "section_who_we_share_with": "5. Who we share data with",
+    "section_security": "6. Technical security",
+    "section_your_rights": "7. Your rights",
+    "section_retention": "8. Retention and deletion",
+    "section_contact": "9. Contact"
   },
   "terms": {
     "title": "Terms and conditions",
-    "back": "Back"
+    "back": "Back",
+    "title_long": "Terms and conditions of use",
+    "subtitle_short": "Clear rules to work together."
   },
   "roles": {
     "role_name": "Role name",
@@ -583,5 +626,8 @@
     "empty_no_account": "You haven't connected any calendar yet.",
     "no_meetings_today": "No meetings scheduled for this day.",
     "no_tasks_today": "No tasks scheduled for this day."
+  },
+  "landing": {
+    "plus_n_more": "+2 more"
   }
 }

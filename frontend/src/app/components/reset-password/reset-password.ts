@@ -5,6 +5,8 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { BrandingService } from '../../services/branding.service';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
 /**
  * Reset Password — réplica del layout split del login.
@@ -14,7 +16,7 @@ import { BrandingService } from '../../services/branding.service';
 @Component({
     selector: 'app-reset-password',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
     templateUrl: './reset-password.html',
     styleUrl: './reset-password.css',
 })

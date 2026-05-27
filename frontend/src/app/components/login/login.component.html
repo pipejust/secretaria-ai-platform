@@ -17,7 +17,7 @@
             </a>
 
             <ng-container *ngIf="branding.companyName() === branding.platformName(); else clientHero">
-                <p class="aside-eyebrow">Inteligencia para reuniones empresariales</p>
+                <p class="aside-eyebrow">{{ 'login.aside_eyebrow_platform' | translate }}</p>
                 <!--
                   Hero ACTEN (marca principal): paralelismo retórico clásico
                   "De la conversación → claridad → impacto". Cada frase va en su
@@ -26,13 +26,11 @@
                   colgada con un punto suelto.
                 -->
                 <h1 class="aside-hero aside-hero-platform">
-                    <span class="hero-line">De la conversación a la claridad.</span>
-                    <span class="hero-line hero-line-accent">De la claridad al impacto.</span>
+                    <span class="hero-line">{{ 'login.hero_line_1' | translate }}</span>
+                    <span class="hero-line hero-line-accent">{{ 'login.hero_line_2' | translate }}</span>
                 </h1>
                 <p class="aside-sub">
-                    El asistente de IA para reuniones que transforma las
-                    conversaciones en decisiones, responsabilidades y
-                    entregables profesionales.
+                    {{ 'login.aside_sub_platform' | translate }}
                 </p>
             </ng-container>
 
@@ -46,14 +44,13 @@
               tipográfico (logo + nombre gigante = redundancia visual).
             -->
             <ng-template #clientHero>
-                <p class="aside-eyebrow">Bienvenido</p>
+                <p class="aside-eyebrow">{{ 'login.aside_eyebrow_client' | translate }}</p>
                 <h1 class="aside-hero aside-hero-client">
-                    <span class="hero-line">A tu espacio</span>
-                    <span class="hero-line hero-line-accent">de trabajo.</span>
+                    <span class="hero-line">{{ 'login.aside_hero_client_1' | translate }}</span>
+                    <span class="hero-line hero-line-accent">{{ 'login.aside_hero_client_2' | translate }}</span>
                 </h1>
                 <p class="aside-sub">
-                    Inteligencia artificial para tus reuniones —
-                    operado con <strong>{{ branding.platformName() }}</strong>.
+                    {{ 'login.aside_sub_client' | translate }} <strong>{{ branding.platformName() }}</strong>.
                 </p>
             </ng-template>
 
@@ -207,7 +204,7 @@
                             <path d="M5 21V7l8-4v18"></path>
                             <path d="M19 21V11l-6-4"></path>
                         </svg>
-                        <span>Entrando como empresa</span>
+                        <span>{{ 'login.entering_as_company' | translate }}</span>
                         <strong>{{ branding.companyName() }}</strong>
                     </div>
 
@@ -232,7 +229,7 @@
                     <div class="row-between">
                         <label class="checkbox-row">
                             <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
-                            <span>Recuérdame</span>
+                            <span>{{ 'login.remember_me' | translate }}</span>
                         </label>
                         <a [routerLink]="forgotPasswordUrl" class="forgot-link">{{ 'login.forgot_password' | translate }}</a>
                     </div>
@@ -243,7 +240,7 @@
 
                     <button type="submit" class="btn-signin" [disabled]="!loginForm.form.valid || isLoading">
                         <span class="btn-signin-label" *ngIf="!isLoading">{{ 'common.login' | translate }}</span>
-                        <span class="btn-signin-label" *ngIf="isLoading">Iniciando sesión…</span>
+                        <span class="btn-signin-label" *ngIf="isLoading">{{ 'login.signing_in' | translate }}</span>
                         <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -284,7 +281,7 @@
 
                     <div class="row-between" style="margin-top: 8px;">
                         <button type="button" class="forgot-link" style="background:none;border:none;cursor:pointer;padding:0;"
-                                (click)="cancel2FA()">Volver al inicio de sesión</button>
+                                (click)="cancel2FA()">{{ 'common.back_to_login' | translate }}</button>
                         <button type="button" class="forgot-link" style="background:none;border:none;cursor:pointer;padding:0;"
                                 (click)="resend2FA()">{{ 'login.resend_code' | translate }}</button>
                     </div>

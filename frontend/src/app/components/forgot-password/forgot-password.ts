@@ -6,6 +6,8 @@ import { RouterModule } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { BrandingService } from '../../services/branding.service';
 import { TenantService } from '../../services/tenant.service';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
 /**
  * Forgot Password — réplica del layout split del login.
@@ -15,7 +17,7 @@ import { TenantService } from '../../services/tenant.service';
 @Component({
     selector: 'app-forgot-password',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
     templateUrl: './forgot-password.html',
     styleUrl: './forgot-password.css',
 })

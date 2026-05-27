@@ -6,7 +6,7 @@
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
-            Volver
+            {{ 'common.back' | translate }}
         </a>
         <p class="privacy-eyebrow">{{ 'privacy.title' | translate }}</p>
         <h1 class="privacy-title">{{ 'privacy.intro_subtitle' | translate }}</h1>
@@ -26,7 +26,7 @@
         <!-- Contenido -->
         <article class="privacy-content">
             <section id="intro">
-                <h2>1. Introducción</h2>
+                <h2>{{ 'privacy.section_intro' | translate }}</h2>
                 <p>
                     En Acten transformamos conversaciones en decisiones, responsabilidades y
                     entregables. Para hacerlo, procesamos transcripciones de tus reuniones y
@@ -61,7 +61,7 @@
             </section>
 
             <section id="uso">
-                <h2>3. Cómo usamos tus datos</h2>
+                <h2>{{ 'privacy.section_how_we_use' | translate }}</h2>
                 <p>Sólo usamos tus datos para:</p>
                 <ul>
                     <li>Generar las actas, tareas y reportes que contrataste.</li>
@@ -87,7 +87,7 @@
             </section>
 
             <section id="compartir">
-                <h2>5. Con quién compartimos datos</h2>
+                <h2>{{ 'privacy.section_who_we_share_with' | translate }}</h2>
                 <p>Sólo con los proveedores estrictamente necesarios para operar:</p>
                 <ul>
                     <li><strong>Fireflies.ai:</strong> transcripciones de reuniones (si
@@ -133,7 +133,7 @@
             </section>
 
             <section id="retencion">
-                <h2>8. Retención y borrado</h2>
+                <h2>{{ 'privacy.section_retention' | translate }}</h2>
                 <ul>
                     <li>Reuniones y action items: mientras tu cuenta esté activa.</li>
                     <li>Audit log: 24 meses (cumplimiento SOC 2).</li>

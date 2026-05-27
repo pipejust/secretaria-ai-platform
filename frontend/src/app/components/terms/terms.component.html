@@ -6,10 +6,10 @@
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
-            Volver
+            {{ 'common.back' | translate }}
         </a>
-        <p class="privacy-eyebrow">Términos y condiciones de uso</p>
-        <h1 class="privacy-title">Reglas claras para trabajar juntos.</h1>
+        <p class="privacy-eyebrow">{{ 'terms.title_long' | translate }}</p>
+        <h1 class="privacy-title">{{ 'terms.subtitle_short' | translate }}</h1>
         <p class="privacy-meta">Última actualización: {{ lastUpdated }}</p>
     </header>
 
@@ -26,7 +26,7 @@
         <!-- Contenido -->
         <article class="privacy-content">
             <section id="intro">
-                <h2>1. Introducción</h2>
+                <h2>{{ 'privacy.section_intro' | translate }}</h2>
                 <p>
                     Estos Términos rigen el uso de la plataforma <strong>Acten</strong> (la
                     "Plataforma") por parte de tu empresa y de los usuarios que la

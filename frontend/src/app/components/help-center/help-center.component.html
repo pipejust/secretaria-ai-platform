@@ -6,10 +6,10 @@
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
-            Volver
+            {{ 'common.back' | translate }}
         </a>
         <p class="help-eyebrow">{{ 'help.title' | translate }}</p>
-        <h1 class="help-title">¿En qué podemos ayudarte?</h1>
+        <h1 class="help-title">{{ 'help.how_can_we_help' | translate }}</h1>
         <p class="help-sub">
             Guías rápidas, preguntas frecuentes y contacto con soporte humano.
             Si no encuentras lo que buscas, escríbenos a
@@ -28,7 +28,7 @@
     </header>
 
     <section class="help-topics">
-        <h2 class="section-title">Temas principales</h2>
+        <h2 class="section-title">{{ 'help.main_topics' | translate }}</h2>
         <div class="topics-grid">
             <article class="topic-card" *ngFor="let t of topics">
                 <div class="topic-icon" [attr.data-icon]="t.icon">
@@ -69,7 +69,7 @@
     </section>
 
     <section class="help-faqs">
-        <h2 class="section-title">Preguntas frecuentes</h2>
+        <h2 class="section-title">{{ 'help.faq' | translate }}</h2>
         <div class="faq-list">
             <details class="faq-item" *ngFor="let f of faqs">
                 <summary>
@@ -85,17 +85,17 @@
 
     <section class="help-contact">
         <div class="contact-card">
-            <h3>¿Necesitas hablar con un humano?</h3>
-            <p>Nuestro equipo de soporte responde en menos de 4 horas hábiles.</p>
+            <h3>{{ 'help.need_human' | translate }}</h3>
+            <p>{{ 'help.support_response_time' | translate }}</p>
             <div class="contact-actions">
                 <a href="mailto:soporte@acten.app" class="contact-btn primary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                         <polyline points="22,6 12,13 2,6"></polyline>
                     </svg>
-                    Escribir a soporte
+                    {{ 'help.write_to_support' | translate }}
                 </a>
-                <a routerLink="/login" class="contact-btn secondary">Volver al login</a>
+                <a routerLink="/login" class="contact-btn secondary">{{ 'common.back_to_login' | translate }}</a>
             </div>
         </div>
     </section>

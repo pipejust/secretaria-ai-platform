@@ -151,7 +151,8 @@
     "load_error": "No hem pogut carregar el contingut. Recarrega la pàgina.",
     "task_assigned_notif": "T'hem assignat una nova tasca en l'acta del projecte",
     "review_architecture_doc": "Revisar el document d'arquitectura",
-    "view_minutes": "Veure acta →"
+    "view_minutes": "Veure acta →",
+    "back_to_login": "Torna a l'inici de sessió"
   },
   "lang": {
     "es": "Español",
@@ -186,7 +187,17 @@
       "code_required": "Introdueix el codi de 6 dígits que t'hem enviat per correu.",
       "code_invalid": "Codi incorrecte. Torna-ho a provar."
     },
-    "2fa_sent_to": "Hem enviat un codi de 6 dígits a"
+    "2fa_sent_to": "Hem enviat un codi de 6 dígits a",
+    "aside_eyebrow_platform": "Intel·ligència per a reunions empresarials",
+    "hero_line_1": "De la conversa a la claredat.",
+    "hero_line_2": "De la claredat a l'impacte.",
+    "aside_eyebrow_client": "Benvingut",
+    "aside_hero_client_1": "Al teu espai",
+    "aside_hero_client_2": "de treball.",
+    "aside_sub_platform": "L'assistent d'IA per a reunions que transforma les converses en decisions, responsabilitats i lliuraments professionals.",
+    "aside_sub_client": "Intel·ligència artificial per a les teves reunions — operat amb",
+    "entering_as_company": "Entrant com a empresa",
+    "signing_in": "Iniciant sessió…"
   },
   "forgot_password": {
     "title": "Recupera la teva contrasenya",
@@ -199,7 +210,16 @@
     "errors": {
       "email_required": "El correu és obligatori.",
       "server_error": "No hem pogut enviar el correu. Torna-ho a provar."
-    }
+    },
+    "q_title": "Has oblidat la contrasenya?",
+    "help_recover": "T'ajudem a recuperar-la.",
+    "subtitle_long": "T'enviarem un enllaç segur perquè tornis al teu espai de treball a",
+    "recover_title": "Recupera contrasenya",
+    "enter_email": "Escriu el correu del teu compte a",
+    "well_send_link": "i t'enviarem un enllaç per crear una nova contrasenya.",
+    "indicate_workspace": "Indica l'espai de treball al qual pertany el teu compte.",
+    "send_link": "Envia enllaç",
+    "change_company": "Canvia d'empresa"
   },
   "reset_password": {
     "title": "Restableix la teva contrasenya",
@@ -213,8 +233,13 @@
     "errors": {
       "invalid_token": "L'enllaç ha caducat o no és vàlid. Demana'n un de nou.",
       "mismatch": "Les contrasenyes no coincideixen.",
-      "min_length": "La contrasenya ha de tenir almenys 8 caràcters."
-    }
+      "min_length": "La contrasenya ha de tenir almenys 8 caràcters.",
+      "mismatch_simple": "Les contrasenyes no coincideixen."
+    },
+    "define_new": "Defineix una nova",
+    "secure_password": "contrasenya segura.",
+    "create_secure": "Crea una contrasenya segura per al teu compte de",
+    "you_will_be_logged_in": ". Tindràs sessió iniciada quan la confirmis."
   },
   "change_password": {
     "title": "Estableix la teva contrasenya",
@@ -564,16 +589,34 @@
     "title": "Centre d'ajuda",
     "subtitle": "Troba guies, tutorials i respostes freqüents.",
     "contact_support": "Contacta suport",
-    "search_placeholder": "Cerca a l'ajuda…"
+    "search_placeholder": "Cerca a l'ajuda…",
+    "how_can_we_help": "En què et podem ajudar?",
+    "subtitle_long": "Guies ràpides, preguntes freqüents i contacte amb suport humà. Si no trobes el que necessites, escriu-nos.",
+    "main_topics": "Temes principals",
+    "faq": "Preguntes freqüents",
+    "need_human": "Necessites parlar amb un humà?",
+    "support_response_time": "El nostre equip de suport respon en menys de 4 hores hàbils.",
+    "write_to_support": "Escriu a suport"
   },
   "privacy": {
     "title": "Política de privadesa",
     "back": "Torna",
-    "intro_subtitle": "La teva informació, sota el teu control."
+    "intro_subtitle": "La teva informació, sota el teu control.",
+    "section_intro": "1. Introducció",
+    "section_what_we_collect": "2. Quina informació recollim",
+    "section_how_we_use": "3. Com utilitzem les teves dades",
+    "section_legal_bases": "4. Bases legals",
+    "section_who_we_share_with": "5. Amb qui compartim dades",
+    "section_security": "6. Seguretat tècnica",
+    "section_your_rights": "7. Els teus drets",
+    "section_retention": "8. Retenció i esborrat",
+    "section_contact": "9. Contacte"
   },
   "terms": {
     "title": "Termes i condicions",
-    "back": "Torna"
+    "back": "Torna",
+    "title_long": "Termes i condicions d'ús",
+    "subtitle_short": "Regles clares per treballar junts."
   },
   "roles": {
     "role_name": "Nom del rol",
@@ -583,5 +626,8 @@
     "empty_no_account": "Encara no has connectat cap calendari.",
     "no_meetings_today": "No hi ha reunions programades per a aquest dia.",
     "no_tasks_today": "No hi ha tasques amb data en aquest dia."
+  },
+  "landing": {
+    "plus_n_more": "+2 més"
   }
 }
