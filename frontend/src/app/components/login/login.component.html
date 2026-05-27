@@ -234,7 +234,7 @@
                             <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
                             <span>Recuérdame</span>
                         </label>
-                        <a [routerLink]="forgotPasswordUrl" class="forgot-link">¿Olvidaste tu contraseña?</a>
+                        <a [routerLink]="forgotPasswordUrl" class="forgot-link">{{ 'login.forgot_password' | translate }}</a>
                     </div>
 
                     <div class="error-banner" *ngIf="errorMessage" role="alert">
@@ -260,7 +260,7 @@
                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M12 2L4 6v6c0 5 3.5 9.4 8 10 4.5-.6 8-5 8-10V6l-8-4z"></path>
                         </svg>
-                        <span>Verificación en dos pasos</span>
+                        <span>{{ 'profile.two_factor' | translate }}</span>
                     </div>
 
                     <p style="margin: 0 0 4px 0; font-size: 14px; color: #475569;">
@@ -286,7 +286,7 @@
                         <button type="button" class="forgot-link" style="background:none;border:none;cursor:pointer;padding:0;"
                                 (click)="cancel2FA()">Volver al inicio de sesión</button>
                         <button type="button" class="forgot-link" style="background:none;border:none;cursor:pointer;padding:0;"
-                                (click)="resend2FA()">Reenviar código</button>
+                                (click)="resend2FA()">{{ 'login.resend_code' | translate }}</button>
                     </div>
                 </form>
             </div>

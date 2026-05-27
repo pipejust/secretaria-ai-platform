@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -77,7 +78,7 @@ interface DonutSlice {
 @Component({
     selector: 'app-pendientes',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, UserChipComponent],
+    imports: [CommonModule, FormsModule, RouterModule, UserChipComponent, TranslateModule],
     templateUrl: './pendientes.component.html',
     styleUrls: ['./pendientes.component.css'],
 })

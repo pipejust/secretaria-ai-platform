@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -89,7 +90,7 @@ const STATUS_PALETTE: Record<string, { color: string; label: string }> = {
 @Component({
     selector: 'app-reportes',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
     templateUrl: './reportes.component.html',
     styleUrls: ['./reportes.component.css'],
 })

@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Subject, forkJoin } from 'rxjs';
@@ -70,7 +71,7 @@ const ACTION_LABELS: Record<string, string> = {
 @Component({
     selector: 'app-roles',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, TranslateModule],
     templateUrl: './roles.component.html',
     styleUrls: ['./roles.component.css'],
 })

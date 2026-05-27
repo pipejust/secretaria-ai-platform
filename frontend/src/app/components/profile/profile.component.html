@@ -4,7 +4,7 @@
        ============================================================ -->
   <header class="pr-header">
     <div class="pr-header-text">
-      <h1 class="pr-title">Mi perfil</h1>
+      <h1 class="pr-title">{{ 'profile.title' | translate }}</h1>
       <p class="pr-subtitle">Administra tu información personal, seguridad y preferencias de cuenta.</p>
     </div>
     <div class="pr-header-actions">
@@ -99,7 +99,7 @@
           <span class="pr-kpi-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
         </span>
         <div class="pr-kpi-body">
-          <span class="pr-kpi-eyebrow">Notificaciones</span>
+          <span class="pr-kpi-eyebrow">{{ 'profile.notifications' | translate }}</span>
           <span class="pr-kpi-value">{{ activeNotifCount }} de {{ totalNotifCount }} activas</span>
           <span class="pr-kpi-hint">
             {{ unreadCount > 0 ? unreadCount + ' sin leer' : 'Todo al día' }}
@@ -199,13 +199,13 @@
       <!-- Información personal -->
       <article class="pr-card" id="pr-section-info">
         <header class="pr-card-head">
-          <h3 class="pr-card-title">Información personal</h3>
+          <h3 class="pr-card-title">{{ 'profile.personal_info' | translate }}</h3>
           <p class="pr-card-sub">Estos datos los ve tu equipo dentro de la plataforma.</p>
         </header>
         <form class="pr-form" (ngSubmit)="saveProfile()">
           <div class="pr-form-grid">
             <div class="pr-field">
-              <label for="pr-fullname">Nombre completo</label>
+              <label for="pr-fullname">{{ 'profile.full_name' | translate }}</label>
               <input id="pr-fullname" type="text" [(ngModel)]="profile.full_name" name="full_name" autocomplete="name">
             </div>
             <div class="pr-field">
@@ -218,11 +218,11 @@
               <input id="pr-phone" type="tel" [(ngModel)]="profile.phone" name="phone" autocomplete="tel" placeholder="+57 300 000 0000">
             </div>
             <div class="pr-field">
-              <label for="pr-position">Cargo</label>
+              <label for="pr-position">{{ 'profile.position' | translate }}</label>
               <input id="pr-position" type="text" [(ngModel)]="profile.position" name="position" placeholder="Project Manager, Analista…">
             </div>
             <div class="pr-field">
-              <label for="pr-department">Departamento</label>
+              <label for="pr-department">{{ 'profile.department' | translate }}</label>
               <input id="pr-department" type="text" [(ngModel)]="profile.department" name="department" placeholder="Operaciones, IT, Comercial…">
             </div>
             <div class="pr-field">
@@ -242,7 +242,7 @@
       <!-- Preferencias de cuenta -->
       <article class="pr-card">
         <header class="pr-card-head">
-          <h3 class="pr-card-title">Preferencias de cuenta</h3>
+          <h3 class="pr-card-title">{{ 'profile.account_preferences' | translate }}</h3>
           <p class="pr-card-sub">Se aplican en toda la plataforma para tu usuario.</p>
         </header>
         <div class="pr-form-grid">
@@ -287,11 +287,11 @@
                     [ngModel]="uiPrefs.landingPage"
                     (ngModelChange)="onUiPrefChange('landingPage', $event)"
                     name="landingPage">
-              <option value="/admin/dashboard">Resumen</option>
-              <option value="/admin/meetings">Reuniones</option>
-              <option value="/admin/projects">Proyectos</option>
+              <option value="/admin/dashboard">{{ 'sidebar.dashboard' | translate }}</option>
+              <option value="/admin/meetings">{{ 'sidebar.meetings' | translate }}</option>
+              <option value="/admin/projects">{{ 'sidebar.projects' | translate }}</option>
               <option value="/admin/calendar">Calendario</option>
-              <option value="/admin/pendientes">Pendientes</option>
+              <option value="/admin/pendientes">{{ 'sidebar.pending' | translate }}</option>
             </select>
           </div>
         </div>
@@ -300,14 +300,14 @@
       <!-- Seguridad -->
       <article class="pr-card" id="pr-section-security">
         <header class="pr-card-head">
-          <h3 class="pr-card-title">Seguridad</h3>
+          <h3 class="pr-card-title">{{ 'profile.security' | translate }}</h3>
           <p class="pr-card-sub">Cambia tu contraseña y revisa tus protecciones.</p>
         </header>
 
         <form class="pr-form" (ngSubmit)="changePassword()">
           <div class="pr-form-grid">
             <div class="pr-field">
-              <label for="pr-pwd-current">Contraseña actual</label>
+              <label for="pr-pwd-current">{{ 'profile.current_password' | translate }}</label>
               <div class="pr-pwd-wrap">
                 <input id="pr-pwd-current" [type]="showPwd.current ? 'text' : 'password'"
                        [(ngModel)]="pwd.current" name="current" autocomplete="current-password">
@@ -403,7 +403,7 @@
       <!-- Notificaciones -->
       <article class="pr-card" id="pr-section-notif">
         <header class="pr-card-head">
-          <h3 class="pr-card-title">Notificaciones</h3>
+          <h3 class="pr-card-title">{{ 'profile.notifications' | translate }}</h3>
           <p class="pr-card-sub">Decide qué alertas recibirás dentro de la plataforma y por correo.</p>
         </header>
 
@@ -430,7 +430,7 @@
 
           <label class="pr-toggle-row">
             <span class="pr-toggle-text">
-              <strong>Recordatorios de reuniones</strong>
+              <strong>{{ 'profile.cat_meeting_reminders' | translate }}</strong>
               <em>Avisos antes de cada reunión agendada.</em>
             </span>
             <input type="checkbox" class="pr-toggle"
@@ -440,7 +440,7 @@
 
           <label class="pr-toggle-row">
             <span class="pr-toggle-text">
-              <strong>Tareas asignadas</strong>
+              <strong>{{ 'profile.cat_task_assigned' | translate }}</strong>
               <em>Cuando alguien te asigne una tarea o pendiente.</em>
             </span>
             <input type="checkbox" class="pr-toggle"
@@ -460,7 +460,7 @@
 
           <label class="pr-toggle-row">
             <span class="pr-toggle-text">
-              <strong>Reporte semanal</strong>
+              <strong>{{ 'profile.cat_weekly_report' | translate }}</strong>
               <em>Resumen ejecutivo cada lunes por la mañana.</em>
             </span>
             <input type="checkbox" class="pr-toggle"
@@ -470,7 +470,7 @@
 
           <label class="pr-toggle-row">
             <span class="pr-toggle-text">
-              <strong>Alertas de seguridad</strong>
+              <strong>{{ 'profile.cat_security_alerts' | translate }}</strong>
               <em>Inicios de sesión sospechosos y cambios de contraseña.</em>
             </span>
             <input type="checkbox" class="pr-toggle"
@@ -516,7 +516,7 @@
             <dd>{{ (user?.role | titlecase) || '—' }}</dd>
           </div>
           <div class="pr-summary-row">
-            <dt>Departamento</dt>
+            <dt>{{ 'profile.department' | translate }}</dt>
             <dd>{{ profile.department || '—' }}</dd>
           </div>
           <div class="pr-summary-row">
@@ -536,7 +536,7 @@
 
       <article class="pr-card pr-card--activity" id="pr-section-activity">
         <header class="pr-card-head pr-card-head--row">
-          <h3 class="pr-card-title">Actividad reciente</h3>
+          <h3 class="pr-card-title">{{ 'profile.activity' | translate }}</h3>
           <button type="button" class="pr-link" (click)="refreshActivity()" [disabled]="isLoadingActivity">
             {{ isLoadingActivity ? 'Cargando…' : 'Actualizar' }}
           </button>
@@ -605,9 +605,9 @@
       </div>
       <div class="pr-msg pr-msg--error" *ngIf="twoFactorError">{{ twoFactorError }}</div>
       <div class="pr-modal-actions">
-        <button type="button" class="pr-link" (click)="resend2FACode()" [disabled]="isProcessing2FA">Reenviar código</button>
+        <button type="button" class="pr-link" (click)="resend2FACode()" [disabled]="isProcessing2FA">{{ 'login.resend_code' | translate }}</button>
         <div class="pr-modal-actions-right">
-          <button type="button" class="pr-btn pr-btn--ghost pr-btn--sm" (click)="closeTwoFactorModal()" [disabled]="isProcessing2FA">Cancelar</button>
+          <button type="button" class="pr-btn pr-btn--ghost pr-btn--sm" (click)="closeTwoFactorModal()" [disabled]="isProcessing2FA">{{ 'common.cancel' | translate }}</button>
           <button type="button" class="pr-btn pr-btn--brand pr-btn--sm" (click)="confirmTwoFactor()" [disabled]="isProcessing2FA">
             <span class="pr-btn-spinner" *ngIf="isProcessing2FA" aria-hidden="true"></span>
             {{ isProcessing2FA ? 'Verificando…' : 'Activar 2FA' }}
@@ -622,7 +622,7 @@
         Desactivar 2FA reduce la seguridad de tu cuenta. Para confirmar, introduce tu contraseña actual.
       </p>
       <div class="pr-field">
-        <label for="pr-2fa-pwd">Contraseña actual</label>
+        <label for="pr-2fa-pwd">{{ 'profile.current_password' | translate }}</label>
         <app-password-input id="pr-2fa-pwd"
                             name="twoFactorPassword"
                             [(ngModel)]="twoFactorPassword"
@@ -633,7 +633,7 @@
       <div class="pr-modal-actions">
         <span></span>
         <div class="pr-modal-actions-right">
-          <button type="button" class="pr-btn pr-btn--ghost pr-btn--sm" (click)="closeTwoFactorModal()" [disabled]="isProcessing2FA">Cancelar</button>
+          <button type="button" class="pr-btn pr-btn--ghost pr-btn--sm" (click)="closeTwoFactorModal()" [disabled]="isProcessing2FA">{{ 'common.cancel' | translate }}</button>
           <button type="button" class="pr-btn pr-btn--danger pr-btn--sm" (click)="disableTwoFactor()" [disabled]="isProcessing2FA">
             <span class="pr-btn-spinner" *ngIf="isProcessing2FA" aria-hidden="true"></span>
             {{ isProcessing2FA ? 'Procesando…' : 'Desactivar 2FA' }}

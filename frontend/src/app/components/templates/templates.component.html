@@ -7,7 +7,7 @@
     <!-- ============ HEADER ============ -->
     <header class="tpl-header">
         <div class="tpl-header-text">
-            <h1 class="tpl-title">Plantillas</h1>
+            <h1 class="tpl-title">{{ 'sidebar.templates' | translate }}</h1>
             <p class="tpl-sub">Gestiona y reutiliza plantillas documentales para reuniones, proyectos y reportes.</p>
         </div>
         <div class="tpl-header-actions">
@@ -30,7 +30,7 @@
 
         <!-- ====== Categorías ====== -->
         <aside class="tpl-categories" aria-label="Categorías de plantillas">
-            <header class="tpl-cat-head">Categorías</header>
+            <header class="tpl-cat-head">{{ 'profile.categories' | translate }}</header>
             <ul class="tpl-cat-list">
                 <li *ngFor="let cat of categories"
                     [class.active]="activeCategory === cat.id"
@@ -129,7 +129,7 @@
                     <span>Versión</span>
                     <span>Estado</span>
                     <span>Actualizado</span>
-                    <span class="t-right">Acciones</span>
+                    <span class="t-right">{{ 'common.actions' | translate }}</span>
                 </div>
 
                 <div class="tpl-tr" *ngFor="let _ of (isLoading ? [1,2,3,4,5] : [])"
@@ -366,7 +366,7 @@
                 </section>
 
                 <section class="tpl-detail-section">
-                    <h4>Acciones</h4>
+                    <h4>{{ 'common.actions' | translate }}</h4>
                     <div class="tpl-detail-actions">
                         <!-- Usar plantilla = descargar el .docx -->
                         <button class="tpl-btn tpl-btn-primary tpl-btn-block"
@@ -586,12 +586,12 @@
         <footer class="tpl-modal-foot">
             <button type="button" class="tpl-btn tpl-btn-outline"
                     (click)="showUploadModal = false; errorMsg = ''; successMsg = ''"
-                    [disabled]="isUploading">Cancelar</button>
+                    [disabled]="isUploading">{{ 'common.cancel' | translate }}</button>
             <button type="button" class="tpl-btn tpl-btn-primary"
                     (click)="uploadFile()"
                     [disabled]="!templateName.trim() || !selectedProjectId || (!selectedFile && !editingTemplateId) || isUploading">
                 <span *ngIf="!isUploading">{{ editingTemplateId ? 'Actualizar plantilla' : 'Subir plantilla' }}</span>
-                <span *ngIf="isUploading">Guardando…</span>
+                <span *ngIf="isUploading">{{ 'common.saving' | translate }}</span>
             </button>
         </footer>
     </div>
@@ -802,7 +802,7 @@
             <div class="tpl-modal-foot-right">
                 <button type="button" class="tpl-btn tpl-btn-outline"
                         (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''"
-                        [disabled]="isSavingMapping">Cancelar</button>
+                        [disabled]="isSavingMapping">{{ 'common.cancel' | translate }}</button>
                 <button type="button" class="tpl-btn tpl-btn-primary"
                         (click)="confirmMapping()"
                         [disabled]="isSavingMapping">
@@ -863,7 +863,7 @@
                 Abrir en pestaña nueva
             </a>
             <div class="tpl-modal-foot-right">
-                <button type="button" class="tpl-btn tpl-btn-outline" (click)="closePreviewModal()">Cerrar</button>
+                <button type="button" class="tpl-btn tpl-btn-outline" (click)="closePreviewModal()">{{ 'common.close' | translate }}</button>
                 <button type="button" class="tpl-btn tpl-btn-primary" (click)="downloadTemplate(previewTemplate)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

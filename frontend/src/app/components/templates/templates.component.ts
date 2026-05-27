@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -40,7 +41,7 @@ interface TemplateMeta {
 @Component({
     selector: 'app-templates',
     standalone: true,
-    imports: [CommonModule, FormsModule, DragDropModule],
+    imports: [CommonModule, FormsModule, DragDropModule, TranslateModule],
     templateUrl: './templates.component.html',
     styleUrls: ['./templates.component.css']
 })

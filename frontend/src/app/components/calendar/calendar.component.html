@@ -137,7 +137,7 @@
        ============================================================ -->
   <section class="cal-filters" *ngIf="showFilters">
     <div class="cal-filter-field">
-      <span class="cal-filter-label">Buscar</span>
+      <span class="cal-filter-label">{{ 'common.search' | translate }}</span>
       <input type="text" class="cal-filter-input"
              placeholder="Título, asistente, responsable…"
              [(ngModel)]="filterSearch"/>
@@ -147,7 +147,7 @@
       <div class="cal-segmented">
         <button [class.is-active]="filterStatus==='all'"     (click)="filterStatus='all'">Todas</button>
         <button [class.is-active]="filterStatus==='linked'"  (click)="filterStatus='linked'">Con acta</button>
-        <button [class.is-active]="filterStatus==='pending'" (click)="filterStatus='pending'">Pendientes</button>
+        <button [class.is-active]="filterStatus==='pending'" (click)="filterStatus='pending'">{{ 'sidebar.pending' | translate }}</button>
       </div>
     </div>
     <div class="cal-filter-field">
@@ -360,7 +360,7 @@
       <!-- Meetings of selected day (ocultada por solicitud — la data sigue disponible) -->
       <div class="cal-panel-section" *ngIf="showMeetingsInPanel">
         <header class="cal-section-head">
-          <h4>Reuniones</h4>
+          <h4>{{ 'sidebar.meetings' | translate }}</h4>
           <span class="cal-section-tag">{{ selectedDayEvents.length }}</span>
         </header>
         <p class="cal-panel-empty" *ngIf="!selectedDayEvents.length">
@@ -504,7 +504,7 @@
                     [(ngModel)]="newNoteText"
                     (keydown.enter)="$event.preventDefault(); addNote()"></textarea>
           <div class="cal-note-form-actions">
-            <button class="cal-link-soft" (click)="cancelNoteEditor()">Cancelar</button>
+            <button class="cal-link-soft" (click)="cancelNoteEditor()">{{ 'common.cancel' | translate }}</button>
             <button class="cal-btn cal-btn--soft" (click)="addNote()">Guardar nota</button>
           </div>
         </div>
@@ -612,7 +612,7 @@
       </div>
 
       <footer class="cal-modal-foot">
-        <button type="button" class="cal-btn cal-btn--ghost" (click)="closeNewTaskModal()">Cancelar</button>
+        <button type="button" class="cal-btn cal-btn--ghost" (click)="closeNewTaskModal()">{{ 'common.cancel' | translate }}</button>
         <button type="button" class="cal-btn cal-btn--primary"
                 (click)="submitNewTask()"
                 [disabled]="isCreatingTask || !newTask.session_id || !newTask.title.trim()">

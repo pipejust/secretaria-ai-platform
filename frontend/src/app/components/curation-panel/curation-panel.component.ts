@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -48,7 +49,7 @@ interface MeetingData {
 @Component({
   selector: 'app-curation-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe],
+  imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe, TranslateModule],
   templateUrl: './curation-panel.component.html',
   styleUrl: './curation-panel.component.css'
 })

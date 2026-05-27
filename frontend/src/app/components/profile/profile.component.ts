@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -48,7 +49,7 @@ type TwoFactorModalStep = 'idle' | 'enable-code' | 'disable-password';
 @Component({
     selector: 'app-profile',
     standalone: true,
-    imports: [CommonModule, FormsModule, PasswordInputComponent, LanguageSelectorComponent],
+    imports: [CommonModule, FormsModule, PasswordInputComponent, LanguageSelectorComponent, TranslateModule],
     templateUrl: './profile.component.html',
     styleUrls: ['./profile.component.css'],
 })

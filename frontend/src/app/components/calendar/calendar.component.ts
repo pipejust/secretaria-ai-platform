@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -82,7 +83,7 @@ const NOTES_STORAGE_KEY = 'acten.calendar.notes.v1';
 @Component({
     selector: 'app-calendar',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
     templateUrl: './calendar.component.html',
     styleUrls: ['./calendar.component.css'],
 })

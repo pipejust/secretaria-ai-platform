@@ -414,7 +414,7 @@
         <article class="acn-card acn-card-meetings">
             <header class="acn-card-head">
                 <h2 class="acn-card-title">Reuniones Analizadas Recientemente</h2>
-                <a class="acn-card-link" routerLink="/admin/meetings">Ver todas</a>
+                <a class="acn-card-link" routerLink="/admin/meetings">{{ 'sidebar.see_all' | translate }}</a>
             </header>
 
             <div class="acn-table">
@@ -511,7 +511,7 @@
         <article class="acn-card acn-card-actions">
             <header class="acn-card-head">
                 <h2 class="acn-card-title">Tareas Principales</h2>
-                <a class="acn-card-link" routerLink="/admin/pendientes">Ver todas</a>
+                <a class="acn-card-link" routerLink="/admin/pendientes">{{ 'sidebar.see_all' | translate }}</a>
             </header>
 
             <ul class="acn-task-list">
@@ -578,7 +578,7 @@
 <div class="ap-modal-overlay" *ngIf="showUploadModal" (click)="closeUploadModal()">
     <div class="ap-modal ap-modal-md" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
-            <h2 class="ap-modal-title">Nueva reunión</h2>
+            <h2 class="ap-modal-title">{{ 'sidebar.new_meeting' | translate }}</h2>
             <button type="button" class="ap-modal-close" (click)="closeUploadModal()" title="Cerrar">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

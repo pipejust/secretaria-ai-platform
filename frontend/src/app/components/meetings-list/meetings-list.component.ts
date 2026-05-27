@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -48,7 +49,7 @@ interface Attendee {
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, MdRenderPipe, UserChipComponent],
+    imports: [CommonModule, FormsModule, MdRenderPipe, UserChipComponent, TranslateModule],
     templateUrl: './meetings-list.component.html',
     styleUrls: ['./meetings-list.component.css']
 })

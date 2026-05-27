@@ -5,6 +5,7 @@ import {
     inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
@@ -39,7 +40,7 @@ interface FilterChip {
 @Component({
     selector: 'app-landing-messages',
     standalone: true,
-    imports: [CommonModule, FormsModule, HttpClientModule, RouterModule],
+    imports: [CommonModule, FormsModule, HttpClientModule, RouterModule, TranslateModule],
     templateUrl: './landing-messages.component.html',
     styleUrls: ['./landing-messages.component.css'],
 })

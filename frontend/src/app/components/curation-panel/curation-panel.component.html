@@ -140,7 +140,7 @@
 
         <!-- Breadcrumb superior -->
         <nav class="cp-breadcrumb" aria-label="Navegación">
-            <a routerLink="/admin/meetings">Reuniones</a>
+            <a routerLink="/admin/meetings">{{ 'sidebar.meetings' | translate }}</a>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="9 18 15 12 9 6"></polyline>
@@ -595,12 +595,12 @@
                         </div>
                         <div class="cp-manual-form-actions">
                             <button type="button" class="cp-btn cp-btn-light"
-                                    (click)="showManualTaskForm = false">Cancelar</button>
+                                    (click)="showManualTaskForm = false">{{ 'common.cancel' | translate }}</button>
                             <button type="button" class="cp-btn cp-btn-save"
                                     (click)="addManualTask()"
                                     [disabled]="isAddingTask || !newTask.title">
                                 <span *ngIf="!isAddingTask">Guardar tarea</span>
-                                <span *ngIf="isAddingTask">Guardando…</span>
+                                <span *ngIf="isAddingTask">{{ 'common.saving' | translate }}</span>
                             </button>
                         </div>
                     </div>

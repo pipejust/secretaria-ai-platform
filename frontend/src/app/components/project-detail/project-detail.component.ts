@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
@@ -77,7 +78,7 @@ interface DashboardResponse {
 @Component({
     selector: 'app-project-detail',
     standalone: true,
-    imports: [CommonModule, RouterModule, UserChipComponent],
+    imports: [CommonModule, RouterModule, UserChipComponent, TranslateModule],
     templateUrl: './project-detail.component.html',
     styleUrls: ['./project-detail.component.css'],
 })

@@ -187,7 +187,7 @@
                     <select [(ngModel)]="filterStatus">
                         <option value="all">Todos</option>
                         <option value="configured">Configurados</option>
-                        <option value="pending">Pendientes</option>
+                        <option value="pending">{{ 'sidebar.pending' | translate }}</option>
                     </select>
                 </div>
                 <div class="filter-group filter-group--actions">
@@ -467,7 +467,7 @@
                                     <img *ngIf="form.logo_data_url" [src]="form.logo_data_url"/>
                                     <span *ngIf="!form.logo_data_url">{{ form.company_name || 'Acten' }}</span>
                                 </div>
-                                <div class="br-ui-sidebar-item br-ui-sidebar-item--active">Resumen</div>
+                                <div class="br-ui-sidebar-item br-ui-sidebar-item--active">{{ 'sidebar.dashboard' | translate }}</div>
                             </div>
                             <span class="br-ui-caption">Sidebar</span>
                         </div>
@@ -490,7 +490,7 @@
                                 <span class="br-ui-login-mark" *ngIf="!form.logo_data_url">
                                     {{ form.company_name || 'Acten' }}
                                 </span>
-                                <p class="br-ui-login-title">Bienvenido de nuevo</p>
+                                <p class="br-ui-login-title">{{ 'login.title' | translate }}</p>
                                 <span class="br-ui-login-sub">Ingresa tus credenciales para continuar.</span>
                             </div>
                             <span class="br-ui-caption">Login</span>
@@ -652,7 +652,7 @@
             </article>
 
             <article class="br-card">
-                <header class="br-card-head"><h3>Actividad reciente</h3></header>
+                <header class="br-card-head"><h3>{{ 'profile.activity' | translate }}</h3></header>
                 <ul class="br-activity">
                     <li *ngFor="let a of recentActivity; trackBy: trackActivity" class="br-activity-item">
                         <span class="br-activity-dot br-activity-dot--{{ a.tone }}"></span>
@@ -787,7 +787,7 @@
 
             <!-- Métricas resumidas -->
             <section class="br-detail-section">
-                <header><h4>Resumen</h4></header>
+                <header><h4>{{ 'sidebar.dashboard' | translate }}</h4></header>
                 <div class="br-detail-stats">
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ brandAssetsCount }}</span>
@@ -795,7 +795,7 @@
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ channelsCount }}</span>
-                        <span class="br-detail-stat-label">Canales</span>
+                        <span class="br-detail-stat-label">{{ 'profile.channels' | translate }}</span>
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ colorsCount }}</span>
@@ -838,7 +838,7 @@
 
         </div>
         <footer class="br-modal-foot">
-            <button class="br-btn br-btn--ghost" (click)="closePreview()">Cerrar</button>
+            <button class="br-btn br-btn--ghost" (click)="closePreview()">{{ 'common.close' | translate }}</button>
             <button class="br-btn br-btn--primary" (click)="save(); closePreview()" [disabled]="isSaving">
                 {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
             </button>

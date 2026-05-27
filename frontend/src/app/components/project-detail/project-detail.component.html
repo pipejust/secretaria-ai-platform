@@ -63,7 +63,7 @@
     <section class="metrics">
       <article class="metric-card metric-card--neutral">
         <span class="metric-num">{{ d.metrics.total_sessions }}</span>
-        <span class="metric-label">Reuniones</span>
+        <span class="metric-label">{{ 'sidebar.meetings' | translate }}</span>
       </article>
       <article class="metric-card metric-card--blue">
         <span class="metric-num">{{ d.metrics.active_action_items }}</span>
@@ -105,7 +105,7 @@
       </section>
 
       <section class="panel">
-        <h2>Reuniones recientes</h2>
+        <h2>{{ 'dashboard.recent_meetings' | translate }}</h2>
         <p class="hint" *ngIf="!d.last_sessions.length">Sin reuniones registradas.</p>
         <ul class="session-list">
           <li *ngFor="let s of d.last_sessions; trackBy: trackById">

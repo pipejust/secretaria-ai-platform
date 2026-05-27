@@ -111,7 +111,7 @@
             </div>
 
             <footer class="ap-modal-foot">
-                <button type="button" class="ap-btn ap-btn-secondary" (click)="cancelEdit()">Cancelar</button>
+                <button type="button" class="ap-btn ap-btn-secondary" (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
                 <button type="submit" class="ap-btn ap-btn-primary"
                         [disabled]="!projectForm.form.valid || isCreating || isUpdating">
                     <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Guardar cambios' : 'Guardar proyecto' }}</span>
@@ -292,7 +292,7 @@
                     </div>
                 </header>
 
-                <div *ngIf="isLoadingRoutings" class="ap-modal-loading">Cargando…</div>
+                <div *ngIf="isLoadingRoutings" class="ap-modal-loading">{{ 'common.loading' | translate }}</div>
                 <div *ngIf="!isLoadingRoutings && projectRoutings.length === 0" class="ap-modal-empty">
                     Sin rutas de integración configuradas para este proyecto. Cero tareas serán despachadas.
                 </div>
@@ -456,12 +456,12 @@
         </div>
 
         <footer class="ap-modal-foot">
-            <button type="button" class="ap-btn ap-btn-secondary" (click)="closeRoutings()">Cancelar</button>
+            <button type="button" class="ap-btn ap-btn-secondary" (click)="closeRoutings()">{{ 'common.cancel' | translate }}</button>
             <button type="button" class="ap-btn ap-btn-primary"
                     (click)="addRouting()"
                     [disabled]="isAddingRouting || activeIntegrations.length === 0 || !newRouting.destination_type">
                 <span *ngIf="!isAddingRouting">Guardar ruta</span>
-                <span *ngIf="isAddingRouting">Guardando…</span>
+                <span *ngIf="isAddingRouting">{{ 'common.saving' | translate }}</span>
             </button>
         </footer>
     </div>
@@ -480,7 +480,7 @@
          + CTA primaria a la derecha. -->
     <header class="ap-header">
         <div class="ap-header-left">
-            <h1 class="ap-title">Proyectos</h1>
+            <h1 class="ap-title">{{ 'sidebar.projects' | translate }}</h1>
             <p class="ap-sub">Gestiona, sincroniza y prioriza los proyectos de tu equipo.</p>
         </div>
         <button type="button" class="ap-cta" (click)="showProjectModal = true">
@@ -541,7 +541,7 @@
                     <label>Estado</label>
                     <select [(ngModel)]="filterStatus" (change)="onSearchInput()">
                         <option value="all">Todos</option>
-                        <option value="active">Activos</option>
+                        <option value="active">{{ 'common.active' | translate }}</option>
                         <option value="archived">Archivados</option>
                     </select>
                 </div>
@@ -574,7 +574,7 @@
                             (click)="setTab('all')">Todos</button>
                     <button type="button"
                             [class.active]="activeTab === 'active'"
-                            (click)="setTab('active')">Activos</button>
+                            (click)="setTab('active')">{{ 'common.active' | translate }}</button>
                     <button type="button"
                             [class.active]="activeTab === 'archived'"
                             (click)="setTab('archived')">Archivados</button>
@@ -595,7 +595,7 @@
                                 <th>Última sincronización</th>
                                 <th>Progreso</th>
                                 <th>Equipo</th>
-                                <th class="t-right">Acciones</th>
+                                <th class="t-right">{{ 'common.actions' | translate }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -851,7 +851,7 @@
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                             </svg>
                         </span>
-                        <span class="ov-label">Proyectos activos</span>
+                        <span class="ov-label">{{ 'dashboard.active_projects' | translate }}</span>
                         <span class="ov-value">{{ overviewCounts.active }}</span>
                     </li>
                     <li>

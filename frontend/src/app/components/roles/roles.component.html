@@ -174,8 +174,8 @@
                     <label>Estado</label>
                     <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
                         <option value="all">Todos</option>
-                        <option value="active">Activos</option>
-                        <option value="inactive">Inactivos</option>
+                        <option value="active">{{ 'common.active' | translate }}</option>
+                        <option value="inactive">{{ 'common.inactive' | translate }}</option>
                     </select>
                 </div>
                 <div class="rl-select-group">
@@ -218,7 +218,7 @@
                     <span>Descripción</span>
                     <span>Usuarios asignados</span>
                     <span>Estado</span>
-                    <span class="rl-t-actions">Acciones</span>
+                    <span class="rl-t-actions">{{ 'common.actions' | translate }}</span>
                 </div>
 
                 <div class="rl-tr"
@@ -499,7 +499,7 @@
             <!-- Actividad reciente del rol seleccionado — datos reales -->
             <article class="rl-card">
                 <header class="rl-card-head">
-                    <h3>Actividad reciente</h3>
+                    <h3>{{ 'profile.activity' | translate }}</h3>
                 </header>
                 <ul class="rl-activity" *ngIf="selectedActivity.length">
                     <li *ngFor="let a of selectedActivity; trackBy: trackActivity" class="rl-activity-item">
@@ -592,7 +592,7 @@
                 </div>
 
                 <div class="rl-modal-actions">
-                    <button type="button" class="rl-btn rl-btn--ghost" (click)="closeRoleModal()">Cancelar</button>
+                    <button type="button" class="rl-btn rl-btn--ghost" (click)="closeRoleModal()">{{ 'common.cancel' | translate }}</button>
                     <button type="button" class="rl-btn rl-btn--primary"
                             [disabled]="isSavingRole || !roleForm.name.trim()"
                             (click)="saveRole()">
@@ -682,7 +682,7 @@
             </section>
 
             <div class="rl-modal-actions">
-                <button class="rl-btn rl-btn--ghost" (click)="closeDetailModal()">Cerrar</button>
+                <button class="rl-btn rl-btn--ghost" (click)="closeDetailModal()">{{ 'common.close' | translate }}</button>
                 <button class="rl-btn rl-btn--primary" (click)="closeDetailModal(); openEditModal(detailRole)">
                     Editar rol
                 </button>
@@ -712,7 +712,7 @@
                 ¿Eliminar el rol <strong>{{ deleteTarget.name }}</strong>? Esta acción no se puede deshacer.
             </p>
             <div class="rl-modal-actions">
-                <button class="rl-btn rl-btn--ghost" (click)="cancelDelete()" [disabled]="isDeleting">Cancelar</button>
+                <button class="rl-btn rl-btn--ghost" (click)="cancelDelete()" [disabled]="isDeleting">{{ 'common.cancel' | translate }}</button>
                 <button class="rl-btn rl-btn--danger" (click)="confirmDelete()" [disabled]="isDeleting">
                     {{ isDeleting ? 'Eliminando…' : 'Sí, eliminar' }}
                 </button>

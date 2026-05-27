@@ -14,7 +14,7 @@
     <!-- ============= HEADER ============= -->
     <header class="st-hero">
         <div class="st-hero-text">
-            <h1 class="st-title">Configuración</h1>
+            <h1 class="st-title">{{ 'sidebar.settings' | translate }}</h1>
             <p class="st-sub">Gestiona tus preferencias, ajustes del workspace e integraciones.</p>
         </div>
         <div class="st-hero-actions">
@@ -684,7 +684,7 @@
                                 <span class="st-field-label">Webhook URL</span>
                                 <div class="st-input-with-action">
                                     <input type="text" class="st-input" [value]="firefliesSettings.webhookUrl" readonly />
-                                    <button type="button" class="st-btn-link" (click)="copyWebhookUrl()">Copiar</button>
+                                    <button type="button" class="st-btn-link" (click)="copyWebhookUrl()">{{ 'common.copy' | translate }}</button>
                                 </div>
                             </label>
                         </div>

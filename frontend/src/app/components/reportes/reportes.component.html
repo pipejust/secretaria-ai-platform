@@ -125,7 +125,7 @@
                     </svg>
                 </div>
                 <div class="rp-kpi-body">
-                    <span class="rp-kpi-label">Proyectos</span>
+                    <span class="rp-kpi-label">{{ 'sidebar.projects' | translate }}</span>
                     <span class="rp-kpi-value">{{ metricProjects }}</span>
                     <span class="rp-kpi-delta">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -391,7 +391,7 @@
                         <span class="rp-detail-value">{{ data.label }}</span>
                         <span class="rp-detail-label">Proyecto</span>
                         <span class="rp-detail-value">{{ data.project_name }}</span>
-                        <span class="rp-detail-label">Reuniones</span>
+                        <span class="rp-detail-label">{{ 'sidebar.meetings' | translate }}</span>
                         <span class="rp-detail-value">{{ data.metrics.sessions_count }}</span>
                     </div>
                 </div>
@@ -419,7 +419,7 @@
                         <select class="rp-mini-select"
                                 [(ngModel)]="workloadStatus">
                             <option value="all">Todos los estados</option>
-                            <option value="pending">Pendientes</option>
+                            <option value="pending">{{ 'sidebar.pending' | translate }}</option>
                             <option value="done">Completadas</option>
                             <option value="blocked">Bloqueadas</option>
                             <option value="overdue">Vencidas</option>
@@ -564,7 +564,7 @@
                         </div>
                         <div class="rp-team-bars">
                             <div class="rp-team-bar">
-                                <span class="rp-team-bar-label">Reuniones</span>
+                                <span class="rp-team-bar-label">{{ 'sidebar.meetings' | translate }}</span>
                                 <span class="rp-team-bar-track">
                                     <span class="rp-team-bar-fill rp-team-bar-fill--blue"
                                           [style.width.%]="teamMeetingsPct(r.meetings)"></span>
@@ -767,7 +767,7 @@
             </div>
         </div>
         <footer class="rp-modal-foot">
-            <button class="rp-btn rp-btn--ghost" (click)="closeExportModal()">Cancelar</button>
+            <button class="rp-btn rp-btn--ghost" (click)="closeExportModal()">{{ 'common.cancel' | translate }}</button>
             <button class="rp-btn rp-btn--primary" [disabled]="isExporting" (click)="confirmExport()">
                 <svg *ngIf="!isExporting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round" class="rp-btn-ico">
