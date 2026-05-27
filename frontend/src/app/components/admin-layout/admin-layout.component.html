@@ -92,7 +92,7 @@
                             <path d="M19 14 L19.75 16 L21.75 16.75 L19.75 17.5 L19 19.5 L18.25 17.5 L16.25 16.75 L18.25 16 Z"></path>
                             <path d="M5 14 L5.6 15.4 L7 16 L5.6 16.6 L5 18 L4.4 16.6 L3 16 L4.4 15.4 Z"></path>
                         </svg>
-                        <span class="nav-text" *ngIf="!isCollapsed">Pregunta a Acten</span>
+                        <span class="nav-text" *ngIf="!isCollapsed">{{ 'common.ask_acten' | translate }}</span>
                     </a>
                 </li>
                 <li *ngIf="canSee('calendario')">
@@ -240,7 +240,7 @@
                      *ngIf="!branding.isActenTenant()"
                      [class.collapsed]="isCollapsed"
                      title="Powered by Acten">
-                    <span class="powered-by-label" *ngIf="!isCollapsed">Powered by</span>
+                    <span class="powered-by-label" *ngIf="!isCollapsed">{{ 'sidebar.powered_by' | translate }}</span>
                     <img [src]="branding.actenIconUrl"
                          alt="Acten"
                          class="powered-by-icon" />

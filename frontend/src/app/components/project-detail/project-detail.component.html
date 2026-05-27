@@ -33,7 +33,7 @@
       </div>
       <div class="header-meta">
         <div class="meta-row" *ngIf="d.project.owner_user">
-          <span class="meta-key">Responsable</span>
+          <span class="meta-key">{{ 'project_detail.owner' | translate }}</span>
           <span class="meta-val">{{ d.project.owner_user.full_name || d.project.owner_user.email }}</span>
         </div>
         <div class="meta-row">
@@ -126,9 +126,9 @@
       <table *ngIf="d.active_action_items.length" class="action-table">
         <thead>
           <tr>
-            <th>Tarea</th>
-            <th>Responsable</th>
-            <th>Vence</th>
+            <th>{{ 'project_detail.task' | translate }}</th>
+            <th>{{ 'project_detail.owner' | translate }}</th>
+            <th>{{ 'project_detail.due' | translate }}</th>
             <th>{{ 'common.status' | translate }}</th>
             <th>Sesión</th>
           </tr>

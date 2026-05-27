@@ -90,7 +90,36 @@
     "done": "Done",
     "high": "High",
     "medium": "Medium",
-    "low": "Low"
+    "low": "Low",
+    "title": "Title",
+    "subtitle": "Subtitle",
+    "all_projects": "All projects",
+    "meeting": "Meeting",
+    "all_statuses": "All statuses",
+    "datetime": "Date and time",
+    "last_week": "Last week",
+    "more_tasks": "More tasks",
+    "yes_delete": "Yes, delete",
+    "ask_acten": "Ask Acten",
+    "new_task": "New task",
+    "due_date": "Due date",
+    "see_all_tasks": "See all tasks",
+    "english": "English",
+    "portuguese": "Portuguese",
+    "select_file": "Select file",
+    "process_session": "Process session",
+    "uploading_transcribing": "Uploading and transcribing…",
+    "delete_session_q": "Delete session?",
+    "project": "Project",
+    "tomorrow": "Tomorrow",
+    "unassigned": "Unassigned",
+    "filter_by": "Filter by",
+    "apply_filters": "Apply filters",
+    "recent": "Recent",
+    "just_now": "Just now",
+    "moments_ago": "Moments ago",
+    "upcoming": "Upcoming",
+    "overdue": "Overdue"
   },
   "lang": {
     "es": "Español",
@@ -218,7 +247,8 @@
     "empty_meetings": "No meetings yet.",
     "empty_projects": "No projects.",
     "empty_tasks": "No pending tasks.",
-    "donut_legend": "Distribution by status"
+    "donut_legend": "Distribution by status",
+    "workload": "Workload"
   },
   "profile": {
     "title": "My profile",
@@ -287,7 +317,9 @@
     "never": "Never",
     "active_users": "Active users",
     "inactive_users": "Inactive users",
-    "admins": "Administrators"
+    "admins": "Administrators",
+    "assigned_users": "Assigned users",
+    "assigned_role": "Assigned role"
   },
   "tenants": {
     "title": "Companies",
@@ -364,7 +396,8 @@
     "title": "Pending",
     "subtitle": "Tasks, sessions and actions requiring your attention.",
     "no_pending": "All caught up. No pending items.",
-    "review": "Review"
+    "review": "Review",
+    "overdue_tasks": "Overdue tasks"
   },
   "templates": {
     "title": "Templates",
@@ -404,7 +437,10 @@
     "theme": "Visual theme",
     "primary_color": "Primary color",
     "secondary_color": "Secondary color",
-    "accent_color": "Accent color"
+    "accent_color": "Accent color",
+    "no_logo": "No logo",
+    "no_icon": "No icon",
+    "previews": "Previews"
   },
   "integrations": {
     "title": "Integrations",

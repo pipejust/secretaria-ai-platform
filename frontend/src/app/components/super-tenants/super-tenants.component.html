@@ -206,7 +206,7 @@
                     <option value="">Todas las fechas</option>
                     <option value="last30">Últimos 30 días</option>
                     <option value="last90">Últimos 90 días</option>
-                    <option value="older">Más antiguas</option>
+                    <option value="older">{{ 'common.older' | translate }}</option>
                 </select>
             </div>
         </section>
@@ -231,7 +231,7 @@
                 <div class="tn-table">
                     <div class="tn-tr tn-th">
                         <span>ID / Slug</span>
-                        <span>Empresa</span>
+                        <span>{{ 'sidebar.tenants' | translate }}</span>
                         <span>Dominio</span>
                         <span>{{ 'sidebar.users' | translate }}</span>
                         <span>{{ 'common.status' | translate }}</span>
@@ -298,14 +298,14 @@
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                         <circle cx="12" cy="12" r="3"></circle>
                                     </svg>
-                                    Ver detalle
+                                    {{ 'common.view_detail' | translate }}
                                 </button>
                                 <button (click)="openEditModal(t, $event)">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                     </svg>
-                                    Editar empresa
+                                    {{ 'tenants.edit_tenant' | translate }}
                                 </button>
                                 <button (click)="setDomain(t, $event)">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -471,7 +471,7 @@
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
                     </svg>
-                    Ver detalle
+                    {{ 'common.view_detail' | translate }}
                 </button>
                 <button class="tn-btn tn-btn--outline-green tn-btn--block" (click)="openEditModal(s)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -479,7 +479,7 @@
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
-                    Editar empresa
+                    {{ 'tenants.edit_tenant' | translate }}
                 </button>
             </div>
         </article>
@@ -737,7 +737,7 @@
                         </header>
                         <div class="tn-upload-drop">
                             <img *ngIf="form.logo_data_url" [src]="form.logo_data_url" alt="Logo preview"/>
-                            <span *ngIf="!form.logo_data_url" class="tn-upload-empty">Sin logo</span>
+                            <span *ngIf="!form.logo_data_url" class="tn-upload-empty">{{ 'branding.no_logo' | translate }}</span>
                         </div>
                         <div class="tn-upload-foot">
                             <label class="tn-btn tn-btn--ghost tn-upload-btn">
@@ -777,7 +777,7 @@
                         </header>
                         <div class="tn-upload-drop tn-upload-drop--square">
                             <img *ngIf="form.icon_data_url" [src]="form.icon_data_url" alt="Icon preview"/>
-                            <span *ngIf="!form.icon_data_url" class="tn-upload-empty">Sin icono</span>
+                            <span *ngIf="!form.icon_data_url" class="tn-upload-empty">{{ 'branding.no_icon' | translate }}</span>
                         </div>
                         <div class="tn-upload-foot">
                             <label class="tn-btn tn-btn--ghost tn-upload-btn">
@@ -833,7 +833,7 @@
     <div class="tn-modal" (click)="$event.stopPropagation()">
         <div class="tn-modal-head">
             <div>
-                <h3>Editar empresa</h3>
+                <h3>{{ 'tenants.edit_tenant' | translate }}</h3>
                 <p class="tn-modal-sub">Actualiza datos, dominio, estado y marca de la empresa. El slug no se puede modificar.</p>
             </div>
             <button class="tn-modal-close" (click)="closeEditModal()" [attr.aria-label]="'common.close' | translate">
@@ -906,7 +906,7 @@
                         </header>
                         <div class="tn-upload-drop">
                             <img *ngIf="editForm.logo_data_url" [src]="editForm.logo_data_url" alt="Logo preview"/>
-                            <span *ngIf="!editForm.logo_data_url" class="tn-upload-empty">Sin logo</span>
+                            <span *ngIf="!editForm.logo_data_url" class="tn-upload-empty">{{ 'branding.no_logo' | translate }}</span>
                         </div>
                         <div class="tn-upload-foot">
                             <label class="tn-btn tn-btn--ghost tn-upload-btn">
@@ -946,7 +946,7 @@
                         </header>
                         <div class="tn-upload-drop tn-upload-drop--square">
                             <img *ngIf="editForm.icon_data_url" [src]="editForm.icon_data_url" alt="Icon preview"/>
-                            <span *ngIf="!editForm.icon_data_url" class="tn-upload-empty">Sin icono</span>
+                            <span *ngIf="!editForm.icon_data_url" class="tn-upload-empty">{{ 'branding.no_icon' | translate }}</span>
                         </div>
                         <div class="tn-upload-foot">
                             <label class="tn-btn tn-btn--ghost tn-upload-btn">
@@ -1067,14 +1067,14 @@
                         <span class="tn-detail-brand-label">Logo completo</span>
                         <div class="tn-detail-brand-preview tn-detail-brand-preview--wide">
                             <img *ngIf="s.logo_data_url" [src]="s.logo_data_url" alt="Logo"/>
-                            <span *ngIf="!s.logo_data_url" class="tn-upload-empty">Sin logo</span>
+                            <span *ngIf="!s.logo_data_url" class="tn-upload-empty">{{ 'branding.no_logo' | translate }}</span>
                         </div>
                     </div>
                     <div class="tn-detail-brand-block">
                         <span class="tn-detail-brand-label">{{ 'branding.icon' | translate }}</span>
                         <div class="tn-detail-brand-preview tn-detail-brand-preview--square">
                             <img *ngIf="s.icon_data_url" [src]="s.icon_data_url" alt="Icon"/>
-                            <span *ngIf="!s.icon_data_url" class="tn-upload-empty">Sin icono</span>
+                            <span *ngIf="!s.icon_data_url" class="tn-upload-empty">{{ 'branding.no_icon' | translate }}</span>
                         </div>
                     </div>
                 </div>
@@ -1088,7 +1088,7 @@
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
-                    Editar empresa
+                    {{ 'tenants.edit_tenant' | translate }}
                 </button>
             </div>
         </div>

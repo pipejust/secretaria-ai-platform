@@ -186,7 +186,7 @@
                 <path d="M5 21V7l7-4 7 4v14"></path>
                 <path d="M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"></path>
               </svg>
-              Empresa
+              {{ 'sidebar.tenants' | translate }}
             </dt>
             <dd>{{ user?.tenant?.name || '—' }}</dd>
           </div>
@@ -508,11 +508,11 @@
             <dd>#{{ user?.id || '—' }}</dd>
           </div>
           <div class="pr-summary-row">
-            <dt>Empresa</dt>
+            <dt>{{ 'sidebar.tenants' | translate }}</dt>
             <dd>{{ user?.tenant?.name || '—' }}</dd>
           </div>
           <div class="pr-summary-row">
-            <dt>Rol asignado</dt>
+            <dt>{{ 'users.assigned_role' | translate }}</dt>
             <dd>{{ (user?.role | titlecase) || '—' }}</dd>
           </div>
           <div class="pr-summary-row">

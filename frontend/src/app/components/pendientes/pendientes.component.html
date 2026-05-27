@@ -114,15 +114,15 @@
 
                     <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
                         <div class="filter-group">
-                            <label>Responsable</label>
+                            <label>{{ 'project_detail.owner' | translate }}</label>
                             <input type="text" [(ngModel)]="ownerFilter" (keyup.enter)="load()"
                                    placeholder="Todos" />
                         </div>
 
                         <div class="filter-group">
-                            <label>Proyecto</label>
+                            <label>{{ 'common.project' | translate }}</label>
                             <select [(ngModel)]="projectFilter">
-                                <option value="">Todos los proyectos</option>
+                                <option value="">{{ 'common.all_projects' | translate }}</option>
                                 <option *ngFor="let p of projects" [value]="p.name">{{ p.name }}</option>
                             </select>
                         </div>
@@ -170,9 +170,9 @@
                     <table class="tk-table">
                         <thead>
                             <tr>
-                                <th class="th-task">Tarea</th>
-                                <th class="th-project">Proyecto</th>
-                                <th class="th-owner">Responsable</th>
+                                <th class="th-task">{{ 'project_detail.task' | translate }}</th>
+                                <th class="th-project">{{ 'common.project' | translate }}</th>
+                                <th class="th-owner">{{ 'project_detail.owner' | translate }}</th>
                                 <th class="th-priority">Prioridad</th>
                                 <th class="th-due">
                                     Fecha de vencimiento
@@ -364,7 +364,7 @@
             <!-- ── Carga de trabajo (donut + mini filtros) ── -->
             <article class="tk-card tk-side-card">
                 <header class="tk-side-head">
-                    <h3>Carga de trabajo</h3>
+                    <h3>{{ 'dashboard.workload' | translate }}</h3>
                     <a routerLink="/admin/reportes" class="tk-side-link">Ver reporte completo</a>
                 </header>
 
@@ -372,13 +372,13 @@
                      Sólo afectan al donut, no a la tabla principal. -->
                 <div class="tk-workload-filters">
                     <select class="tk-mini-select" [(ngModel)]="workloadProjectFilter">
-                        <option value="">Todos los proyectos</option>
+                        <option value="">{{ 'common.all_projects' | translate }}</option>
                         <option *ngFor="let p of projects" [value]="p.name">{{ p.name }}</option>
                     </select>
                     <select class="tk-mini-select" [(ngModel)]="workloadRangeFilter">
                         <option value="all">Todo el periodo</option>
-                        <option value="week">Esta semana</option>
-                        <option value="month">Este mes</option>
+                        <option value="week">{{ 'common.this_week' | translate }}</option>
+                        <option value="month">{{ 'common.this_month' | translate }}</option>
                     </select>
                 </div>
 
@@ -431,8 +431,8 @@
             <!-- ── Tareas vencidas ── -->
             <article class="tk-card tk-side-card">
                 <header class="tk-side-head">
-                    <h3>Tareas vencidas</h3>
-                    <a class="tk-side-link" (click)="setBucket('vencido')" href="javascript:void(0)">Ver todo</a>
+                    <h3>{{ 'pending.overdue_tasks' | translate }}</h3>
+                    <a class="tk-side-link" (click)="setBucket('vencido')" href="javascript:void(0)">{{ 'common.show_all' | translate }}</a>
                 </header>
 
                 <ul class="tk-overdue-list">
@@ -631,7 +631,7 @@
 
                     <!-- 1. Selector de sesión -->
                     <div class="tk-form-row">
-                        <label class="tk-form-label">Reunión</label>
+                        <label class="tk-form-label">{{ 'common.meeting' | translate }}</label>
                         <div class="tk-search tk-form-search">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -681,7 +681,7 @@
 
                     <div class="tk-form-grid">
                         <div class="tk-form-row">
-                            <label class="tk-form-label">Responsable</label>
+                            <label class="tk-form-label">{{ 'project_detail.owner' | translate }}</label>
                             <input type="text" class="tk-input" [(ngModel)]="newTask.owner_name"
                                    placeholder="Nombre" />
                         </div>
@@ -702,7 +702,7 @@
 
                     <div class="tk-form-grid">
                         <div class="tk-form-row">
-                            <label class="tk-form-label">Fecha límite</label>
+                            <label class="tk-form-label">{{ 'common.due_date' | translate }}</label>
                             <input type="date" class="tk-input" [(ngModel)]="newTask.due_date" />
                         </div>
                         <div class="tk-form-row">

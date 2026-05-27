@@ -179,7 +179,7 @@
                         <option value="logo">Logo</option>
                         <option value="icono">Icono</option>
                         <option value="tema">{{ 'branding.theme' | translate }}</option>
-                        <option value="previews">Vistas previas</option>
+                        <option value="previews">{{ 'branding.previews' | translate }}</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -594,7 +594,7 @@
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
-                        Ver detalle
+                        {{ 'common.view_detail' | translate }}
                     </button>
                 </div>
             </article>
@@ -645,7 +645,7 @@
                                 <line x1="12" y1="17" x2="12" y2="21"></line>
                             </svg>
                         </span>
-                        Vistas previas
+                        {{ 'branding.previews' | translate }}
                         <span class="br-summary-value">{{ previewsCount }}</span>
                     </li>
                 </ul>
@@ -807,7 +807,7 @@
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ previewsCount }}</span>
-                        <span class="br-detail-stat-label">Vistas previas</span>
+                        <span class="br-detail-stat-label">{{ 'branding.previews' | translate }}</span>
                     </div>
                 </div>
             </section>

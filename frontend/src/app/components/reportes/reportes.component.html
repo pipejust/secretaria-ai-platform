@@ -28,8 +28,8 @@
                     </svg>
                 </button>
                 <div class="rp-period-menu" *ngIf="showPeriodMenu">
-                    <button [class.is-active]="period === 'week'"  (click)="pickPeriod('week')">Esta semana</button>
-                    <button [class.is-active]="period === 'month'" (click)="pickPeriod('month')">Este mes</button>
+                    <button [class.is-active]="period === 'week'"  (click)="pickPeriod('week')">{{ 'common.this_week' | translate }}</button>
+                    <button [class.is-active]="period === 'month'" (click)="pickPeriod('month')">{{ 'common.this_month' | translate }}</button>
                     <button [class.is-active]="period === 'all'"   (click)="pickPeriod('all')">Siempre</button>
                     <div class="rp-period-divider"></div>
                     <div class="rp-period-custom">
@@ -38,13 +38,13 @@
                         <input type="date" name="rp_custom_start" [(ngModel)]="customStart"/>
                         <label>Hasta</label>
                         <input type="date" name="rp_custom_end"   [(ngModel)]="customEnd"/>
-                        <label>Proyecto</label>
+                        <label>{{ 'common.project' | translate }}</label>
                         <!-- Sin (change) automático: el proyecto se aplica
                              SOLO al pulsar "Aplicar rango" para que la
                              llamada use el período custom y no recargue
                              con el período viejo a medio camino. -->
                         <select name="rp_custom_project" [(ngModel)]="projectId">
-                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <button class="rp-btn rp-btn--primary rp-btn--block"
@@ -194,7 +194,7 @@
                     </svg>
                 </div>
                 <div class="rp-kpi-body">
-                    <span class="rp-kpi-label">Tareas vencidas</span>
+                    <span class="rp-kpi-label">{{ 'pending.overdue_tasks' | translate }}</span>
                     <span class="rp-kpi-value">{{ metricOverdue }}</span>
                     <span class="rp-kpi-delta rp-kpi-delta--bad">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -223,7 +223,7 @@
                         <select class="rp-mini-select"
                                 [(ngModel)]="donutProjectId"
                                 (change)="onDonutProjectChange()">
-                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <a class="rp-card-link" routerLink="/admin/projects">
@@ -295,7 +295,7 @@
                         <select class="rp-mini-select"
                                 [(ngModel)]="decisionsProjectId"
                                 (change)="onDecisionsProjectChange()">
-                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <button class="rp-card-link rp-card-link--btn" (click)="onDecisionsViewDetails()">
@@ -389,7 +389,7 @@
                         <span class="rp-detail-value">{{ linePoints.length ? linePoints[linePoints.length-1].value : 0 }}</span>
                         <span class="rp-detail-label">Periodo</span>
                         <span class="rp-detail-value">{{ data.label }}</span>
-                        <span class="rp-detail-label">Proyecto</span>
+                        <span class="rp-detail-label">{{ 'common.project' | translate }}</span>
                         <span class="rp-detail-value">{{ data.project_name }}</span>
                         <span class="rp-detail-label">{{ 'sidebar.meetings' | translate }}</span>
                         <span class="rp-detail-value">{{ data.metrics.sessions_count }}</span>
@@ -407,25 +407,25 @@
             <article class="rp-card rp-card--wide">
                 <header class="rp-card-head">
                     <div class="rp-card-title">
-                        <h2>Carga de trabajo</h2>
+                        <h2>{{ 'dashboard.workload' | translate }}</h2>
                     </div>
                     <div class="rp-card-tools">
                         <select class="rp-mini-select"
                                 [(ngModel)]="workloadProjectId"
                                 (change)="onWorkloadProjectChange()">
-                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <select class="rp-mini-select"
                                 [(ngModel)]="workloadStatus">
-                            <option value="all">Todos los estados</option>
+                            <option value="all">{{ 'common.all_statuses' | translate }}</option>
                             <option value="pending">{{ 'sidebar.pending' | translate }}</option>
                             <option value="done">Completadas</option>
                             <option value="blocked">Bloqueadas</option>
                             <option value="overdue">Vencidas</option>
                         </select>
                         <select class="rp-mini-select" [(ngModel)]="workloadSortBy">
-                            <option value="total">Más tareas</option>
+                            <option value="total">{{ 'common.more_tasks' | translate }}</option>
                             <option value="overdue">Más vencidas</option>
                             <option value="meetings">Más reuniones</option>
                         </select>
@@ -537,14 +537,14 @@
                         <select class="rp-mini-select"
                                 [(ngModel)]="teamProjectId"
                                 (change)="onTeamProjectChange()">
-                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <select class="rp-mini-select"
                                 [(ngModel)]="teamActivitySort"
                                 (change)="setTeamSort(teamActivitySort)">
                             <option value="combined">Más activos</option>
-                            <option value="actions">Más tareas</option>
+                            <option value="actions">{{ 'common.more_tasks' | translate }}</option>
                             <option value="meetings">Más reuniones</option>
                         </select>
                     </div>
@@ -607,7 +607,7 @@
                         <select class="rp-mini-select"
                                 [(ngModel)]="topProjectId"
                                 (change)="onTopProjectChange()">
-                            <option [ngValue]="null">Todos los proyectos</option>
+                            <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <a class="rp-card-link" routerLink="/admin/projects">
@@ -624,8 +624,8 @@
                 <div class="rp-table-wrap">
                     <div class="rp-table">
                         <div class="rp-tr rp-th">
-                            <span>Proyecto</span>
-                            <span>Responsable</span>
+                            <span>{{ 'common.project' | translate }}</span>
+                            <span>{{ 'project_detail.owner' | translate }}</span>
                             <span>Progreso</span>
                             <span>{{ 'common.status' | translate }}</span>
                         </div>
@@ -759,9 +759,9 @@
             </div>
 
             <div class="rp-modal-field">
-                <label>Proyecto</label>
+                <label>{{ 'common.project' | translate }}</label>
                 <select [(ngModel)]="exportProjectId">
-                    <option [ngValue]="null">Todos los proyectos</option>
+                    <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
                     <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                 </select>
             </div>

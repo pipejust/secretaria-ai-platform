@@ -90,7 +90,36 @@
     "done": "Fet",
     "high": "Alta",
     "medium": "Mitjana",
-    "low": "Baixa"
+    "low": "Baixa",
+    "title": "Títol",
+    "subtitle": "Subtítol",
+    "all_projects": "Tots els projectes",
+    "meeting": "Reunió",
+    "all_statuses": "Tots els estats",
+    "datetime": "Data i hora",
+    "last_week": "Última setmana",
+    "more_tasks": "Més tasques",
+    "yes_delete": "Sí, elimina",
+    "ask_acten": "Pregunta a Acten",
+    "new_task": "Nova tasca",
+    "due_date": "Data límit",
+    "see_all_tasks": "Veure totes les tasques",
+    "english": "Anglès",
+    "portuguese": "Portuguès",
+    "select_file": "Selecciona arxiu",
+    "process_session": "Processa sessió",
+    "uploading_transcribing": "Pujant i transcrivint…",
+    "delete_session_q": "Eliminar sessió?",
+    "project": "Projecte",
+    "tomorrow": "Demà",
+    "unassigned": "Sense assignar",
+    "filter_by": "Filtra per",
+    "apply_filters": "Aplica filtres",
+    "recent": "Recents",
+    "just_now": "Fa uns segons",
+    "moments_ago": "Fa un moment",
+    "upcoming": "Pròximes",
+    "overdue": "Endarrerides"
   },
   "lang": {
     "es": "Español",
@@ -218,7 +247,8 @@
     "empty_meetings": "Encara no hi ha reunions.",
     "empty_projects": "Sense projectes.",
     "empty_tasks": "Sense tasques pendents.",
-    "donut_legend": "Distribució per estat"
+    "donut_legend": "Distribució per estat",
+    "workload": "Càrrega de treball"
   },
   "profile": {
     "title": "El meu perfil",
@@ -287,7 +317,9 @@
     "never": "Mai",
     "active_users": "Usuaris actius",
     "inactive_users": "Usuaris inactius",
-    "admins": "Administradors"
+    "admins": "Administradors",
+    "assigned_users": "Usuaris assignats",
+    "assigned_role": "Rol assignat"
   },
   "tenants": {
     "title": "Empreses",
@@ -364,7 +396,8 @@
     "title": "Pendents",
     "subtitle": "Tasques, sessions i accions que requereixen la teva atenció.",
     "no_pending": "Tot al dia. Sense pendents.",
-    "review": "Revisa"
+    "review": "Revisa",
+    "overdue_tasks": "Tasques vençudes"
   },
   "templates": {
     "title": "Plantilles",
@@ -404,7 +437,10 @@
     "theme": "Tema visual",
     "primary_color": "Color primari",
     "secondary_color": "Color secundari",
-    "accent_color": "Color accent"
+    "accent_color": "Color accent",
+    "no_logo": "Sense logo",
+    "no_icon": "Sense icona",
+    "previews": "Vistes prèvies"
   },
   "integrations": {
     "title": "Integracions",

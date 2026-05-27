@@ -79,7 +79,7 @@
                 </svg>
             </div>
             <div class="rl-kpi-body">
-                <span class="rl-kpi-label">Usuarios asignados</span>
+                <span class="rl-kpi-label">{{ 'users.assigned_users' | translate }}</span>
                 <span class="rl-kpi-value">{{ usersAssignedCount }}</span>
                 <span class="rl-kpi-hint">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -187,7 +187,7 @@
                     </select>
                 </div>
                 <div class="rl-select-group">
-                    <label>Usuarios asignados</label>
+                    <label>{{ 'users.assigned_users' | translate }}</label>
                     <select [(ngModel)]="filterUsers" (change)="onFilterChange()">
                         <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="with">Con usuarios</option>
@@ -216,7 +216,7 @@
                     <span>ID</span>
                     <span>Nombre del rol</span>
                     <span>{{ 'projects.description' | translate }}</span>
-                    <span>Usuarios asignados</span>
+                    <span>{{ 'users.assigned_users' | translate }}</span>
                     <span>{{ 'common.status' | translate }}</span>
                     <span class="rl-t-actions">{{ 'common.actions' | translate }}</span>
                 </div>
@@ -276,7 +276,7 @@
                                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                         <circle cx="12" cy="12" r="3"></circle>
                                     </svg>
-                                    Ver detalle
+                                    {{ 'common.view_detail' | translate }}
                                 </button>
                                 <button (click)="openEditModal(r, $event); closeRowMenu()">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -419,7 +419,7 @@
                     <dl class="rl-selected-meta">
                         <div><dt>ID de rol</dt><dd>#{{ sel.id }}</dd></div>
                         <div><dt>{{ 'common.status' | translate }}</dt><dd>{{ roleTypeLabel(sel) }}</dd></div>
-                        <div><dt>Usuarios asignados</dt><dd>{{ usersCountForRole(sel) }}</dd></div>
+                        <div><dt>{{ 'users.assigned_users' | translate }}</dt><dd>{{ usersCountForRole(sel) }}</dd></div>
                         <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(sel.created_at) }}</dd></div>
                         <div><dt>Última edición</dt><dd>{{ formatDate(sel.updated_at) }}</dd></div>
                     </dl>
@@ -431,7 +431,7 @@
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
-                            Ver detalle
+                            {{ 'common.view_detail' | translate }}
                         </button>
                         <button class="rl-btn rl-btn--outline-green" (click)="openEditModal(sel)">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -643,7 +643,7 @@
             <dl class="rl-selected-meta">
                 <div><dt>ID</dt><dd>#{{ detailRole.id }}</dd></div>
                 <div><dt>{{ 'common.status' | translate }}</dt><dd>{{ roleTypeLabel(detailRole) }}</dd></div>
-                <div><dt>Usuarios asignados</dt><dd>{{ usersCountForRole(detailRole) }}</dd></div>
+                <div><dt>{{ 'users.assigned_users' | translate }}</dt><dd>{{ usersCountForRole(detailRole) }}</dd></div>
                 <div><dt>Permisos activos</dt><dd>{{ selectedPermissions.length }}</dd></div>
                 <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(detailRole.created_at) }}</dd></div>
                 <div><dt>Última edición</dt><dd>{{ formatDate(detailRole.updated_at) }}</dd></div>

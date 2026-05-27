@@ -17,7 +17,7 @@
                         <path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path>
                     </svg>
                 </span>
-                Pregunta a Acten
+                {{ 'common.ask_acten' | translate }}
             </h1>
             <p class="aa-sub">Tu asistente inteligente de reuniones</p>
         </div>
@@ -255,7 +255,7 @@
                                                 <polyline points="20 6 9 17 4 12"></polyline>
                                             </svg>
                                         </span>
-                                        Decisiones clave
+                                        {{ 'meetings.tabs.decisions' | translate }}
                                     </h3>
                                     <ul class="aa-decision-list">
                                         <li class="aa-decision"
@@ -305,9 +305,9 @@
                                         <table class="aa-task-table">
                                             <thead>
                                                 <tr>
-                                                    <th class="th-task">Tarea</th>
-                                                    <th class="th-owner">Responsable</th>
-                                                    <th class="th-due">Fecha límite</th>
+                                                    <th class="th-task">{{ 'project_detail.task' | translate }}</th>
+                                                    <th class="th-owner">{{ 'project_detail.owner' | translate }}</th>
+                                                    <th class="th-due">{{ 'common.due_date' | translate }}</th>
                                                     <th class="th-status">{{ 'common.status' | translate }}</th>
                                                     <th class="th-src">Fuente</th>
                                                 </tr>
@@ -321,7 +321,7 @@
                                                             <span class="aa-owner-name">{{ it.owner }}</span>
                                                         </ng-container>
                                                         <ng-template #noOwner>
-                                                            <span class="aa-owner-empty">Sin asignar</span>
+                                                            <span class="aa-owner-empty">{{ 'common.unassigned' | translate }}</span>
                                                         </ng-template>
                                                     </td>
                                                     <td class="td-due">
@@ -362,7 +362,7 @@
                                                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                             </svg>
                                         </span>
-                                        Riesgos identificados
+                                        {{ 'project_detail.risks' | translate }}
                                     </h3>
                                     <ul class="aa-decision-list">
                                         <li class="aa-decision aa-decision--risk"

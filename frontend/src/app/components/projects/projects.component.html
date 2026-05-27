@@ -546,7 +546,7 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Responsable</label>
+                    <label>{{ 'project_detail.owner' | translate }}</label>
                     <select [(ngModel)]="filterOwner">
                         <option [ngValue]="'all'">{{ 'common.all' | translate }}</option>
                         <option *ngFor="let u of users" [ngValue]="u.id">{{ u.full_name || u.email }}</option>
@@ -589,8 +589,8 @@
                     <table class="ap-table" *ngIf="!isLoading">
                         <thead>
                             <tr>
-                                <th>Proyecto</th>
-                                <th>Responsable</th>
+                                <th>{{ 'common.project' | translate }}</th>
+                                <th>{{ 'project_detail.owner' | translate }}</th>
                                 <th>{{ 'common.status' | translate }}</th>
                                 <th>Última sincronización</th>
                                 <th>Progreso</th>

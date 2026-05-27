@@ -90,7 +90,36 @@
     "done": "Hecho",
     "high": "Alta",
     "medium": "Media",
-    "low": "Baja"
+    "low": "Baja",
+    "title": "Título",
+    "subtitle": "Subtítulo",
+    "all_projects": "Todos los proyectos",
+    "meeting": "Reunión",
+    "all_statuses": "Todos los estados",
+    "datetime": "Fecha y hora",
+    "last_week": "Última semana",
+    "more_tasks": "Más tareas",
+    "yes_delete": "Sí, eliminar",
+    "ask_acten": "Pregunta a Acten",
+    "new_task": "Nueva tarea",
+    "due_date": "Fecha límite",
+    "see_all_tasks": "Ver todas las tareas",
+    "english": "Inglés",
+    "portuguese": "Portugués",
+    "select_file": "Seleccionar archivo",
+    "process_session": "Procesar sesión",
+    "uploading_transcribing": "Subiendo y transcribiendo…",
+    "delete_session_q": "¿Eliminar sesión?",
+    "project": "Proyecto",
+    "tomorrow": "Mañana",
+    "unassigned": "Sin asignar",
+    "filter_by": "Filtrar por",
+    "apply_filters": "Aplicar filtros",
+    "recent": "Recientes",
+    "just_now": "Hace unos segundos",
+    "moments_ago": "Hace un momento",
+    "upcoming": "Próximas",
+    "overdue": "Atrasadas"
   },
   "lang": {
     "es": "Español",
@@ -218,7 +247,8 @@
     "empty_meetings": "Sin reuniones aún.",
     "empty_projects": "Sin proyectos.",
     "empty_tasks": "Sin tareas pendientes.",
-    "donut_legend": "Distribución por estado"
+    "donut_legend": "Distribución por estado",
+    "workload": "Carga de trabajo"
   },
   "profile": {
     "title": "Mi perfil",
@@ -287,7 +317,9 @@
     "never": "Nunca",
     "active_users": "Usuarios activos",
     "inactive_users": "Usuarios inactivos",
-    "admins": "Administradores"
+    "admins": "Administradores",
+    "assigned_users": "Usuarios asignados",
+    "assigned_role": "Rol asignado"
   },
   "tenants": {
     "title": "Empresas",
@@ -364,7 +396,8 @@
     "title": "Pendientes",
     "subtitle": "Tareas, sesiones y acciones que requieren tu atención.",
     "no_pending": "Todo al día. Sin pendientes.",
-    "review": "Revisar"
+    "review": "Revisar",
+    "overdue_tasks": "Tareas vencidas"
   },
   "templates": {
     "title": "Plantillas",
@@ -404,7 +437,10 @@
     "theme": "Tema visual",
     "primary_color": "Color primario",
     "secondary_color": "Color secundario",
-    "accent_color": "Color acento"
+    "accent_color": "Color acento",
+    "no_logo": "Sin logo",
+    "no_icon": "Sin icono",
+    "previews": "Vistas previas"
   },
   "integrations": {
     "title": "Integraciones",

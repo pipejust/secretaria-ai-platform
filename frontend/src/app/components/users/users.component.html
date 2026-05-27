@@ -156,8 +156,8 @@
                 <select [(ngModel)]="lastAccessFilter" (change)="currentPage = 1">
                     <option value="">Cualquier fecha</option>
                     <option value="today">{{ 'common.today' | translate }}</option>
-                    <option value="week">Última semana</option>
-                    <option value="month">Último mes</option>
+                    <option value="week">{{ 'common.last_week' | translate }}</option>
+                    <option value="month">{{ 'common.this_month' | translate }}</option>
                 </select>
             </div>
         </section>
@@ -182,7 +182,7 @@
                 <div class="us-tr us-th">
                     <span>ID</span>
                     <span>Usuario</span>
-                    <span>Rol asignado</span>
+                    <span>{{ 'users.assigned_role' | translate }}</span>
                     <span>Estado / acceso</span>
                     <span>{{ 'users.last_login' | translate }}</span>
                     <span class="us-th-actions">{{ 'common.actions' | translate }}</span>
@@ -244,14 +244,14 @@
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
                                 </svg>
-                                Ver detalle
+                                {{ 'common.view_detail' | translate }}
                             </button>
                             <button (click)="openEditModal(u, $event)">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
-                                Editar usuario
+                                {{ 'users.edit_user' | translate }}
                             </button>
                             <button (click)="resendInvitation(u); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -356,7 +356,7 @@
 
             <dl class="us-card-dl">
                 <div>
-                    <dt>Rol asignado</dt>
+                    <dt>{{ 'users.assigned_role' | translate }}</dt>
                     <dd><span class="us-role us-role--{{ roleBadgeKey(u.role) }} us-role--inline">{{ u.role || '—' }}</span></dd>
                 </div>
                 <div>
@@ -382,7 +382,7 @@
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
                     </svg>
-                    Ver detalle
+                    {{ 'common.view_detail' | translate }}
                 </button>
                 <button class="us-btn us-btn--outline-green us-btn--block" (click)="openEditModal(u)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -390,7 +390,7 @@
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
-                    Editar usuario
+                    {{ 'users.edit_user' | translate }}
                 </button>
             </div>
         </article>
@@ -640,7 +640,7 @@
     <div class="us-modal us-modal--wide" (click)="$event.stopPropagation()">
         <div class="us-modal-head">
             <div>
-                <h3>Editar usuario</h3>
+                <h3>{{ 'users.edit_user' | translate }}</h3>
                 <p class="us-modal-sub">Modifica datos del perfil, rol y acceso del usuario.</p>
             </div>
             <button class="us-modal-close" (click)="showEditModal = false; errorMsg = ''; successMsg = ''"
@@ -793,7 +793,7 @@
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
-                    Editar usuario
+                    {{ 'users.edit_user' | translate }}
                 </button>
             </div>
         </div>

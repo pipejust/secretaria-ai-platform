@@ -113,7 +113,7 @@
                 <div class="tpl-filter-group">
                     <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus">
-                        <option value="all">Todos los estados</option>
+                        <option value="all">{{ 'common.all_statuses' | translate }}</option>
                         <option value="active">Activas</option>
                         <option value="inactive">Inactivas</option>
                         <option value="archived">Archivadas</option>
@@ -447,7 +447,7 @@
                         <dt>Versión</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
                         <dt>{{ 'common.status' | translate }}</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
                         <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small *ngIf="updatedAgo(selectedTemplate)">({{ updatedAgo(selectedTemplate) }})</small></dd>
-                        <dt>Proyecto</dt><dd>{{ selectedTemplate.project_id || '—' }}</dd>
+                        <dt>{{ 'common.project' | translate }}</dt><dd>{{ selectedTemplate.project_id || '—' }}</dd>
                         <dt>Archivo</dt>
                         <dd>
                             <a *ngIf="selectedTemplate.file_path" [href]="selectedTemplate.file_path" target="_blank" rel="noopener">Ver archivo Word</a>
@@ -546,7 +546,7 @@
                 <div class="tpl-field">
                     <label>Tipo / categoría <span class="req">*</span></label>
                     <select [(ngModel)]="templateType" name="templateType" required>
-                        <option value="meeting">Reunión</option>
+                        <option value="meeting">{{ 'common.meeting' | translate }}</option>
                         <option value="project">Gestión de proyectos</option>
                         <option value="reports">Reportes</option>
                         <option value="finance">Finanzas</option>

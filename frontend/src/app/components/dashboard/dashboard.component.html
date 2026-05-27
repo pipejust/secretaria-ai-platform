@@ -382,7 +382,7 @@
         <article class="acn-card acn-card-sync">
             <header class="acn-card-head">
                 <h2 class="acn-card-title">Estado de Sincronización</h2>
-                <a class="acn-card-link" routerLink="/admin/settings">Ver todo</a>
+                <a class="acn-card-link" routerLink="/admin/settings">{{ 'common.show_all' | translate }}</a>
             </header>
 
             <ul class="acn-sync-list">
@@ -419,7 +419,7 @@
 
             <div class="acn-table">
                 <div class="acn-table-row acn-table-head">
-                    <span>Reunión</span>
+                    <span>{{ 'common.meeting' | translate }}</span>
                     <span>{{ 'meetings.duration' | translate }}</span>
                     <span>{{ 'meetings.participants' | translate }}</span>
                     <span>{{ 'meetings.duration' | translate }}</span>
@@ -546,7 +546,7 @@
                 <li *ngIf="!topActionItemsRich.length" class="acn-empty-li">No hay tareas abiertas.</li>
             </ul>
 
-            <a class="acn-card-foot-link" routerLink="/admin/pendientes">Ver todas las tareas</a>
+            <a class="acn-card-foot-link" routerLink="/admin/pendientes">{{ 'common.see_all_tasks' | translate }}</a>
         </article>
     </section>
 
@@ -634,9 +634,9 @@
                     <label class="ap-label">Idioma Principal</label>
                     <div class="ap-select-wrap">
                         <select class="ap-select" [(ngModel)]="uploadForm.language">
-                            <option value="Español">Español</option>
-                            <option value="Inglés">Inglés</option>
-                            <option value="Portugués">Portugués</option>
+                            <option value="Español">{{ 'lang.es' | translate }}</option>
+                            <option value="Inglés">{{ 'common.english' | translate }}</option>
+                            <option value="Portugués">{{ 'common.portuguese' | translate }}</option>
                             <option value="Multilingüe">Múltiples Idiomas</option>
                         </select>
                     </div>
@@ -670,7 +670,7 @@
                 <p class="ap-dropzone-sub">Formatos aceptados: MP3, WAV, M4A o video MP4</p>
                 <button type="button" class="ap-btn ap-btn-secondary"
                         (click)="audioUpload.click()" [disabled]="isUploading">
-                    Seleccionar archivo
+                    {{ 'common.select_file' | translate }}
                 </button>
                 <p class="ap-dropzone-file" *ngIf="uploadForm.file">
                     Archivo seleccionado: <strong>{{ uploadForm.file.name }}</strong>
@@ -691,8 +691,8 @@
                 Cancelar
             </button>
             <button type="button" class="ap-btn ap-btn-primary" (click)="submitUpload()" [disabled]="isUploading">
-                <span *ngIf="!isUploading">Procesar sesión</span>
-                <span *ngIf="isUploading">Subiendo y transcribiendo…</span>
+                <span *ngIf="!isUploading">{{ 'common.process_session' | translate }}</span>
+                <span *ngIf="isUploading">{{ 'common.uploading_transcribing' | translate }}</span>
             </button>
         </footer>
     </div>
@@ -704,7 +704,7 @@
 <div class="ap-modal-overlay" *ngIf="showDeleteModal" (click)="cancelDeleteSession()">
     <div class="ap-modal ap-modal-sm" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
-            <h2 class="ap-modal-title">¿Eliminar sesión?</h2>
+            <h2 class="ap-modal-title">{{ 'common.delete_session_q' | translate }}</h2>
             <button type="button" class="ap-modal-close" (click)="cancelDeleteSession()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -735,7 +735,7 @@
                 Cancelar
             </button>
             <button type="button" class="ap-btn ap-btn-danger" (click)="confirmDeleteSession()" [disabled]="isDeleting">
-                <span *ngIf="!isDeleting">Sí, eliminar</span>
+                <span *ngIf="!isDeleting">{{ 'common.yes_delete' | translate }}</span>
                 <span *ngIf="isDeleting">Borrando…</span>
             </button>
         </footer>
