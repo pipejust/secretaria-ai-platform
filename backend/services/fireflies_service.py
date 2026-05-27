@@ -297,30 +297,36 @@ async def get_or_detect_fireflies_tier(
 # ---------------------------------------------------------------------------
 
 
-def _extract_summary_text(summary_obj: Any) -> str:
+def _extract_summary_text(summary_obj: Any, lang: Optional[str] = None) -> str:
     """Compone texto del resumen ejecutivo nativo de Fireflies.
 
     Duplica `_extract_native_summary` de routers/fireflies.py para que esta
     función sea autocontenida (no importa el router para evitar circulares).
     Fireflies devuelve summary como dict con campos opcionales — usamos los
     que estén poblados.
+
+    `lang` permite localizar los section headers ("Resumen General",
+    "Resum General", "General Summary"). Si no se pasa, cae a "es".
     """
+    from .i18n_pipeline import section_headers
+    h = section_headers(lang)
+
     if not isinstance(summary_obj, dict):
         return str(summary_obj or "").strip()
 
     parts: list[str] = []
     overview = (summary_obj.get("overview") or "").strip()
     if overview:
-        parts.append(f"### Resumen General\n{overview}")
+        parts.append(f"### {h['general_summary']}\n{overview}")
     bullet_gist = (summary_obj.get("bullet_gist") or "").strip()
     if bullet_gist:
-        parts.append(f"### Puntos Clave\n{bullet_gist}")
+        parts.append(f"### {h['key_points']}\n{bullet_gist}")
     notes = (summary_obj.get("notes") or "").strip()
     if notes:
-        parts.append(f"### Notas\n{notes}")
+        parts.append(f"### {h['notes']}\n{notes}")
     short_summary = (summary_obj.get("short_summary") or "").strip()
     if short_summary and not parts:
-        parts.append(f"### Resumen\n{short_summary}")
+        parts.append(f"### {h['executive_summary']}\n{short_summary}")
     return "\n\n".join(parts).strip()
 
 
@@ -330,6 +336,7 @@ async def fetch_native_summary(
     api_key: Optional[str] = None,
     max_attempts: int = 3,
     backoff_base_sec: float = 5.0,
+    lang: Optional[str] = None,
 ) -> str:
     """Pide a Fireflies SOLO el campo summary de un transcript.
 
@@ -357,7 +364,7 @@ async def fetch_native_summary(
             )
             ff_data = {}
 
-        summary_text = _extract_summary_text(ff_data.get("summary"))
+        summary_text = _extract_summary_text(ff_data.get("summary"), lang=lang)
         if summary_text:
             logger.info(
                 "fetch_native_summary: summary obtenido para %s en intento %s "
@@ -407,10 +414,23 @@ async def refetch_summary_for_session(
     if not session.fireflies_id:
         return False
 
+    # Resolver idioma del tenant para localizar los section headers del
+    # summary nativo. Sin esto, un tenant en catalán/inglés vería el
+    # summary con "### Resumen General" hardcoded.
+    tenant_lang = None
+    try:
+        from models import Tenant as _Tenant
+        _t = db.get(_Tenant, session.tenant_id)
+        if _t:
+            tenant_lang = getattr(_t, "default_language", None)
+    except Exception:
+        tenant_lang = None
+
     summary = await fetch_native_summary(
         session.fireflies_id,
         api_key=api_key,
         max_attempts=max_attempts,
+        lang=tenant_lang,
     )
 
     source = "fireflies"
@@ -436,10 +456,17 @@ async def refetch_summary_for_session(
             try:
                 from services.llm_groq import GroqLLMService
                 groq = GroqLLMService()
+                # Preferimos el idioma del tenant (consistente con el resto
+                # del pipeline) sobre `session.language`, que refleja el
+                # idioma detectado en la transcripción y puede divergir.
+                _ln_map = {"es": "Español", "ca": "Català", "en": "English"}
+                _fallback_lang_name = _ln_map.get(
+                    (tenant_lang or "es").lower()[:2], session.language or "Español"
+                )
                 generated = await groq.generate_summary_from_transcript(
                     transcript,
                     title=session.title or "",
-                    language=session.language or "Español",
+                    language=_fallback_lang_name,
                 )
                 if generated and generated.strip():
                     summary = generated
@@ -459,7 +486,9 @@ async def refetch_summary_for_session(
         try:
             from services.llm_groq import GroqLLMService
             groq = GroqLLMService()
-            cleaned = await groq.clean_native_summary(summary)
+            cleaned = await groq.clean_native_summary(
+                summary, target_lang=tenant_lang,
+            )
             if cleaned and cleaned.strip():
                 summary = cleaned
         except Exception as exc:  # noqa: BLE001

@@ -23,6 +23,20 @@ import { environment } from '../../environments/environment';
 export type SupportedLang = 'es' | 'ca' | 'en';
 
 const STORAGE_KEY = 'acten_lang';
+/**
+ * Flag de sessionStorage que marca si el user PICKED un idioma en este
+ * tab/sesión actual desde el selector (landing/login/perfil). Cuando es
+ * true y el user inicia sesión, el idioma elegido en el cliente PRIMA
+ * sobre `user.language` que viene del backend — el caller hace push del
+ * idioma local al server. Esto permite que una persona seleccione 'ca'
+ * en la landing, inicie sesión, y el primer login adopte 'ca' como su
+ * preferencia persistente.
+ *
+ * Se limpia automáticamente al hacer logout y al consumir el flag tras
+ * el login. Usamos sessionStorage (no localStorage) para que NO sobreviva
+ * a cierres de pestaña — la "explicitud" muere con la sesión del browser.
+ */
+const SESSION_PICKED_KEY = 'acten_lang_picked_session';
 const SUPPORTED: SupportedLang[] = ['es', 'ca', 'en'];
 const DEFAULT_LANG: SupportedLang = 'es';
 
@@ -77,6 +91,10 @@ export class LanguageService {
      * - persistLocal: guarda en localStorage para próximas visitas (default true)
      * - syncServer: PUT /auth/me con la nueva preferencia (default true si el
      *   user está logueado; false en login/landing)
+     *
+     * Marca el flag `SESSION_PICKED_KEY` para que el siguiente login sepa
+     * que el cliente eligió un idioma explícitamente y deba priorizarlo
+     * sobre el `user.language` del backend.
      */
     async setLanguage(
         lang: SupportedLang,
@@ -87,15 +105,59 @@ export class LanguageService {
             persistLocal: opts.persistLocal ?? true,
             syncServer: opts.syncServer ?? this.hasAuthToken(),
         });
+        // Marcamos que el user eligió en este browser session — gana
+        // sobre user.language en el siguiente login si difiere.
+        try {
+            sessionStorage.setItem(SESSION_PICKED_KEY, '1');
+        } catch { /* ignore */ }
     }
 
-    /** Lee el idioma persistido del usuario logueado (vía /auth/me) y lo
-     *  aplica. Llamar después de un login exitoso. */
+    /**
+     * Reconcilia el idioma del cliente con el del perfil del user tras login.
+     *
+     * Reglas:
+     *  - Si el user eligió un idioma en esta sesión del browser (flag
+     *    `SESSION_PICKED_KEY`) Y difiere de `user.language` del backend →
+     *    el local PRIMA: lo pusheamos al server via setLanguage (que hace
+     *    PUT /auth/me). Esto cumple la regla "si elige idioma en
+     *    landing/login, su primer login adopta ese idioma".
+     *  - En caso contrario, aplicamos `user.language` localmente — la
+     *    config del perfil prevalece para logins recurrentes.
+     *  - Consumimos el flag SIEMPRE (incluso si no hubo cambio).
+     */
     async syncFromUserProfile(language: string | null | undefined): Promise<void> {
-        if (!language) return;
-        const safe = this.normalize(language);
-        if (safe === this.currentLang()) return;
-        await this.applyLanguage(safe, { persistLocal: true, syncServer: false });
+        const userPickedThisSession = this.consumeSessionPickFlag();
+        const serverLang = language ? this.normalize(language) : null;
+        const localLang = this.currentLang();
+
+        if (userPickedThisSession && (!serverLang || serverLang !== localLang)) {
+            // El user eligió en la landing/login y/o el server no tiene
+            // valor: pusheamos el local. setLanguage hace PUT /auth/me.
+            await this.setLanguage(localLang, { persistLocal: true, syncServer: true });
+            return;
+        }
+
+        // Login recurrente o el user no tocó el selector — gana la config
+        // del perfil del backend.
+        if (!serverLang) return;
+        if (serverLang === localLang) return;
+        await this.applyLanguage(serverLang, { persistLocal: true, syncServer: false });
+    }
+
+    /** Limpia el flag de "pick en sesión". Llamar en logout para que la
+     *  siguiente cuenta no herede la elección de la anterior. */
+    clearSessionPickFlag(): void {
+        try { sessionStorage.removeItem(SESSION_PICKED_KEY); } catch { /* ignore */ }
+    }
+
+    private consumeSessionPickFlag(): boolean {
+        try {
+            const v = sessionStorage.getItem(SESSION_PICKED_KEY);
+            sessionStorage.removeItem(SESSION_PICKED_KEY);
+            return v === '1';
+        } catch {
+            return false;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────

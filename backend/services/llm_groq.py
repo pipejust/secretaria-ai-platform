@@ -107,6 +107,23 @@ class GroqLLMService:
     def _resolve_output_lang_name(cls, lang: Optional[str]) -> str:
         return cls._LANG_NAMES.get((lang or "es").lower(), "ESPAÑOL")
 
+    @staticmethod
+    def _language_name_to_code(name: Optional[str]) -> str:
+        """Acepta nombres humanos ("Español", "Català", "English") o códigos
+        cortos ("es"/"ca"/"en") y devuelve siempre el código corto. Usado
+        por `generate_summary_from_transcript`, que recibe `language` como
+        nombre humano por compat histórica."""
+        if not name:
+            return "es"
+        key = name.strip().lower()
+        if key in ("es", "ca", "en"):
+            return key
+        if key.startswith("cat"):  # català/catalan/catalán
+            return "ca"
+        if key.startswith("eng") or key.startswith("ingl"):
+            return "en"
+        return "es"
+
     async def process_fundamentals_and_insights(
         self,
         transcript: str,
@@ -271,27 +288,36 @@ Transcripción:
             if was_truncated else ""
         )
 
+        # Resolvemos los headers en el idioma destino. `language` puede
+        # venir como "Español"/"Català"/"English" (nombres humanos) o como
+        # código corto ("es"/"ca"/"en"). _lang_to_code lo normaliza.
+        from .i18n_pipeline import section_headers
+        _h = section_headers(self._language_name_to_code(language))
+        h_general = _h["general_summary"]
+        h_key = _h["key_points"]
+        h_notes = _h["notes"]
+
         prompt = (
             f"Actuás como editor profesional de actas corporativas. Generá un "
             f"resumen ejecutivo en {language} de la siguiente reunión.\n\n"
             "FORMATO ESTRICTO de salida (markdown):\n\n"
-            "### Resumen General\n"
+            f"### {h_general}\n"
             "Un párrafo de 4–6 líneas con el contexto y el desenlace de la reunión.\n\n"
-            "### Puntos Clave\n"
+            f"### {h_key}\n"
             "- Bullet 1 (máx 2 líneas, hecho concreto)\n"
             "- Bullet 2 ...\n"
             "(5–8 bullets máximo)\n\n"
-            "### Notas\n"
+            f"### {h_notes}\n"
             "Información complementaria útil para alguien que no asistió "
             "(decisiones implícitas, próximos pasos, riesgos sutiles). 2–4 líneas.\n\n"
             "REGLAS:\n"
             "- Respetá nombres propios, fechas, números, porcentajes y montos exactos.\n"
             "- NO inventes datos que no estén en el transcript.\n"
             "- NO uses asteriscos `**` para énfasis.\n"
-            "- NO incluyas títulos como 'Resumen Ejecutivo' arriba — empezá directo "
-            "con `### Resumen General`.\n"
-            "- Si el transcript es muy corto o sin contenido sustantivo, devolvé "
-            "solo `### Resumen General` con 1–2 líneas explicando qué se discutió.\n\n"
+            f"- NO incluyas títulos como 'Resumen Ejecutivo' arriba — empezá directo "
+            f"con `### {h_general}`.\n"
+            f"- Si el transcript es muy corto o sin contenido sustantivo, devolvé "
+            f"solo `### {h_general}` con 1–2 líneas explicando qué se discutió.\n\n"
             f"{title_hint}Transcript:\n{truncated}{truncation_note}"
         )
 
@@ -325,9 +351,16 @@ Transcripción:
                 )
                 return ""
 
-    async def clean_native_summary(self, dirty_summary: str) -> str:
-        """Limpia el summary nativo de Fireflies (traduce headers al español, quita asteriscos).
+    async def clean_native_summary(
+        self,
+        dirty_summary: str,
+        *,
+        target_lang: Optional[str] = None,
+    ) -> str:
+        """Limpia el summary nativo de Fireflies (traduce headers al idioma
+        del tenant, quita asteriscos).
 
+        `target_lang` puede ser 'es', 'ca' o 'en'. Default 'es' por compat.
         Si Groq no está disponible o falla, devuelve el original sin tocar.
         """
         if not dirty_summary or not dirty_summary.strip():
@@ -335,18 +368,19 @@ Transcripción:
         if not settings.groq_api_key:
             return dirty_summary
 
+        lang_name = self._resolve_output_lang_name(target_lang)
         prompt = (
             "Eres un editor de actas corporativas. Te paso un resumen generado por "
             "otra IA (Fireflies) que puede traer encabezados en inglés (TOPICS, "
             "BLOCKERS, etc.), referencias `**[Fuente: ...]**` y asteriscos markdown. "
-            "Devuelve el MISMO contenido pero:\n"
-            "1) Traduce todos los encabezados al español ('Temas Principales', "
-            "'Bloqueos y Retrasos', etc.).\n"
+            f"Devuelve el MISMO contenido EN {lang_name} pero:\n"
+            f"1) Traduce todos los encabezados al idioma destino ({lang_name}).\n"
             "2) Elimina referencias literales tipo `**[Fuente: nombre, fecha]**`.\n"
             "3) Elimina asteriscos markdown (`**`).\n"
             "4) Elimina títulos introductorios redundantes tipo 'Daily Digest "
             "Resumen Ejecutivo Consolidado — ProyectoX'.\n"
-            "5) Respeta hechos, responsables, fechas y puntos clave: solo pules forma.\n"
+            "5) Respeta hechos, responsables, fechas y puntos clave: solo pules forma "
+            "y traduces los encabezados/etiquetas — NO traduzcas nombres propios.\n"
             "Responde EXCLUSIVAMENTE con el texto limpio, sin explicaciones tuyas.\n\n"
             f"Texto original:\n{dirty_summary}"
         )

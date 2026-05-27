@@ -316,19 +316,25 @@ async def fetch_summary(
                 if out.get("title") and out.get("response"):
                     mega_summary += f"### {out['title']}\n{out['response']}\n\n"
                     
-            # 2. Summary estándar
+            # 2. Summary estándar — los headers de sección se localizan al
+            # idioma por defecto del tenant. Sin esto, un workspace en
+            # catalán/inglés veía "### Resumen General" hardcoded encima
+            # del overview, aunque el resto del pipeline IA sí estuviera
+            # traducido. Ver services/i18n_pipeline.py.
+            from services.i18n_pipeline import section_headers
+            _h = section_headers(getattr(tenant, "default_language", None))
             if isinstance(summary_obj, dict):
                 overview = summary_obj.get("overview", "")
                 if overview and overview not in mega_summary:
-                    mega_summary += f"### Resumen General\n{overview}\n\n"
-                    
+                    mega_summary += f"### {_h['general_summary']}\n{overview}\n\n"
+
                 bullet_gist = summary_obj.get("bullet_gist", "")
                 if bullet_gist:
-                    mega_summary += f"### Puntos Clave\n{bullet_gist}\n\n"
-                    
+                    mega_summary += f"### {_h['key_points']}\n{bullet_gist}\n\n"
+
                 notes = summary_obj.get("notes", "")
                 if notes:
-                    mega_summary += f"### Notas Entendidas\n{notes}\n\n"
+                    mega_summary += f"### {_h['understood_notes']}\n{notes}\n\n"
             
             mega_summary = mega_summary.strip()
             if not mega_summary:
@@ -457,7 +463,12 @@ async def regenerate_tasks_from_transcript(
     # Le pasamos también las secciones ya procesadas (decisions, agreements,
     # summary) para mejorar cobertura: el LLM verifica que cada compromiso
     # listado en Acuerdos/Decisiones tenga su tarea correspondiente.
+    # IMPORTANTE: pasamos `output_language` igual al idioma por defecto del
+    # tenant para que las tareas se generen en el mismo idioma que el resto
+    # de la curación. Sin esto, OpenAIService cae al default "es" aunque la
+    # transcripción y el tenant operen en catalán/inglés.
     openai_svc = OpenAIService()
+    tenant_lang = (tenant.default_language or "es").lower()
     try:
         structured_data = await openai_svc.process_transcript_for_tasks_only(
             session_obj.raw_transcript,
@@ -465,6 +476,7 @@ async def regenerate_tasks_from_transcript(
             decisions=session_obj.processed_decisions or "",
             agreements=session_obj.processed_agreements or "",
             summary=session_obj.raw_summary or "",
+            output_language=tenant_lang,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error conectando con la IA (OpenAI): {str(e)}")

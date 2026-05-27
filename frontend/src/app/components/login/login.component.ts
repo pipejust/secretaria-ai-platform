@@ -109,9 +109,15 @@ export class LoginComponent implements OnInit {
                     return;
                 }
                 this.branding.loadFromServer();
-                // Sync de idioma desde el perfil del user — si tiene una
-                // preferencia distinta a la actual, la aplica antes de navegar.
-                if (res?.language) this.lang.syncFromUserProfile(res.language);
+                // Reconciliación de idioma: si el user eligió uno desde el
+                // selector en esta sesión (landing/login), gana sobre el del
+                // perfil. Si no, gana el del perfil. syncFromUserProfile lo
+                // resuelve y, cuando aplica, hace PUT /auth/me con el local.
+                // No bloqueamos la navegación aunque tarde el PUT — el await
+                // termina rápido (~ms) o falla y caemos sin romper UX.
+                this.lang
+                    .syncFromUserProfile(res?.language ?? null)
+                    .catch((err) => console.warn('lang sync post-login fallo:', err));
                 // Si el backend devuelve must_change_password=true, redirigir
                 // a la pantalla de cambio obligatorio antes del dashboard.
                 if (res?.must_change_password) {

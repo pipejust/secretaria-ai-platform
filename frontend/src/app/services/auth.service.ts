@@ -181,6 +181,12 @@ export class AuthService {
     logout() {
         localStorage.removeItem('access_token');
         this.currentUserSubject.next(null);
+        // Limpiar el flag de "idioma elegido en esta sesión" — no debe
+        // sobrevivir a un logout: el siguiente login es de otra cuenta y
+        // su propia preferencia debe ganar, no la elección del anterior.
+        try {
+            sessionStorage.removeItem('acten_lang_picked_session');
+        } catch { /* ignore */ }
         // Force fully reload en caso extremo o solo routing limpio
         setTimeout(() => {
             // Forzar en frontend refresh para evitar bugs en menús colapsados state

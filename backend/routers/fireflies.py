@@ -411,8 +411,15 @@ async def _send_session_ready_email(
 _send_initial_admin_email = _send_session_ready_email
 
 
-def _extract_native_summary(summary_obj) -> str:
-    """Compone el resumen ejecutivo a partir de los campos nativos de Fireflies."""
+def _extract_native_summary(summary_obj, lang: Optional[str] = None) -> str:
+    """Compone el resumen ejecutivo a partir de los campos nativos de Fireflies.
+
+    `lang` localiza los section headers (es/ca/en). Default 'es' por compat
+    con call sites que aún no resuelven el idioma del tenant.
+    """
+    from services.i18n_pipeline import section_headers
+    h = section_headers(lang)
+
     if not isinstance(summary_obj, dict):
         return str(summary_obj or "").strip()
 
@@ -420,19 +427,19 @@ def _extract_native_summary(summary_obj) -> str:
 
     overview = (summary_obj.get("overview") or "").strip()
     if overview:
-        parts.append(f"### Resumen General\n{overview}")
+        parts.append(f"### {h['general_summary']}\n{overview}")
 
     bullet_gist = (summary_obj.get("bullet_gist") or "").strip()
     if bullet_gist:
-        parts.append(f"### Puntos Clave\n{bullet_gist}")
+        parts.append(f"### {h['key_points']}\n{bullet_gist}")
 
     notes = (summary_obj.get("notes") or "").strip()
     if notes:
-        parts.append(f"### Notas\n{notes}")
+        parts.append(f"### {h['notes']}\n{notes}")
 
     short_summary = (summary_obj.get("short_summary") or "").strip()
     if short_summary and not parts:
-        parts.append(f"### Resumen\n{short_summary}")
+        parts.append(f"### {h['executive_summary']}\n{short_summary}")
 
     return "\n\n".join(parts).strip()
 
@@ -713,7 +720,21 @@ async def process_transcript_background(
             #          gastamos 70s esperando. Pasamos directo al fallback Groq.
             # - unknown (primera vez): tratamos como paid (espera + sin Groq).
             #   El probe de tier se hace abajo como side effect del refetch.
-            raw_summary = _extract_native_summary(ff_data.get("summary"))
+            # Idioma del tenant para localizar los section headers del
+            # summary nativo ("Resumen General"/"Resum General"/"General
+            # Summary"). Sin esto los tenants en catalán/inglés veían el
+            # header hardcoded en español al inicio del acta.
+            _tenant_lang = None
+            try:
+                from models import Tenant as _Tenant
+                _t = db.get(_Tenant, new_session.tenant_id)
+                if _t:
+                    _tenant_lang = getattr(_t, "default_language", None)
+            except Exception:
+                _tenant_lang = None
+            raw_summary = _extract_native_summary(
+                ff_data.get("summary"), lang=_tenant_lang,
+            )
 
             from services.fireflies_service import (
                 fetch_native_summary,
@@ -746,6 +767,7 @@ async def process_transcript_background(
                         api_key=ff_api_key,
                         max_attempts=3,
                         backoff_base_sec=10.0,  # 10s, 20s, 40s = ~70s
+                        lang=_tenant_lang,
                     )
 
             # Limpieza cosmética del summary con Groq (traduce headers, quita
@@ -756,7 +778,9 @@ async def process_transcript_background(
             summary_clean_error = ""
             if raw_summary:
                 try:
-                    raw_summary = await groq.clean_native_summary(raw_summary)
+                    raw_summary = await groq.clean_native_summary(
+                        raw_summary, target_lang=_tenant_lang,
+                    )
                 except Exception as exc:  # noqa: BLE001
                     summary_clean_error = (
                         f"Groq clean_native_summary falló (se mantiene crudo): {exc}"
@@ -771,10 +795,15 @@ async def process_transcript_background(
                         len(raw_transcript),
                     )
                     try:
+                        # Mapeamos código de tenant ('es'/'ca'/'en') al nombre
+                        # humano que el LLM espera para inyectar en el prompt.
+                        _ln = {"es": "Español", "ca": "Català", "en": "English"}.get(
+                            (_tenant_lang or "es").lower()[:2], "Español"
+                        )
                         raw_summary = await groq.generate_summary_from_transcript(
                             raw_transcript,
                             title=title,
-                            language="Español",
+                            language=_ln,
                         )
                         if raw_summary:
                             logger.info(
