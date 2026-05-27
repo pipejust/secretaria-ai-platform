@@ -23,6 +23,9 @@ interface TenantOut {
     icon_data_url?: string | null;
     primary_color?: string | null;
     company_name?: string | null;
+    /** Idioma por defecto del workspace ('es', 'ca', 'en'). Lo usa el
+     *  pipeline IA para generar tareas/resumen/decisiones en ese idioma. */
+    default_language?: string | null;
     // Aliases tolerantes que algunos templates referencian.
     logo_url?: string | null;
     icon_url?: string | null;
@@ -59,6 +62,9 @@ interface CreateForm {
     logo_dark_data_url: string;
     icon_data_url: string;
     favicon_data_url: string;
+    /** Idioma por defecto del workspace — define el idioma de toda
+     *  la salida de IA (tasks, resumen, decisiones, headers). */
+    default_language: 'es' | 'ca' | 'en';
 }
 
 const MAX_BRAND_FILE_BYTES = 2 * 1024 * 1024;
@@ -101,10 +107,15 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         logo_data_url: string;         // logo claro
         logo_dark_data_url: string;    // logo oscuro (variante para fondos dark)
         icon_data_url: string;
+        /** Idioma por defecto del workspace. Editable desde el modal
+         *  edit del super-admin — cambia el idioma que el pipeline IA
+         *  va a usar para las próximas curaciones del tenant. */
+        default_language: 'es' | 'ca' | 'en';
     } = {
         slug: '', name: '', domain: '', is_active: true,
         company_name: '', primary_color: '',
         logo_data_url: '', logo_dark_data_url: '', icon_data_url: '',
+        default_language: 'es',
     };
     /** Snapshot inicial para detectar qué cambió y solo mandar lo necesario. */
     private editFormInitial: any = null;
@@ -182,6 +193,11 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             primary_color: '#1F2A52', secondary_color: '#3D6B5E', accent_color: '#C8993B',
             logo_data_url: '', logo_dark_data_url: '',
             icon_data_url: '', favicon_data_url: '',
+            // Default 'es' por backwards-compat. El super-admin puede
+            // cambiarlo a 'ca' o 'en' al crear si el workspace nuevo
+            // opera en otro idioma — afecta directo la salida del
+            // pipeline IA del nuevo tenant.
+            default_language: 'es',
         };
     }
 
@@ -417,6 +433,9 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                     logo_dark_data_url: this.form.logo_dark_data_url || undefined,
                     icon_data_url: this.form.icon_data_url || undefined,
                     favicon_data_url: this.form.favicon_data_url || undefined,
+                    // Idioma del workspace — backend lo persiste en
+                    // Tenant.default_language y manda al pipeline IA.
+                    default_language: this.form.default_language,
                 }, { headers: this._headers() }),
             );
             this.tenants = [...this.tenants, out];
@@ -645,6 +664,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             logo_data_url: t.logo_data_url || '',
             logo_dark_data_url: t.logo_dark_data_url || '',
             icon_data_url: t.icon_data_url || '',
+            default_language: (t.default_language as 'es' | 'ca' | 'en') || 'es',
         };
         this.editForm = { ...initial };
         this.editFormInitial = { ...initial };
@@ -730,6 +750,9 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             }
             if (this.editForm.icon_data_url !== init.icon_data_url) {
                 body['icon_data_url'] = this.editForm.icon_data_url || '';
+            }
+            if (this.editForm.default_language !== init.default_language) {
+                body['default_language'] = this.editForm.default_language;
             }
 
             let out: TenantOut | null = null;

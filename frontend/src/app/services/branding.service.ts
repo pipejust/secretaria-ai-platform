@@ -40,6 +40,12 @@ export interface Branding {
    *  espacios chicos: sidebar colapsado, favicon visual, avatar default. */
   icon_data_url: string;
   favicon_data_url: string;
+  /** Idioma por defecto del workspace ('es', 'ca', 'en'). Define el
+   *  idioma que el pipeline IA usará para generar headers de resumen,
+   *  tareas, decisiones, etc. Persistido en Tenant.default_language —
+   *  NO en branding_json. El admin del tenant lo edita desde el form
+   *  de /admin/branding (mismo endpoint PUT /api/branding/). */
+  default_language: string;
 }
 
 const DEFAULT_BRAND: Branding = {
@@ -59,6 +65,7 @@ const DEFAULT_BRAND: Branding = {
   logo_dark_data_url: '',
   icon_data_url: '',
   favicon_data_url: '',
+  default_language: 'es',
 };
 
 /** Defaults estáticos de Acten (assets en `/public/brand/`). Se usan si el

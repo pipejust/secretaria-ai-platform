@@ -144,6 +144,12 @@ class BrandingPatch(BaseModel):
     logo_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
     logo_dark_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
     icon_data_url: str | None = Field(None, max_length=4 * 1024 * 1024)
+    # Idioma por defecto del workspace. NO va a branding_json — se
+    # persiste directo en Tenant.default_language (vivo en columna real,
+    # no en blob JSON). Lo aceptamos acá para que /admin/branding sea el
+    # único endpoint que tiene que llamar el admin del tenant para
+    # configurar SU empresa.
+    default_language: str | None = Field(None, max_length=4)
 
 
 @router.get("/")
@@ -156,7 +162,12 @@ def get_branding(
     Resuelve el tenant desde header `X-Tenant-Slug` o querystring `?tenant=`,
     o cae al tenant default ('acten').
     """
-    return branding_service.get_branding(db, tenant.id)
+    out = branding_service.get_branding(db, tenant.id)
+    # Inyectamos default_language para que el formulario de /admin/branding
+    # lo pre-cargue y muestre el valor actual del workspace sin pedir un
+    # endpoint extra. Default 'es' si la columna es NULL/vacía.
+    out["default_language"] = (tenant.default_language or "es")
+    return out
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -309,7 +320,27 @@ def put_branding(
     tenant: Tenant = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     payload = {k: v for k, v in patch.model_dump().items() if v is not None}
+
+    # default_language vive en columna real (Tenant.default_language), NO
+    # en branding_json. Lo sacamos del payload antes de delegar al service
+    # y lo persistimos a mano. Si viene con valor inválido, 422.
+    dl = payload.pop("default_language", None)
+    if dl is not None:
+        code = (dl or "").strip().lower()
+        if code not in ("es", "ca", "en"):
+            raise HTTPException(
+                status_code=422,
+                detail="default_language debe ser 'es', 'ca' o 'en'.",
+            )
+        tenant.default_language = code
+        db.add(tenant)
+        db.commit()
+        db.refresh(tenant)
+
     result = branding_service.update_branding(db, tenant.id, payload)
+    # Reflejamos el idioma en la respuesta para que el cliente actualice
+    # su estado sin pedir un GET aparte.
+    result["default_language"] = tenant.default_language or "es"
     if (
         "logo_data_url" in payload
         or "logo_dark_data_url" in payload

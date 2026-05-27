@@ -102,6 +102,25 @@ class TenantCreate(BaseModel):
     primary_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
     secondary_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
     accent_color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    # Idioma del workspace — define el idioma que usa el pipeline IA
+    # para generar headers de resumen, decisiones, tareas, riesgos, etc.
+    # Default 'es' por backwards-compat. Acepta es/ca/en (single source
+    # of truth: services/i18n_pipeline._SUPPORTED).
+    default_language: Optional[str] = Field(
+        default=None,
+        max_length=4,
+        description="Idioma por defecto del workspace: 'es', 'ca' o 'en'.",
+    )
+
+    @field_validator("default_language")
+    @classmethod
+    def _norm_default_language(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        code = (v or "").strip().lower()
+        if code not in ("es", "ca", "en"):
+            raise ValueError("default_language debe ser 'es', 'ca' o 'en'.")
+        return code
 
     @field_validator("admin_email")
     @classmethod
@@ -132,6 +151,19 @@ class TenantUpdate(BaseModel):
     logo_data_url: Optional[str] = Field(None, max_length=4 * 1024 * 1024)
     logo_dark_data_url: Optional[str] = Field(None, max_length=4 * 1024 * 1024)
     icon_data_url: Optional[str] = Field(None, max_length=4 * 1024 * 1024)
+    # Idioma del workspace. Si viene, se persiste en Tenant.default_language.
+    # Acepta es/ca/en. Determina el idioma del output del pipeline IA.
+    default_language: Optional[str] = Field(None, max_length=4)
+
+    @field_validator("default_language")
+    @classmethod
+    def _norm_default_language_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        code = (v or "").strip().lower()
+        if code not in ("es", "ca", "en"):
+            raise ValueError("default_language debe ser 'es', 'ca' o 'en'.")
+        return code
 
 
 class TenantOut(BaseModel):
@@ -148,6 +180,10 @@ class TenantOut(BaseModel):
     icon_data_url: Optional[str] = None
     primary_color: Optional[str] = None
     company_name: Optional[str] = None
+    # Idioma por defecto del workspace. Lo expone aquí para que la UI
+    # del super-admin lo pinte en list/edit/view sin pedir un endpoint
+    # extra.
+    default_language: Optional[str] = None
 
     @classmethod
     def from_db(cls, t: Tenant, user_count: int) -> "TenantOut":
@@ -169,6 +205,7 @@ class TenantOut(BaseModel):
             icon_data_url=brand.get("icon_data_url"),
             primary_color=brand.get("primary_color"),
             company_name=brand.get("company_name"),
+            default_language=(t.default_language or "es"),
         )
 
 
@@ -281,6 +318,9 @@ def create_tenant(
         domain=(payload.domain or None),
         branding_json=json.dumps(initial_branding, ensure_ascii=False),
         is_active=True,
+        # default_language ya validado por el field_validator
+        # (es/ca/en). Si no viene, dejamos el default del modelo ('es').
+        default_language=(payload.default_language or "es"),
     )
     db.add(tenant)
     db.commit()
@@ -497,6 +537,9 @@ def update_tenant(
         t.domain = new_domain
     if patch.is_active is not None:
         t.is_active = patch.is_active
+    if patch.default_language is not None:
+        # field_validator ya garantiza es/ca/en si llegó hasta acá.
+        t.default_language = patch.default_language
     db.add(t)
     db.commit()
     db.refresh(t)

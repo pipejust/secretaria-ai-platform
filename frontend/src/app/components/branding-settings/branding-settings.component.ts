@@ -55,6 +55,7 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
         logo_dark_data_url: '',
         icon_data_url: '',
         favicon_data_url: '',
+        default_language: 'es',
     };
 
     isSaving = false;
@@ -300,6 +301,10 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
                 primary_color: this.form.primary_color,
                 secondary_color: this.form.secondary_color,
                 accent_color: this.form.accent_color,
+                // Idioma del workspace — el backend lo persiste fuera de
+                // branding_json (en Tenant.default_language). Cambia el
+                // idioma del pipeline IA de aquí en adelante.
+                default_language: this.form.default_language || 'es',
             };
             await this.branding.update(patch, this.auth.token);
             this.toast.success('Marca actualizada. Los cambios ya están aplicados.');

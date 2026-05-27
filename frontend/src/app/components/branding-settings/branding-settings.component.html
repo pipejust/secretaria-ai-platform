@@ -7,9 +7,8 @@
         <div class="br-header-text">
             <h1>{{ 'branding.title' | translate }}</h1>
             <p class="br-subtitle">
-                Personaliza la apariencia de la plataforma para tu empresa. La plataforma siempre se llama
-                <strong>{{ branding.platformName() }}</strong>, pero el nombre, logo, colores y datos de contacto
-                que ven tus usuarios y reciben los correos los defines aquí.
+                {{ 'branding.subtitle_prefix' | translate }}
+                <strong>{{ branding.platformName() }}</strong>{{ 'branding.subtitle_suffix' | translate }}
             </p>
         </div>
         <div class="br-header-actions">
@@ -26,7 +25,7 @@
                      stroke-linecap="round" stroke-linejoin="round" class="br-btn-ico">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
+                {{ (isSaving ? 'common.saving' : 'common.save_changes') | translate }}
             </button>
         </div>
     </header>
@@ -46,7 +45,7 @@
             <div class="br-kpi-body">
                 <span class="br-kpi-label">{{ 'branding.brand_assets' | translate }}</span>
                 <span class="br-kpi-value">{{ brandAssetsCount }}</span>
-                <span class="br-kpi-hint">Elementos configurados</span>
+                <span class="br-kpi-hint">{{ 'branding.elements_configured' | translate }}</span>
             </div>
         </article>
 
@@ -59,9 +58,9 @@
                 </svg>
             </div>
             <div class="br-kpi-body">
-                <span class="br-kpi-label">Canales configurados</span>
+                <span class="br-kpi-label">{{ 'branding.channels_configured' | translate }}</span>
                 <span class="br-kpi-value">{{ channelsCount }}</span>
-                <span class="br-kpi-hint">Correos y dominios</span>
+                <span class="br-kpi-hint">{{ 'branding.emails_domains' | translate }}</span>
             </div>
         </article>
 
@@ -77,9 +76,9 @@
                 </svg>
             </div>
             <div class="br-kpi-body">
-                <span class="br-kpi-label">Colores activos</span>
+                <span class="br-kpi-label">{{ 'branding.active_colors' | translate }}</span>
                 <span class="br-kpi-value">{{ colorsCount }}</span>
-                <span class="br-kpi-hint">Primario, secundario y acento</span>
+                <span class="br-kpi-hint">{{ 'branding.primary_secondary_accent' | translate }}</span>
             </div>
         </article>
 
@@ -93,9 +92,9 @@
                 </svg>
             </div>
             <div class="br-kpi-body">
-                <span class="br-kpi-label">Vistas previas disponibles</span>
+                <span class="br-kpi-label">{{ 'branding.previews_available' | translate }}</span>
                 <span class="br-kpi-value">{{ previewsCount }}</span>
-                <span class="br-kpi-hint">Email e interfaz</span>
+                <span class="br-kpi-hint">{{ 'branding.email_and_ui' | translate }}</span>
             </div>
         </article>
     </section>
@@ -110,7 +109,7 @@
             <!-- Filtros — patrón EXACTO de Reuniones: search-row con input
                  grande + botón Filtros (con badge de contador y chevron) que
                  abre un panel debajo con los selectores. -->
-            <section class="mt-search-row" aria-label="Buscar en marca">
+            <section class="mt-search-row" [attr.aria-label]="'branding.search_aria' | translate">
                 <div class="filter-search">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -118,7 +117,7 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                     <input type="text"
-                           placeholder="Buscar campo, activo o sección…"
+                           [placeholder]="'branding.search_placeholder' | translate"
                            [(ngModel)]="filterSearch"/>
                 </div>
 
@@ -132,7 +131,7 @@
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                     </svg>
-                    Filtros
+                    {{ 'common.filters' | translate }}
                     <span class="filters-btn-count" *ngIf="activeFilterCount > 0">
                         {{ activeFilterCount }}
                     </span>
@@ -145,7 +144,7 @@
 
                 <div class="br-view-switch">
                     <button [class.is-active]="viewMode === 'list'" (click)="setViewMode('list')"
-                            aria-label="Vista lista">
+                            [attr.aria-label]="'tenants.view_list' | translate">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round">
                             <line x1="8" y1="6" x2="21" y2="6"></line>
@@ -157,7 +156,7 @@
                         </svg>
                     </button>
                     <button [class.is-active]="viewMode === 'grid'" (click)="setViewMode('grid')"
-                            aria-label="Vista cuadrícula">
+                            [attr.aria-label]="'tenants.view_grid' | translate">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="7" height="7"></rect>
@@ -170,14 +169,14 @@
             </section>
 
             <!-- Panel de filtros expandible (clon del de Reuniones). -->
-            <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+            <section class="mt-filters" *ngIf="showFilters" [attr.aria-label]="'projects.advanced_filters' | translate">
                 <div class="filter-group">
-                    <label>Sección</label>
+                    <label>{{ 'branding.section' | translate }}</label>
                     <select [(ngModel)]="filterSection">
-                        <option value="all">Todas</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="identidad">{{ 'branding.identity' | translate }}</option>
-                        <option value="logo">Logo</option>
-                        <option value="icono">Icono</option>
+                        <option value="logo">{{ 'branding.logo_section' | translate }}</option>
+                        <option value="icono">{{ 'branding.icon' | translate }}</option>
                         <option value="tema">{{ 'branding.theme' | translate }}</option>
                         <option value="previews">{{ 'branding.previews' | translate }}</option>
                     </select>
@@ -186,7 +185,7 @@
                     <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus">
                         <option value="all">{{ 'common.all' | translate }}</option>
-                        <option value="configured">Configurados</option>
+                        <option value="configured">{{ 'branding.configured' | translate }}</option>
                         <option value="pending">{{ 'sidebar.pending' | translate }}</option>
                     </select>
                 </div>
@@ -210,25 +209,22 @@
                             <input type="text" [(ngModel)]="form.company_name" placeholder="Acten" maxlength="120"/>
                         </label>
                         <label class="br-field">
-                            <span>Tagline / lema (opcional)</span>
+                            <span>{{ 'branding.tagline_optional' | translate }}</span>
                             <input type="text" [(ngModel)]="form.company_tagline"
-                                   placeholder="Inteligencia para tus reuniones" maxlength="240"/>
+                                   [placeholder]="'branding.tagline_placeholder' | translate" maxlength="240"/>
                         </label>
                         <label class="br-field">
                             <span>{{ 'branding.company_email' | translate }}</span>
                             <input type="email" [(ngModel)]="form.company_email" placeholder="contacto@tuempresa.com"/>
                         </label>
                         <label class="br-field">
-                            <span>{{ 'common.website' | translate }} <span class="br-required" aria-label="obligatorio">*</span></span>
+                            <span>{{ 'common.website' | translate }} <span class="br-required" [attr.aria-label]="'common.required' | translate">*</span></span>
                             <input #websiteInput type="url" required
                                    [(ngModel)]="form.company_website"
                                    placeholder="https://tuempresa.com"
                                    name="company_website"
                                    [class.br-input--invalid]="!form.company_website || !form.company_website.trim()"/>
-                            <small class="br-field-hint">
-                                Obligatorio. El dominio se usa para validar el email de los usuarios que
-                                creés (ej. <code>tuempresa.com</code> → solo se aceptan correos
-                                <code>&#64;tuempresa.app</code>, <code>&#64;tuempresa.co</code>, etc.).
+                            <small class="br-field-hint" [innerHTML]="'branding.website_hint' | translate">
                             </small>
                         </label>
                         <label class="br-field">
@@ -240,6 +236,22 @@
                             <input type="text" [(ngModel)]="form.company_address"
                                    placeholder="Calle 123 #45-67, Bogotá, Colombia"/>
                         </label>
+                        <!-- Idioma del workspace — define el idioma del output
+                             del pipeline IA (resumen, decisiones, tareas).
+                             Persistido fuera de branding_json (en Tenant.
+                             default_language) para que el pipeline lo lea
+                             directo sin parsear el JSON de marca. -->
+                        <label class="br-field">
+                            <span>{{ 'branding.default_language' | translate }}</span>
+                            <select [(ngModel)]="form.default_language">
+                                <option value="es">Español</option>
+                                <option value="ca">Català</option>
+                                <option value="en">English</option>
+                            </select>
+                            <small style="display:block; color:#64748b; font-size:12px; margin-top:4px;">
+                                {{ 'branding.default_language_hint' | translate }}
+                            </small>
+                        </label>
                     </div>
                     <footer class="br-card-foot">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -248,7 +260,7 @@
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        Esta información se mostrará en la plataforma y en las comunicaciones.
+                        {{ 'branding.identity_footer_note' | translate }}
                     </footer>
                 </article>
 
@@ -257,7 +269,7 @@
                     <header class="br-card-head">
                         <div>
                             <h2>{{ 'branding.logo_light' | translate }}</h2>
-                            <p class="br-card-sub">Versión para fondos claros (admin, dashboards, emails). PNG/SVG/WEBP. Máx 2 MB.</p>
+                            <p class="br-card-sub">{{ 'branding.logo_light_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="br-logo-preview"
@@ -279,14 +291,14 @@
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            {{ isUploading ? 'Subiendo…' : (form.logo_data_url ? 'Reemplazar logo claro' : 'Subir logo claro') }}
+                            {{ (isUploading ? 'branding.uploading' : (form.logo_data_url ? 'branding.replace_light_logo' : 'branding.upload_light_logo')) | translate }}
                             <input type="file" hidden
                                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
                                    (change)="onLogoSelected($event)"/>
                         </label>
                         <button class="br-btn br-btn--danger-ghost" (click)="removeLogo()"
                                 *ngIf="form.logo_data_url" [disabled]="isUploading">
-                            Quitar
+                            {{ 'branding.remove' | translate }}
                         </button>
                     </div>
                 </article>
@@ -296,7 +308,7 @@
                     <header class="br-card-head">
                         <div>
                             <h2>{{ 'branding.logo_dark' | translate }}</h2>
-                            <p class="br-card-sub">Versión para fondos oscuros (hero de la landing, dark mode). Si no la subís, los fondos oscuros usan el logo claro. PNG/SVG/WEBP. Máx 2 MB.</p>
+                            <p class="br-card-sub">{{ 'branding.logo_dark_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="br-logo-preview"
@@ -318,7 +330,7 @@
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            {{ isUploadingDark ? 'Subiendo…' : (form.logo_dark_data_url ? 'Reemplazar logo oscuro' : 'Subir logo oscuro') }}
+                            {{ (isUploadingDark ? 'branding.uploading' : (form.logo_dark_data_url ? 'branding.replace_dark_logo' : 'branding.upload_dark_logo')) | translate }}
                             <input type="file" hidden
                                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
                                    (change)="onDarkLogoSelected($event)"/>
@@ -335,7 +347,7 @@
                     <header class="br-card-head">
                         <div>
                             <h2>{{ 'branding.icon' | translate }}</h2>
-                            <p class="br-card-sub">Versión cuadrada para avatares y badges.</p>
+                            <p class="br-card-sub">{{ 'branding.icon_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="br-icon-preview" [style.background]="form.primary_color || '#031B34'">
@@ -353,7 +365,7 @@
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            {{ isUploadingIcon ? 'Subiendo…' : (form.icon_data_url ? 'Reemplazar icono' : 'Subir icono') }}
+                            {{ (isUploadingIcon ? 'branding.uploading' : (form.icon_data_url ? 'branding.replace_icon' : 'branding.upload_icon')) | translate }}
                             <input type="file" hidden
                                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
                                    (change)="onIconSelected($event)"/>
@@ -370,12 +382,12 @@
                     <header class="br-card-head">
                         <div>
                             <h2>{{ 'branding.theme' | translate }}</h2>
-                            <p class="br-card-sub">Define los colores principales que usarán la plataforma y los correos.</p>
+                            <p class="br-card-sub">{{ 'branding.theme_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="br-colors">
                         <div class="br-color">
-                            <span class="br-color-label">PRIMARIO</span>
+                            <span class="br-color-label">{{ 'branding.primary_upper' | translate }}</span>
                             <label class="br-color-swatch" [style.background]="form.primary_color">
                                 <input type="color" [(ngModel)]="form.primary_color"
                                        (ngModelChange)="onColorChange()"/>
@@ -386,7 +398,7 @@
                                    pattern="#[0-9A-Fa-f]{6}"/>
                         </div>
                         <div class="br-color">
-                            <span class="br-color-label">SECUNDARIO</span>
+                            <span class="br-color-label">{{ 'branding.secondary_upper' | translate }}</span>
                             <label class="br-color-swatch" [style.background]="form.secondary_color">
                                 <input type="color" [(ngModel)]="form.secondary_color"
                                        (ngModelChange)="onColorChange()"/>
@@ -397,7 +409,7 @@
                                    pattern="#[0-9A-Fa-f]{6}"/>
                         </div>
                         <div class="br-color">
-                            <span class="br-color-label">ACENTO</span>
+                            <span class="br-color-label">{{ 'branding.accent_upper' | translate }}</span>
                             <label class="br-color-swatch" [style.background]="form.accent_color">
                                 <input type="color" [(ngModel)]="form.accent_color"
                                        (ngModelChange)="onColorChange()"/>
@@ -415,7 +427,7 @@
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        Estos colores se aplicarán a la plataforma y a las comunicaciones.
+                        {{ 'branding.colors_footer_note' | translate }}
                     </footer>
                 </article>
 
@@ -423,8 +435,8 @@
                 <article class="br-card br-card--email" *ngIf="showSection('email')">
                     <header class="br-card-head">
                         <div>
-                            <h2>Vista previa del email</h2>
-                            <p class="br-card-sub">Así verán tus usuarios los correos enviados desde Acten.</p>
+                            <h2>{{ 'branding.email_preview' | translate }}</h2>
+                            <p class="br-card-sub">{{ 'branding.email_preview_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="br-email-preview">
@@ -436,17 +448,17 @@
                             <img [src]="emailPreviewLogoUrl" [alt]="form.company_name || 'Acten'"/>
                         </div>
                         <div class="br-email-body">
-                            <p><strong>Hola Juan,</strong></p>
+                            <p><strong>{{ 'branding.hello_example' | translate }}</strong></p>
                             <p>{{ 'common.task_assigned_notif' | translate }} <strong>X</strong>.<br/>
-                               Podés verla y editarla en
-                               <a href="#" [style.color]="form.primary_color">la plataforma</a>.
+                               {{ 'branding.view_edit_in' | translate }}
+                               <a href="#" [style.color]="form.primary_color">{{ 'branding.the_platform' | translate }}</a>.
                             </p>
                             <div class="br-email-task" [style.borderLeftColor]="form.accent_color">
-                                <strong>Tarea:</strong> {{ 'common.review_architecture_doc' | translate }}
+                                <strong>{{ 'project_detail.task' | translate }}:</strong> {{ 'common.review_architecture_doc' | translate }}
                             </div>
                         </div>
                         <div class="br-email-footer">
-                            © {{ form.company_name || 'Acten' }} · Enviado por <strong>{{ branding.platformName() }}</strong>
+                            © {{ form.company_name || 'Acten' }} · {{ 'branding.sent_by' | translate }} <strong>{{ branding.platformName() }}</strong>
                         </div>
                     </div>
                 </article>
@@ -455,8 +467,8 @@
                 <article class="br-card br-card--ui" *ngIf="showSection('interfaz')">
                     <header class="br-card-head">
                         <div>
-                            <h2>Vista previa de interfaz</h2>
-                            <p class="br-card-sub">Así se aplica tu marca en los principales elementos de la plataforma.</p>
+                            <h2>{{ 'branding.ui_preview' | translate }}</h2>
+                            <p class="br-card-sub">{{ 'branding.ui_preview_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="br-ui-grid">
@@ -469,7 +481,7 @@
                                 </div>
                                 <div class="br-ui-sidebar-item br-ui-sidebar-item--active">{{ 'sidebar.dashboard' | translate }}</div>
                             </div>
-                            <span class="br-ui-caption">Sidebar</span>
+                            <span class="br-ui-caption">{{ 'branding.sidebar_caption' | translate }}</span>
                         </div>
                         <!-- Header -->
                         <div class="br-ui-tile">
@@ -479,9 +491,9 @@
                                     <span *ngIf="!form.logo_data_url">{{ form.company_name || 'Acten' }}</span>
                                 </div>
                                 <span class="br-ui-header-btn"
-                                      [style.background]="form.primary_color">+ Nueva reunión</span>
+                                      [style.background]="form.primary_color">+ {{ 'sidebar.new_meeting' | translate }}</span>
                             </div>
-                            <span class="br-ui-caption">Header</span>
+                            <span class="br-ui-caption">{{ 'branding.header_caption' | translate }}</span>
                         </div>
                         <!-- Login -->
                         <div class="br-ui-tile">
@@ -491,17 +503,17 @@
                                     {{ form.company_name || 'Acten' }}
                                 </span>
                                 <p class="br-ui-login-title">{{ 'login.title' | translate }}</p>
-                                <span class="br-ui-login-sub">Ingresa tus credenciales para continuar.</span>
+                                <span class="br-ui-login-sub">{{ 'branding.login_sub_caption' | translate }}</span>
                             </div>
-                            <span class="br-ui-caption">Login</span>
+                            <span class="br-ui-caption">{{ 'branding.login_caption' | translate }}</span>
                         </div>
                         <!-- Buttons and colors -->
                         <div class="br-ui-tile">
                             <div class="br-ui-buttons">
                                 <p class="br-ui-buttons-label">{{ 'branding.buttons_colors' | translate }}</p>
                                 <div class="br-ui-buttons-row">
-                                    <span class="br-ui-btn" [style.background]="form.primary_color">Primario</span>
-                                    <span class="br-ui-btn" [style.background]="form.secondary_color">Secundario</span>
+                                    <span class="br-ui-btn" [style.background]="form.primary_color">{{ 'branding.primary_short' | translate }}</span>
+                                    <span class="br-ui-btn" [style.background]="form.secondary_color">{{ 'branding.secondary_short' | translate }}</span>
                                 </div>
                                 <div class="br-ui-dots">
                                     <span [style.background]="form.primary_color"></span>
@@ -524,7 +536,7 @@
 
             <article class="br-card">
                 <header class="br-card-head">
-                    <h3>Marca seleccionada</h3>
+                    <h3>{{ 'branding.selected_brand' | translate }}</h3>
                     <span class="br-badge br-badge--active">{{ 'profile.two_factor_on' | translate }}</span>
                 </header>
 
@@ -535,7 +547,7 @@
                     </div>
                     <div class="br-side-info">
                         <strong>{{ form.company_name || 'Acten' }}</strong>
-                        <span>Slug: {{ tenantSlug }}</span>
+                        <span>{{ 'branding.slug_label' | translate }}: {{ tenantSlug }}</span>
                     </div>
                 </div>
 
@@ -548,7 +560,7 @@
                                 <line x1="2" y1="12" x2="22" y2="12"></line>
                                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                             </svg>
-                            Dominio
+                            {{ 'branding.domain' | translate }}
                         </dt>
                         <dd>{{ tenantDomain }}</dd>
                     </div>
@@ -600,7 +612,7 @@
             </article>
 
             <article class="br-card">
-                <header class="br-card-head"><h3>Resumen de marca</h3></header>
+                <header class="br-card-head"><h3>{{ 'branding.brand_summary' | translate }}</h3></header>
                 <ul class="br-summary-list">
                     <li>
                         <span class="br-summary-ico">
@@ -622,7 +634,7 @@
                                 <path d="M12 6v6l4 2"></path>
                             </svg>
                         </span>
-                        Colores configurados
+                        {{ 'branding.colors_configured' | translate }}
                         <span class="br-summary-value">{{ colorsCount }}</span>
                     </li>
                     <li>
@@ -633,7 +645,7 @@
                                 <polyline points="22,6 12,13 2,6"></polyline>
                             </svg>
                         </span>
-                        Correos activos
+                        {{ 'branding.active_emails' | translate }}
                         <span class="br-summary-value">{{ channelsCount }}</span>
                     </li>
                     <li>
@@ -662,7 +674,7 @@
                         </div>
                     </li>
                 </ul>
-                <a class="br-card-link">Ver toda la actividad →</a>
+                <a class="br-card-link">{{ 'branding.see_all_activity' | translate }}</a>
             </article>
         </aside>
     </section>
@@ -676,9 +688,9 @@
     <div class="br-modal br-modal--wide" (click)="$event.stopPropagation()">
         <header class="br-modal-head">
             <div>
-                <h3>Detalle de la marca</h3>
+                <h3>{{ 'branding.brand_detail' | translate }}</h3>
                 <p class="br-modal-sub-inline">
-                    Vista consolidada de la marca: identidad, activos visuales, colores y previews.
+                    {{ 'branding.brand_detail_sub' | translate }}
                 </p>
             </div>
             <button class="br-icon-btn" (click)="closePreview()" [attr.aria-label]="'common.close' | translate">
@@ -710,7 +722,7 @@
                         <span class="br-badge br-badge--active">
                             <span class="br-badge-dot"></span> {{ 'profile.two_factor_on' | translate }}
                         </span>
-                        <span class="br-detail-pill">Slug · {{ tenantSlug }}</span>
+                        <span class="br-detail-pill">{{ 'branding.slug_label' | translate }} · {{ tenantSlug }}</span>
                         <span class="br-detail-pill">{{ tenantDomain }}</span>
                     </div>
                 </div>
@@ -718,22 +730,22 @@
 
             <!-- Identidad / contacto -->
             <section class="br-detail-section">
-                <header><h4>Identidad y contacto</h4></header>
+                <header><h4>{{ 'branding.identity_and_contact' | translate }}</h4></header>
                 <dl class="br-detail-list">
                     <div><dt>{{ 'common.name' | translate }}</dt><dd>{{ form.company_name || '—' }}</dd></div>
-                    <div><dt>Tagline</dt><dd>{{ form.company_tagline || '—' }}</dd></div>
+                    <div><dt>{{ 'branding.company_tagline' | translate }}</dt><dd>{{ form.company_tagline || '—' }}</dd></div>
                     <div><dt>{{ 'branding.company_email' | translate }}</dt><dd>{{ form.company_email || '—' }}</dd></div>
                     <div><dt>{{ 'common.website' | translate }}</dt><dd>{{ form.company_website || '—' }}</dd></div>
                     <div><dt>{{ 'common.phone' | translate }}</dt><dd>{{ form.company_phone || '—' }}</dd></div>
                     <div><dt>{{ 'common.address' | translate }}</dt><dd>{{ form.company_address || '—' }}</dd></div>
-                    <div><dt>Plataforma</dt><dd>{{ branding.platformName() }}</dd></div>
+                    <div><dt>{{ 'branding.platform' | translate }}</dt><dd>{{ branding.platformName() }}</dd></div>
                     <div><dt>{{ 'common.updated_at' | translate }}</dt><dd>{{ lastUpdatedLabel }}</dd></div>
                 </dl>
             </section>
 
             <!-- Activos visuales -->
             <section class="br-detail-section">
-                <header><h4>Activos visuales</h4></header>
+                <header><h4>{{ 'branding.visual_assets' | translate }}</h4></header>
                 <div class="br-detail-assets">
                     <div class="br-detail-asset">
                         <span class="br-detail-asset-label">{{ 'branding.logo_light' | translate }}</span>
@@ -756,14 +768,14 @@
 
             <!-- Paleta de colores -->
             <section class="br-detail-section">
-                <header><h4>Paleta de colores</h4></header>
+                <header><h4>{{ 'branding.color_palette' | translate }}</h4></header>
                 <div class="br-detail-colors">
                     <div class="br-detail-color">
                         <div class="br-detail-color-swatch" [style.background]="form.primary_color"></div>
                         <div>
                             <strong>{{ primaryName }}</strong>
                             <span>{{ form.primary_color }}</span>
-                            <small>Primario</small>
+                            <small>{{ 'branding.primary_short' | translate }}</small>
                         </div>
                     </div>
                     <div class="br-detail-color">
@@ -771,7 +783,7 @@
                         <div>
                             <strong>{{ secondaryName }}</strong>
                             <span>{{ form.secondary_color }}</span>
-                            <small>Secundario</small>
+                            <small>{{ 'branding.secondary_short' | translate }}</small>
                         </div>
                     </div>
                     <div class="br-detail-color">
@@ -779,7 +791,7 @@
                         <div>
                             <strong>{{ accentName }}</strong>
                             <span>{{ form.accent_color }}</span>
-                            <small>Acento</small>
+                            <small>{{ 'branding.accent_short' | translate }}</small>
                         </div>
                     </div>
                 </div>
@@ -799,7 +811,7 @@
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ colorsCount }}</span>
-                        <span class="br-detail-stat-label">Colores</span>
+                        <span class="br-detail-stat-label">{{ 'branding.colors_label' | translate }}</span>
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ logosUploaded }}</span>
@@ -814,7 +826,7 @@
 
             <!-- Preview del email -->
             <section class="br-detail-section">
-                <header><h4>Cómo se ve un correo enviado</h4></header>
+                <header><h4>{{ 'branding.how_email_looks' | translate }}</h4></header>
                 <div class="br-email-preview">
                     <div class="br-email-header"
                          [style.background]="'linear-gradient(135deg,' + (form.primary_color || '#223148') + ',' + (form.secondary_color || '#1B7F67') + ')'">
@@ -840,7 +852,7 @@
         <footer class="br-modal-foot">
             <button class="br-btn br-btn--ghost" (click)="closePreview()">{{ 'common.close' | translate }}</button>
             <button class="br-btn br-btn--primary" (click)="save(); closePreview()" [disabled]="isSaving">
-                {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
+                {{ (isSaving ? 'common.saving' : 'common.save_changes') | translate }}
             </button>
         </footer>
     </div>

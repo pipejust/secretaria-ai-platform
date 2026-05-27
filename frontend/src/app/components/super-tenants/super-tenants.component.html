@@ -682,6 +682,23 @@
                            placeholder="Cra 7 # 80-30, Bogotá, Colombia"/>
                 </div>
 
+                <!-- Idioma del workspace — define el idioma de toda la salida del
+                     pipeline IA (resúmenes, tareas, decisiones, headers). El admin
+                     del tenant también puede modificarlo desde /admin/branding,
+                     pero acá lo dejamos disponible al crear para que arranque ya
+                     configurado correctamente desde la primera reunión. -->
+                <div class="tn-field">
+                    <label>{{ 'tenants.default_language' | translate }} <span class="tn-req">*</span></label>
+                    <select name="default_language" [(ngModel)]="form.default_language" required>
+                        <option value="es">Español</option>
+                        <option value="ca">Català</option>
+                        <option value="en">English</option>
+                    </select>
+                    <small class="tn-field-hint">
+                        {{ 'tenants.default_language_hint' | translate }}
+                    </small>
+                </div>
+
                 <!-- ============================================================
                      Tema visual — 3 colores (primario / secundario / acento)
                      ============================================================ -->
@@ -890,6 +907,23 @@
                     </select>
                 </div>
 
+                <!-- Idioma del workspace. Cambia el idioma que el pipeline IA
+                     va a usar para CURACIONES FUTURAS del tenant. Las sesiones
+                     ya curadas no se traducen retro — el admin del tenant debe
+                     re-correr cada sesión vieja desde el botón "Re-traer de
+                     Fireflies + IA" si quiere actualizar el idioma de salida. -->
+                <div class="tn-field">
+                    <label>{{ 'tenants.default_language' | translate }}</label>
+                    <select name="e_default_language" [(ngModel)]="editForm.default_language">
+                        <option value="es">Español</option>
+                        <option value="ca">Català</option>
+                        <option value="en">English</option>
+                    </select>
+                    <small class="tn-field-hint">
+                        {{ 'tenants.default_language_edit_hint' | translate }}
+                    </small>
+                </div>
+
                 <div class="tn-section-divider">
                     <span class="tn-section-title">{{ 'branding.title' | translate }}</span>
                     <span class="tn-section-tag">{{ 'common.optional' | translate }}</span>
@@ -1057,6 +1091,14 @@
                     <span class="tn-color-swatch" *ngIf="s.primary_color"
                           [style.background]="s.primary_color"></span>
                     {{ s.primary_color || '—' }}
+                </dd></div>
+                <!-- Idioma del workspace — informativo. Para cambiarlo hay
+                     que entrar al modal de edit (boton "Editar empresa" abajo). -->
+                <div><dt>{{ 'tenants.default_language' | translate }}</dt><dd>
+                    <span *ngIf="s.default_language === 'es'">Español</span>
+                    <span *ngIf="s.default_language === 'ca'">Català</span>
+                    <span *ngIf="s.default_language === 'en'">English</span>
+                    <span *ngIf="!s.default_language">—</span>
                 </dd></div>
             </div>
 
