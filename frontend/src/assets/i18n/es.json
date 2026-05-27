@@ -137,7 +137,21 @@
     "notice": "Aviso",
     "attention": "Atención",
     "detail": "Detalle",
-    "quick_start": "Inicio rápido"
+    "quick_start": "Inicio rápido",
+    "confidential_internal": "Confidencial  ·  Uso interno únicamente",
+    "version": "Versión",
+    "version_1": "Versión 1.0",
+    "coming_soon": "Próximamente.",
+    "per_page_10": "10 / página",
+    "per_page_20": "20 / página",
+    "per_page_50": "50 / página",
+    "associate_task_meeting": "Asocia la tarea a una reunión del workspace.",
+    "select_meeting": "— Selecciona una reunión —",
+    "action_items": "Elementos de acción",
+    "load_error": "No pudimos cargar el contenido. Recarga la página.",
+    "task_assigned_notif": "Te asignamos una nueva tarea en el acta del proyecto",
+    "review_architecture_doc": "Revisar el documento de arquitectura",
+    "view_minutes": "Ver acta →"
   },
   "lang": {
     "es": "Español",
@@ -171,7 +185,8 @@
       "server_error": "Error conectando al servidor. Inténtalo más tarde.",
       "code_required": "Introduce el código de 6 dígitos que te enviamos por correo.",
       "code_invalid": "Código incorrecto. Inténtalo nuevamente."
-    }
+    },
+    "2fa_sent_to": "Te enviamos un código de 6 dígitos a"
   },
   "forgot_password": {
     "title": "Recupera tu contraseña",
@@ -243,7 +258,8 @@
     "mark_all_read": "Marcar todo leído",
     "no_notifications": "No tienes notificaciones",
     "see_all": "Ver todas",
-    "powered_by": "Hecho con"
+    "powered_by": "Hecho con",
+    "operations": "Gestión Operativa"
   },
   "dashboard": {
     "title": "Resumen",
@@ -387,7 +403,9 @@
     "task": "Tarea",
     "owner": "Responsable",
     "due": "Vence",
-    "session": "Sesión"
+    "session": "Sesión",
+    "no_decisions": "Aún no hay decisiones registradas.",
+    "no_tasks": "No hay tareas asociadas todavía."
   },
   "meetings": {
     "title": "Reuniones",
@@ -413,14 +431,28 @@
     "approve": "Aprobar",
     "dispatch": "Distribuir",
     "curation": "Curación de la sesión",
-    "select_audio_file": "Selecciona un archivo de audio"
+    "select_audio_file": "Selecciona un archivo de audio",
+    "pending_review": "Pendientes de revisión",
+    "average_duration": "Duración media",
+    "estimated_by_transcript": "Estimada por transcripción",
+    "all_sources": "Todos los orígenes",
+    "empty_state": "Sube una transcripción o crea una nueva sesión para empezar.",
+    "view_meeting": "Ver reunión",
+    "meeting_minutes": "Acta de la reunión",
+    "open_curation": "Abrir vista de curación",
+    "title_or_reason": "Título o motivo de la sesión",
+    "multiple_languages": "Múltiples idiomas",
+    "raw_transcript": "Transcripción o acta cruda",
+    "no_participants": "No se detectaron participantes en esta sesión."
   },
   "pending": {
     "title": "Pendientes",
     "subtitle": "Tareas, sesiones y acciones que requieren tu atención.",
     "no_pending": "Todo al día. Sin pendientes.",
     "review": "Revisar",
-    "overdue_tasks": "Tareas vencidas"
+    "overdue_tasks": "Tareas vencidas",
+    "no_upcoming": "No hay actas ni tareas pendientes en los próximos días.",
+    "up_to_date": "Estás al día."
   },
   "templates": {
     "title": "Plantillas",
@@ -483,7 +515,8 @@
     "api_token": "API token",
     "secret": "Secret",
     "connected": "Conectado",
-    "disconnected": "Desconectado"
+    "disconnected": "Desconectado",
+    "platforms": "Plataformas de gestión"
   },
   "settings": {
     "title": "Configuración",
@@ -495,7 +528,15 @@
     "calendars": "Calendarios",
     "tasks_routing": "Routing de tareas",
     "auto_curation": "Curación automática",
-    "wait_before_send": "Tiempo de espera antes del envío (minutos)"
+    "wait_before_send": "Tiempo de espera antes del envío (minutos)",
+    "default_home": "Página de inicio por defecto",
+    "organization": "Organización",
+    "generic_smtp": "SMTP genérico",
+    "test_email_send": "Probar envío de correo",
+    "test_smtp_hint": "Verifica que tu configuración SMTP y el branding funcionan correctamente.",
+    "tasks_emails_sync": "Sincronización de tareas y correos",
+    "auto_send": "Envío automático de tareas y correos",
+    "auto_dispatch": "Envío automático"
   },
   "landing_cms": {
     "title": "Landing CMS",
@@ -527,7 +568,8 @@
   },
   "privacy": {
     "title": "Política de privacidad",
-    "back": "Volver"
+    "back": "Volver",
+    "intro_subtitle": "Tu información, bajo tu control."
   },
   "terms": {
     "title": "Términos y condiciones",
@@ -536,5 +578,10 @@
   "roles": {
     "role_name": "Nombre del rol",
     "edit_role": "Editar rol"
+  },
+  "calendar": {
+    "empty_no_account": "Aún no has conectado ningún calendario.",
+    "no_meetings_today": "No hay reuniones programadas para este día.",
+    "no_tasks_today": "No hay tareas con fecha en este día."
   }
 }

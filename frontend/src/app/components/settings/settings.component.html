@@ -101,7 +101,7 @@
                     <header class="st-card-head">
                         <div>
                             <h2 class="st-card-title">Preferencias generales</h2>
-                            <p class="st-card-sub">Configura cómo se comporta Acten para ti y tu equipo.</p>
+                            <p class="st-card-sub">{{ 'settings.subtitle' | translate }}</p>
                         </div>
                     </header>
                     <div class="st-card-body">
@@ -140,7 +140,7 @@
 
                         <div class="st-grid st-grid-2 st-mt-16">
                             <label class="st-field">
-                                <span class="st-field-label">Página de inicio por defecto</span>
+                                <span class="st-field-label">{{ 'settings.default_home' | translate }}</span>
                                 <div class="st-field-input">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -355,8 +355,8 @@
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">Plataformas de gestión</h2>
-                            <p class="st-card-sub">Conecta Acten con tus herramientas para despachar tareas automáticamente.</p>
+                            <h2 class="st-card-title">{{ 'integrations.platforms' | translate }}</h2>
+                            <p class="st-card-sub">{{ 'integrations.subtitle' | translate }}</p>
                         </div>
                     </header>
                     <div class="st-card-body st-stack">
@@ -452,7 +452,7 @@
                                 </label>
                             </div>
                             <div class="st-grid st-grid-3">
-                                <label class="st-field"><span class="st-field-label">Organización</span>
+                                <label class="st-field"><span class="st-field-label">{{ 'settings.organization' | translate }}</span>
                                     <input type="text" class="st-input" [(ngModel)]="azureSettings.organization" /></label>
                                 <label class="st-field"><span class="st-field-label">{{ 'common.project' | translate }}</span>
                                     <input type="text" class="st-input" [(ngModel)]="azureSettings.project" /></label>
@@ -525,7 +525,7 @@
                                     <select [(ngModel)]="smtpSettings.provider">
                                         <option value="Resend">Resend</option>
                                         <option value="SendGrid">SendGrid</option>
-                                        <option value="SMTP">SMTP genérico</option>
+                                        <option value="SMTP">{{ 'settings.generic_smtp' | translate }}</option>
                                     </select>
                                 </div>
                             </label>
@@ -557,8 +557,8 @@
                                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
                                 </svg>
                                 <div>
-                                    <strong>Probar envío de correo</strong>
-                                    <span>Verifica que tu configuración SMTP y el branding funcionan correctamente.</span>
+                                    <strong>{{ 'settings.test_email_send' | translate }}</strong>
+                                    <span>{{ 'settings.test_smtp_hint' | translate }}</span>
                                 </div>
                             </div>
                             <div class="st-test-email-row">
@@ -587,7 +587,7 @@
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">Sincronización de tareas y correos</h2>
+                            <h2 class="st-card-title">{{ 'settings.tasks_emails_sync' | translate }}</h2>
                             <p class="st-card-sub">
                                 Configura cómo y cuándo se envían automáticamente los correos a los
                                 responsables y las tareas a las plataformas conectadas (Trello, Jira,
@@ -598,7 +598,7 @@
                     <div class="st-card-body">
                         <div class="st-toggle-card">
                             <div>
-                                <strong>Envío automático de tareas y correos</strong>
+                                <strong>{{ 'settings.auto_send' | translate }}</strong>
                                 <small>
                                     <strong>Flujo:</strong> cuando llega una reunión nueva vía
                                     Fireflies <em>primero</em> se procesa con IA (transcribe,

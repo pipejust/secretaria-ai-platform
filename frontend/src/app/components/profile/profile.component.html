@@ -594,11 +594,11 @@
     <!-- Activar -->
     <div class="pr-modal-body" *ngIf="twoFactorModalStep === 'enable-code'">
       <p>
-        Te enviamos un código de 6 dígitos a <strong>{{ twoFactorEmailSent }}</strong>. Introdúcelo aquí para activar
+        {{ 'login.2fa_sent_to' | translate }} <strong>{{ twoFactorEmailSent }}</strong>. Introdúcelo aquí para activar
         la verificación en dos pasos. A partir de ahora, cada inicio de sesión pedirá un código nuevo.
       </p>
       <div class="pr-field">
-        <label for="pr-2fa-code">Código de verificación</label>
+        <label for="pr-2fa-code">{{ 'login.code_label' | translate }}</label>
         <input id="pr-2fa-code" type="text" inputmode="numeric" maxlength="6"
                autocomplete="one-time-code" [(ngModel)]="twoFactorCode"
                placeholder="000000" style="letter-spacing: 0.4em; text-align: center; font-size: 18px; font-weight: 600;">

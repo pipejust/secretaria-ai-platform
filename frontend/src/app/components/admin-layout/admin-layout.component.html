@@ -29,7 +29,7 @@
         -->
         <nav class="sidebar-nav" (click)="closeMobileMenu()">
             <ul>
-                <li class="nav-category" *ngIf="!isCollapsed && user && canSee('resumen')">Gestión Operativa</li>
+                <li class="nav-category" *ngIf="!isCollapsed && user && canSee('resumen')">{{ 'sidebar.operations' | translate }}</li>
                 <li *ngIf="user && canSee('resumen')">
                     <a routerLink="/admin/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}" title="Resumen — métricas y vista ejecutiva">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -131,7 +131,7 @@
                 </li>
                 <li class="nav-category"
                     *ngIf="!isCollapsed && (canSee('usuarios') || canSee('roles') || isSuperAdmin || canSee('marca') || canSee('configuracion'))">
-                    Administración
+                    {{ 'sidebar.admin_section' | translate }}
                 </li>
                 <li *ngIf="canSee('usuarios')">
                     <a routerLink="/admin/users" routerLinkActive="active">
@@ -372,7 +372,7 @@
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                             </svg>
-                            <p>Estás al día.</p>
+                            <p>{{ 'pending.up_to_date' | translate }}</p>
                             <small>Te avisaremos cuando lleguen sesiones nuevas o tareas pendientes.</small>
                         </div>
 
@@ -444,7 +444,7 @@
                                 <polyline points="16 17 21 12 16 7"></polyline>
                                 <line x1="21" y1="12" x2="9" y2="12"></line>
                             </svg>
-                            Cerrar Sesión
+                            {{ 'common.logout' | translate }}
                         </button>
                     </div>
                 </div>
@@ -476,7 +476,7 @@
             </div>
             <div class="app-footer-center">Confidencial &nbsp;·&nbsp; Uso interno únicamente</div>
             <div class="app-footer-right">
-                <span>Versión 1.0</span>
+                <span>{{ 'common.version_1' | translate }}</span>
                 <span class="dot-sep">·</span>
                 <span>{{ todayLabel }}</span>
             </div>

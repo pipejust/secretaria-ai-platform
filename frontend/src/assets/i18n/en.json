@@ -137,7 +137,21 @@
     "notice": "Notice",
     "attention": "Attention",
     "detail": "Detail",
-    "quick_start": "Quick start"
+    "quick_start": "Quick start",
+    "confidential_internal": "Confidential · Internal use only",
+    "version": "Version",
+    "version_1": "Version 1.0",
+    "coming_soon": "Coming soon.",
+    "per_page_10": "10 / page",
+    "per_page_20": "20 / page",
+    "per_page_50": "50 / page",
+    "associate_task_meeting": "Associate the task with a workspace meeting.",
+    "select_meeting": "— Select a meeting —",
+    "action_items": "Action items",
+    "load_error": "Couldn't load content. Reload the page.",
+    "task_assigned_notif": "We assigned you a new task in the project minutes",
+    "review_architecture_doc": "Review the architecture document",
+    "view_minutes": "View minutes →"
   },
   "lang": {
     "es": "Español",
@@ -171,7 +185,8 @@
       "server_error": "Error connecting to the server. Try again later.",
       "code_required": "Enter the 6-digit code we emailed you.",
       "code_invalid": "Incorrect code. Try again."
-    }
+    },
+    "2fa_sent_to": "We sent a 6-digit code to"
   },
   "forgot_password": {
     "title": "Recover your password",
@@ -243,7 +258,8 @@
     "mark_all_read": "Mark all read",
     "no_notifications": "No notifications",
     "see_all": "See all",
-    "powered_by": "Powered by"
+    "powered_by": "Powered by",
+    "operations": "Operations"
   },
   "dashboard": {
     "title": "Overview",
@@ -387,7 +403,9 @@
     "task": "Task",
     "owner": "Owner",
     "due": "Due",
-    "session": "Session"
+    "session": "Session",
+    "no_decisions": "No decisions recorded yet.",
+    "no_tasks": "No tasks associated yet."
   },
   "meetings": {
     "title": "Meetings",
@@ -413,14 +431,28 @@
     "approve": "Approve",
     "dispatch": "Dispatch",
     "curation": "Session curation",
-    "select_audio_file": "Select an audio file"
+    "select_audio_file": "Select an audio file",
+    "pending_review": "Pending review",
+    "average_duration": "Average duration",
+    "estimated_by_transcript": "Estimated by transcript",
+    "all_sources": "All sources",
+    "empty_state": "Upload a transcript or create a new session to start.",
+    "view_meeting": "View meeting",
+    "meeting_minutes": "Meeting minutes",
+    "open_curation": "Open curation view",
+    "title_or_reason": "Title or reason for the session",
+    "multiple_languages": "Multiple languages",
+    "raw_transcript": "Raw transcript",
+    "no_participants": "No participants detected in this session."
   },
   "pending": {
     "title": "Pending",
     "subtitle": "Tasks, sessions and actions requiring your attention.",
     "no_pending": "All caught up. No pending items.",
     "review": "Review",
-    "overdue_tasks": "Overdue tasks"
+    "overdue_tasks": "Overdue tasks",
+    "no_upcoming": "No upcoming meetings or pending tasks.",
+    "up_to_date": "You're up to date."
   },
   "templates": {
     "title": "Templates",
@@ -483,7 +515,8 @@
     "api_token": "API token",
     "secret": "Secret",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "platforms": "Management platforms"
   },
   "settings": {
     "title": "Settings",
@@ -495,7 +528,15 @@
     "calendars": "Calendars",
     "tasks_routing": "Task routing",
     "auto_curation": "Auto curation",
-    "wait_before_send": "Wait time before sending (minutes)"
+    "wait_before_send": "Wait time before sending (minutes)",
+    "default_home": "Default home page",
+    "organization": "Organization",
+    "generic_smtp": "Generic SMTP",
+    "test_email_send": "Test email send",
+    "test_smtp_hint": "Verify your SMTP and branding configuration works correctly.",
+    "tasks_emails_sync": "Tasks and emails sync",
+    "auto_send": "Automatic tasks and emails sending",
+    "auto_dispatch": "Auto dispatch"
   },
   "landing_cms": {
     "title": "Landing CMS",
@@ -527,7 +568,8 @@
   },
   "privacy": {
     "title": "Privacy policy",
-    "back": "Back"
+    "back": "Back",
+    "intro_subtitle": "Your information, under your control."
   },
   "terms": {
     "title": "Terms and conditions",
@@ -536,5 +578,10 @@
   "roles": {
     "role_name": "Role name",
     "edit_role": "Edit role"
+  },
+  "calendar": {
+    "empty_no_account": "You haven't connected any calendar yet.",
+    "no_meetings_today": "No meetings scheduled for this day.",
+    "no_tasks_today": "No tasks scheduled for this day."
   }
 }

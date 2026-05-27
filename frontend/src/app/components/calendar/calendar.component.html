@@ -68,7 +68,7 @@
           <div class="cal-sources-section">
             <div class="cal-sources-title">Conectadas</div>
             <p class="cal-sources-empty" *ngIf="!accounts.length">
-              Aún no has conectado ningún calendario.
+              {{ 'calendar.empty_no_account' | translate }}
             </p>
             <ul class="cal-sources-list" *ngIf="accounts.length">
               <li *ngFor="let a of accounts; trackBy: trackById" class="cal-source-row">
@@ -364,7 +364,7 @@
           <span class="cal-section-tag">{{ selectedDayEvents.length }}</span>
         </header>
         <p class="cal-panel-empty" *ngIf="!selectedDayEvents.length">
-          No hay reuniones programadas para este día.
+          {{ 'calendar.no_meetings_today' | translate }}
         </p>
         <ul class="cal-meeting-list" *ngIf="selectedDayEvents.length">
           <li *ngFor="let ev of selectedDayEvents; trackBy: trackByEv"
@@ -399,7 +399,7 @@
                 <div class="cal-meeting-actions">
                   <a *ngIf="ev.session_id"
                      [routerLink]="['/admin/curation', ev.session_id]"
-                     class="cal-link-soft">Ver acta →</a>
+                     class="cal-link-soft">{{ 'common.view_minutes' | translate }}</a>
                   <button *ngIf="ev.meeting_url"
                           class="cal-link-soft"
                           (click)="openMeetingLink(ev, $event)">Unirse →</button>
@@ -409,7 +409,7 @@
                    *ngIf="!(ev.attendees && ev.attendees.length) && (ev.session_id || ev.meeting_url)">
                 <a *ngIf="ev.session_id"
                    [routerLink]="['/admin/curation', ev.session_id]"
-                   class="cal-link-soft">Ver acta →</a>
+                   class="cal-link-soft">{{ 'common.view_minutes' | translate }}</a>
                 <button *ngIf="ev.meeting_url"
                         class="cal-link-soft"
                         (click)="openMeetingLink(ev, $event)">Unirse →</button>
@@ -426,7 +426,7 @@
           <span class="cal-section-tag">{{ selectedDayTasks.length }}</span>
         </header>
         <p class="cal-panel-empty" *ngIf="!selectedDayTasks.length">
-          No hay tareas con fecha en este día.
+          {{ 'calendar.no_tasks_today' | translate }}
         </p>
         <ul class="cal-task-list" *ngIf="selectedDayTasks.length">
           <li *ngFor="let t of selectedDayTasks; trackBy: trackById"
@@ -466,7 +466,7 @@
           <a class="cal-section-link" [routerLink]="['/admin/pendientes']">{{ 'common.show_all' | translate }}</a>
         </header>
         <p class="cal-panel-empty" *ngIf="!deadlines.length">
-          No hay actas ni tareas pendientes en los próximos días.
+          {{ 'pending.no_upcoming' | translate }}
         </p>
         <ul class="cal-deadline-list" *ngIf="deadlines.length">
           <li *ngFor="let d of deadlines; trackBy: trackById"
@@ -546,7 +546,7 @@
         <div>
           <h3 class="cal-modal-title">{{ 'common.new_task' | translate }}</h3>
           <p class="cal-modal-sub">
-            Asocia la tarea a una reunión del workspace.
+            {{ 'common.associate_task_meeting' | translate }}
             <ng-container *ngIf="newTask.due_date"> · {{ newTask.due_date }}</ng-container>
           </p>
         </div>
@@ -563,7 +563,7 @@
         <div class="cal-form-row">
           <label class="cal-form-label">{{ 'common.meeting' | translate }}</label>
           <select class="cal-input" [(ngModel)]="newTask.session_id">
-            <option [ngValue]="null">— Selecciona una reunión —</option>
+            <option [ngValue]="null">{{ 'common.select_meeting' | translate }}</option>
             <option *ngFor="let s of newTaskSessions" [ngValue]="s.id">{{ s.title }}</option>
           </select>
         </div>

@@ -12,7 +12,7 @@
         <header class="mt-header">
             <div class="mt-header-left">
                 <h1 class="mt-title">{{ 'sidebar.meetings' | translate }}</h1>
-                <p class="mt-sub">Gestiona, analiza y actúa sobre tus reuniones.</p>
+                <p class="mt-sub">{{ 'meetings.subtitle' | translate }}</p>
             </div>
             <button class="mt-cta" (click)="openUploadModal()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -20,7 +20,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Nueva Reunión
+                {{ 'sidebar.new_meeting' | translate }}
             </button>
         </header>
 
@@ -76,7 +76,7 @@
                     </svg>
                 </div>
                 <div class="metric-body">
-                    <span class="metric-label">Pendientes de revisión</span>
+                    <span class="metric-label">{{ 'meetings.pending_review' | translate }}</span>
                     <span class="metric-value">{{ pendingCount }}</span>
                     <span class="metric-foot">{{ pctOfTotal(pendingCount) }}% del total</span>
                 </div>
@@ -92,9 +92,9 @@
                     </svg>
                 </div>
                 <div class="metric-body">
-                    <span class="metric-label">Duración media</span>
+                    <span class="metric-label">{{ 'meetings.average_duration' | translate }}</span>
                     <span class="metric-value">{{ avgDurationLabel }}</span>
-                    <span class="metric-foot">Estimada por transcripción</span>
+                    <span class="metric-foot">{{ 'meetings.estimated_by_transcript' | translate }}</span>
                 </div>
             </article>
         </section>
@@ -198,7 +198,7 @@
             <div class="filter-group">
                 <label>Origen</label>
                 <select [(ngModel)]="filterSource">
-                    <option value="">Todos los orígenes</option>
+                    <option value="">{{ 'meetings.all_sources' | translate }}</option>
                     <option value="manual">Subida manual</option>
                     <option value="web">Web</option>
                 </select>
@@ -475,7 +475,7 @@
                         <polyline points="14 2 14 8 20 8"></polyline>
                     </svg>
                     <h4>No hay reuniones registradas</h4>
-                    <p>Sube una transcripción o crea una nueva sesión para empezar.</p>
+                    <p>{{ 'meetings.empty_state' | translate }}</p>
                 </div>
             </div>
         </section>
@@ -513,9 +513,9 @@
             </div>
             <div class="pg-right">
                 <select [ngModel]="limit" (ngModelChange)="changeLimit($event)">
-                    <option [ngValue]="10">10 / página</option>
-                    <option [ngValue]="20">20 / página</option>
-                    <option [ngValue]="50">50 / página</option>
+                    <option [ngValue]="10">{{ 'common.per_page_10' | translate }}</option>
+                    <option [ngValue]="20">{{ 'common.per_page_20' | translate }}</option>
+                    <option [ngValue]="50">{{ 'common.per_page_50' | translate }}</option>
                 </select>
             </div>
         </section>
@@ -564,7 +564,7 @@
                         <path d="M10 14L21 3"></path>
                         <path d="M21 14v7H3V3h7"></path>
                     </svg>
-                    Ver reunión
+                    {{ 'meetings.view_meeting' | translate }}
                 </button>
                 <button class="dt-close" (click)="closeDetailPanel()" [attr.title]="'common.close' | translate">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -713,7 +713,7 @@
                         </li>
                     </ul>
                     <p class="dt-card-empty" *ngIf="!selectedActionItems.length && !isLoadingDetail">
-                        No hay tareas asociadas todavía.
+                        {{ 'project_detail.no_tasks' | translate }}
                     </p>
                     <a class="dt-card-link" *ngIf="selectedActionItems.length > 5"
                        (click)="viewCuration(selectedSession.id)" role="button">{{ 'common.see_all_tasks' | translate }}</a>
@@ -734,7 +734,7 @@
                         </svg>
                     </div>
                     <div class="dt-file-text">
-                        <span class="dt-file-name">Acta de la reunión</span>
+                        <span class="dt-file-name">{{ 'meetings.meeting_minutes' | translate }}</span>
                         <span class="dt-file-sub">Word · descarga generada por IA</span>
                     </div>
                     <span class="dt-file-action">
@@ -766,10 +766,10 @@
                         Esta sesión no tiene transcripción cargada.
                     </p>
                     <p class="dt-card-empty" *ngIf="detailTab !== 'transcript'">
-                        Próximamente.
+                        {{ 'common.coming_soon' | translate }}
                     </p>
                     <a class="dt-card-link" *ngIf="detailTab === 'transcript'"
-                       (click)="viewCuration(selectedSession.id)" role="button">Abrir vista de curación</a>
+                       (click)="viewCuration(selectedSession.id)" role="button">{{ 'meetings.open_curation' | translate }}</a>
                 </article>
             </ng-container>
         </div>
@@ -824,7 +824,7 @@
             </div>
 
             <div class="ap-field">
-                <label class="ap-label">Título o motivo de la sesión <span class="ap-required">*</span></label>
+                <label class="ap-label">{{ 'meetings.title_or_reason' | translate }} <span class="ap-required">*</span></label>
                 <input class="ap-input" type="text" [(ngModel)]="uploadForm.title"
                        placeholder="Ej: Comité estratégico mensual" />
             </div>
@@ -841,7 +841,7 @@
                             <option value="Español">{{ 'lang.es' | translate }}</option>
                             <option value="Inglés">{{ 'common.english' | translate }}</option>
                             <option value="Portugués">{{ 'common.portuguese' | translate }}</option>
-                            <option value="Multilingüe">Múltiples idiomas</option>
+                            <option value="Multilingüe">{{ 'meetings.multiple_languages' | translate }}</option>
                         </select>
                     </div>
                 </div>
@@ -881,7 +881,7 @@
             </div>
 
             <div *ngIf="uploadTab === 'text'" class="ap-field">
-                <label class="ap-label">Transcripción o acta cruda <span class="ap-required">*</span></label>
+                <label class="ap-label">{{ 'meetings.raw_transcript' | translate }} <span class="ap-required">*</span></label>
                 <textarea class="ap-textarea" rows="8"
                           [(ngModel)]="uploadForm.textContent"
                           placeholder="Pega aquí todo el texto discutido en la sesión..."
@@ -993,7 +993,7 @@
             </ul>
 
             <div class="ap-modal-empty" *ngIf="!selectedAttendees.length">
-                No se detectaron participantes en esta sesión.
+                {{ 'meetings.no_participants' | translate }}
             </div>
         </div>
     </div>

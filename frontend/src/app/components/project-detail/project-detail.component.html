@@ -37,7 +37,7 @@
           <span class="meta-val">{{ d.project.owner_user.full_name || d.project.owner_user.email }}</span>
         </div>
         <div class="meta-row">
-          <span class="meta-key">Envío automático</span>
+          <span class="meta-key">{{ 'settings.auto_dispatch' | translate }}</span>
           <span class="meta-val">
             <ng-container *ngIf="d.project.auto_dispatch_enabled === null">Heredado del global</ng-container>
             <ng-container *ngIf="d.project.auto_dispatch_enabled === true">
@@ -94,7 +94,7 @@
     <div class="grid">
       <section class="panel">
         <h2>Decisiones recientes</h2>
-        <p class="hint" *ngIf="!d.recent_decisions.length">Aún no hay decisiones registradas.</p>
+        <p class="hint" *ngIf="!d.recent_decisions.length">{{ 'project_detail.no_decisions' | translate }}</p>
         <article *ngFor="let dec of d.recent_decisions; trackBy: trackByDecision" class="decision">
           <div class="decision-head">
             <a [routerLink]="['/admin/curation', dec.session_id]" class="decision-link">{{ dec.session_title }}</a>
@@ -121,7 +121,7 @@
     </div>
 
     <section class="panel">
-      <h2>Tareas activas (vencidas y próximas primero)</h2>
+      <h2>{{ 'project_detail.active_tasks' | translate }}</h2>
       <p class="hint" *ngIf="!d.active_action_items.length">No hay tareas activas en este proyecto.</p>
       <table *ngIf="d.active_action_items.length" class="action-table">
         <thead>
@@ -130,7 +130,7 @@
             <th>{{ 'project_detail.owner' | translate }}</th>
             <th>{{ 'project_detail.due' | translate }}</th>
             <th>{{ 'common.status' | translate }}</th>
-            <th>Sesión</th>
+            <th>{{ 'project_detail.session' | translate }}</th>
           </tr>
         </thead>
         <tbody>

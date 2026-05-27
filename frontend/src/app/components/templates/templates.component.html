@@ -126,7 +126,7 @@
                 <div class="tpl-tr tpl-th">
                     <span>Plantilla</span>
                     <span>{{ 'common.status' | translate }}</span>
-                    <span>Versión</span>
+                    <span>{{ 'common.version' | translate }}</span>
                     <span>{{ 'common.status' | translate }}</span>
                     <span>Actualizado</span>
                     <span class="t-right">{{ 'common.actions' | translate }}</span>
@@ -444,7 +444,7 @@
                     <dl class="tpl-detail-info">
                         <dt>ID</dt><dd>#{{ selectedTemplate.id }}</dd>
                         <dt>{{ 'common.status' | translate }}</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>
-                        <dt>Versión</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
+                        <dt>{{ 'common.version' | translate }}</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
                         <dt>{{ 'common.status' | translate }}</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
                         <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small *ngIf="updatedAgo(selectedTemplate)">({{ updatedAgo(selectedTemplate) }})</small></dd>
                         <dt>{{ 'common.project' | translate }}</dt><dd>{{ selectedTemplate.project_id || '—' }}</dd>

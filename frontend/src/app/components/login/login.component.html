@@ -264,12 +264,12 @@
                     </div>
 
                     <p style="margin: 0 0 4px 0; font-size: 14px; color: #475569;">
-                        Te enviamos un código de 6 dígitos a <strong>{{ emailMasked }}</strong>.
+                        {{ 'login.2fa_sent_to' | translate }} <strong>{{ emailMasked }}</strong>.
                         Caduca en 10 minutos.
                     </p>
 
                     <div class="field">
-                        <label for="code2fa">Código de verificación</label>
+                        <label for="code2fa">{{ 'login.code_label' | translate }}</label>
                         <input id="code2fa" name="code2fa" type="text" inputmode="numeric"
                                maxlength="6" autocomplete="one-time-code"
                                [(ngModel)]="code2FA" placeholder="000000"

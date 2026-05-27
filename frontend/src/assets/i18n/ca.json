@@ -137,7 +137,21 @@
     "notice": "Avís",
     "attention": "Atenció",
     "detail": "Detall",
-    "quick_start": "Inici ràpid"
+    "quick_start": "Inici ràpid",
+    "confidential_internal": "Confidencial · Ús intern únicament",
+    "version": "Versió",
+    "version_1": "Versió 1.0",
+    "coming_soon": "Pròximament.",
+    "per_page_10": "10 / pàgina",
+    "per_page_20": "20 / pàgina",
+    "per_page_50": "50 / pàgina",
+    "associate_task_meeting": "Associa la tasca a una reunió del workspace.",
+    "select_meeting": "— Selecciona una reunió —",
+    "action_items": "Elements d'acció",
+    "load_error": "No hem pogut carregar el contingut. Recarrega la pàgina.",
+    "task_assigned_notif": "T'hem assignat una nova tasca en l'acta del projecte",
+    "review_architecture_doc": "Revisar el document d'arquitectura",
+    "view_minutes": "Veure acta →"
   },
   "lang": {
     "es": "Español",
@@ -171,7 +185,8 @@
       "server_error": "Error connectant amb el servidor. Torna-ho a provar més tard.",
       "code_required": "Introdueix el codi de 6 dígits que t'hem enviat per correu.",
       "code_invalid": "Codi incorrecte. Torna-ho a provar."
-    }
+    },
+    "2fa_sent_to": "Hem enviat un codi de 6 dígits a"
   },
   "forgot_password": {
     "title": "Recupera la teva contrasenya",
@@ -243,7 +258,8 @@
     "mark_all_read": "Marca tot llegit",
     "no_notifications": "No tens notificacions",
     "see_all": "Veure'n totes",
-    "powered_by": "Fet amb"
+    "powered_by": "Fet amb",
+    "operations": "Gestió Operativa"
   },
   "dashboard": {
     "title": "Resum",
@@ -387,7 +403,9 @@
     "task": "Tasca",
     "owner": "Responsable",
     "due": "Venciment",
-    "session": "Sessió"
+    "session": "Sessió",
+    "no_decisions": "Encara no hi ha decisions registrades.",
+    "no_tasks": "Encara no hi ha tasques associades."
   },
   "meetings": {
     "title": "Reunions",
@@ -413,14 +431,28 @@
     "approve": "Aprova",
     "dispatch": "Distribueix",
     "curation": "Curació de la sessió",
-    "select_audio_file": "Selecciona un arxiu d'àudio"
+    "select_audio_file": "Selecciona un arxiu d'àudio",
+    "pending_review": "Pendents de revisió",
+    "average_duration": "Durada mitjana",
+    "estimated_by_transcript": "Estimada per transcripció",
+    "all_sources": "Tots els orígens",
+    "empty_state": "Puja una transcripció o crea una nova sessió per començar.",
+    "view_meeting": "Veure reunió",
+    "meeting_minutes": "Acta de la reunió",
+    "open_curation": "Obre vista de curació",
+    "title_or_reason": "Títol o motiu de la sessió",
+    "multiple_languages": "Múltiples idiomes",
+    "raw_transcript": "Transcripció o acta crua",
+    "no_participants": "No s'han detectat participants en aquesta sessió."
   },
   "pending": {
     "title": "Pendents",
     "subtitle": "Tasques, sessions i accions que requereixen la teva atenció.",
     "no_pending": "Tot al dia. Sense pendents.",
     "review": "Revisa",
-    "overdue_tasks": "Tasques vençudes"
+    "overdue_tasks": "Tasques vençudes",
+    "no_upcoming": "No hi ha actes ni tasques pendents els pròxims dies.",
+    "up_to_date": "Estàs al dia."
   },
   "templates": {
     "title": "Plantilles",
@@ -483,7 +515,8 @@
     "api_token": "API token",
     "secret": "Secret",
     "connected": "Connectat",
-    "disconnected": "Desconnectat"
+    "disconnected": "Desconnectat",
+    "platforms": "Plataformes de gestió"
   },
   "settings": {
     "title": "Configuració",
@@ -495,7 +528,15 @@
     "calendars": "Calendaris",
     "tasks_routing": "Routing de tasques",
     "auto_curation": "Curació automàtica",
-    "wait_before_send": "Temps d'espera abans de l'enviament (minuts)"
+    "wait_before_send": "Temps d'espera abans de l'enviament (minuts)",
+    "default_home": "Pàgina d'inici per defecte",
+    "organization": "Organització",
+    "generic_smtp": "SMTP genèric",
+    "test_email_send": "Prova enviament de correu",
+    "test_smtp_hint": "Verifica que la teva configuració SMTP i el branding funcionen correctament.",
+    "tasks_emails_sync": "Sincronització de tasques i correus",
+    "auto_send": "Enviament automàtic de tasques i correus",
+    "auto_dispatch": "Enviament automàtic"
   },
   "landing_cms": {
     "title": "Landing CMS",
@@ -527,7 +568,8 @@
   },
   "privacy": {
     "title": "Política de privadesa",
-    "back": "Torna"
+    "back": "Torna",
+    "intro_subtitle": "La teva informació, sota el teu control."
   },
   "terms": {
     "title": "Termes i condicions",
@@ -536,5 +578,10 @@
   "roles": {
     "role_name": "Nom del rol",
     "edit_role": "Edita rol"
+  },
+  "calendar": {
+    "empty_no_account": "Encara no has connectat cap calendari.",
+    "no_meetings_today": "No hi ha reunions programades per a aquest dia.",
+    "no_tasks_today": "No hi ha tasques amb data en aquest dia."
   }
 }
