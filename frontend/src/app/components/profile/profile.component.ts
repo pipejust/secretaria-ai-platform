@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -60,6 +60,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     private readonly preferences = inject(PreferencesService);
     private readonly router = inject(Router);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly translate = inject(TranslateService);
 
     @ViewChild('avatarInput') avatarInput?: ElementRef<HTMLInputElement>;
 
@@ -191,30 +192,30 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     get profileCompleteLabel(): string {
         const pct = this.profileCompletePct;
-        if (pct >= 90) return 'Excelente, tu perfil está completo.';
-        if (pct >= 70) return 'Buen trabajo, tu perfil está casi completo.';
-        if (pct >= 40) return 'Tu perfil está en camino. Completa los datos restantes.';
-        return 'Completa tu perfil para que tu equipo te identifique mejor.';
+        if (pct >= 90) return this.translate.instant('profile.complete_excellent');
+        if (pct >= 70) return this.translate.instant('profile.complete_good');
+        if (pct >= 40) return this.translate.instant('profile.complete_progressing');
+        return this.translate.instant('profile.complete_start');
     }
 
     get profileMissingHint(): string {
         const missing: string[] = [];
-        if (!this.profile.phone)      missing.push('teléfono');
-        if (!this.profile.department) missing.push('departamento');
-        if (!this.profile.location)   missing.push('ubicación');
-        if (!this.profile.bio)        missing.push('biografía');
-        if (!missing.length) return 'Todos tus datos están al día.';
-        return `Faltan: ${missing.join(', ')}.`;
+        if (!this.profile.phone)      missing.push(this.translate.instant('profile.missing_phone'));
+        if (!this.profile.department) missing.push(this.translate.instant('profile.missing_department'));
+        if (!this.profile.location)   missing.push(this.translate.instant('profile.missing_location'));
+        if (!this.profile.bio)        missing.push(this.translate.instant('profile.missing_bio'));
+        if (!missing.length) return this.translate.instant('profile.all_up_to_date');
+        return this.translate.instant('profile.missing_list', { list: missing.join(', ') });
     }
 
     get securityLevelLabel(): string {
-        if (this.is2FAEnabled) return 'Excelente';
-        return 'Alta';
+        if (this.is2FAEnabled) return this.translate.instant('profile.security_excellent');
+        return this.translate.instant('profile.security_high');
     }
 
     get securityHintLabel(): string {
-        if (this.is2FAEnabled) return 'Autenticación en dos pasos activa';
-        return 'Activa la autenticación en dos pasos';
+        if (this.is2FAEnabled) return this.translate.instant('profile.security_2fa_active');
+        return this.translate.instant('profile.security_2fa_inactive');
     }
 
     get activeNotifCount(): number {
@@ -226,9 +227,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     get lastLoginLabel(): string {
         const raw = this.user?.last_login_at;
-        if (!raw) return 'Sin registrar';
+        if (!raw) return this.translate.instant('profile.last_login_unknown');
         const d = new Date(raw);
-        if (isNaN(d.getTime())) return 'Sin registrar';
+        if (isNaN(d.getTime())) return this.translate.instant('profile.last_login_unknown');
         return d.toLocaleString('es-CO', {
             day: '2-digit', month: 'long', year: 'numeric',
             hour: '2-digit', minute: '2-digit',
@@ -242,12 +243,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
         if (isNaN(d.getTime())) return '—';
         const diff = Date.now() - d.getTime();
         const hours = Math.floor(diff / 3_600_000);
-        if (hours < 1) return 'Hace menos de una hora';
-        if (hours < 24) return `Hace ${hours} h`;
+        if (hours < 1) return this.translate.instant('profile.last_login_under_hour');
+        if (hours < 24) return this.translate.instant('profile.last_login_hours', { count: hours });
         const days = Math.floor(hours / 24);
-        if (days < 30) return `Hace ${days} día${days === 1 ? '' : 's'}`;
+        if (days < 30) return days === 1
+            ? this.translate.instant('profile.last_login_days_one')
+            : this.translate.instant('profile.last_login_days_other', { count: days });
         const months = Math.floor(days / 30);
-        return `Hace ${months} mes${months === 1 ? '' : 'es'}`;
+        return months === 1
+            ? this.translate.instant('profile.last_login_months_one')
+            : this.translate.instant('profile.last_login_months_other', { count: months });
     }
 
     get createdAtLabel(): string {
@@ -281,17 +286,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
     // ============================================================
     cancelChanges(): void {
         this.profile = { ...this.pristine };
-        this.toast.info('Cambios descartados.');
+        this.toast.info(this.translate.instant('profile.toast_changes_discarded'));
         this.cdr.detectChanges();
     }
 
     saveProfile(): void {
         if (!this.isDirty) {
-            this.toast.info('No hay cambios pendientes.');
+            this.toast.info(this.translate.instant('profile.toast_no_pending_changes'));
             return;
         }
         if (!this.profile.full_name.trim()) {
-            this.toast.error('El nombre no puede estar vacío.');
+            this.toast.error(this.translate.instant('profile.toast_name_required'));
             return;
         }
         this.isSavingProfile = true;
@@ -308,13 +313,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
                 next: (updated) => {
                     this.applyUserToForm(updated);
                     this.isSavingProfile = false;
-                    this.toast.success('Información personal guardada.');
+                    this.toast.success(this.translate.instant('profile.toast_profile_saved'));
                     this.refreshActivity();
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
                     this.isSavingProfile = false;
-                    const detail = err?.error?.detail || 'No se pudo guardar el perfil.';
+                    const detail = err?.error?.detail || this.translate.instant('profile.toast_profile_save_error');
                     this.toast.error(detail);
                     this.cdr.detectChanges();
                 },
@@ -335,11 +340,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
         if (input) input.value = '';
         if (!file) return;
         if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-            this.toast.error('Formato no permitido. Usa PNG, JPG o WebP.');
+            this.toast.error(this.translate.instant('profile.toast_avatar_bad_format'));
             return;
         }
         if (file.size > 2 * 1024 * 1024) {
-            this.toast.error('La imagen pesa más de 2 MB.');
+            this.toast.error(this.translate.instant('profile.toast_avatar_too_large'));
             return;
         }
         this.isUploadingAvatar = true;
@@ -348,13 +353,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: () => {
                     this.isUploadingAvatar = false;
-                    this.toast.success('Foto de perfil actualizada.');
+                    this.toast.success(this.translate.instant('profile.toast_avatar_updated'));
                     this.refreshActivity();
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
                     this.isUploadingAvatar = false;
-                    this.toast.error(err?.error?.detail || 'No se pudo subir la imagen.');
+                    this.toast.error(err?.error?.detail || this.translate.instant('profile.toast_avatar_upload_error'));
                     this.cdr.detectChanges();
                 },
             });
@@ -365,8 +370,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.authService.deleteAvatar()
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => this.toast.success('Foto de perfil eliminada.'),
-                error: () => this.toast.error('No se pudo eliminar la foto.'),
+                next: () => this.toast.success(this.translate.instant('profile.toast_avatar_removed')),
+                error: () => this.toast.error(this.translate.instant('profile.toast_avatar_remove_error')),
             });
     }
 
@@ -383,17 +388,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
         if (!this.pwd.current || !this.pwd.new || !this.pwd.confirm) {
             this.isError = true;
-            this.msg = 'Por favor completa todos los campos.';
+            this.msg = this.translate.instant('profile.pwd_fill_all');
             return;
         }
         if (this.pwd.new.length < 6) {
             this.isError = true;
-            this.msg = 'La nueva contraseña debe tener al menos 6 caracteres.';
+            this.msg = this.translate.instant('profile.pwd_min_length');
             return;
         }
         if (this.pwd.new !== this.pwd.confirm) {
             this.isError = true;
-            this.msg = 'Las nuevas contraseñas no coinciden.';
+            this.msg = this.translate.instant('profile.pwd_mismatch');
             return;
         }
         this.isChangingPassword = true;
@@ -401,17 +406,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (res) => {
-                    this.msg = res?.msg || 'Contraseña actualizada correctamente.';
+                    this.msg = res?.msg || this.translate.instant('profile.pwd_updated');
                     this.isError = false;
                     this.pwd = { current: '', new: '', confirm: '' };
                     this.isChangingPassword = false;
-                    this.toast.success('Contraseña actualizada.');
+                    this.toast.success(this.translate.instant('profile.toast_pwd_updated'));
                     this.refreshActivity();
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
                     this.isError = true;
-                    this.msg = err?.error?.detail || 'Error al actualizar contraseña.';
+                    this.msg = err?.error?.detail || this.translate.instant('profile.pwd_update_error');
                     this.isChangingPassword = false;
                     this.cdr.detectChanges();
                 },
@@ -436,12 +441,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
                         this.isProcessing2FA = false;
                         this.twoFactorEmailSent = r?.email || this.user?.email || '';
                         this.twoFactorModalStep = 'enable-code';
-                        this.toast.success('Te enviamos un código a tu correo.');
+                        this.toast.success(this.translate.instant('profile.tfa_code_sent'));
                         this.cdr.detectChanges();
                     },
                     error: (err) => {
                         this.isProcessing2FA = false;
-                        this.toast.error(err?.error?.detail || 'No se pudo iniciar la activación 2FA.');
+                        this.toast.error(err?.error?.detail || this.translate.instant('profile.tfa_init_error'));
                         this.cdr.detectChanges();
                     },
                 });
@@ -458,7 +463,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     confirmTwoFactor(): void {
         if (!this.twoFactorCode || this.twoFactorCode.trim().length < 6) {
-            this.twoFactorError = 'Introduce el código de 6 dígitos.';
+            this.twoFactorError = this.translate.instant('profile.tfa_code_format');
             return;
         }
         this.isProcessing2FA = true;
@@ -468,13 +473,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: () => {
                     this.isProcessing2FA = false;
-                    this.toast.success('Autenticación en dos pasos activada.');
+                    this.toast.success(this.translate.instant('profile.tfa_enabled'));
                     this.refreshActivity();
                     this.closeTwoFactorModal();
                 },
                 error: (err) => {
                     this.isProcessing2FA = false;
-                    this.twoFactorError = err?.error?.detail || 'Código incorrecto.';
+                    this.twoFactorError = err?.error?.detail || this.translate.instant('profile.tfa_invalid_code');
                     this.cdr.detectChanges();
                 },
             });
@@ -482,7 +487,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     disableTwoFactor(): void {
         if (!this.twoFactorPassword) {
-            this.twoFactorError = 'Introduce tu contraseña para desactivar 2FA.';
+            this.twoFactorError = this.translate.instant('profile.tfa_password_required');
             return;
         }
         this.isProcessing2FA = true;
@@ -492,13 +497,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: () => {
                     this.isProcessing2FA = false;
-                    this.toast.success('Autenticación en dos pasos desactivada.');
+                    this.toast.success(this.translate.instant('profile.tfa_disabled'));
                     this.refreshActivity();
                     this.closeTwoFactorModal();
                 },
                 error: (err) => {
                     this.isProcessing2FA = false;
-                    this.twoFactorError = err?.error?.detail || 'No se pudo desactivar 2FA.';
+                    this.twoFactorError = err?.error?.detail || this.translate.instant('profile.tfa_disable_error');
                     this.cdr.detectChanges();
                 },
             });
@@ -511,12 +516,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: () => {
                     this.isProcessing2FA = false;
-                    this.toast.success('Nuevo código enviado.');
+                    this.toast.success(this.translate.instant('profile.tfa_code_resent'));
                     this.cdr.detectChanges();
                 },
                 error: () => {
                     this.isProcessing2FA = false;
-                    this.toast.error('No se pudo reenviar el código.');
+                    this.toast.error(this.translate.instant('profile.tfa_resend_error'));
                     this.cdr.detectChanges();
                 },
             });
@@ -535,13 +540,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
                 next: (server) => {
                     this.notif = { ...this.notif, ...server };
                     this.isSavingNotif = false;
-                    this.toast.success('Preferencias de notificación actualizadas.');
+                    this.toast.success(this.translate.instant('profile.notif_prefs_updated'));
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
                     this.notif = { ...this.notif, [key]: prev };
                     this.isSavingNotif = false;
-                    const detail = err?.error?.detail || 'No se pudieron guardar las preferencias.';
+                    const detail = err?.error?.detail || this.translate.instant('profile.notif_prefs_error');
                     this.toast.error(detail);
                     this.cdr.detectChanges();
                 },
@@ -554,16 +559,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: (r) => {
                     const n = r?.marked ?? 0;
-                    if (n > 0) this.toast.success(`${n} notificación${n === 1 ? '' : 'es'} marcada${n === 1 ? '' : 's'} como leída${n === 1 ? '' : 's'}.`);
-                    else this.toast.info('No hay notificaciones pendientes.');
+                    if (n > 0) {
+                        this.toast.success(n === 1
+                            ? this.translate.instant('profile.notif_marked_one')
+                            : this.translate.instant('profile.notif_marked_other', { count: n }));
+                    } else {
+                        this.toast.info(this.translate.instant('profile.notif_no_pending'));
+                    }
                 },
-                error: () => this.toast.error('No se pudo marcar las notificaciones.'),
+                error: () => this.toast.error(this.translate.instant('profile.notif_mark_error')),
             });
     }
 
     onUiPrefChange(key: string, value: any): void {
         (this.preferences as any).set(key, value);
-        this.toast.success('Preferencia actualizada.');
+        this.toast.success(this.translate.instant('profile.pref_updated'));
     }
 
     // ============================================================

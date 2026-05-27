@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -74,15 +74,20 @@ export class TemplatesComponent implements OnInit {
     activeCategory: string = 'all';
     detailTab: DetailTab = 'preview';
 
-    readonly categories: CategoryDef[] = [
-        { id: 'all',      label: 'Todas las plantillas' },
-        { id: 'meeting',  label: 'Reunión' },
-        { id: 'project',  label: 'Gestión de proyectos' },
-        { id: 'reports',  label: 'Reportes' },
-        { id: 'finance',  label: 'Finanzas' },
-        { id: 'comms',    label: 'Comunicación' },
-        { id: 'strategy', label: 'Estrategia' },
-    ];
+    /** Categorías visibles en el sidebar. Resueltas dinámicamente desde
+     *  i18n — getter en vez de literal estático para que cambien de idioma
+     *  cuando el usuario cambia el switch del topbar. */
+    get categories(): CategoryDef[] {
+        return [
+            { id: 'all',      label: this.translate.instant('templates.msg_cat_all') },
+            { id: 'meeting',  label: this.translate.instant('templates.msg_cat_meeting') },
+            { id: 'project',  label: this.translate.instant('templates.msg_cat_project') },
+            { id: 'reports',  label: this.translate.instant('templates.msg_cat_reports') },
+            { id: 'finance',  label: this.translate.instant('templates.msg_cat_finance') },
+            { id: 'comms',    label: this.translate.instant('templates.msg_cat_comms') },
+            { id: 'strategy', label: this.translate.instant('templates.msg_cat_strategy') },
+        ];
+    }
 
     // ----- Datos derivados de styleConfig (metadata "shadow") --------
 
@@ -108,13 +113,13 @@ export class TemplatesComponent implements OnInit {
             if (found) return { id: explicit, label: found.label };
         }
         const name = (t?.name || '').toLowerCase();
-        if (/reuni|sesi|acta|minut/.test(name))                return { id: 'meeting',  label: 'Reunión' };
-        if (/proyecto|plan|riesg|matriz|acci[oó]n/.test(name)) return { id: 'project',  label: 'Gestión de proyectos' };
-        if (/reporte|status|resumen|ejecutiv/.test(name))      return { id: 'reports',  label: 'Reportes' };
-        if (/finan|presup|budget|cost/.test(name))             return { id: 'finance',  label: 'Finanzas' };
-        if (/correo|email|notific|comunic|mensaj/.test(name))  return { id: 'comms',    label: 'Comunicación' };
-        if (/estrat|kickoff|roadmap/.test(name))               return { id: 'strategy', label: 'Estrategia' };
-        return { id: 'meeting', label: 'Reunión' };
+        if (/reuni|sesi|acta|minut/.test(name))                return { id: 'meeting',  label: this.translate.instant('templates.msg_cat_meeting') };
+        if (/proyecto|plan|riesg|matriz|acci[oó]n/.test(name)) return { id: 'project',  label: this.translate.instant('templates.msg_cat_project') };
+        if (/reporte|status|resumen|ejecutiv/.test(name))      return { id: 'reports',  label: this.translate.instant('templates.msg_cat_reports') };
+        if (/finan|presup|budget|cost/.test(name))             return { id: 'finance',  label: this.translate.instant('templates.msg_cat_finance') };
+        if (/correo|email|notific|comunic|mensaj/.test(name))  return { id: 'comms',    label: this.translate.instant('templates.msg_cat_comms') };
+        if (/estrat|kickoff|roadmap/.test(name))               return { id: 'strategy', label: this.translate.instant('templates.msg_cat_strategy') };
+        return { id: 'meeting', label: this.translate.instant('templates.msg_cat_meeting') };
     }
 
     /** Estado real persistido. Default = active. */
@@ -122,9 +127,9 @@ export class TemplatesComponent implements OnInit {
         const meta = this.metaOf(t);
         const key: TemplateStatus = meta.status || 'active';
         const labels: { [k in TemplateStatus]: string } = {
-            active:   'Activa',
-            inactive: 'Inactiva',
-            archived: 'Archivada',
+            active:   this.translate.instant('templates.msg_st_active'),
+            inactive: this.translate.instant('templates.msg_st_inactive'),
+            archived: this.translate.instant('templates.msg_st_archived'),
         };
         return { key, label: labels[key] };
     }
@@ -154,27 +159,54 @@ export class TemplatesComponent implements OnInit {
         if (isNaN(d.getTime())) return '';
         const diffMs = Date.now() - d.getTime();
         const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-        if (days === 0) return 'hoy';
-        if (days === 1) return 'hace 1 día';
-        if (days < 30) return `hace ${days} días`;
+        if (days === 0) return this.translate.instant('templates.msg_today');
+        if (days === 1) return this.translate.instant('templates.msg_ago_1_day');
+        if (days < 30) return this.translate.instant('templates.msg_ago_days', { count: days });
         const months = Math.floor(days / 30);
-        return months === 1 ? 'hace 1 mes' : `hace ${months} meses`;
+        return months === 1
+            ? this.translate.instant('templates.msg_ago_1_month')
+            : this.translate.instant('templates.msg_ago_months', { count: months });
     }
     descriptionOf(t: any): string {
         const explicit = this.metaOf(t).description;
         if (explicit) return explicit;
         const type = this.typeOf(t).label;
-        return `Plantilla de ${type.toLowerCase()} con estructura preconfigurada.`;
+        return this.translate.instant('templates.msg_desc_default', { type: type.toLowerCase() });
     }
     useCasesOf(t: any): string[] {
         const type = this.typeOf(t).id;
+        const T = (k: string) => this.translate.instant(k);
         switch (type) {
-            case 'meeting':  return ['Reuniones de equipo', 'Sincronizaciones internas', 'Reuniones con cliente', 'Comités directivos'];
-            case 'project':  return ['Kickoffs', 'Seguimiento de tareas', 'Matriz de riesgos', 'Status semanal'];
-            case 'reports':  return ['Reporte ejecutivo', 'Status del cliente', 'KPIs mensuales'];
-            case 'finance':  return ['Revisión presupuestal', 'Análisis financiero'];
-            case 'comms':    return ['Updates internos', 'Notificaciones a equipo', 'Correos de seguimiento'];
-            case 'strategy': return ['Planeación trimestral', 'Roadmap product'];
+            case 'meeting':  return [
+                T('templates.msg_uc_team_meetings'),
+                T('templates.msg_uc_internal_sync'),
+                T('templates.msg_uc_client_meetings'),
+                T('templates.msg_uc_steering_committees'),
+            ];
+            case 'project':  return [
+                T('templates.msg_uc_kickoffs'),
+                T('templates.msg_uc_task_tracking'),
+                T('templates.msg_uc_risk_matrix'),
+                T('templates.msg_uc_weekly_status'),
+            ];
+            case 'reports':  return [
+                T('templates.msg_uc_exec_report'),
+                T('templates.msg_uc_client_status'),
+                T('templates.msg_uc_monthly_kpis'),
+            ];
+            case 'finance':  return [
+                T('templates.msg_uc_budget_review'),
+                T('templates.msg_uc_financial_analysis'),
+            ];
+            case 'comms':    return [
+                T('templates.msg_uc_internal_updates'),
+                T('templates.msg_uc_team_notifications'),
+                T('templates.msg_uc_followup_emails'),
+            ];
+            case 'strategy': return [
+                T('templates.msg_uc_quarterly_planning'),
+                T('templates.msg_uc_product_roadmap'),
+            ];
         }
         return [];
     }
@@ -217,25 +249,31 @@ export class TemplatesComponent implements OnInit {
     // ============================================================
     // CONFIGURADOR (drag & drop)
     // ============================================================
-    allPossibleTokens = [
-        { id: 'meta',         label: 'Cabecera (Título, Fecha, Estado)' },
-        { id: 'attendees',    label: 'Lista de Asistentes' },
-        { id: 'summary',      label: 'Resumen Ejecutivo' },
-        { id: 'decisions',    label: 'Decisiones Clave' },
-        { id: 'risks',        label: 'Riesgos Identificados' },
-        { id: 'agreements',   label: 'Acuerdos' },
-        { id: 'action_items', label: 'Tabla de Tareas/Compromisos' }
-    ];
+    /** Tokens disponibles para construir la plantilla. Getter dinámico para
+     *  que los labels reflejen el idioma activo. */
+    get allPossibleTokens(): { id: string; label: string }[] {
+        return [
+            { id: 'meta',         label: this.translate.instant('templates.msg_token_meta') },
+            { id: 'attendees',    label: this.translate.instant('templates.msg_token_attendees') },
+            { id: 'summary',      label: this.translate.instant('templates.msg_token_summary') },
+            { id: 'decisions',    label: this.translate.instant('templates.msg_token_decisions') },
+            { id: 'risks',        label: this.translate.instant('templates.msg_token_risks') },
+            { id: 'agreements',   label: this.translate.instant('templates.msg_token_agreements') },
+            { id: 'action_items', label: this.translate.instant('templates.msg_token_action_items') },
+        ];
+    }
 
-    readonly tokenDescriptions: { [k: string]: string } = {
-        meta:         'Identificación general de la sesión.',
-        attendees:    'Lista de participantes de la reunión.',
-        summary:      'Resumen de los puntos clave tratados.',
-        decisions:    'Decisiones y acuerdos principales.',
-        risks:        'Riesgos y temas críticos identificados.',
-        agreements:   'Detalles de los acuerdos y compromisos.',
-        action_items: 'Tareas asignadas y seguimiento.',
-    };
+    get tokenDescriptions(): { [k: string]: string } {
+        return {
+            meta:         this.translate.instant('templates.msg_token_desc_meta'),
+            attendees:    this.translate.instant('templates.msg_token_desc_attendees'),
+            summary:      this.translate.instant('templates.msg_token_desc_summary'),
+            decisions:    this.translate.instant('templates.msg_token_desc_decisions'),
+            risks:        this.translate.instant('templates.msg_token_desc_risks'),
+            agreements:   this.translate.instant('templates.msg_token_desc_agreements'),
+            action_items: this.translate.instant('templates.msg_token_desc_action_items'),
+        };
+    }
 
     availableTokens: any[] = [];
     activeTokens: any[] = [];
@@ -249,6 +287,7 @@ export class TemplatesComponent implements OnInit {
         private cdr: ChangeDetectorRef,
         private router: Router,
         private sanitizer: DomSanitizer,
+        private translate: TranslateService,
     ) { }
 
     ngOnInit() { this.loadData(); }
@@ -273,7 +312,7 @@ export class TemplatesComponent implements OnInit {
                 this.cdr.detectChanges();
             },
             error: () => {
-                this.errorMsg = 'Error al cargar plantillas';
+                this.errorMsg = this.translate.instant('templates.msg_load_failed');
                 this.isLoading = false;
                 this.cdr.detectChanges();
             }
@@ -300,7 +339,7 @@ export class TemplatesComponent implements OnInit {
      *  basta un anchor con download attribute. */
     downloadTemplate(t: any): void {
         if (!t?.file_path) {
-            this.errorMsg = 'Esta plantilla no tiene archivo cargado.';
+            this.errorMsg = this.translate.instant('templates.msg_no_file_loaded');
             return;
         }
         const a = document.createElement('a');
@@ -336,26 +375,30 @@ export class TemplatesComponent implements OnInit {
         this.editingTemplateId = null;          // forzar nueva subida
         this.selectedFile = null;
         this.selectedProjectId = t.project_id || '';
-        this.templateName = `Copia de ${t.name || 'Plantilla'}`;
+        this.templateName = this.translate.instant('templates.msg_copy_of', {
+            name: t.name || this.translate.instant('templates.msg_template_fallback_name'),
+        });
         this.templateType = this.typeOf(t).id;
         this.templateDescription = this.descriptionOf(t);
         this.showUploadModal = true;
-        this.successMsg = 'Sube un archivo .docx (puedes descargar el original primero) para crear la copia.';
+        this.successMsg = this.translate.instant('templates.msg_upload_original_first');
     }
 
     /** Toggle Activa ↔ Inactiva. Cualquier estado → "active" → "inactive". */
     toggleActive(t: any): void {
         const current = this.statusOf(t).key;
         const next: TemplateStatus = current === 'active' ? 'inactive' : 'active';
-        const label = next === 'active' ? 'Plantilla activada' : 'Plantilla inactivada';
+        const label = next === 'active'
+            ? this.translate.instant('templates.msg_status_activated')
+            : this.translate.instant('templates.msg_status_inactivated');
         this.persistMeta(t, { status: next }, 'status_changed', label);
     }
 
     /** Archiva la plantilla — distinto de eliminar: queda oculta del listado
      *  default pero recuperable filtrando por archivadas. */
     archiveTemplate(t: any): void {
-        if (!confirm('¿Archivar esta plantilla? No se eliminará del backend.')) return;
-        this.persistMeta(t, { status: 'archived' }, 'archived', 'Plantilla archivada');
+        if (!confirm(this.translate.instant('templates.msg_archive_confirm'))) return;
+        this.persistMeta(t, { status: 'archived' }, 'archived', this.translate.instant('templates.msg_status_archived'));
     }
 
     /** Persiste cambios de metadata en style_config (PUT /templates/:id/mapping)
@@ -389,12 +432,12 @@ export class TemplatesComponent implements OnInit {
             next: () => {
                 t.style_config = payload.style_config;
                 if (this.selectedTemplate?.id === t.id) this.selectedTemplate = { ...t };
-                this.successMsg = 'Cambios guardados.';
+                this.successMsg = this.translate.instant('templates.msg_changes_saved');
                 this.cdr.detectChanges();
                 setTimeout(() => { this.successMsg = ''; this.cdr.detectChanges(); }, 1500);
             },
             error: () => {
-                this.errorMsg = 'No se pudo guardar el cambio.';
+                this.errorMsg = this.translate.instant('templates.msg_change_save_failed');
                 this.cdr.detectChanges();
             }
         });
@@ -431,7 +474,7 @@ export class TemplatesComponent implements OnInit {
                 history: [{
                     at: new Date().toISOString(),
                     action: 'created',
-                    label: 'Plantilla importada al historial',
+                    label: this.translate.instant('templates.msg_imported_to_history'),
                 }],
             };
             let styleObj: any = {};
@@ -466,13 +509,13 @@ export class TemplatesComponent implements OnInit {
     historyLabel(e: HistoryEntry): string {
         if (e.label) return e.label;
         switch (e.action) {
-            case 'created':         return 'Plantilla creada';
-            case 'updated':         return 'Plantilla actualizada';
-            case 'file_replaced':   return 'Archivo Word reemplazado';
-            case 'configured':      return 'Bloques y estilos configurados';
-            case 'status_changed':  return 'Cambio de estado';
-            case 'archived':        return 'Plantilla archivada';
-            default:                return 'Cambio guardado';
+            case 'created':         return this.translate.instant('templates.msg_history_created');
+            case 'updated':         return this.translate.instant('templates.msg_history_updated');
+            case 'file_replaced':   return this.translate.instant('templates.msg_history_file_replaced');
+            case 'configured':      return this.translate.instant('templates.msg_history_configured');
+            case 'status_changed':  return this.translate.instant('templates.msg_history_status_changed');
+            case 'archived':        return this.translate.instant('templates.msg_history_archived');
+            default:                return this.translate.instant('templates.msg_history_default');
         }
     }
 
@@ -491,11 +534,13 @@ export class TemplatesComponent implements OnInit {
         const d = new Date(e.at);
         if (isNaN(d.getTime())) return '';
         const days = Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
-        if (days === 0) return 'hoy';
-        if (days === 1) return 'ayer';
-        if (days < 30) return `hace ${days} días`;
+        if (days === 0) return this.translate.instant('templates.msg_today');
+        if (days === 1) return this.translate.instant('templates.msg_yesterday');
+        if (days < 30) return this.translate.instant('templates.msg_ago_days', { count: days });
         const months = Math.floor(days / 30);
-        return months === 1 ? 'hace 1 mes' : `hace ${months} meses`;
+        return months === 1
+            ? this.translate.instant('templates.msg_ago_1_month')
+            : this.translate.instant('templates.msg_ago_months', { count: months });
     }
 
     // ============================================================
@@ -558,7 +603,7 @@ export class TemplatesComponent implements OnInit {
     previewTemplate: any = null;
     openPreviewModal(t: any): void {
         if (!t?.file_path) {
-            this.errorMsg = 'Esta plantilla no tiene archivo para previsualizar.';
+            this.errorMsg = this.translate.instant('templates.msg_no_file_to_preview');
             return;
         }
         this.previewTemplate = t;
@@ -585,7 +630,7 @@ export class TemplatesComponent implements OnInit {
                 this.selectedFile = file;
                 this.errorMsg = '';
             } else {
-                this.errorMsg = 'Solo se permiten archivos de formato Word (.docx)';
+                this.errorMsg = this.translate.instant('templates.msg_only_docx');
                 this.selectedFile = null;
             }
         }
@@ -651,8 +696,10 @@ export class TemplatesComponent implements OnInit {
                     ? (this.selectedFile ? 'file_replaced' : 'updated')
                     : 'created';
                 const historyLabel = this.editingTemplateId
-                    ? (this.selectedFile ? 'Archivo Word reemplazado' : 'Plantilla actualizada')
-                    : 'Plantilla creada';
+                    ? (this.selectedFile
+                        ? this.translate.instant('templates.msg_history_file_replaced')
+                        : this.translate.instant('templates.msg_history_updated'))
+                    : this.translate.instant('templates.msg_history_created');
                 const newHistory = this._appendHistory(prevMeta.history, action, historyLabel);
                 const meta: TemplateMeta = {
                     type: this.templateType,
@@ -664,8 +711,8 @@ export class TemplatesComponent implements OnInit {
                 this.persistMetaById(newId, meta).subscribe({
                     next: () => {
                         this.successMsg = this.editingTemplateId
-                            ? 'Plantilla actualizada exitosamente'
-                            : 'Documento subido. Ahora configura los bloques del Word.';
+                            ? this.translate.instant('templates.msg_template_updated')
+                            : this.translate.instant('templates.msg_doc_uploaded_configure_blocks');
                         this.loadData();
                         this.isUploading = false;
                         if (!this.editingTemplateId) {
@@ -676,12 +723,12 @@ export class TemplatesComponent implements OnInit {
                     },
                     error: () => {
                         this.isUploading = false;
-                        this.errorMsg = 'Plantilla subida pero falló la metadata.';
+                        this.errorMsg = this.translate.instant('templates.msg_metadata_failed');
                     }
                 });
             },
             error: (err) => {
-                this.errorMsg = err.error?.detail || 'Error al guardar la plantilla.';
+                this.errorMsg = err.error?.detail || this.translate.instant('templates.msg_save_failed');
                 this.isUploading = false;
             }
         });
@@ -804,7 +851,7 @@ export class TemplatesComponent implements OnInit {
         const meta: TemplateMeta = existing ? this.metaOf(existing) : {};
         meta.updated_at = new Date().toISOString();
         meta.history = this._appendHistory(meta.history, 'configured',
-            `Configurados ${this.activeTokens.length} bloque(s) y estilos del documento`);
+            this.translate.instant('templates.msg_blocks_configured_label', { count: this.activeTokens.length }));
 
         const mappingPayload = {
             mapping_config: JSON.stringify(this.activeTokens.map(t => t.id)),
@@ -815,7 +862,7 @@ export class TemplatesComponent implements OnInit {
             headers: this.authService.getAuthHeaders()
         }).subscribe({
             next: () => {
-                this.saveMappingSuccessMsg = 'Configuración y estilos guardados correctamente.';
+                this.saveMappingSuccessMsg = this.translate.instant('templates.msg_config_saved');
                 this.isSavingMapping = false;
                 this.loadData();
                 setTimeout(() => {
@@ -825,7 +872,9 @@ export class TemplatesComponent implements OnInit {
             },
             error: (err) => {
                 this.isSavingMapping = false;
-                this.errorMsg = 'Error al guardar el mapeo: ' + (err.error?.detail || err.message);
+                this.errorMsg = this.translate.instant('templates.msg_mapping_save_failed', {
+                    detail: err.error?.detail || err.message,
+                });
             }
         });
     }
@@ -833,7 +882,7 @@ export class TemplatesComponent implements OnInit {
     isDeleting = false;
 
     deleteTemplate(templateId: number) {
-        if (!confirm('¿Estás seguro de que deseas eliminar esta plantilla?')) return;
+        if (!confirm(this.translate.instant('templates.msg_delete_confirm'))) return;
 
         this.isDeleting = true;
         this.errorMsg = '';
@@ -848,12 +897,12 @@ export class TemplatesComponent implements OnInit {
                     this.selectedTemplate = this.templates[0] || null;
                 }
                 this.isDeleting = false;
-                this.successMsg = 'Plantilla eliminada exitosamente';
+                this.successMsg = this.translate.instant('templates.msg_deleted');
                 this.cdr.detectChanges();
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al eliminar la plantilla';
+                this.errorMsg = err.error?.detail || this.translate.instant('templates.msg_delete_failed');
                 this.isDeleting = false;
                 this.cdr.detectChanges();
             }

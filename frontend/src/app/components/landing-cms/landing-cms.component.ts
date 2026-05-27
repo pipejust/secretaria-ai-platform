@@ -5,7 +5,7 @@ import {
     inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
@@ -74,6 +74,7 @@ export class LandingCmsComponent implements OnInit {
     private readonly auth = inject(AuthService);
     private readonly toast = inject(ToastService);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly translate = inject(TranslateService);
 
     /** Modelo editable. Empieza vacío hasta que `ngOnInit` lo carga. */
     content: LandingContent | null = null;
@@ -196,7 +197,7 @@ export class LandingCmsComponent implements OnInit {
     async ngOnInit(): Promise<void> {
         const token = this.auth.token;
         if (!token) {
-            this.loadError = 'Tu sesión expiró. Vuelve a iniciar sesión.';
+            this.loadError = this.translate.instant('landing_cms.msg_session_expired');
             this.isLoading = false;
             return;
         }
@@ -210,8 +211,8 @@ export class LandingCmsComponent implements OnInit {
             this.content = data;
             this.originalSnapshot = JSON.stringify(data);
         } catch (err: any) {
-            const detail = err?.error?.detail || err?.message || 'Error desconocido.';
-            this.loadError = `No se pudo cargar el contenido: ${detail}`;
+            const detail = err?.error?.detail || err?.message || this.translate.instant('landing_cms.msg_unknown_error');
+            this.loadError = this.translate.instant('landing_cms.msg_load_failed', { detail });
             this.toast.error(this.loadError);
         } finally {
             this.isLoading = false;
@@ -224,9 +225,7 @@ export class LandingCmsComponent implements OnInit {
      *  traducciones del nuevo idioma desde server). */
     async changeEditLang(newLang: 'es' | 'ca' | 'en'): Promise<void> {
         if (newLang === this.editLang) return;
-        if (this.isDirty && !confirm(
-            'Tenés cambios sin guardar en este idioma. Si cambiás de idioma se descartarán. ¿Continuar?',
-        )) return;
+        if (this.isDirty && !confirm(this.translate.instant('landing_cms.msg_change_lang_confirm'))) return;
         this.editLang = newLang;
         const token = this.auth.token;
         if (token) await this._reloadForLang(token);
@@ -257,7 +256,7 @@ export class LandingCmsComponent implements OnInit {
         if (!this.content || this.isSaving) return;
         const token = this.auth.token;
         if (!token) {
-            this.toast.error('Tu sesión expiró. Vuelve a iniciar sesión.');
+            this.toast.error(this.translate.instant('landing_cms.msg_session_expired'));
             return;
         }
         this.isSaving = true;
@@ -265,10 +264,12 @@ export class LandingCmsComponent implements OnInit {
             const updated = await this.cms.save(this.content, token, this.editLang);
             this.content = updated;
             this.originalSnapshot = JSON.stringify(updated);
-            this.toast.success(`Contenido del landing guardado en ${this.editLang.toUpperCase()}.`);
+            this.toast.success(this.translate.instant('landing_cms.msg_saved_in_lang', {
+                lang: this.editLang.toUpperCase(),
+            }));
         } catch (err: any) {
-            const detail = err?.error?.detail || err?.message || 'Error desconocido.';
-            this.toast.error(`No se pudo guardar: ${detail}`);
+            const detail = err?.error?.detail || err?.message || this.translate.instant('landing_cms.msg_unknown_error');
+            this.toast.error(this.translate.instant('landing_cms.msg_save_failed', { detail }));
         } finally {
             this.isSaving = false;
             this.cdr.detectChanges();
@@ -277,20 +278,20 @@ export class LandingCmsComponent implements OnInit {
 
     cancelChanges(): void {
         if (!this.originalSnapshot) return;
-        if (this.isDirty && !confirm('Vas a descartar los cambios sin guardar. ¿Continuar?')) {
+        if (this.isDirty && !confirm(this.translate.instant('landing_cms.msg_discard_confirm'))) {
             return;
         }
         this.content = JSON.parse(this.originalSnapshot);
-        this.toast.info('Cambios descartados.');
+        this.toast.info(this.translate.instant('landing_cms.msg_changes_discarded'));
     }
 
     async resetToDefaults(): Promise<void> {
-        if (!confirm('Esto reemplaza TODO el contenido del landing con los defaults de fábrica. ¿Seguro?')) {
+        if (!confirm(this.translate.instant('landing_cms.msg_reset_confirm'))) {
             return;
         }
         const token = this.auth.token;
         if (!token) {
-            this.toast.error('Tu sesión expiró.');
+            this.toast.error(this.translate.instant('landing_cms.msg_session_expired_short'));
             return;
         }
         this.isResetting = true;
@@ -298,10 +299,10 @@ export class LandingCmsComponent implements OnInit {
             const fresh = await this.cms.reset(token);
             this.content = fresh;
             this.originalSnapshot = JSON.stringify(fresh);
-            this.toast.success('Contenido restaurado a los defaults de fábrica.');
+            this.toast.success(this.translate.instant('landing_cms.msg_reset_success'));
         } catch (err: any) {
-            const detail = err?.error?.detail || err?.message || 'Error desconocido.';
-            this.toast.error(`No se pudo restablecer: ${detail}`);
+            const detail = err?.error?.detail || err?.message || this.translate.instant('landing_cms.msg_unknown_error');
+            this.toast.error(this.translate.instant('landing_cms.msg_reset_failed', { detail }));
         } finally {
             this.isResetting = false;
             this.cdr.detectChanges();
@@ -324,7 +325,7 @@ export class LandingCmsComponent implements OnInit {
 
     addNavItem(): void {
         if (!this.content) return;
-        this.content.nav.items.push({ label: 'Nuevo enlace', anchor: '#' });
+        this.content.nav.items.push({ label: this.translate.instant('landing_cms.msg_new_link'), anchor: '#' });
     }
     removeNavItem(idx: number): void {
         this.content?.nav.items.splice(idx, 1);
@@ -332,7 +333,7 @@ export class LandingCmsComponent implements OnInit {
 
     addTrustLogo(): void {
         if (!this.content) return;
-        this.content.trust.logos.push('Nueva empresa');
+        this.content.trust.logos.push(this.translate.instant('landing_cms.msg_new_company'));
     }
     removeTrustLogo(idx: number): void {
         this.content?.trust.logos.splice(idx, 1);
@@ -341,8 +342,8 @@ export class LandingCmsComponent implements OnInit {
     addFeature(): void {
         if (!this.content) return;
         const item: FeatureItem = {
-            title: 'Nueva capacidad',
-            description: 'Describe lo que esta capacidad hace por el cliente.',
+            title: this.translate.instant('landing_cms.msg_new_feature'),
+            description: this.translate.instant('landing_cms.msg_feature_default_desc'),
             icon: 'capture',
         };
         this.content.features.items.push(item);
@@ -354,8 +355,8 @@ export class LandingCmsComponent implements OnInit {
     addStep(): void {
         if (!this.content) return;
         const item: StepItem = {
-            title: 'Nuevo paso',
-            description: 'Describe el paso del flujo.',
+            title: this.translate.instant('landing_cms.msg_new_step'),
+            description: this.translate.instant('landing_cms.msg_step_default_desc'),
             icon: 'mic',
         };
         this.content.flow.steps.push(item);
@@ -366,7 +367,7 @@ export class LandingCmsComponent implements OnInit {
 
     addIntegration(): void {
         if (!this.content) return;
-        this.content.integrations.items.push('Nueva integración');
+        this.content.integrations.items.push(this.translate.instant('landing_cms.msg_new_integration'));
     }
     removeIntegration(idx: number): void {
         this.content?.integrations.items.splice(idx, 1);
@@ -400,10 +401,10 @@ export class LandingCmsComponent implements OnInit {
     addTestimonial(): void {
         if (!this.content) return;
         const item: Testimonial = {
-            quote: 'Lo que cambió para nosotros desde que usamos Acten…',
-            name: 'Nombre Apellido',
-            role: 'Cargo',
-            company: 'Empresa',
+            quote: this.translate.instant('landing_cms.msg_default_testimonial_quote'),
+            name: this.translate.instant('landing_cms.msg_default_testimonial_name'),
+            role: this.translate.instant('landing_cms.msg_default_testimonial_role'),
+            company: this.translate.instant('landing_cms.msg_default_testimonial_company'),
             initials: 'NA',
         };
         this.content.testimonials.items.push(item);
@@ -415,12 +416,15 @@ export class LandingCmsComponent implements OnInit {
     addPlan(): void {
         if (!this.content) return;
         const item: PricingPlan = {
-            name: 'Nuevo plan',
+            name: this.translate.instant('landing_cms.msg_new_plan'),
             price: '$0',
-            billing: 'USD / mes',
-            description: 'Describe a quién va dirigido este plan.',
-            features: ['Beneficio 1', 'Beneficio 2'],
-            cta_label: 'Empezar',
+            billing: this.translate.instant('landing_cms.msg_plan_default_billing'),
+            description: this.translate.instant('landing_cms.msg_plan_default_desc'),
+            features: [
+                this.translate.instant('landing_cms.msg_plan_feature_1'),
+                this.translate.instant('landing_cms.msg_plan_feature_2'),
+            ],
+            cta_label: this.translate.instant('landing_cms.msg_plan_cta_start'),
             cta_anchor: '#contact',
             featured: false,
         };
@@ -430,7 +434,7 @@ export class LandingCmsComponent implements OnInit {
         this.content?.pricing.plans.splice(idx, 1);
     }
     addPlanFeature(planIdx: number): void {
-        this.content?.pricing.plans[planIdx]?.features.push('Nuevo beneficio');
+        this.content?.pricing.plans[planIdx]?.features.push(this.translate.instant('landing_cms.msg_new_benefit'));
     }
     removePlanFeature(planIdx: number, featIdx: number): void {
         this.content?.pricing.plans[planIdx]?.features.splice(featIdx, 1);
@@ -439,9 +443,9 @@ export class LandingCmsComponent implements OnInit {
     addResource(): void {
         if (!this.content) return;
         const item: ResourceItem = {
-            category: 'Guía',
-            title: 'Nuevo recurso',
-            description: 'Resumen breve del recurso.',
+            category: this.translate.instant('landing_cms.msg_resource_cat_guide'),
+            title: this.translate.instant('landing_cms.msg_new_resource'),
+            description: this.translate.instant('landing_cms.msg_resource_default_desc'),
             url: '#',
             icon: 'guide',
         };
@@ -454,8 +458,8 @@ export class LandingCmsComponent implements OnInit {
     addValue(): void {
         if (!this.content) return;
         const item: CompanyValue = {
-            title: 'Nuevo valor',
-            description: 'Explica qué significa este valor para el equipo.',
+            title: this.translate.instant('landing_cms.msg_new_value'),
+            description: this.translate.instant('landing_cms.msg_value_default_desc'),
         };
         this.content.company.values.push(item);
     }
@@ -465,7 +469,7 @@ export class LandingCmsComponent implements OnInit {
 
     addStat(): void {
         if (!this.content) return;
-        const item: CompanyStat = { label: 'Nueva métrica', value: '0' };
+        const item: CompanyStat = { label: this.translate.instant('landing_cms.msg_new_metric'), value: '0' };
         this.content.company.stats.push(item);
     }
     removeStat(idx: number): void {
@@ -475,8 +479,8 @@ export class LandingCmsComponent implements OnInit {
     addFooterColumn(): void {
         if (!this.content) return;
         const col: FooterColumn = {
-            title: 'Nueva columna',
-            links: [{ label: 'Nuevo enlace', url: '#' }],
+            title: this.translate.instant('landing_cms.msg_new_column'),
+            links: [{ label: this.translate.instant('landing_cms.msg_new_link'), url: '#' }],
         };
         this.content.footer.columns.push(col);
     }
@@ -484,7 +488,7 @@ export class LandingCmsComponent implements OnInit {
         this.content?.footer.columns.splice(idx, 1);
     }
     addFooterLink(colIdx: number): void {
-        const link: FooterLink = { label: 'Nuevo enlace', url: '#' };
+        const link: FooterLink = { label: this.translate.instant('landing_cms.msg_new_link'), url: '#' };
         this.content?.footer.columns[colIdx]?.links.push(link);
     }
     removeFooterLink(colIdx: number, linkIdx: number): void {
@@ -542,7 +546,7 @@ export class LandingCmsComponent implements OnInit {
     addCaseStudy(): void {
         this.ensureCaseStudies().items.push({
             slug: 'nuevo-' + Date.now(),
-            company: 'Nueva empresa',
+            company: this.translate.instant('landing_cms.msg_new_case_company'),
             tagline: '',
             summary: '',
             kpis: [],
@@ -554,7 +558,7 @@ export class LandingCmsComponent implements OnInit {
         const cs = this.ensureCaseStudies().items[caseIdx];
         if (!cs) return;
         cs.kpis = cs.kpis || [];
-        cs.kpis.push({ label: 'Nueva métrica', value: '0' });
+        cs.kpis.push({ label: this.translate.instant('landing_cms.msg_new_metric'), value: '0' });
     }
     removeCaseKpi(caseIdx: number, kpiIdx: number): void {
         this.ensureCaseStudies().items[caseIdx]?.kpis?.splice(kpiIdx, 1);

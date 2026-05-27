@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -213,6 +213,7 @@ export class UsersComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
+        private translate: TranslateService,
     ) {}
 
     ngOnInit() { this.loadData(); }
@@ -260,7 +261,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                     this.cdr.detectChanges();
                 },
                 error: () => {
-                    this.toast.error('Error al cargar usuarios.');
+                    this.toast.error(this.translate.instant('users.msg_load_users_failed'));
                     this.isLoading = false;
                     this.cdr.detectChanges();
                 },
@@ -310,39 +311,36 @@ export class UsersComponent implements OnInit, OnDestroy {
     /** Validación cliente para el formulario de registro. */
     private validateNewUser(): string | null {
         const u = this.newUser;
-        if (!u.full_name || !u.full_name.trim()) return 'El nombre completo es obligatorio.';
-        if (!u.email || !u.email.trim()) return 'El correo electrónico es obligatorio.';
+        if (!u.full_name || !u.full_name.trim()) return this.translate.instant('users.msg_full_name_required');
+        if (!u.email || !u.email.trim()) return this.translate.instant('users.msg_email_required');
         const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(u.email.trim());
-        if (!emailOk) return 'El correo electrónico no tiene un formato válido.';
+        if (!emailOk) return this.translate.instant('users.msg_email_invalid');
         // Validación de dominio: el email debe pertenecer al mismo SLD que el
         // sitio web de la empresa (sin importar el TLD). El backend también
         // valida — esto es solo para feedback inmediato sin round-trip.
         const tenantSld = this.tenantSld;
         if (!tenantSld) {
-            return (
-                'La empresa no tiene página web configurada. Pedile al administrador ' +
-                'que cargue la URL en Personalización de marca antes de crear usuarios.'
-            );
+            return this.translate.instant('users.msg_no_website_configured');
         }
         const emailSld = extractSld(u.email);
         if (emailSld !== tenantSld) {
-            return (
-                `El email debe ser del dominio '${tenantSld}' (con cualquier extensión: ` +
-                `.com, .co, .net, .app, etc.). El que ingresaste pertenece a '${emailSld || 'otro'}'.`
-            );
+            return this.translate.instant('users.msg_email_domain_mismatch', {
+                tenant: tenantSld,
+                emailSld: emailSld || this.translate.instant('users.msg_other_domain'),
+            });
         }
         // Modo "forzar cambio": el backend autogenera la password temporal,
         // así que NO exigimos password en el form. Solo se valida cuando el
         // admin elige password manual (toggle off).
         if (!u.must_change_password) {
-            if (!u.password || u.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
-            if (u.password !== u.confirm_password) return 'La confirmación de contraseña no coincide.';
+            if (!u.password || u.password.length < 8) return this.translate.instant('users.msg_password_min_length');
+            if (u.password !== u.confirm_password) return this.translate.instant('users.msg_passwords_no_match');
         }
-        if (!u.role_id) return 'Debes seleccionar un rol.';
+        if (!u.role_id) return this.translate.instant('users.msg_role_required');
         if (u.phone) {
             // Validación laxa: dígitos, +, espacios y guiones; mínimo 7 dígitos.
             const digits = u.phone.replace(/\D/g, '');
-            if (digits.length < 7) return 'El teléfono parece incompleto.';
+            if (digits.length < 7) return this.translate.instant('users.msg_phone_invalid');
         }
         return null;
     }
@@ -371,8 +369,8 @@ export class UsersComponent implements OnInit, OnDestroy {
         .subscribe({
             next: (res) => {
                 this.successMsg = res?.temporary_password
-                    ? 'Usuario creado. Mirá abajo la contraseña temporal generada.'
-                    : 'Usuario registrado exitosamente.';
+                    ? this.translate.instant('users.msg_user_created_with_temp')
+                    : this.translate.instant('users.msg_user_registered');
                 this.loadData();
                 this.isCreating = false;
                 // Si vino password temporal, la guardamos para mostrar el banner
@@ -391,7 +389,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
             },
             error: (err) => {
-                this.errorMsg = err?.error?.detail || 'Error al registrar el usuario.';
+                this.errorMsg = err?.error?.detail || this.translate.instant('users.msg_register_failed');
                 this.isCreating = false;
                 this.cdr.detectChanges();
             },
@@ -403,9 +401,9 @@ export class UsersComponent implements OnInit, OnDestroy {
         if (!this.lastCreatedTempPassword) return;
         try {
             await navigator.clipboard.writeText(this.lastCreatedTempPassword);
-            this.toast.success('Contraseña copiada al portapapeles.');
+            this.toast.success(this.translate.instant('users.msg_password_copied'));
         } catch {
-            this.toast.error('No pudimos copiar. Seleccionala manualmente.');
+            this.toast.error(this.translate.instant('users.msg_copy_manual'));
         }
     }
 
@@ -413,9 +411,9 @@ export class UsersComponent implements OnInit, OnDestroy {
      *  temporal y envía email con must_change=true. */
     resendInvitation(user: UserRow): void {
         this.confirmAction({
-            title: 'Reenviar invitación',
-            message: `Se generará una NUEVA contraseña temporal para ${user.full_name || user.email} y se le enviará por correo. La contraseña actual quedará invalidada inmediatamente. ¿Continuar?`,
-            confirmLabel: 'Reenviar',
+            title: this.translate.instant('users.msg_resend_title'),
+            message: this.translate.instant('users.msg_resend_text', { user: user.full_name || user.email }),
+            confirmLabel: this.translate.instant('users.msg_resend_btn'),
             confirmVariant: 'warning',
             action: () => {
                 this.http.post<{ temporary_password?: string }>(
@@ -425,7 +423,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                 ).pipe(takeUntil(this.destroy$)).subscribe({
                     next: (res) => {
                         this.toast.success(
-                            `Invitación reenviada a ${user.email}. Contraseña temporal generada.`,
+                            this.translate.instant('users.msg_invitation_resent_user', { email: user.email }),
                         );
                         if (res?.temporary_password) {
                             this.lastCreatedTempPassword = res.temporary_password;
@@ -439,7 +437,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                         this.cdr.detectChanges();
                     },
                     error: (err) => {
-                        this.toast.error(err?.error?.detail || 'No se pudo reenviar.');
+                        this.toast.error(err?.error?.detail || this.translate.instant('users.msg_resend_failed_short'));
                     },
                 });
             },
@@ -491,10 +489,14 @@ export class UsersComponent implements OnInit, OnDestroy {
                 user.is_active = newStatus;
                 user.status = this.deriveStatus(user);
                 this.cdr.detectChanges();
-                this.toast.success(newStatus ? 'Usuario activado.' : 'Usuario desactivado.');
+                this.toast.success(
+                    newStatus
+                        ? this.translate.instant('users.msg_user_activated')
+                        : this.translate.instant('users.msg_user_deactivated'),
+                );
             },
             error: (err) => {
-                this.toast.error(err?.error?.detail || 'No pude cambiar el estado del usuario.');
+                this.toast.error(err?.error?.detail || this.translate.instant('users.msg_status_change_failed'));
             },
         });
     }
@@ -506,9 +508,9 @@ export class UsersComponent implements OnInit, OnDestroy {
         // (regla pedida por el usuario para toda acción destructiva).
         if (user.is_active) {
             this.confirmAction({
-                title: 'Desactivar usuario',
-                message: `¿Estás seguro de desactivar a ${user.full_name || user.email}? Perderá el acceso a la plataforma hasta que lo actives nuevamente.`,
-                confirmLabel: 'Desactivar',
+                title: this.translate.instant('users.msg_deactivate_title'),
+                message: this.translate.instant('users.msg_deactivate_text', { user: user.full_name || user.email }),
+                confirmLabel: this.translate.instant('users.msg_deactivate_btn'),
                 confirmVariant: 'danger',
                 action: () => this._performToggleStatus(user),
             });
@@ -561,7 +563,7 @@ export class UsersComponent implements OnInit, OnDestroy {
         ).pipe(takeUntil(this.destroy$))
         .subscribe({
             next: (updated) => {
-                this.successMsg = 'Usuario actualizado correctamente.';
+                this.successMsg = this.translate.instant('users.msg_user_updated_form');
                 this.isEditing = false;
                 // Sustituir en la lista + selección sin recargar todo.
                 const idx = this.users.findIndex((u) => u.id === updated.id);
@@ -569,7 +571,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                     this.users[idx] = { ...updated, status: this.deriveStatus(updated) };
                     if (this.selectedUser?.id === updated.id) this.selectedUser = this.users[idx];
                 }
-                this.toast.success('Usuario actualizado.');
+                this.toast.success(this.translate.instant('users.msg_user_updated_toast'));
                 setTimeout(() => {
                     this.showEditModal = false;
                     this.successMsg = '';
@@ -577,7 +579,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                 }, 800);
             },
             error: (err) => {
-                this.errorMsg = err?.error?.detail || 'No pude actualizar el usuario.';
+                this.errorMsg = err?.error?.detail || this.translate.instant('users.msg_update_failed');
                 this.isEditing = false;
                 this.cdr.detectChanges();
             },
@@ -631,11 +633,13 @@ export class UsersComponent implements OnInit, OnDestroy {
     }
     get activePercent(): string {
         if (!this.totalUsers) return '0%';
-        return `${Math.round((this.activeUsers / this.totalUsers) * 1000) / 10}% del total`;
+        const pct = Math.round((this.activeUsers / this.totalUsers) * 1000) / 10;
+        return this.translate.instant('users.msg_percent_of_total', { pct });
     }
     get adminPercent(): string {
         if (!this.totalUsers) return '0%';
-        return `${Math.round((this.adminUsers / this.totalUsers) * 1000) / 10}% del total`;
+        const pct = Math.round((this.adminUsers / this.totalUsers) * 1000) / 10;
+        return this.translate.instant('users.msg_percent_of_total', { pct });
     }
 
     /** Cuántos usuarios fueron creados en el mes en curso. */
@@ -676,12 +680,12 @@ export class UsersComponent implements OnInit, OnDestroy {
         const now = this.newUsersThisMonth;
         const prev = this.newUsersLastMonth;
         if (!now && !prev) {
-            return { dir: 'flat', label: 'Sin cambios este mes' };
+            return { dir: 'flat', label: this.translate.instant('users.msg_no_changes_this_month') };
         }
         const diff = now - prev;
-        if (diff > 0) return { dir: 'up',   label: `+${diff} este mes` };
-        if (diff < 0) return { dir: 'down', label: `${diff} este mes` };
-        return { dir: 'flat', label: 'Igual que el mes pasado' };
+        if (diff > 0) return { dir: 'up',   label: this.translate.instant('users.msg_delta_this_month_pos', { diff }) };
+        if (diff < 0) return { dir: 'down', label: this.translate.instant('users.msg_delta_this_month_neg', { diff }) };
+        return { dir: 'flat', label: this.translate.instant('users.msg_same_as_last_month') };
     }
 
     get roleOptions(): string[] {
@@ -722,10 +726,10 @@ export class UsersComponent implements OnInit, OnDestroy {
     }
     get rangeLabel(): string {
         const total = this.filteredUsers.length;
-        if (!total) return 'Sin usuarios';
+        if (!total) return this.translate.instant('users.msg_no_users_label');
         const start = (this.currentPage - 1) * this.pageLimit + 1;
         const end = Math.min(this.currentPage * this.pageLimit, total);
-        return `Mostrando ${start}-${end} de ${total} usuarios`;
+        return this.translate.instant('users.msg_showing_users_range', { start, end, total });
     }
     goToPage(p: number): void { if (p >= 1 && p <= this.totalPages) this.currentPage = p; }
     changePageLimit(n: number): void { this.pageLimit = n; this.currentPage = 1; }
@@ -752,10 +756,10 @@ export class UsersComponent implements OnInit, OnDestroy {
     // ============================================================
     statusLabel(s?: string): string {
         switch (s) {
-            case 'active':   return 'Activo';
-            case 'inactive': return 'Inactivo';
-            case 'invited':  return 'Invitado';
-            default:         return '—';
+            case 'active':   return this.translate.instant('users.msg_status_active');
+            case 'inactive': return this.translate.instant('users.msg_status_inactive');
+            case 'invited':  return this.translate.instant('users.msg_status_invited');
+            default:         return this.translate.instant('users.msg_status_dash');
         }
     }
     roleBadgeKey(role?: string): string {
@@ -796,7 +800,10 @@ export class UsersComponent implements OnInit, OnDestroy {
     }
 
     formatLastAccess(value?: string | null): { line1: string; line2: string } {
-        if (!value) return { line1: 'Nunca', line2: 'Sin acceso' };
+        if (!value) return {
+            line1: this.translate.instant('users.msg_never_no_access'),
+            line2: this.translate.instant('users.msg_no_access'),
+        };
         const d = new Date(value);
         if (isNaN(d.getTime())) return { line1: '—', line2: '' };
         const now = new Date();
@@ -805,8 +812,12 @@ export class UsersComponent implements OnInit, OnDestroy {
         const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         const time = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
         const longDate = d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
-        if (target.getTime() === today.getTime()) return { line1: `Hoy, ${time}`, line2: longDate };
-        if (target.getTime() === yest.getTime())  return { line1: `Ayer, ${time}`, line2: longDate };
+        if (target.getTime() === today.getTime()) return {
+            line1: this.translate.instant('users.msg_today_at', { time }), line2: longDate,
+        };
+        if (target.getTime() === yest.getTime())  return {
+            line1: this.translate.instant('users.msg_yesterday_at', { time }), line2: longDate,
+        };
         return { line1: longDate, line2: time };
     }
     formatCreationDate(value?: string | null): string {
@@ -828,7 +839,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                           : /Firefox/i.test(ua) ? 'Firefox'
                           : /Safari/i.test(ua)  ? 'Safari'
                           : /Edge/i.test(ua)    ? 'Edge'
-                          : 'Navegador';
+                          : this.translate.instant('users.msg_browser_generic');
             const os = /Mac OS X/i.test(ua) ? 'macOS'
                      : /Windows/i.test(ua)  ? 'Windows'
                      : /Linux/i.test(ua)    ? 'Linux'

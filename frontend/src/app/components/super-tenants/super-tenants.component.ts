@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -81,6 +81,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     private auth = inject(AuthService);
     private toast = inject(ToastService);
     private cdr = inject(ChangeDetectorRef);
+    private translate = inject(TranslateService);
     private apiUrl = `${environment.apiUrl}/api/super/tenants`;
 
     tenants: TenantOut[] = [];
@@ -203,11 +204,15 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
 
     private async _fileToDataUrl(file: File): Promise<string> {
         if (!file.type.startsWith('image/')) {
-            this.errorMsg = `"${file.name}" no es una imagen válida.`;
+            this.errorMsg = this.translate.instant('tenants.msg_file_not_image', { name: file.name });
             return '';
         }
         if (file.size > MAX_BRAND_FILE_BYTES) {
-            this.errorMsg = `"${file.name}" pesa ${(file.size / 1024 / 1024).toFixed(1)} MB. Máximo permitido: ${MAX_BRAND_FILE_BYTES / 1024 / 1024} MB.`;
+            this.errorMsg = this.translate.instant('tenants.msg_file_too_large', {
+                name: file.name,
+                size: (file.size / 1024 / 1024).toFixed(1),
+                max: MAX_BRAND_FILE_BYTES / 1024 / 1024,
+            });
             return '';
         }
         return await new Promise<string>((resolve, reject) => {
@@ -303,7 +308,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                 this.selected = this.tenants[0];
             }
         } catch (err: any) {
-            this.errorMsg = err?.error?.detail || 'No se pudo cargar la lista de empresas.';
+            this.errorMsg = err?.error?.detail || this.translate.instant('tenants.msg_load_failed');
         } finally {
             this.loading = false;
             this.cdr.detectChanges();
@@ -323,41 +328,42 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
 
     private validateCreate(): string | null {
         const f = this.form;
-        if (!f.slug.trim()) return 'El slug es obligatorio.';
+        if (!f.slug.trim()) return this.translate.instant('tenants.msg_slug_required');
         if (!/^[a-z0-9-]+$/.test(f.slug.trim().toLowerCase())) {
-            return 'El slug solo admite minúsculas, números y guiones.';
+            return this.translate.instant('tenants.msg_invalid_slug_chars');
         }
-        if (!f.name.trim()) return 'El nombre legible es obligatorio.';
+        if (!f.name.trim()) return this.translate.instant('tenants.msg_name_required');
         // Sitio web obligatorio — su SLD se usa luego para validar el email
         // de los usuarios que el admin del tenant cree.
         const website = (f.company_website || '').trim();
         if (!website) {
-            return 'El sitio web de la empresa es obligatorio (se usa para validar el dominio de los usuarios).';
+            return this.translate.instant('tenants.msg_website_required');
         }
         if (!/^(https?:\/\/)?[a-z0-9.-]+\.[a-z]{2,}/i.test(website)) {
-            return 'El sitio web no tiene formato válido. Ejemplo: https://tuempresa.com';
+            return this.translate.instant('tenants.msg_website_invalid');
         }
-        if (!f.admin_email.trim()) return 'El email del primer admin es obligatorio.';
+        if (!f.admin_email.trim()) return this.translate.instant('tenants.msg_admin_email_required');
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.admin_email.trim())) {
-            return 'El email del primer admin no tiene un formato válido.';
+            return this.translate.instant('tenants.msg_admin_email_invalid');
         }
         // Si NO está activado "forzar cambio", admin_password es obligatorio
         // y mínimo 8 chars. Si SÍ está activado, el backend autogenera.
         if (!f.admin_must_change_password) {
             if (!f.admin_password || f.admin_password.length < 8) {
-                return 'La contraseña inicial debe tener al menos 8 caracteres (o activá "forzar cambio").';
+                return this.translate.instant('tenants.msg_initial_password_min');
             }
         }
-        if (!f.admin_full_name.trim()) return 'El nombre del admin es obligatorio.';
+        if (!f.admin_full_name.trim()) return this.translate.instant('tenants.msg_admin_name_required');
         // Color hex check — solo si vienen no-vacíos (defaults Acten ya son válidos).
         const hex = /^#[0-9A-Fa-f]{6}$/;
-        for (const [k, v] of [
-            ['primario', f.primary_color],
-            ['secundario', f.secondary_color],
-            ['acento', f.accent_color],
-        ] as const) {
+        const colorChecks: ReadonlyArray<readonly [string, string]> = [
+            [this.translate.instant('tenants.msg_color_primary_lbl'), f.primary_color],
+            [this.translate.instant('tenants.msg_color_secondary_lbl'), f.secondary_color],
+            [this.translate.instant('tenants.msg_color_accent_lbl'), f.accent_color],
+        ];
+        for (const [label, v] of colorChecks) {
             if (v && !hex.test(v)) {
-                return `El color ${k} no es un hex válido (#RRGGBB).`;
+                return this.translate.instant('tenants.msg_color_invalid', { label });
             }
         }
         return null;
@@ -439,7 +445,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                 }, { headers: this._headers() }),
             );
             this.tenants = [...this.tenants, out];
-            this.toast.success(`Empresa '${out.name}' creada correctamente.`);
+            this.toast.success(this.translate.instant('tenants.msg_tenant_created_toast', { name: out.name }));
             this.selected = out;
             this.showCreate = false;
             this.form = this._emptyForm();
@@ -457,7 +463,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                 copiedPassword: false,
             };
         } catch (err: any) {
-            this.errorMsg = err?.error?.detail || 'No se pudo crear la empresa.';
+            this.errorMsg = err?.error?.detail || this.translate.instant('tenants.msg_create_failed');
         } finally {
             this.isCreating = false;
             this.cdr.detectChanges();
@@ -470,10 +476,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     resendTenantInvitation(t: TenantOut, evt?: Event): void {
         if (evt) { evt.stopPropagation(); evt.preventDefault(); }
         this.closeRowMenu();
-        if (!confirm(
-            `Se generará una NUEVA contraseña temporal para el admin de "${t.name}" ` +
-            `y se enviará por correo. La actual quedará invalidada. ¿Continuar?`,
-        )) return;
+        if (!confirm(this.translate.instant('tenants.msg_resend_confirm', { name: t.name }))) return;
         firstValueFrom(
             this.http.post<{ admin_email?: string; temporary_password?: string }>(
                 `${this.apiUrl}/${t.slug}/resend-invitation`,
@@ -481,10 +484,9 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                 { headers: this._headers() },
             ),
         ).then((res) => {
-            this.toast.success(
-                `Invitación reenviada a ${res?.admin_email || 'el admin'}. ` +
-                'Contraseña temporal regenerada.',
-            );
+            this.toast.success(this.translate.instant('tenants.msg_invitation_resent', {
+                email: res?.admin_email || this.translate.instant('tenants.msg_invitation_resent_fallback_admin'),
+            }));
             if (res?.temporary_password) {
                 // Mostramos el banner con la temp password para que el super-admin
                 // la copie si necesita comunicarla manualmente.
@@ -501,7 +503,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             }
             this.cdr.detectChanges();
         }).catch((err) => {
-            this.toast.error(err?.error?.detail || 'No se pudo reenviar la invitación.');
+            this.toast.error(err?.error?.detail || this.translate.instant('tenants.msg_resend_failed'));
         });
     }
 
@@ -519,7 +521,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
             }, 2000);
         } catch {
-            this.toast.error('No se pudo copiar al portapapeles.');
+            this.toast.error(this.translate.instant('tenants.msg_clipboard_failed'));
         }
     }
 
@@ -548,10 +550,14 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
                 this.http.put<TenantOut>(`${this.apiUrl}/${t.slug}`, { is_active: next }, { headers: this._headers() }),
             );
             t.is_active = next;
-            this.toast.success(next ? 'Empresa activada.' : 'Empresa desactivada.');
+            this.toast.success(
+                next
+                    ? this.translate.instant('tenants.msg_tenant_activated')
+                    : this.translate.instant('tenants.msg_tenant_deactivated'),
+            );
             this.cdr.detectChanges();
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo cambiar el estado.');
+            this.toast.error(err?.error?.detail || this.translate.instant('tenants.msg_status_change_failed'));
         }
     }
 
@@ -563,27 +569,27 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         if (t.is_active) {
             if (t.slug === 'acten') {
                 this.confirmAction({
-                    title: 'Tenant principal protegido',
-                    message: `"${t.name}" es el tenant principal de la plataforma y no se puede desactivar. Para deshabilitar el acceso usa los permisos de su rol.`,
-                    confirmLabel: 'Entendido',
+                    title: this.translate.instant('tenants.msg_protected_main_title'),
+                    message: this.translate.instant('tenants.msg_protected_deactivate_text', { name: t.name }),
+                    confirmLabel: this.translate.instant('tenants.msg_understood'),
                     confirmVariant: 'warning',
                     action: () => {}, // No-op: solo informa.
                 });
                 return;
             }
             this.confirmAction({
-                title: 'Desactivar empresa',
-                message: `¿Estás seguro de desactivar a "${t.name}"? Sus usuarios perderán el acceso hasta que la actives nuevamente.`,
-                confirmLabel: 'Desactivar',
+                title: this.translate.instant('tenants.msg_deactivate_title'),
+                message: this.translate.instant('tenants.msg_deactivate_text', { name: t.name }),
+                confirmLabel: this.translate.instant('tenants.msg_deactivate_btn'),
                 confirmVariant: 'danger',
                 action: () => this._performToggleActive(t),
             });
         } else {
             // Activar es seguro → confirm igual para consistencia UX, variante primary.
             this.confirmAction({
-                title: 'Activar empresa',
-                message: `¿Reactivar "${t.name}"? Sus usuarios podrán volver a iniciar sesión.`,
-                confirmLabel: 'Activar',
+                title: this.translate.instant('tenants.msg_activate_title'),
+                message: this.translate.instant('tenants.msg_activate_text', { name: t.name }),
+                confirmLabel: this.translate.instant('tenants.msg_activate_btn'),
                 confirmVariant: 'primary',
                 action: () => this._performToggleActive(t),
             });
@@ -623,12 +629,12 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             t.domain = out.domain;
             const idx = this.tenants.findIndex((x) => x.id === out.id);
             if (idx >= 0) this.tenants[idx] = { ...this.tenants[idx], ...out };
-            this.toast.success(`Dominio actualizado para ${t.name}.`);
+            this.toast.success(this.translate.instant('tenants.msg_domain_updated', { name: t.name }));
             this.showDomainModal = false;
             this.domainTarget = null;
             this.domainValue = '';
         } catch (err: any) {
-            this.errorMsg = err?.error?.detail || 'No se pudo actualizar el dominio.';
+            this.errorMsg = err?.error?.detail || this.translate.instant('tenants.msg_domain_update_failed');
         } finally {
             this.isSavingDomain = false;
             this.cdr.detectChanges();
@@ -716,7 +722,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         if (!this.editForm.slug) return;
         const name = this.editForm.name.trim();
         if (!name || name.length < 2) {
-            this.errorMsg = 'El nombre debe tener al menos 2 caracteres.';
+            this.errorMsg = this.translate.instant('tenants.msg_name_min_length');
             return;
         }
         const init = this.editFormInitial || {};
@@ -775,10 +781,10 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             // Refrescamos para traer branding fresco.
             await this.refresh();
 
-            this.toast.success('Empresa actualizada correctamente.');
+            this.toast.success(this.translate.instant('tenants.msg_tenant_updated'));
             this.showEdit = false;
         } catch (err: any) {
-            this.errorMsg = err?.error?.detail || 'No se pudo actualizar la empresa.';
+            this.errorMsg = err?.error?.detail || this.translate.instant('tenants.msg_update_failed');
         } finally {
             this.isEditing = false;
             this.cdr.detectChanges();
@@ -797,20 +803,22 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
             );
             // Removemos la fila del listado en memoria.
             this.tenants = this.tenants.filter(x => x.slug !== t.slug);
-            const summary = res?.rows_deleted
+            const summaryStr = res?.rows_deleted
                 ? Object.entries(res.rows_deleted)
                     .map(([k, v]) => `${k}: ${v}`)
                     .join(', ')
                 : '';
+            const summarySuffix = summaryStr
+                ? this.translate.instant('tenants.msg_rows_deleted_suffix', { summary: summaryStr })
+                : '';
             this.toast.success(
-                `Empresa "${t.name}" eliminada permanentemente.` +
-                (summary ? ` Filas borradas → ${summary}` : ''),
+                this.translate.instant('tenants.msg_tenant_deleted', { name: t.name, summary: summarySuffix }),
             );
             this.cdr.detectChanges();
         } catch (err: any) {
             this.toast.error(
                 err?.error?.detail
-                || 'No se pudo eliminar la empresa. Revisá los logs del backend.',
+                || this.translate.instant('tenants.msg_delete_failed'),
             );
         }
     }
@@ -827,9 +835,9 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         this.closeRowMenu();
         if (t.slug === 'acten') {
             this.confirmAction({
-                title: 'Tenant principal protegido',
-                message: `"${t.name}" es el tenant principal y no se puede eliminar. Esta operación está bloqueada por el backend.`,
-                confirmLabel: 'Entendido',
+                title: this.translate.instant('tenants.msg_protected_main_title'),
+                message: this.translate.instant('tenants.msg_protected_delete_text', { name: t.name }),
+                confirmLabel: this.translate.instant('tenants.msg_understood'),
                 confirmVariant: 'warning',
                 action: () => {},
             });
@@ -852,7 +860,7 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
         if (!t) return;
         const typed = (this.hardDeleteConfirm.typedSlug || '').trim().toLowerCase();
         if (typed !== t.slug.toLowerCase()) {
-            this.toast.warning('El slug tipeado no coincide.');
+            this.toast.warning(this.translate.instant('tenants.msg_slug_mismatch'));
             return;
         }
         const tenant = t;
@@ -907,8 +915,9 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     get totalUsers(): number { return this.tenants.reduce((acc, t) => acc + (t.user_count || 0), 0); }
     get configuredDomains(): number { return this.tenants.filter((t) => !!t.domain).length; }
     get activePercent(): string {
-        if (!this.totalTenants) return '0% del total';
-        return `${Math.round((this.activeTenants / this.totalTenants) * 1000) / 10}% del total`;
+        if (!this.totalTenants) return this.translate.instant('tenants.msg_percent_of_total', { pct: 0 });
+        const pct = Math.round((this.activeTenants / this.totalTenants) * 1000) / 10;
+        return this.translate.instant('tenants.msg_percent_of_total', { pct });
     }
 
     /** Empresas creadas este mes (vs el mes pasado) — basado en created_at real. */
@@ -932,15 +941,15 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     }
     get tenantsDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
         const now = this.newThisMonth, prev = this.newLastMonth;
-        if (!now && !prev) return { dir: 'flat', label: 'Sin altas este mes' };
+        if (!now && !prev) return { dir: 'flat', label: this.translate.instant('tenants.msg_no_dates_this_month') };
         const diff = now - prev;
-        if (diff > 0) return { dir: 'up',   label: `+${diff} este mes` };
-        if (diff < 0) return { dir: 'down', label: `${diff} este mes` };
-        return { dir: 'flat', label: 'Igual que el mes pasado' };
+        if (diff > 0) return { dir: 'up',   label: this.translate.instant('tenants.msg_delta_this_month_pos', { diff }) };
+        if (diff < 0) return { dir: 'down', label: this.translate.instant('tenants.msg_delta_this_month_neg', { diff }) };
+        return { dir: 'flat', label: this.translate.instant('tenants.msg_same_as_last_month') };
     }
     /** % vs total para "Empresas activas". */
     get activeDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
-        if (!this.totalTenants) return { dir: 'flat', label: 'Sin empresas' };
+        if (!this.totalTenants) return { dir: 'flat', label: this.translate.instant('tenants.msg_no_companies_label') };
         const pct = (this.activeTenants / this.totalTenants) * 100;
         if (pct >= 80) return { dir: 'up',   label: `${this.activePercent}` };
         if (pct >= 50) return { dir: 'flat', label: `${this.activePercent}` };
@@ -948,20 +957,20 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     }
     /** Promedio usuarios/empresa para Usuarios distribuidos. */
     get usersDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
-        if (!this.totalTenants) return { dir: 'flat', label: 'Sin empresas' };
+        if (!this.totalTenants) return { dir: 'flat', label: this.translate.instant('tenants.msg_no_companies_label') };
         const avg = Math.round((this.totalUsers / this.totalTenants) * 10) / 10;
         return {
             dir: this.totalUsers > 0 ? 'up' : 'flat',
-            label: `${avg} usuarios por empresa`,
+            label: this.translate.instant('tenants.msg_avg_users_per_company', { avg }),
         };
     }
     /** % de empresas con dominio personalizado. */
     get domainsDelta(): { dir: 'up' | 'down' | 'flat'; label: string } {
-        if (!this.totalTenants) return { dir: 'flat', label: 'Sin dominios' };
+        if (!this.totalTenants) return { dir: 'flat', label: this.translate.instant('tenants.msg_no_domains') };
         const pct = Math.round((this.configuredDomains / this.totalTenants) * 100);
-        if (pct >= 50) return { dir: 'up',   label: `${pct}% de las empresas` };
-        if (pct === 0) return { dir: 'flat', label: 'Sin dominios personalizados' };
-        return { dir: 'down', label: `${pct}% de las empresas` };
+        if (pct >= 50) return { dir: 'up',   label: this.translate.instant('tenants.msg_percent_companies', { pct }) };
+        if (pct === 0) return { dir: 'flat', label: this.translate.instant('tenants.msg_no_custom_domains') };
+        return { dir: 'down', label: this.translate.instant('tenants.msg_percent_companies', { pct }) };
     }
 
     // ============================================================
@@ -1007,10 +1016,10 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     }
     get rangeLabel(): string {
         const total = this.filteredTenants.length;
-        if (!total) return 'Sin empresas';
+        if (!total) return this.translate.instant('tenants.msg_no_companies_label');
         const start = (this.currentPage - 1) * this.pageLimit + 1;
         const end = Math.min(this.currentPage * this.pageLimit, total);
-        return `Mostrando ${start}-${end} de ${total} empresas`;
+        return this.translate.instant('tenants.msg_showing_companies_range', { start, end, total });
     }
     goToPage(p: number): void { if (p >= 1 && p <= this.totalPages) this.currentPage = p; }
     changePageLimit(n: number): void { this.pageLimit = n; this.currentPage = 1; }

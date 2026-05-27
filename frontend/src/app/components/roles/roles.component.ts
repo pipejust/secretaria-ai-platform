@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Subject, forkJoin } from 'rxjs';
@@ -59,13 +59,17 @@ type StatusFilter = 'all' | 'active' | 'inactive';
 type TypeFilter = 'all' | 'system' | 'custom';
 type UsersFilter = 'all' | 'with' | 'without';
 
-const ACTION_LABELS: Record<string, string> = {
-    view: 'Ver',
-    create: 'Crear',
-    edit: 'Editar',
-    delete: 'Eliminar',
-    manage: 'Administrar',
-    export: 'Exportar',
+/** i18n keys for action labels — resolved per render to follow the active
+ *  language. Direct dot-access on a `Record<string, string>` is forbidden by
+ *  the strict `noPropertyAccessFromIndexSignature` setting, so we always
+ *  bracket-access. */
+const ACTION_LABEL_KEYS: Record<string, string> = {
+    view: 'roles.action_view',
+    create: 'roles.action_create',
+    edit: 'roles.action_edit',
+    delete: 'roles.action_delete',
+    manage: 'roles.action_manage',
+    export: 'roles.action_export',
 };
 
 @Component({
@@ -134,6 +138,7 @@ export class RolesComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
+        private translate: TranslateService,
     ) {}
 
     ngOnInit(): void { this.loadAll(); }
@@ -175,7 +180,7 @@ export class RolesComponent implements OnInit, OnDestroy {
                     this.cdr.detectChanges();
                 },
                 error: () => {
-                    this.errorMsg = 'No se pudieron cargar los roles.';
+                    this.errorMsg = this.translate.instant('roles.toast_load_error');
                     this.isLoading = false;
                     this.cdr.detectChanges();
                 },
@@ -262,10 +267,10 @@ export class RolesComponent implements OnInit, OnDestroy {
     }
     get pageRangeLabel(): string {
         const total = this.filteredRoles.length;
-        if (!total) return 'Mostrando 0-0 de 0 roles';
+        if (!total) return this.translate.instant('roles.page_range_empty');
         const start = (this.currentPage - 1) * this.pageSize + 1;
         const end = Math.min(this.currentPage * this.pageSize, total);
-        return `Mostrando ${start}-${end} de ${total} roles`;
+        return this.translate.instant('roles.page_range', { start, end, total });
     }
     setPage(p: number): void {
         if (p < 1 || p > this.totalFilteredPages) return;
@@ -416,7 +421,10 @@ export class RolesComponent implements OnInit, OnDestroy {
         return some && !all;
     }
 
-    actionLabel(a: string): string { return ACTION_LABELS[a] || a; }
+    actionLabel(a: string): string {
+        const key = ACTION_LABEL_KEYS[a];
+        return key ? this.translate.instant(key) : a;
+    }
 
     private permissionsPayload(): { module_key: string; action: string; is_granted: boolean }[] {
         const out: { module_key: string; action: string; is_granted: boolean }[] = [];
@@ -430,7 +438,7 @@ export class RolesComponent implements OnInit, OnDestroy {
 
     saveRole(): void {
         if (!this.roleForm.name.trim()) {
-            this.roleFormError = 'El nombre del rol es obligatorio.';
+            this.roleFormError = this.translate.instant('roles.form_name_required');
             return;
         }
         this.isSavingRole = true;
@@ -448,7 +456,9 @@ export class RolesComponent implements OnInit, OnDestroy {
             next: () => {
                 this.isSavingRole = false;
                 this.toast.success(
-                    this.roleModalMode === 'create' ? 'Rol creado exitosamente.' : 'Rol actualizado.'
+                    this.roleModalMode === 'create'
+                        ? this.translate.instant('roles.toast_role_created')
+                        : this.translate.instant('roles.toast_role_updated')
                 );
                 this.closeRoleModal();
                 this.reloadRoles();
@@ -456,7 +466,7 @@ export class RolesComponent implements OnInit, OnDestroy {
             },
             error: (err) => {
                 this.isSavingRole = false;
-                this.roleFormError = err?.error?.detail || 'No pude guardar el rol.';
+                this.roleFormError = err?.error?.detail || this.translate.instant('roles.toast_role_save_error');
                 this.cdr.detectChanges();
             },
         });
@@ -469,12 +479,14 @@ export class RolesComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (updated) => {
-                    this.toast.success(`Rol ${updated.is_active ? 'activado' : 'desactivado'}.`);
+                    this.toast.success(updated.is_active
+                        ? this.translate.instant('roles.toast_role_activated')
+                        : this.translate.instant('roles.toast_role_deactivated'));
                     this.reloadRoles();
                     if (this.selectedRole?.id === r.id) this.loadSelectedDetails(r);
                 },
                 error: (err) => {
-                    this.toast.error(err?.error?.detail || 'No pude actualizar el estado.');
+                    this.toast.error(err?.error?.detail || this.translate.instant('roles.toast_role_toggle_error'));
                 },
             });
     }
@@ -494,7 +506,7 @@ export class RolesComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: () => {
                     this.isDeleting = false;
-                    this.toast.success('Rol eliminado.');
+                    this.toast.success(this.translate.instant('roles.toast_role_deleted'));
                     if (this.selectedRole?.id === this.deleteTarget!.id) this.selectedRole = null;
                     this.showDeleteModal = false;
                     this.deleteTarget = null;
@@ -503,7 +515,7 @@ export class RolesComponent implements OnInit, OnDestroy {
                 },
                 error: (err) => {
                     this.isDeleting = false;
-                    this.toast.error(err?.error?.detail || 'No pude eliminar el rol.');
+                    this.toast.error(err?.error?.detail || this.translate.instant('roles.toast_role_delete_error'));
                 },
             });
     }
@@ -513,7 +525,9 @@ export class RolesComponent implements OnInit, OnDestroy {
     // ============================================================
     roleTypeLabel(r: Role | null): string {
         if (!r) return '—';
-        return r.is_system ? 'Sistema' : 'Personalizado';
+        return r.is_system
+            ? this.translate.instant('roles.role_type_system')
+            : this.translate.instant('roles.role_type_custom');
     }
     initials(value: string): string {
         if (!value) return '?';
@@ -549,18 +563,19 @@ export class RolesComponent implements OnInit, OnDestroy {
         }
     }
     activityLabel(action: string): string {
-        return ({
-            created: 'Rol creado',
-            updated: 'Rol actualizado',
-            activated: 'Rol activado',
-            deactivated: 'Rol desactivado',
-            deleted: 'Rol eliminado',
-            permission_updated: 'Permisos actualizados',
-        } as Record<string, string>)[action] || action;
+        const map: Record<string, string> = {
+            created: this.translate.instant('roles.activity_created'),
+            updated: this.translate.instant('roles.activity_updated'),
+            activated: this.translate.instant('roles.activity_activated'),
+            deactivated: this.translate.instant('roles.activity_deactivated'),
+            deleted: this.translate.instant('roles.activity_deleted'),
+            permission_updated: this.translate.instant('roles.activity_permission_updated'),
+        };
+        return map[action] || action;
     }
     activityMeta(a: ActivityItem): string {
         const when = this.formatDateTime(a.created_at);
-        const who = a.actor_name || 'Sistema';
+        const who = a.actor_name || this.translate.instant('roles.actor_system');
         return `${when} · ${who}`;
     }
     formatDateTime(iso: string): string {

@@ -14,6 +14,7 @@ import { errorInterceptor } from './interceptors/error.interceptor';
 import { tenantInterceptor } from './interceptors/tenant.interceptor';
 import { BrandingService } from './services/branding.service';
 import { LanguageService } from './services/language.service';
+import { TitleService } from './services/title.service';
 
 import { routes } from './app.routes';
 
@@ -47,5 +48,9 @@ export const appConfig: ApplicationConfig = {
     provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' }),
     provideAppInitializer(() => inject(BrandingService).loadFromServer()),
     provideAppInitializer(() => inject(LanguageService).bootstrap()),
+    // El TitleService se arranca DESPUÉS del LanguageService porque depende
+    // del fallbackLang y de las traducciones cargadas para resolver los
+    // labels de `route_titles.*`. No bloquea — solo registra listeners.
+    provideAppInitializer(() => inject(TitleService).start()),
   ],
 };

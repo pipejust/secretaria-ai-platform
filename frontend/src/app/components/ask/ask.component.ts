@@ -256,7 +256,7 @@ export class AskComponent implements OnInit, OnDestroy {
     submit(): void {
         const q = (this.question || '').trim();
         if (q.length < 3) {
-            this.toast.warning('Escribe una pregunta de al menos 3 caracteres.');
+            this.toast.warning(this.translate.instant('ask.toast_question_too_short'));
             return;
         }
         this.isAsking = true;
@@ -309,7 +309,7 @@ export class AskComponent implements OnInit, OnDestroy {
                 },
                 error: (err) => {
                     this.isAsking = false;
-                    const msg = err?.error?.detail || 'Error consultando a Acten.';
+                    const msg = err?.error?.detail || this.translate.instant('ask.toast_ask_error');
                     this.toast.error(msg);
                     this.cdr.detectChanges();
                 },
@@ -428,17 +428,17 @@ export class AskComponent implements OnInit, OnDestroy {
                 next: () => {
                     this.history = this.history.filter(x => x.id !== t.id);
                     this.historyList = this.historyList.filter(x => x.id !== t.id);
-                    this.toast.success('Pregunta borrada del historial.');
+                    this.toast.success(this.translate.instant('ask.toast_entry_deleted'));
                     this.cdr.detectChanges();
                 },
-                error: () => this.toast.error('No se pudo borrar la entrada.'),
+                error: () => this.toast.error(this.translate.instant('ask.toast_entry_delete_error')),
             });
     }
 
     /** Borra TODO el historial (backend + ambas listas locales). */
     clearAllHistory(): void {
         if (!this.historyList.length) return;
-        const ok = confirm(`¿Borrar las ${this.historyList.length} preguntas del historial? Esta acción no se puede deshacer.`);
+        const ok = confirm(this.translate.instant('ask.confirm_clear_history', { count: this.historyList.length }));
         if (!ok) return;
         const headers = this.authService.getAuthHeaders();
         this.http.delete(`${environment.apiUrl}/api/ask/history`, { headers })
@@ -448,10 +448,10 @@ export class AskComponent implements OnInit, OnDestroy {
                     this.history = [];
                     this.historyList = [];
                     this.showHistory = false;
-                    this.toast.success('Historial borrado.');
+                    this.toast.success(this.translate.instant('ask.toast_history_cleared'));
                     this.cdr.detectChanges();
                 },
-                error: () => this.toast.error('No se pudo borrar el historial.'),
+                error: () => this.toast.error(this.translate.instant('ask.toast_history_clear_error')),
             });
     }
 
@@ -506,7 +506,7 @@ export class AskComponent implements OnInit, OnDestroy {
             date: meta?.date,
         };
         this.showSessionPicker = false;
-        this.toast.success(`Búsqueda enfocada en: ${this.pinnedSession.title}`);
+        this.toast.success(this.translate.instant('ask.toast_session_pinned', { title: this.pinnedSession.title }));
         this.cdr.detectChanges();
     }
 
@@ -536,12 +536,12 @@ export class AskComponent implements OnInit, OnDestroy {
         if (!file) return;
         const okTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!okTypes.includes(file.type)) {
-            this.toast.warning('Solo se admiten imágenes JPEG, PNG o WebP.');
+            this.toast.warning(this.translate.instant('ask.toast_image_bad_format'));
             input.value = '';
             return;
         }
         if (file.size > 4 * 1024 * 1024) {
-            this.toast.warning('La imagen es muy grande (máx 4 MB).');
+            this.toast.warning(this.translate.instant('ask.toast_image_too_large'));
             input.value = '';
             return;
         }
@@ -559,19 +559,19 @@ export class AskComponent implements OnInit, OnDestroy {
                 input.value = '';
                 const txt = (res.text || '').slice(0, 4000);
                 if (!txt.trim()) {
-                    this.toast.warning('No se detectó texto en la imagen.');
+                    this.toast.warning(this.translate.instant('ask.toast_image_no_text'));
                     this.cdr.detectChanges();
                     return;
                 }
                 const prefix = this.question ? this.question + '\n\n' : '';
-                this.question = `${prefix}--- Texto extraído de imagen (${file.name}) ---\n${txt}`;
-                this.toast.success(`Imagen procesada: ${res.chars} caracteres extraídos.`);
+                this.question = `${prefix}${this.translate.instant('ask.toast_image_extracted_prefix', { name: file.name, text: txt })}`;
+                this.toast.success(this.translate.instant('ask.toast_image_processed', { chars: res.chars }));
                 this.cdr.detectChanges();
             },
             error: (err) => {
                 this.isOcr = false;
                 input.value = '';
-                const msg = err?.error?.detail || 'No se pudo procesar la imagen.';
+                const msg = err?.error?.detail || this.translate.instant('ask.toast_image_error');
                 this.toast.error(msg);
                 this.cdr.detectChanges();
             },
@@ -584,7 +584,7 @@ export class AskComponent implements OnInit, OnDestroy {
         if (!file) return;
         // Limitamos a 200kb de texto plano para no sobrepasar el contexto.
         if (file.size > 200_000) {
-            this.toast.warning('El archivo es muy grande (máx 200 KB de texto).');
+            this.toast.warning(this.translate.instant('ask.toast_attach_too_large'));
             input.value = '';
             return;
         }
@@ -592,7 +592,7 @@ export class AskComponent implements OnInit, OnDestroy {
         const ext = file.name.toLowerCase().split('.').pop() || '';
         const looksText = okTypes.includes(file.type) || ['txt','md','json','csv'].includes(ext);
         if (!looksText) {
-            this.toast.warning('Solo se admite texto plano (.txt, .md, .json, .csv).');
+            this.toast.warning(this.translate.instant('ask.toast_attach_bad_format'));
             input.value = '';
             return;
         }
@@ -600,11 +600,11 @@ export class AskComponent implements OnInit, OnDestroy {
         reader.onload = () => {
             const txt = String(reader.result || '').slice(0, 4000);
             const prefix = this.question ? this.question + '\n\n' : '';
-            this.question = `${prefix}--- Contexto adjunto (${file.name}) ---\n${txt}`;
-            this.toast.success(`Adjunté ${file.name} como contexto.`);
+            this.question = `${prefix}${this.translate.instant('ask.toast_attached_context_prefix', { name: file.name, text: txt })}`;
+            this.toast.success(this.translate.instant('ask.toast_attached_success', { name: file.name }));
             this.cdr.detectChanges();
         };
-        reader.onerror = () => this.toast.error('No se pudo leer el archivo.');
+        reader.onerror = () => this.toast.error(this.translate.instant('ask.toast_attach_read_error'));
         reader.readAsText(file);
         input.value = '';
     }
@@ -771,9 +771,9 @@ export class AskComponent implements OnInit, OnDestroy {
     /** Confianza visual basada en la cantidad de chunks usados. */
     confidenceLabel(turn: ChatTurn): { tone: 'high' | 'medium' | 'low'; text: string } {
         const n = turn?.chunks_used || 0;
-        if (n >= 5) return { tone: 'high',   text: 'Alta' };
-        if (n >= 3) return { tone: 'medium', text: 'Media' };
-        return { tone: 'low', text: 'Baja' };
+        if (n >= 5) return { tone: 'high',   text: this.translate.instant('ask.confidence_high') };
+        if (n >= 3) return { tone: 'medium', text: this.translate.instant('ask.confidence_medium') };
+        return { tone: 'low', text: this.translate.instant('ask.confidence_low') };
     }
 
     /** Cantidad de fuentes únicas (deduplicadas por session_id). */
@@ -812,16 +812,18 @@ export class AskComponent implements OnInit, OnDestroy {
     copyAnswer(turn: ChatTurn): void {
         try {
             navigator.clipboard.writeText(turn.answer || '');
-            this.toast.success('Respuesta copiada al portapapeles.');
+            this.toast.success(this.translate.instant('ask.toast_answer_copied'));
         } catch {
-            this.toast.warning('No se pudo copiar la respuesta.');
+            this.toast.warning(this.translate.instant('ask.toast_answer_copy_error'));
         }
     }
 
     /** Feedback placeholder (like/dislike) — no persiste todavía, sólo
      *  reconoce el click. Cuando exista endpoint, lo cableamos. */
     rateAnswer(turn: ChatTurn, score: 'up' | 'down'): void {
-        this.toast.success(score === 'up' ? '¡Gracias por tu feedback!' : 'Gracias, tomaremos nota.');
+        this.toast.success(score === 'up'
+            ? this.translate.instant('ask.toast_feedback_thanks_up')
+            : this.translate.instant('ask.toast_feedback_thanks_down'));
     }
 
     // ============================================================
@@ -859,11 +861,11 @@ export class AskComponent implements OnInit, OnDestroy {
     statusLabel(status: string): string {
         const s = (status || '').toLowerCase();
         switch (s) {
-            case 'in_progress': return 'En progreso';
-            case 'pending':     return 'Pendiente';
-            case 'not_started': return 'No iniciado';
-            case 'done':        return 'Completado';
-            default:            return s ? s : 'Pendiente';
+            case 'in_progress': return this.translate.instant('ask.status_in_progress');
+            case 'pending':     return this.translate.instant('ask.status_pending');
+            case 'not_started': return this.translate.instant('ask.status_not_started');
+            case 'done':        return this.translate.instant('ask.status_done');
+            default:            return s ? s : this.translate.instant('ask.status_pending');
         }
     }
 

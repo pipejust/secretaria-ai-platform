@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { RouterModule } from '@angular/router';
 
 interface FaqEntry { q: string; a: string; }
@@ -15,65 +15,41 @@ interface Topic { title: string; description: string; icon: string; }
 })
 export class HelpCenterComponent {
   readonly year = new Date().getFullYear();
+  private readonly translate = inject(TranslateService);
 
-  /** Categorías rápidas — links a secciones internas o a /admin/* cuando aplica. */
+  /**
+   * Categorías rápidas — links a secciones internas o a /admin/* cuando aplica.
+   *
+   * Los textos vienen de i18n (`help_center.topics.<key>.title|description`)
+   * para que cambien con el idioma seleccionado. La fuente declarativa abajo
+   * usa keys estables; el template resuelve cada `translate` en render.
+   */
   readonly topics: Topic[] = [
-    {
-      title: 'Empezar con Acten',
-      description: 'Crea tu cuenta, conecta Fireflies, sube tu primera reunión y revisa el acta generada por IA.',
-      icon: 'rocket',
-    },
-    {
-      title: 'Curación de actas',
-      description: 'Revisa las decisiones, riesgos y compromisos extraídos por la IA antes de despachar tareas.',
-      icon: 'edit',
-    },
-    {
-      title: 'Integraciones',
-      description: 'Conecta Trello, Jira, ClickUp, Azure DevOps, Slack, Notion y más desde Configuraciones.',
-      icon: 'link',
-    },
-    {
-      title: 'Multi-empresa (tenants)',
-      description: 'Cada empresa cliente vive en un espacio aislado. Aprende a crear tenants y administrar accesos.',
-      icon: 'building',
-    },
-    {
-      title: 'Marca / White-label',
-      description: 'Personaliza el logo, los colores primario/secundario/acento y los datos de contacto de tu empresa.',
-      icon: 'palette',
-    },
-    {
-      title: 'Privacidad y seguridad',
-      description: 'Cómo Acten cifra tus datos, cumple con GDPR y mantiene aislada la información entre empresas.',
-      icon: 'shield',
-    },
+    { title: 'help_center.topics.getting_started.title',  description: 'help_center.topics.getting_started.description',  icon: 'rocket'   },
+    { title: 'help_center.topics.curation.title',         description: 'help_center.topics.curation.description',         icon: 'edit'     },
+    { title: 'help_center.topics.integrations.title',     description: 'help_center.topics.integrations.description',     icon: 'link'     },
+    { title: 'help_center.topics.multi_tenant.title',     description: 'help_center.topics.multi_tenant.description',     icon: 'building' },
+    { title: 'help_center.topics.branding.title',         description: 'help_center.topics.branding.description',         icon: 'palette'  },
+    { title: 'help_center.topics.privacy_security.title', description: 'help_center.topics.privacy_security.description', icon: 'shield'   },
   ];
 
+  /**
+   * FAQ — 6 entradas. Como con los topics, los strings son keys i18n y se
+   * traducen en el template vía `translate` pipe (los call sites del HTML
+   * existente leen `f.q` / `f.a` literalmente — ver `_t()` helper).
+   */
   readonly faqs: FaqEntry[] = [
-    {
-      q: '¿Cómo recupero mi contraseña?',
-      a: 'En la pantalla de inicio de sesión, haz clic en "¿Olvidaste tu contraseña?". Recibirás un correo con un enlace de recuperación válido por 30 minutos.',
-    },
-    {
-      q: '¿Acten guarda el audio original de mis reuniones?',
-      a: 'No. Acten procesa el audio para extraer la transcripción y los insights, y luego descarta el archivo. Solo conservamos el texto y los metadatos asociados.',
-    },
-    {
-      q: '¿Puedo conectar Acten con mi propio servidor SMTP?',
-      a: 'Sí. En Configuraciones → Integraciones puedes pegar tu API Key de Resend o configurar un SMTP custom. Las credenciales viven sólo en tu empresa.',
-    },
-    {
-      q: '¿Quién puede ver las actas de mi empresa?',
-      a: 'Solo los usuarios que pertenecen a tu tenant. Otra empresa NUNCA verá tus sesiones, proyectos, integraciones ni configuraciones — el aislamiento es a nivel de base de datos.',
-    },
-    {
-      q: '¿Cómo invito a un nuevo miembro?',
-      a: 'Si eres administrador del tenant, ve a Usuarios → Crear usuario. Comparte la contraseña inicial; el usuario podrá cambiarla en su primer login.',
-    },
-    {
-      q: '¿Qué hago si una sesión queda en estado "Procesando"?',
-      a: 'El cron de auto-recuperación reintenta cada 5 minutos. Si después de 30 minutos sigue atascada, contacta soporte: incluye el ID de la sesión y la fecha aproximada.',
-    },
+    { q: 'help_center.faqs.forgot_password.q',   a: 'help_center.faqs.forgot_password.a'   },
+    { q: 'help_center.faqs.audio_storage.q',     a: 'help_center.faqs.audio_storage.a'     },
+    { q: 'help_center.faqs.custom_smtp.q',       a: 'help_center.faqs.custom_smtp.a'       },
+    { q: 'help_center.faqs.who_sees_minutes.q',  a: 'help_center.faqs.who_sees_minutes.a'  },
+    { q: 'help_center.faqs.invite_member.q',     a: 'help_center.faqs.invite_member.a'     },
+    { q: 'help_center.faqs.stuck_processing.q', a: 'help_center.faqs.stuck_processing.a' },
   ];
+
+  /** Helper de template — traduce una key. Mantiene los strings en JSON y
+   *  permite cambiar idioma sin recargar el componente. */
+  t(key: string): string {
+    return this.translate.instant(key);
+  }
 }

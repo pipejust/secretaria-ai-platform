@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -33,6 +33,7 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     private readonly toast = inject(ToastService);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly http = inject(HttpClient);
+    private readonly translate = inject(TranslateService);
 
     // Prueba de envío de correo
     testEmailTo = '';
@@ -280,17 +281,13 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
         // usuario nuevo pertenezca al mismo SLD que company_website).
         const website = (this.form.company_website || '').trim();
         if (!website) {
-            this.toast.error(
-                'El sitio web es obligatorio. Se usa para validar el dominio de los usuarios que creás.',
-            );
+            this.toast.error(this.translate.instant('branding.msg_website_required'));
             return;
         }
         // Mini-check de formato: necesita al menos un punto y caracteres válidos.
         const looksValid = /^(https?:\/\/)?[a-z0-9.-]+\.[a-z]{2,}/i.test(website);
         if (!looksValid) {
-            this.toast.error(
-                'El sitio web no tiene un formato válido. Ejemplo: https://tuempresa.com',
-            );
+            this.toast.error(this.translate.instant('branding.msg_website_invalid'));
             return;
         }
         this.isSaving = true;
@@ -311,9 +308,9 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
                 default_language: this.form.default_language || 'es',
             };
             await this.branding.update(patch, this.auth.token);
-            this.toast.success('Marca actualizada. Los cambios ya están aplicados.');
+            this.toast.success(this.translate.instant('branding.msg_brand_updated'));
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo guardar la marca.');
+            this.toast.error(err?.error?.detail || this.translate.instant('branding.msg_brand_save_failed'));
         } finally {
             this.isSaving = false;
             this.cdr.detectChanges();
@@ -331,9 +328,9 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
         try {
             await this.branding.uploadLogo(file, this.auth.token);
             this.form.logo_data_url = this.branding.brand().logo_data_url;
-            this.toast.success('Logo subido correctamente.');
+            this.toast.success(this.translate.instant('branding.msg_logo_uploaded'));
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo subir el logo.');
+            this.toast.error(err?.error?.detail || this.translate.instant('branding.msg_logo_upload_failed'));
         } finally {
             this.isUploading = false;
             input.value = '';
@@ -342,14 +339,14 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     }
 
     async removeLogo(): Promise<void> {
-        if (!confirm('¿Quitar el logo? Volverá a mostrarse el nombre de la empresa.')) return;
+        if (!confirm(this.translate.instant('branding.msg_remove_logo_confirm'))) return;
         this.isUploading = true;
         try {
             await this.branding.deleteLogo(this.auth.token);
             this.form.logo_data_url = '';
-            this.toast.success('Logo eliminado.');
+            this.toast.success(this.translate.instant('branding.msg_logo_removed'));
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo eliminar el logo.');
+            this.toast.error(err?.error?.detail || this.translate.instant('branding.msg_logo_remove_failed'));
         } finally {
             this.isUploading = false;
             this.cdr.detectChanges();
@@ -367,9 +364,9 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
         try {
             await this.branding.uploadDarkLogo(file, this.auth.token);
             this.form.logo_dark_data_url = this.branding.brand().logo_dark_data_url;
-            this.toast.success('Logo oscuro subido correctamente.');
+            this.toast.success(this.translate.instant('branding.msg_dark_logo_uploaded'));
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo subir el logo oscuro.');
+            this.toast.error(err?.error?.detail || this.translate.instant('branding.msg_dark_logo_upload_failed'));
         } finally {
             this.isUploadingDark = false;
             input.value = '';
@@ -378,14 +375,14 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     }
 
     async removeDarkLogo(): Promise<void> {
-        if (!confirm('¿Quitar el logo oscuro? Los fondos oscuros volverán a usar el logo regular.')) return;
+        if (!confirm(this.translate.instant('branding.msg_remove_dark_logo_confirm'))) return;
         this.isUploadingDark = true;
         try {
             await this.branding.deleteDarkLogo(this.auth.token);
             this.form.logo_dark_data_url = '';
-            this.toast.success('Logo oscuro eliminado.');
+            this.toast.success(this.translate.instant('branding.msg_dark_logo_removed'));
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo eliminar el logo oscuro.');
+            this.toast.error(err?.error?.detail || this.translate.instant('branding.msg_dark_logo_remove_failed'));
         } finally {
             this.isUploadingDark = false;
             this.cdr.detectChanges();
@@ -400,9 +397,9 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
         try {
             await this.branding.uploadIcon(file, this.auth.token);
             this.form.icon_data_url = this.branding.brand().icon_data_url;
-            this.toast.success('Imagologo subido correctamente.');
+            this.toast.success(this.translate.instant('branding.msg_icon_uploaded'));
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo subir el imagologo.');
+            this.toast.error(err?.error?.detail || this.translate.instant('branding.msg_icon_upload_failed'));
         } finally {
             this.isUploadingIcon = false;
             input.value = '';
@@ -411,14 +408,14 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
     }
 
     async removeIcon(): Promise<void> {
-        if (!confirm('¿Quitar el imagologo? El sidebar colapsado volverá al icono Acten por defecto.')) return;
+        if (!confirm(this.translate.instant('branding.msg_remove_icon_confirm'))) return;
         this.isUploadingIcon = true;
         try {
             await this.branding.deleteIcon(this.auth.token);
             this.form.icon_data_url = '';
-            this.toast.success('Imagologo eliminado.');
+            this.toast.success(this.translate.instant('branding.msg_icon_removed'));
         } catch (err: any) {
-            this.toast.error(err?.error?.detail || 'No se pudo eliminar el imagologo.');
+            this.toast.error(err?.error?.detail || this.translate.instant('branding.msg_icon_remove_failed'));
         } finally {
             this.isUploadingIcon = false;
             this.cdr.detectChanges();
@@ -443,13 +440,13 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
             );
             if (!res?.smtp_configured) {
                 this.toast.warning(
-                    `Correo de prueba simulado a ${res?.to} (revisa logs del backend). Configura SMTP en /admin/settings para envío real.`,
+                    this.translate.instant('branding.msg_test_email_simulated', { to: res?.to }),
                 );
             } else {
-                this.toast.success(`Correo de prueba enviado a ${res.to}.`);
+                this.toast.success(this.translate.instant('branding.msg_test_email_sent', { to: res.to }));
             }
         } catch (err: any) {
-            const msg = err?.error?.detail || 'No pude enviar el correo de prueba.';
+            const msg = err?.error?.detail || this.translate.instant('branding.msg_test_email_failed');
             this.toast.error(msg);
         } finally {
             this.isSendingTest = false;

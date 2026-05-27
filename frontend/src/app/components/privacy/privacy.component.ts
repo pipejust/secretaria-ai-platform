@@ -3,7 +3,8 @@ import { CommonModule, Location } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 
-interface Section { id: string; title: string; }
+/** TOC entry — la `titleKey` se traduce en el template vía `translate` pipe. */
+interface Section { id: string; titleKey: string; }
 
 @Component({
   selector: 'app-privacy',
@@ -17,7 +18,10 @@ export class PrivacyComponent {
   private readonly router = inject(Router);
 
   readonly year = new Date().getFullYear();
-  readonly lastUpdated = '15 de mayo de 2026';
+  /** Fecha de la última actualización legal. La key i18n permite mostrar
+   *  "15 de mayo de 2026" / "May 15, 2026" / "15 de maig de 2026" según
+   *  el idioma activo sin hardcodear el formato. */
+  readonly lastUpdatedKey = 'privacy.last_updated_date';
 
   /** Volver al lugar de origen. Si hay history previo, usamos back();
    *  si no, vamos al landing (`/`). Evita "Volver al login" cuando el
@@ -34,16 +38,16 @@ export class PrivacyComponent {
   }
 
   readonly sections: Section[] = [
-    { id: 'intro',         title: '1. Introducción' },
-    { id: 'datos',         title: '2. Datos que recopilamos' },
-    { id: 'uso',           title: '3. Cómo usamos tus datos' },
-    { id: 'aislamiento',   title: '4. Aislamiento entre empresas' },
-    { id: 'compartir',     title: '5. Con quién compartimos datos' },
-    { id: 'seguridad',     title: '6. Seguridad' },
-    { id: 'derechos',      title: '7. Tus derechos (GDPR)' },
-    { id: 'retencion',     title: '8. Retención y borrado' },
-    { id: 'cookies',       title: '9. Cookies y tracking' },
-    { id: 'cambios',       title: '10. Cambios a esta política' },
-    { id: 'contacto',      title: '11. Contacto' },
+    { id: 'intro',       titleKey: 'privacy.s1_title' },
+    { id: 'datos',       titleKey: 'privacy.s2_title' },
+    { id: 'uso',         titleKey: 'privacy.s3_title' },
+    { id: 'aislamiento', titleKey: 'privacy.s4_title' },
+    { id: 'compartir',   titleKey: 'privacy.s5_title' },
+    { id: 'seguridad',   titleKey: 'privacy.s6_title' },
+    { id: 'derechos',    titleKey: 'privacy.s7_title' },
+    { id: 'retencion',   titleKey: 'privacy.s8_title' },
+    { id: 'cookies',     titleKey: 'privacy.s9_title' },
+    { id: 'cambios',     titleKey: 'privacy.s10_title' },
+    { id: 'contacto',    titleKey: 'privacy.s11_title' },
   ];
 }

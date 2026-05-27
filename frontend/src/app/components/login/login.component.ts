@@ -6,7 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { BrandingService } from '../../services/branding.service';
 import { LanguageService } from '../../services/language.service';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TenantService } from '../../services/tenant.service';
 
 @Component({
@@ -44,6 +44,7 @@ export class LoginComponent implements OnInit {
     readonly branding = inject(BrandingService);
     readonly lang = inject(LanguageService);
     private readonly tenants = inject(TenantService);
+    private readonly translate = inject(TranslateService);
     readonly year = new Date().getFullYear();
 
     constructor(
@@ -81,8 +82,11 @@ export class LoginComponent implements OnInit {
      *  efímero en pantalla en lugar de un toast (para no añadir dependencias). */
     ssoUnavailable(ev?: Event) {
         ev?.preventDefault();
-        this.errorMessage = 'SSO y registro auto-servicio aún no disponibles. Pide acceso a tu administrador.';
-        setTimeout(() => { if (this.errorMessage.startsWith('SSO')) this.errorMessage = ''; }, 4000);
+        const msg = this.translate.instant('login.errors.sso_unavailable');
+        this.errorMessage = msg;
+        // El cleanup detecta el mensaje exacto (no por prefijo) para no
+        // borrar errores legítimos en otros idiomas que pueda haber.
+        setTimeout(() => { if (this.errorMessage === msg) this.errorMessage = ''; }, 4000);
     }
 
     onSubmit() {
@@ -129,11 +133,11 @@ export class LoginComponent implements OnInit {
             error: (err) => {
                 this.isLoading = false;
                 if (err.status === 401) {
-                    this.errorMessage = 'Correo o contraseña incorrectos.';
+                    this.errorMessage = this.translate.instant('login.errors.invalid_credentials');
                 } else if (err.status === 404) {
-                    this.errorMessage = `La empresa "${this.tenantSlug}" no existe o está inactiva.`;
+                    this.errorMessage = this.translate.instant('login.errors.tenant_not_found', { slug: this.tenantSlug });
                 } else {
-                    this.errorMessage = 'Error conectando al servidor. Inténtalo más tarde.';
+                    this.errorMessage = this.translate.instant('login.errors.server_error');
                 }
             }
         });
@@ -141,7 +145,7 @@ export class LoginComponent implements OnInit {
 
     verify2FA() {
         if (!this.code2FA || this.code2FA.trim().length < 6) {
-            this.errorMessage = 'Introduce el código de 6 dígitos que te enviamos por correo.';
+            this.errorMessage = this.translate.instant('login.errors.code_required');
             return;
         }
         this.isVerifying2FA = true;
@@ -158,7 +162,8 @@ export class LoginComponent implements OnInit {
             },
             error: (err) => {
                 this.isVerifying2FA = false;
-                this.errorMessage = err?.error?.detail || 'Código incorrecto. Inténtalo nuevamente.';
+                this.errorMessage = err?.error?.detail
+                    || this.translate.instant('login.errors.code_invalid');
             },
         });
     }
@@ -173,8 +178,8 @@ export class LoginComponent implements OnInit {
         // Para reenviar simplemente repetimos el login (genera nuevo código).
         this.errorMessage = '';
         this.authService.login(this.email, this.password, this.tenantSlug).subscribe({
-            next: () => { this.errorMessage = 'Se reenvió un nuevo código a tu correo.'; },
-            error: () => { this.errorMessage = 'No se pudo reenviar el código.'; },
+            next: () => { this.errorMessage = this.translate.instant('login.code_resent'); },
+            error: () => { this.errorMessage = this.translate.instant('login.errors.code_resend_failed'); },
         });
     }
 }

@@ -10,6 +10,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { BrandingService } from '../../services/branding.service';
@@ -18,37 +19,34 @@ import { PasswordInputComponent } from '../shared/password-input/password-input.
 @Component({
     selector: 'app-change-password',
     standalone: true,
-    imports: [CommonModule, FormsModule, PasswordInputComponent],
+    imports: [CommonModule, FormsModule, TranslateModule, PasswordInputComponent],
     template: `
         <div class="cp-wrap">
             <div class="cp-card">
                 <header class="cp-head">
                     <img *ngIf="branding.hasLogo()" [src]="branding.logoUrl()"
                          alt="" class="cp-logo" />
-                    <h1>Establecé tu contraseña</h1>
-                    <p class="cp-sub">
-                        Por seguridad, tenés que reemplazar la contraseña temporal
-                        por una propia antes de continuar.
-                    </p>
+                    <h1>{{ 'change_password.title' | translate }}</h1>
+                    <p class="cp-sub">{{ 'change_password.subtitle' | translate }}</p>
                 </header>
 
                 <form (ngSubmit)="submit()" class="cp-form">
                     <div class="cp-field">
-                        <label>Nueva contraseña</label>
+                        <label>{{ 'change_password.new_password' | translate }}</label>
                         <app-password-input name="new_password"
                                             [(ngModel)]="newPassword"
-                                            placeholder="Mínimo 8 caracteres"
+                                            [placeholder]="'change_password.new_password_placeholder' | translate"
                                             autocomplete="new-password"
                                             [minlength]="8"
                                             [required]="true"></app-password-input>
-                        <small class="cp-hint">Usá al menos 8 caracteres. Mezclá letras, números y símbolos para mayor seguridad.</small>
+                        <small class="cp-hint">{{ 'change_password.new_password_hint' | translate }}</small>
                     </div>
 
                     <div class="cp-field">
-                        <label>Confirmar nueva contraseña</label>
+                        <label>{{ 'change_password.confirm_password' | translate }}</label>
                         <app-password-input name="confirm_password"
                                             [(ngModel)]="confirmPassword"
-                                            placeholder="Repetí la nueva contraseña"
+                                            [placeholder]="'change_password.confirm_placeholder' | translate"
                                             autocomplete="new-password"
                                             [minlength]="8"
                                             [required]="true"></app-password-input>
@@ -57,7 +55,7 @@ import { PasswordInputComponent } from '../shared/password-input/password-input.
                     <div *ngIf="errorMessage" class="cp-error">{{ errorMessage }}</div>
 
                     <button type="submit" class="cp-btn" [disabled]="isSubmitting">
-                        {{ isSubmitting ? 'Guardando…' : 'Cambiar contraseña y continuar' }}
+                        {{ (isSubmitting ? 'change_password.submitting' : 'change_password.submit') | translate }}
                     </button>
                 </form>
             </div>
@@ -135,6 +133,7 @@ export class ChangePasswordComponent {
     private auth = inject(AuthService);
     private router = inject(Router);
     private toast = inject(ToastService);
+    private translate = inject(TranslateService);
     readonly branding = inject(BrandingService);
 
     newPassword = '';
@@ -147,11 +146,11 @@ export class ChangePasswordComponent {
         const pw = (this.newPassword || '').trim();
         const cf = (this.confirmPassword || '').trim();
         if (pw.length < 8) {
-            this.errorMessage = 'La contraseña debe tener al menos 8 caracteres.';
+            this.errorMessage = this.translate.instant('change_password.errors.min_length');
             return;
         }
         if (pw !== cf) {
-            this.errorMessage = 'La confirmación no coincide.';
+            this.errorMessage = this.translate.instant('change_password.errors.mismatch');
             return;
         }
         this.isSubmitting = true;
@@ -159,12 +158,13 @@ export class ChangePasswordComponent {
         // el user llegó acá con must_change_password=true.
         this.auth.changePasswordForced(pw).subscribe({
             next: () => {
-                this.toast.success('Contraseña actualizada. ¡Listo!');
+                this.toast.success(this.translate.instant('change_password.success'));
                 this.router.navigate(['/admin/dashboard']);
             },
             error: (err) => {
                 this.isSubmitting = false;
-                this.errorMessage = err?.error?.detail || 'No se pudo cambiar la contraseña. Reintentá.';
+                this.errorMessage = err?.error?.detail
+                    || this.translate.instant('change_password.errors.generic');
             },
         });
     }

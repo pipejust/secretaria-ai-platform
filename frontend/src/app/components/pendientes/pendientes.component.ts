@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -165,6 +165,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
         private cdr: ChangeDetectorRef,
         private router: Router,
         private userDirectory: UserDirectoryService,
+        private translate: TranslateService,
     ) {}
 
     ngOnInit(): void {
@@ -245,7 +246,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
                     this.cdr.detectChanges();
                 },
                 error: () => {
-                    this.toast.error('No se pudieron cargar las tareas.');
+                    this.toast.error(this.translate.instant('pendientes.toast_load_error'));
                     this.isLoading = false;
                     this.cdr.detectChanges();
                 },
@@ -277,12 +278,12 @@ export class PendientesComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: () => {
-                    this.toast.success(`Tarea marcada como "${this.statusLabel(status)}".`);
+                    this.toast.success(this.translate.instant('pendientes.toast_status_changed', { status: this.statusLabel(status) }));
                     this.load();
                     this.loadStats();
                 },
                 error: (err) => {
-                    const detail = err?.error?.detail || 'No se pudo cambiar el estado.';
+                    const detail = err?.error?.detail || this.translate.instant('pendientes.toast_status_error');
                     this.toast.error(detail);
                 },
             });
@@ -369,37 +370,43 @@ export class PendientesComponent implements OnInit, OnDestroy {
     }
 
     priorityLabel(p: string): string {
-        return ({ alta: 'Alta', media: 'Media', baja: 'Baja' } as any)[p] || p;
+        const map: Record<string, string> = {
+            alta: this.translate.instant('pendientes.priority_high'),
+            media: this.translate.instant('pendientes.priority_medium'),
+            baja: this.translate.instant('pendientes.priority_low'),
+        };
+        return map[p] || p;
     }
 
     /** Etiqueta de estado para el badge — combina status + bucket para
      *  mostrar Vencida/En progreso/Abierta/Completada/Bloqueada. */
     estadoLabel(item: PendingItem): string {
-        if (item.status === 'cancelled') return 'Cancelada';
-        if (item.status === 'done') return 'Completada';
-        if (item.status === 'blocked') return 'Bloqueada';
-        if (item.bucket === 'vencido') return 'Vencida';
-        if (item.bucket === 'proximo') return 'En progreso';
-        return 'Abierta';
+        if (item.status === 'cancelled') return this.translate.instant('pendientes.estado_cancelled');
+        if (item.status === 'done') return this.translate.instant('pendientes.estado_done');
+        if (item.status === 'blocked') return this.translate.instant('pendientes.estado_blocked');
+        if (item.bucket === 'vencido') return this.translate.instant('pendientes.estado_overdue');
+        if (item.bucket === 'proximo') return this.translate.instant('pendientes.estado_in_progress');
+        return this.translate.instant('pendientes.estado_open');
     }
 
     estadoTone(item: PendingItem): 'red' | 'amber' | 'blue' | 'green' | 'gray' | 'violet' {
-        const lbl = this.estadoLabel(item);
-        if (lbl === 'Vencida') return 'red';
-        if (lbl === 'En progreso') return 'amber';
-        if (lbl === 'Completada') return 'green';
-        if (lbl === 'Bloqueada') return 'violet';
-        if (lbl === 'Cancelada') return 'gray';
+        // Tone derivation by raw item state — independent of i18n labels.
+        if (item.status === 'cancelled') return 'gray';
+        if (item.status === 'done') return 'green';
+        if (item.status === 'blocked') return 'violet';
+        if (item.bucket === 'vencido') return 'red';
+        if (item.bucket === 'proximo') return 'amber';
         return 'blue';
     }
 
     statusLabel(s: string): string {
-        return ({
-            pending: 'Pendiente',
-            done: 'Completada',
-            blocked: 'Bloqueada',
-            cancelled: 'Cancelada',
-        } as Record<string, string>)[s] || s;
+        const map: Record<string, string> = {
+            pending: this.translate.instant('pendientes.status_pending'),
+            done: this.translate.instant('pendientes.status_done'),
+            blocked: this.translate.instant('pendientes.status_blocked'),
+            cancelled: this.translate.instant('pendientes.status_cancelled'),
+        };
+        return map[s] || s;
     }
 
     /** Progreso visible en la barra. Como ActionItem no almacena % real,
@@ -430,7 +437,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
      *  Cada línea separada por `\n` (CSS lo respeta con `white-space: pre-line`). */
     ownerTooltip(item: PendingItem | { owner_name: string; owner_email?: string; owner_role?: string; owner_department?: string; owner_company?: string }): string {
         const lines: string[] = [];
-        lines.push(item.owner_name || 'Sin asignar');
+        lines.push(item.owner_name || this.translate.instant('pendientes.owner_unassigned'));
         if (item.owner_role && item.owner_department) {
             lines.push(`${item.owner_role} · ${item.owner_department}`);
         } else if (item.owner_role) {
@@ -535,36 +542,36 @@ export class PendientesComponent implements OnInit, OnDestroy {
 
         return [
             // Más tareas abiertas = neutral (no hay baseline histórico).
-            { key: 'open',     label: 'Tareas abiertas',    value: open,    icon: 'open',
-              delta: this._weekly(open, 'nuevas'),
+            { key: 'open',     label: this.translate.instant('pendientes.metric_open'),         value: open,    icon: 'open',
+              delta: this._weekly(open, 'pendientes.weekly_n_new'),
               deltaDir: open > 0 ? 'up' : 'flat',
               deltaTone: 'neutral' },
 
-            { key: 'progress', label: 'En progreso',        value: inprog,  icon: 'progress',
-              delta: this._weekly(inprog, 'esta semana'),
+            { key: 'progress', label: this.translate.instant('pendientes.metric_in_progress'), value: inprog,  icon: 'progress',
+              delta: this._weekly(inprog, 'pendientes.weekly_n_this_week'),
               deltaDir: inprog > 0 ? 'up' : 'flat',
               deltaTone: 'neutral' },
 
-            { key: 'week',     label: 'Vencen esta semana', value: week,    icon: 'week',
-              delta: 'En los próximos 7 días',
+            { key: 'week',     label: this.translate.instant('pendientes.metric_due_week'),    value: week,    icon: 'week',
+              delta: this.translate.instant('pendientes.weekly_next_7_days'),
               deltaDir: 'flat', deltaTone: 'neutral' },
 
             // Vencidas: más es PEOR.
-            { key: 'overdue',  label: 'Vencidas',           value: overdue, icon: 'overdue',
-              delta: this._weekly(overdue, 'requieren acción'),
+            { key: 'overdue',  label: this.translate.instant('pendientes.metric_overdue'),     value: overdue, icon: 'overdue',
+              delta: this._weekly(overdue, 'pendientes.weekly_n_require_action'),
               deltaDir: overdue > 0 ? 'up' : 'flat',
               deltaTone: overdue > 0 ? 'bad' : 'good' },
 
             // Completadas: más es MEJOR.
-            { key: 'done',     label: 'Completadas',        value: done,    icon: 'done',
-              delta: this._weekly(done, 'cerradas'),
+            { key: 'done',     label: this.translate.instant('pendientes.metric_done'),        value: done,    icon: 'done',
+              delta: this._weekly(done, 'pendientes.weekly_n_closed'),
               deltaDir: done > 0 ? 'up' : 'flat',
               deltaTone: done > 0 ? 'good' : 'neutral' },
         ];
     }
-    private _weekly(n: number, suffix: string): string {
-        if (!n) return `Sin cambios esta semana`;
-        return `${n} ${suffix}`;
+    private _weekly(n: number, key: string): string {
+        if (!n) return this.translate.instant('pendientes.weekly_no_changes');
+        return this.translate.instant(key, { n });
     }
 
     // ============================================================
@@ -686,7 +693,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
             const total = top.reduce((acc, x) => acc + x.count, 0);
             const tot = this.stats?.active_total || total;
             const out: DonutSlice[] = top.map((o, i) => ({
-                owner: o.owner || 'Sin asignar',
+                owner: o.owner || this.translate.instant('pendientes.owner_unassigned'),
                 count: o.count,
                 pct: tot > 0 ? Math.round((o.count / tot) * 100) : 0,
                 color: this.donutPalette[i] || this.donutPalette[5],
@@ -695,7 +702,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
             const restCount = (this.stats?.active_total || 0) - total;
             if (restCount > 0) {
                 out.push({
-                    owner: 'Otros', count: restCount,
+                    owner: this.translate.instant('pendientes.donut_others'), count: restCount,
                     pct: tot > 0 ? Math.round((restCount / tot) * 100) : 0,
                     color: this.donutPalette[5], initials: '··',
                 });
@@ -721,8 +728,9 @@ export class PendientesComponent implements OnInit, OnDestroy {
 
         // Agrupar por owner_name.
         const byOwner: Record<string, number> = {};
+        const unassignedLabel = this.translate.instant('pendientes.owner_unassigned');
         for (const it of filtered) {
-            const k = it.owner_name || 'Sin asignar';
+            const k = it.owner_name || unassignedLabel;
             byOwner[k] = (byOwner[k] || 0) + 1;
         }
         const sorted = Object.entries(byOwner)
@@ -807,7 +815,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
     }
     actionCancel(item: PendingItem): void {
         this.openActionsId = null;
-        if (!confirm('¿Cancelar esta tarea? Quedará archivada con estado "Cancelada".')) return;
+        if (!confirm(this.translate.instant('pendientes.confirm_cancel_task'))) return;
         this.setStatus(item, 'cancelled');
     }
 
@@ -892,11 +900,11 @@ export class PendientesComponent implements OnInit, OnDestroy {
     /** POST /api/sessions/{id}/action_items con multipart/form-data. */
     submitNewTask(): void {
         if (!this.newTask.session_id) {
-            this.toast.warning('Selecciona una reunión.');
+            this.toast.warning(this.translate.instant('pendientes.toast_pick_meeting'));
             return;
         }
         if (!this.newTask.title.trim()) {
-            this.toast.warning('La tarea necesita un título.');
+            this.toast.warning(this.translate.instant('pendientes.toast_task_needs_title'));
             return;
         }
         this.isCreating = true;
@@ -916,14 +924,14 @@ export class PendientesComponent implements OnInit, OnDestroy {
         ).pipe(takeUntil(this.destroy$)).subscribe({
             next: () => {
                 this.isCreating = false;
-                this.toast.success('Tarea agregada correctamente.');
+                this.toast.success(this.translate.instant('pendientes.toast_task_created'));
                 this.showCreateModal = false;
                 this.load();
                 this.loadStats();
             },
             error: (err) => {
                 this.isCreating = false;
-                const msg = err?.error?.detail || 'No se pudo crear la tarea.';
+                const msg = err?.error?.detail || this.translate.instant('pendientes.toast_task_create_error');
                 this.toast.error(msg);
                 this.cdr.detectChanges();
             },

@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -35,6 +35,7 @@ export class LandingComponent implements OnInit {
     private readonly router = inject(Router);
     private readonly cms = inject(LandingCmsService);
     private readonly langService = inject(LanguageService);
+    private readonly translate = inject(TranslateService);
 
     constructor() {
         // Reactivamos al cambio de idioma: cuando el usuario cambia el
@@ -203,12 +204,16 @@ export class LandingComponent implements OnInit {
      */
     peopleQuote(index: number): string {
         const fromCms = this.content?.testimonials?.quotes?.filter(q => q && q.trim()) ?? [];
-        const pool = fromCms.length > 0 ? fromCms : [
-            'Acten transformó la forma en que mi equipo ejecuta sus decisiones.',
-            'Pasamos de reuniones que terminan en olvido a tareas que sí se ejecutan.',
-            'La precisión y el seguimiento automático elevaron nuestra disciplina.',
-            'Las actas profesionales y la asignación de tareas son indispensables ya.',
+        // Fallbacks i18n cuando el CMS no aporta quotes — antes eran strings
+        // hardcoded en español. Ahora vienen del JSON activo para respetar el
+        // idioma del visitante.
+        const fallback = [
+            this.translate.instant('landing.fallback_quotes.q1'),
+            this.translate.instant('landing.fallback_quotes.q2'),
+            this.translate.instant('landing.fallback_quotes.q3'),
+            this.translate.instant('landing.fallback_quotes.q4'),
         ];
+        const pool = fromCms.length > 0 ? fromCms : fallback;
         return pool[index % pool.length];
     }
 
@@ -311,7 +316,7 @@ export class LandingComponent implements OnInit {
         const { name, email, message } = this.contactForm;
         if (!name.trim() || !email.includes('@') || !message.trim()) {
             this.contactError = this.content?.contact.form_error
-                || 'Por favor completa nombre, email y mensaje.';
+                || this.translate.instant('landing.contact_errors.missing_fields');
             return;
         }
 
@@ -345,18 +350,22 @@ export class LandingComponent implements OnInit {
             if (status === 429) {
                 this.contactError = typeof detail === 'string' && detail
                     ? detail
-                    : 'Estás enviando demasiados mensajes. Espera unos minutos y vuelve a intentar.';
+                    : this.translate.instant('landing.contact_errors.rate_limit');
             } else if (status === 422) {
                 // Pydantic devuelve detail como array de objetos {loc, msg, ...}.
                 const first = Array.isArray(detail) ? detail[0] : null;
+                const fallbackField = this.translate.instant('landing.contact_errors.field_fallback');
                 this.contactError = first?.msg
-                    ? `Revisa el campo "${(first.loc || []).slice(-1)[0] || 'formulario'}": ${first.msg}.`
-                    : 'Hay algún dato inválido en el formulario.';
+                    ? this.translate.instant('landing.contact_errors.field_invalid', {
+                          field: (first.loc || []).slice(-1)[0] || fallbackField,
+                          msg: first.msg,
+                      })
+                    : this.translate.instant('landing.contact_errors.invalid_data');
             } else if (status === 0 || !status) {
-                this.contactError = 'No pudimos conectar con el servidor. Verifica tu conexión e intenta de nuevo.';
+                this.contactError = this.translate.instant('landing.contact_errors.network');
             } else {
                 this.contactError = this.content?.contact.form_error
-                    || 'No se pudo enviar el mensaje. Intenta de nuevo en unos minutos.';
+                    || this.translate.instant('landing.contact_errors.generic');
             }
         } finally {
             this.contactLoading = false;

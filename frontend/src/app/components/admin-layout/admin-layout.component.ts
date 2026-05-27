@@ -11,8 +11,9 @@ import { PermissionsService } from '../../services/permissions.service';
 import { SearchService, SearchGroup } from '../../services/search.service';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer } from '@angular/platform-browser';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { LanguageService } from '../../services/language.service';
 
 interface CurrentUser {
     email?: string;
@@ -57,9 +58,11 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     searchLoading = false;
     private readonly searchInput$ = new Subject<string>();
 
-    /** Título dinámico del topbar derivado de la ruta activa
-     *  (route.data.title o route.title con sufijo " | Acten" recortado). */
-    currentPageTitle = 'Resumen';
+    /** Título dinámico derivado de la ruta activa (legacy — el `<title>` del
+     *  browser lo gestiona TitleService ahora). Se mantiene por compatibilidad
+     *  con cualquier consumidor interno; la inicialización vacía evita un
+     *  flash de texto en idioma incorrecto antes de la primera NavigationEnd. */
+    currentPageTitle = '';
 
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
@@ -71,6 +74,10 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     can(module: string, action: 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'export' = 'view'): boolean {
         return this.perms.can(module, action);
     }
+
+    private readonly translate = inject(TranslateService);
+    /** Para mapear el idioma activo al locale del date formatter del topbar. */
+    private readonly langService = inject(LanguageService);
 
     private readonly destroy$ = new Subject<void>();
 
@@ -247,33 +254,45 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
             });
     }
 
-    /** Convierte 'session_processed' → label humano en español. */
+    /** Convierte 'session_processed' → label humano en el idioma activo. */
     notifKindLabel(kind: string): string {
         const map: Record<string, string> = {
-            session_processed: 'Sesión analizada',
-            session_received:  'Sesión recibida',
-            task_assigned:     'Tarea asignada',
-            routing_failed:    'Error de sincronización',
-            comment_mention:   'Mención en comentario',
-            system:            'Sistema',
+            session_processed: 'admin_layout.notif_kinds.session_processed',
+            session_received:  'admin_layout.notif_kinds.session_received',
+            task_assigned:     'admin_layout.notif_kinds.task_assigned',
+            routing_failed:    'admin_layout.notif_kinds.routing_failed',
+            comment_mention:   'admin_layout.notif_kinds.comment_mention',
+            system:            'admin_layout.notif_kinds.system',
         };
-        return map[kind] || 'Notificación';
+        const key = map[kind] || 'admin_layout.notif_kinds.default';
+        return this.translate.instant(key);
     }
 
-    /** "hace X" para los timestamps de las notificaciones. */
+    /** "hace X" para los timestamps de las notificaciones — i18n-aware.
+     *  Para minutos/horas/días usamos `translate` con interpolación.
+     *  Para fechas >7 días caemos a `toLocaleDateString` con el locale
+     *  derivado del idioma activo (es → es-CO, en → en-US, ca → ca-ES). */
     timeAgo(iso: string): string {
         if (!iso) return '';
         const d = new Date(iso);
         if (isNaN(d.getTime())) return '';
         const diff = Date.now() - d.getTime();
         const mins = Math.floor(diff / 60000);
-        if (mins < 1) return 'hace un momento';
-        if (mins < 60) return `hace ${mins} min`;
+        if (mins < 1) return this.translate.instant('admin_layout.time_ago.moment');
+        if (mins < 60) return this.translate.instant('admin_layout.time_ago.minutes', { n: mins });
         const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return `hace ${hrs} h`;
+        if (hrs < 24) return this.translate.instant('admin_layout.time_ago.hours', { n: hrs });
         const days = Math.floor(hrs / 24);
-        if (days < 7) return `hace ${days} d`;
-        return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
+        if (days < 7) return this.translate.instant('admin_layout.time_ago.days', { n: days });
+        const locale = this.dateLocale();
+        return d.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
+    }
+
+    /** Locale BCP-47 para Intl APIs derivado del idioma activo. */
+    private dateLocale(): string {
+        const lang = this.langService.currentLang();
+        const map: Record<string, string> = { es: 'es-CO', en: 'en-US', ca: 'ca-ES' };
+        return map[lang] || 'es-CO';
     }
 
     // ==================== SEARCH ====================
@@ -356,11 +375,20 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
         return `${environment.apiUrl}${raw}`;
     }
 
-    /** "12 may 2026" — etiqueta que renderiza el date selector del topbar. */
+    /** "12 may 2026" / "May 12, 2026" / "12 maig 2026" — label del date
+     *  selector del topbar. Usa `Intl.DateTimeFormat` con el locale del
+     *  idioma activo para que la abreviación del mes y el orden de los
+     *  campos respeten convenciones locales sin tablas hardcoded. */
     get todayLabel(): string {
         const d = new Date();
-        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        try {
+            return new Intl.DateTimeFormat(this.dateLocale(), {
+                day: 'numeric', month: 'short', year: 'numeric',
+            }).format(d);
+        } catch {
+            // Fallback defensivo si el browser no soporta el locale.
+            return d.toDateString();
+        }
     }
 
     /** Año actual para el copy del footer. */

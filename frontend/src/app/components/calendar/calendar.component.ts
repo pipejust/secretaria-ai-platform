@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -203,6 +203,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         private route: ActivatedRoute,
         private userDirectory: UserDirectoryService,
         public lang: LanguageService,
+        private translate: TranslateService,
     ) {
         // Re-render del calendario cuando el directorio resuelve nuevos
         // emails (la foto del dueño aparece en cuanto está disponible).
@@ -255,7 +256,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => { this.accounts = data || []; this.cdr.detectChanges(); },
-                error: () => this.toast.error('No pude listar tus cuentas conectadas.'),
+                error: () => this.toast.error(this.translate.instant('calendar.toast_accounts_error')),
             });
     }
 
@@ -310,7 +311,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     connect(provider: 'google' | 'microsoft'): void {
         this.showSourcesMenu = false;
-        this.toast.info(`Abriendo ventana de ${provider === 'google' ? 'Google' : 'Microsoft 365'}…`);
+        const providerName = provider === 'google'
+            ? this.translate.instant('calendar.provider_google')
+            : this.translate.instant('calendar.provider_microsoft');
+        this.toast.info(this.translate.instant('calendar.toast_opening_oauth', { provider: providerName }));
         this.http.get<{url: string; state: string}>(
             `${environment.apiUrl}/api/calendar/${provider}/auth_url`,
             { headers: this.auth.getAuthHeaders() })
@@ -318,10 +322,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: (res) => this.openOauthPopup(res.url, provider),
                 error: (err) => {
+                    const envvar = provider === 'google' ? 'GOOGLE_OAUTH_CLIENT_ID' : 'MS_OAUTH_CLIENT_ID';
                     const detail = err?.error?.detail
                         || (err?.status === 503
-                            ? `OAuth de ${provider} no está configurado en el servidor. Pídele al admin que defina ${provider === 'google' ? 'GOOGLE_OAUTH_CLIENT_ID' : 'MS_OAUTH_CLIENT_ID'} y el redirect URI.`
-                            : `No pude iniciar el flujo de ${provider}.`);
+                            ? this.translate.instant('calendar.toast_oauth_unconfigured', { provider: providerName, envvar })
+                            : this.translate.instant('calendar.toast_oauth_flow_error', { provider: providerName }));
                     this.toast.error(detail);
                 },
             });
@@ -335,7 +340,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         const popup = window.open(url, `acten_oauth_${provider}`, features);
         if (!popup) {
             // Popup bloqueado → fallback: redirección directa.
-            this.toast.warning('Tu navegador bloqueó la ventana emergente. Redirigiendo…');
+            this.toast.warning(this.translate.instant('calendar.toast_popup_blocked'));
             window.location.href = url;
             return;
         }
@@ -350,20 +355,23 @@ export class CalendarComponent implements OnInit, OnDestroy {
                 setTimeout(() => {
                     this.loadAccounts();
                     this.loadEvents();
-                    this.toast.success(`Conexión con ${provider === 'google' ? 'Google' : 'Microsoft 365'} verificada.`);
+                    const providerName = provider === 'google'
+                        ? this.translate.instant('calendar.provider_google')
+                        : this.translate.instant('calendar.provider_microsoft');
+                    this.toast.success(this.translate.instant('calendar.toast_oauth_connected', { provider: providerName }));
                 }, 600);
             }
         }, 1000);
     }
 
     disconnect(account: CalAccount): void {
-        if (!confirm(`¿Desconectar la cuenta ${account.account_email}?`)) return;
+        if (!confirm(this.translate.instant('calendar.confirm_disconnect', { email: account.account_email }))) return;
         this.http.delete(`${environment.apiUrl}/api/calendar/accounts/${account.id}`,
             { headers: this.auth.getAuthHeaders() })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => { this.toast.success('Cuenta desconectada.'); this.loadAccounts(); this.loadEvents(); },
-                error: () => this.toast.error('No pude desconectar.'),
+                next: () => { this.toast.success(this.translate.instant('calendar.toast_account_disconnected')); this.loadAccounts(); this.loadEvents(); },
+                error: () => this.toast.error(this.translate.instant('calendar.toast_disconnect_error')),
             });
     }
 
@@ -377,11 +385,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: (res) => {
                     this.isSyncing = false;
-                    this.toast.success(`${res.events_added} eventos nuevos sincronizados.`);
+                    this.toast.success(this.translate.instant('calendar.toast_sync_success', { count: res.events_added }));
                     this.loadEvents();
                     this.loadTasks();
                 },
-                error: () => { this.isSyncing = false; this.toast.error('Sincronización falló.'); this.cdr.detectChanges(); },
+                error: () => { this.isSyncing = false; this.toast.error(this.translate.instant('calendar.toast_sync_failed')); this.cdr.detectChanges(); },
             });
     }
 
@@ -532,8 +540,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
             const isToday = this.sameDay(dueDay, today);
             items.push({
                 id: `task-${t.id}`,
-                title: t.title || 'Tarea sin título',
-                when: isToday ? 'Vence hoy' : isOverdue ? `Vencida · ${this.shortDateLabel(d)}` : this.shortDateLabel(d),
+                title: t.title || this.translate.instant('calendar.task_no_title'),
+                when: isToday
+                    ? this.translate.instant('calendar.deadline_due_today')
+                    : isOverdue
+                        ? this.translate.instant('calendar.deadline_overdue_at', { date: this.shortDateLabel(d) })
+                        : this.shortDateLabel(d),
                 urgent: isToday || isOverdue,
             });
         }
@@ -547,8 +559,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
             const sameToday = this.sameDay(d, today);
             items.push({
                 id: `ev-${ev.id}`,
-                title: `Acta pendiente · ${ev.title}`,
-                when: sameToday ? 'Vence hoy' : this.shortDateLabel(d),
+                title: this.translate.instant('calendar.deadline_acta_pending', { title: ev.title }),
+                when: sameToday ? this.translate.instant('calendar.deadline_due_today') : this.shortDateLabel(d),
                 urgent: sameToday,
             });
         }
@@ -569,10 +581,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
     get selectedDayCountLabel(): string {
         const m = this.selectedDayEvents.length;
         const t = this.selectedDayTasks.length;
-        if (!m && !t) return 'Sin reuniones ni tareas';
+        if (!m && !t) return this.translate.instant('calendar.selected_day_none');
         const parts: string[] = [];
-        if (m) parts.push(m === 1 ? '1 reunión' : `${m} reuniones`);
-        if (t) parts.push(t === 1 ? '1 tarea' : `${t} tareas`);
+        if (m) parts.push(m === 1
+            ? this.translate.instant('calendar.meetings_one')
+            : this.translate.instant('calendar.meetings_other', { count: m }));
+        if (t) parts.push(t === 1
+            ? this.translate.instant('calendar.tasks_one')
+            : this.translate.instant('calendar.tasks_other', { count: t }));
         return parts.join(' · ');
     }
 
@@ -615,13 +631,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     taskKindLabel(t: PendingTask): string {
         switch (this.taskKind(t)) {
-            case 'overdue': return 'Vencida';
-            case 'today': return 'Vence hoy';
-            case 'soon': return 'Próxima';
-            case 'done': return 'Completada';
-            case 'cancelled': return 'Cancelada';
-            case 'blocked': return 'Bloqueada';
-            default: return 'Programada';
+            case 'overdue': return this.translate.instant('calendar.task_overdue');
+            case 'today': return this.translate.instant('calendar.task_due_today');
+            case 'soon': return this.translate.instant('calendar.task_soon');
+            case 'done': return this.translate.instant('calendar.task_done');
+            case 'cancelled': return this.translate.instant('calendar.task_cancelled');
+            case 'blocked': return this.translate.instant('calendar.task_blocked');
+            default: return this.translate.instant('calendar.task_planned');
         }
     }
 
@@ -682,13 +698,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     /** Etiqueta corta para mostrar dentro del pill del día: prioriza dueño. */
     taskOwnerLabel(t: PendingTask): string {
-        if (!t) return 'Tarea';
+        const fallback = this.translate.instant('calendar.task_default');
+        if (!t) return fallback;
         if (t.owner_name && t.owner_name.trim()) return t.owner_name.trim();
         if (t.owner_email && t.owner_email.includes('@')) {
             return t.owner_email.split('@')[0];
         }
         if (t.owner_email && t.owner_email.trim()) return t.owner_email.trim();
-        return 'Tarea';
+        return fallback;
     }
 
     eventColor(ev: CalEvent): string {
@@ -752,20 +769,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
         if (ev.meeting_url) {
             try {
                 const host = new URL(ev.meeting_url).hostname.replace('www.', '');
-                if (host.includes('zoom')) return 'Zoom Meeting';
-                if (host.includes('meet.google')) return 'Google Meet';
-                if (host.includes('teams')) return 'Microsoft Teams';
+                if (host.includes('zoom')) return this.translate.instant('calendar.event_zoom');
+                if (host.includes('meet.google')) return this.translate.instant('calendar.event_google_meet');
+                if (host.includes('teams')) return this.translate.instant('calendar.event_teams');
                 return host;
-            } catch { return 'Reunión virtual'; }
+            } catch { return this.translate.instant('calendar.event_virtual'); }
         }
-        return 'Sin enlace';
+        return this.translate.instant('calendar.event_no_link');
     }
 
     eventStatusLabel(ev: CalEvent): string {
-        if (ev.session_id) return 'Con acta';
+        if (ev.session_id) return this.translate.instant('calendar.event_has_minutes');
         const start = new Date(ev.start_at);
-        if (!isNaN(start.getTime()) && start < this.today) return 'Sin acta';
-        return 'Programada';
+        if (!isNaN(start.getTime()) && start < this.today) return this.translate.instant('calendar.event_missing_minutes');
+        return this.translate.instant('calendar.event_scheduled');
     }
 
     eventStatusKind(ev: CalEvent): 'linked' | 'missing' | 'scheduled' | 'live' {
@@ -786,11 +803,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
 
     badgeLabel(ev: CalEvent): string {
-        if (this.isEventLive(ev)) return 'En progreso';
-        if (ev.session_id) return 'Con acta';
+        if (this.isEventLive(ev)) return this.translate.instant('calendar.event_in_progress');
+        if (ev.session_id) return this.translate.instant('calendar.event_has_minutes');
         const start = new Date(ev.start_at);
-        if (!isNaN(start.getTime()) && start < this.today) return 'Sin acta';
-        return 'Próxima';
+        if (!isNaN(start.getTime()) && start < this.today) return this.translate.instant('calendar.event_missing_minutes');
+        return this.translate.instant('calendar.event_upcoming');
     }
 
     eventInitials(name: string): string {
@@ -873,7 +890,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     newMeeting(): void {
         // The backend has no "create event" endpoint; events flow from sync.
         // Surface a discoverable hint that helps the user with the right path.
-        this.toast.info('Las reuniones se crean en tu calendario externo. Sincroniza para verlas aquí.');
+        this.toast.info(this.translate.instant('calendar.toast_external_calendars'));
     }
 
     // ============================================================
@@ -1013,11 +1030,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     submitNewTask(): void {
         if (!this.newTask.session_id) {
-            this.toast.warning('Selecciona una reunión.');
+            this.toast.warning(this.translate.instant('calendar.toast_pick_meeting'));
             return;
         }
         if (!this.newTask.title.trim()) {
-            this.toast.warning('La tarea necesita un título.');
+            this.toast.warning(this.translate.instant('calendar.toast_task_needs_title'));
             return;
         }
         this.isCreatingTask = true;
@@ -1037,14 +1054,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
         ).pipe(takeUntil(this.destroy$)).subscribe({
             next: () => {
                 this.isCreatingTask = false;
-                this.toast.success('Tarea creada correctamente.');
+                this.toast.success(this.translate.instant('calendar.toast_task_created'));
                 this.showNewTaskModal = false;
                 this.loadTasks();
                 this.cdr.detectChanges();
             },
             error: (err) => {
                 this.isCreatingTask = false;
-                const msg = err?.error?.detail || 'No se pudo crear la tarea.';
+                const msg = err?.error?.detail || this.translate.instant('calendar.toast_task_create_error');
                 this.toast.error(msg);
                 this.cdr.detectChanges();
             },

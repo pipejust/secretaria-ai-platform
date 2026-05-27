@@ -242,9 +242,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     getProjectName(projectId: any): string {
-        if (!projectId) return 'General';
+        const fallback = this.translate.instant('dashboard.project_general');
+        if (!projectId) return fallback;
         const p = this.projects.find(proj => proj.id === projectId);
-        return p ? p.name : 'General';
+        return p ? p.name : fallback;
     }
 
     /** Convierte la fecha de la sesión a 'dd/mm/aaaa' para que el buscador
@@ -300,17 +301,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     submitUpload() {
         if (!this.uploadForm.title) {
-            this.toast.warning('El título/motivo es obligatorio.');
+            this.toast.warning(this.translate.instant('dashboard.toast_title_required'));
             return;
         }
 
         if (this.uploadTab === 'audio' && !this.uploadForm.file) {
-            this.toast.warning('Debe subir un archivo de audio para transcribir.');
+            this.toast.warning(this.translate.instant('dashboard.toast_audio_required'));
             return;
         }
 
         if (this.uploadTab === 'text' && !this.uploadForm.textContent.trim()) {
-            this.toast.warning('Debe pegar el texto de la transcripción.');
+            this.toast.warning(this.translate.instant('dashboard.toast_text_required'));
             return;
         }
 
@@ -341,14 +342,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
         
         this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
             next: () => {
-                this.toast.success('Sesión creada exitosamente.');
+                this.toast.success(this.translate.instant('dashboard.toast_session_created'));
                 this.showUploadModal = false;
                 this.isUploading = false;
                 this.loadSessions();
             },
             error: (err) => {
                 this.toast.error(
-                    'Error subiendo o creando la sesión: ' + (err?.error?.detail || err?.message || 'desconocido'),
+                    this.translate.instant('dashboard.toast_session_upload_error', {
+                        detail: err?.error?.detail || err?.message || 'desconocido',
+                    }),
                 );
                 this.isUploading = false;
             }
@@ -554,10 +557,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const prevActions = prev.reduce((acc) => acc, Math.max(0, actionItems - 5));
 
         return [
-            { key: 'meetings',     label: 'Reuniones',  value: meetings,    trend: trend(meetings, prevMeetings),   tone: 'navy',    icon: 'meetings',  sparkline: this._sparkSessionsCount() },
-            { key: 'action_items', label: 'Tareas',     value: actionItems, trend: trend(actionItems, prevActions), tone: 'success', icon: 'tasks',     sparkline: this._sparkActionItems() },
-            { key: 'decisions',    label: 'Decisiones', value: decisions,   trend: trend(decisions, prevDecisions), tone: 'success', icon: 'decisions', sparkline: this._sparkDecisions() },
-            { key: 'risks',        label: 'Riesgos',    value: risks,       trend: trend(risks, prevRisks),         tone: 'warning', icon: 'risks',     sparkline: this._sparkRisks() },
+            { key: 'meetings',     label: this.translate.instant('dashboard.kpi_meetings'),  value: meetings,    trend: trend(meetings, prevMeetings),   tone: 'navy',    icon: 'meetings',  sparkline: this._sparkSessionsCount() },
+            { key: 'action_items', label: this.translate.instant('dashboard.kpi_tasks'),     value: actionItems, trend: trend(actionItems, prevActions), tone: 'success', icon: 'tasks',     sparkline: this._sparkActionItems() },
+            { key: 'decisions',    label: this.translate.instant('dashboard.kpi_decisions'), value: decisions,   trend: trend(decisions, prevDecisions), tone: 'success', icon: 'decisions', sparkline: this._sparkDecisions() },
+            { key: 'risks',        label: this.translate.instant('dashboard.kpi_risks'),     value: risks,       trend: trend(risks, prevRisks),         tone: 'warning', icon: 'risks',     sparkline: this._sparkRisks() },
         ];
     }
 
@@ -746,10 +749,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const archived = c('archived') + c('failed') + c('error');
         const pct = (n: number) => Math.round((n / total) * 100);
         return [
-            { label: 'Completadas',     count: completed,  pct: pct(completed),  color: 'var(--color-success)' },
-            { label: 'En procesamiento', count: processing, pct: pct(processing), color: 'var(--color-info)' },
-            { label: 'Pendientes',      count: pending,    pct: pct(pending),    color: 'var(--color-warning)' },
-            { label: 'Archivadas',      count: archived,   pct: pct(archived),   color: 'var(--color-fg-soft)' },
+            { label: this.translate.instant('dashboard.followup_label_completed'),     count: completed,  pct: pct(completed),  color: 'var(--color-success)' },
+            { label: this.translate.instant('dashboard.followup_label_processing'),    count: processing, pct: pct(processing), color: 'var(--color-info)' },
+            { label: this.translate.instant('dashboard.followup_label_pending'),       count: pending,    pct: pct(pending),    color: 'var(--color-warning)' },
+            { label: this.translate.instant('dashboard.followup_label_archived'),      count: archived,   pct: pct(archived),   color: 'var(--color-fg-soft)' },
         ];
     }
 
@@ -771,10 +774,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }).length;
         const pct = (n: number) => Math.round((n / total) * 100);
         return [
-            { label: 'Completadas',    count: completed,  pct: pct(completed),  color: 'var(--color-success)' },
-            { label: 'En progreso',    count: inProgress, pct: pct(inProgress), color: 'var(--color-info)' },
-            { label: 'Pendientes',     count: pending,    pct: pct(pending),    color: 'var(--color-warning)' },
-            { label: 'Vencidas',       count: overdue,    pct: pct(overdue),    color: 'var(--color-danger)' },
+            { label: this.translate.instant('dashboard.followup_label_completed'),    count: completed,  pct: pct(completed),  color: 'var(--color-success)' },
+            { label: this.translate.instant('dashboard.followup_label_in_progress'),  count: inProgress, pct: pct(inProgress), color: 'var(--color-info)' },
+            { label: this.translate.instant('dashboard.followup_label_pending'),      count: pending,    pct: pct(pending),    color: 'var(--color-warning)' },
+            { label: this.translate.instant('dashboard.followup_label_overdue'),      count: overdue,    pct: pct(overdue),    color: 'var(--color-danger)' },
         ];
     }
 
@@ -788,7 +791,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     /** Sustantivo que va abajo del número en el centro (Total siempre,
      *  pero usamos esto en el banner para variar el copy). */
     get followupUnitPlural(): string {
-        return this.followupSource === 'sessions' ? 'sesiones' : 'tareas';
+        return this.followupSource === 'sessions'
+            ? this.translate.instant('dashboard.followup_unit_sessions')
+            : this.translate.instant('dashboard.followup_unit_tasks');
     }
 
     /** Cambia la fuente del donut. */
@@ -846,7 +851,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     /** Porcentaje de tareas completadas (para el banner de ánimo). */
     get completedPercent(): number {
-        const c = this.followupBreakdown.find((b) => b.label === 'Completadas');
+        const completedLabel = this.translate.instant('dashboard.followup_label_completed');
+        const c = this.followupBreakdown.find((b) => b.label === completedLabel);
         return c?.pct || 0;
     }
 
@@ -854,38 +860,48 @@ export class DashboardComponent implements OnInit, OnDestroy {
      *  (sesiones vs tareas) para que el mensaje siempre sea preciso. */
     get encouragementMessage(): { title: string; sub: string; tone: 'success' | 'info' | 'neutral' } {
         const noun = this.followupUnitPlural;            // "sesiones" | "tareas"
-        const nounSing = noun.slice(0, -1);              // "sesione" / "tarea" → ajustamos abajo
-        const unitFem = this.followupSource === 'sessions' ? 'sesión' : 'tarea';
 
         if (this.followupTotal === 0) {
             return this.followupSource === 'sessions'
                 ? {
-                    title: 'Aún no hay sesiones registradas.',
-                    sub: 'Sube tu primera reunión y la IA generará las acciones automáticamente.',
+                    title: this.translate.instant('dashboard.encouragement_empty_sessions_title'),
+                    sub: this.translate.instant('dashboard.encouragement_empty_sessions_sub'),
                     tone: 'neutral',
                   }
                 : {
-                    title: 'Aún no hay tareas registradas.',
-                    sub: 'Las tareas se generan al analizar una sesión.',
+                    title: this.translate.instant('dashboard.encouragement_empty_tasks_title'),
+                    sub: this.translate.instant('dashboard.encouragement_empty_tasks_sub'),
                     tone: 'neutral',
                   };
         }
         const pct = this.completedPercent;
         if (pct >= 70) {
-            return { title: `¡Excelente! ${pct}% de las ${noun} completadas.`, sub: 'Mantén el ritmo del equipo.', tone: 'success' };
+            return {
+                title: this.translate.instant('dashboard.encouragement_excellent_title', { pct, noun }),
+                sub: this.translate.instant('dashboard.encouragement_excellent_sub'),
+                tone: 'success',
+            };
         }
         if (pct >= 40) {
-            return { title: `¡Buen trabajo! ${pct}% de las ${noun} completadas.`, sub: 'Mantén el momentum.', tone: 'success' };
+            return {
+                title: this.translate.instant('dashboard.encouragement_good_title', { pct, noun }),
+                sub: this.translate.instant('dashboard.encouragement_good_sub'),
+                tone: 'success',
+            };
         }
         if (pct >= 15) {
-            return { title: `Vas avanzando: ${pct}% de las ${noun} completadas.`, sub: 'Revisa las pendientes para acelerar el cierre.', tone: 'info' };
+            return {
+                title: this.translate.instant('dashboard.encouragement_progressing_title', { pct, noun }),
+                sub: this.translate.instant('dashboard.encouragement_progressing_sub'),
+                tone: 'info',
+            };
         }
         // Sub-frase específica por fuente.
         const sub = this.followupSource === 'sessions'
-            ? 'Procesa las sesiones pendientes o archiva las que ya no necesitas.'
-            : 'Empieza con las vencidas o asignadas a tu equipo.';
+            ? this.translate.instant('dashboard.encouragement_attention_sub_sessions')
+            : this.translate.instant('dashboard.encouragement_attention_sub_tasks');
         return {
-            title: `Hay ${noun} que necesitan atención.`,
+            title: this.translate.instant('dashboard.encouragement_attention_title', { noun }),
             sub,
             tone: 'info',
         };
@@ -939,7 +955,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         // "Synced Xm ago" — placeholders visuales escalonados para que la card
         // no quede toda con el mismo timestamp. El backend no traquea esto
         // hoy; cuando lo haga, leemos `cfg[provider].last_sync_at`.
-        const ago = (mins: number): string => `Synced ${mins}m ago`;
+        const ago = (mins: number): string => this.translate.instant('dashboard.synced_ago', { minutes: mins });
         return [
             { id: 'jira',     name: 'Jira',         iconColor: '#2684FF', iconLetter: 'J', connected: has('jira'),         syncedAgo: ago(2) },
             { id: 'trello',   name: 'Trello',       iconColor: '#0079BF', iconLetter: 'T', connected: has('trello'),       syncedAgo: ago(5) },
@@ -1027,7 +1043,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             if (allEmails.length) this.userDirectory.preload(allEmails);
 
             const visible = attendees.slice(0, 3).map((a: any, i: number) => {
-                const name = String(a?.name || a?.full_name || a?.email || 'Sin nombre').trim();
+                const name = String(a?.name || a?.full_name || a?.email || this.translate.instant('dashboard.row_no_attendee')).trim();
                 return {
                     initials: this.initials(name),
                     tone: palette[(idx + i) % palette.length],
@@ -1053,7 +1069,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
             return {
                 id: m.id,
-                title: m.title || 'Sin título',
+                title: m.title || this.translate.instant('dashboard.row_no_title'),
                 date: this.formatTableDate(m.date),
                 participants: visible,
                 extra,
@@ -1106,7 +1122,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     : 'Low';
                 out.push({
                     id: s.id,
-                    sessionTitle: s.title || 'Sin título',
+                    sessionTitle: s.title || this.translate.instant('dashboard.row_no_title'),
                     sessionDate: this.formatTableDate(s.date),
                     text: line.slice(0, 110),
                     impact,
@@ -1135,11 +1151,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (emails.length) this.userDirectory.preload(emails);
         return items.map((it, idx) => {
             const accents: Array<'success' | 'info' | 'warning'> = ['success', 'info', 'warning'];
-            const ownerName = String(it?.owner_name || it?.owner_email || 'Sin asignar').trim();
+            const ownerName = String(it?.owner_name || it?.owner_email || this.translate.instant('dashboard.row_owner_unassigned')).trim();
             return {
                 id: it.id,
-                title: it.title || 'Tarea sin título',
-                sessionTitle: it?.session_title || it?.session?.title || 'Reunión sin título',
+                title: it.title || this.translate.instant('dashboard.row_task_no_title'),
+                sessionTitle: it?.session_title || it?.session?.title || this.translate.instant('dashboard.row_meeting_no_title'),
                 sessionDate: this.formatTableDate(it?.session_date || it?.session?.date),
                 owner: {
                     initials: this.initials(ownerName),
@@ -1149,7 +1165,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     company: String(it?.owner_company || it?.owner_entity || '').trim(),
                     email: String(it?.owner_email || '').trim().toLowerCase(),
                 },
-                dueLabel: this.formatTableDate(it.due_date) || 'Sin fecha',
+                dueLabel: this.formatTableDate(it.due_date) || this.translate.instant('dashboard.row_no_date'),
                 accent: accents[idx % 3],
             };
         });
@@ -1227,7 +1243,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     toggleTaskDone(task: any, ev: Event): void {
         ev.stopPropagation();
         if (!this.canTickTasks) {
-            this.toast.error('Tu rol no permite cambiar el estado de tareas.');
+            this.toast.error(this.translate.instant('dashboard.toast_task_role_forbidden'));
             (ev.target as HTMLInputElement).checked = false;
             return;
         }
@@ -1246,14 +1262,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ).pipe(takeUntil(this.destroy$)).subscribe({
             next: () => {
                 this.togglingTaskId = null;
-                this.toast.success(nextStatus === 'done' ? 'Tarea marcada como completada.' : 'Tarea reabierta.');
+                this.toast.success(nextStatus === 'done'
+                    ? this.translate.instant('dashboard.toast_task_completed')
+                    : this.translate.instant('dashboard.toast_task_reopened'));
                 // Refresca contadores (Follow-up Status + KPIs)
                 this.loadOverview();
             },
             error: (err) => {
                 this.togglingTaskId = null;
                 task.status = wasDone ? 'done' : 'pending';  // revert
-                this.toast.error('No se pudo actualizar la tarea: ' + (err?.error?.detail || 'desconocido'));
+                this.toast.error(this.translate.instant('dashboard.toast_task_update_error', {
+                    detail: err?.error?.detail || 'desconocido',
+                }));
                 this.cdr.detectChanges();
             },
         });
@@ -1273,10 +1293,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     statusLabel(status: string): string {
-        if (status === 'completed') return 'Completado';
-        if (status === 'processing') return 'Procesando';
-        if (status === 'pending') return 'Pendiente';
-        if (status === 'archived') return 'Archivado';
+        if (status === 'completed') return this.translate.instant('dashboard.status_completed');
+        if (status === 'processing') return this.translate.instant('dashboard.status_processing');
+        if (status === 'pending') return this.translate.instant('dashboard.status_pending');
+        if (status === 'archived') return this.translate.instant('dashboard.status_archived');
         return status || '—';
     }
 
@@ -1424,7 +1444,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             error: () => {
                 this.toast.error(
-                    `Error descargando el documento ${format.toUpperCase()}. Verifique su conexión.`,
+                    this.translate.instant('dashboard.toast_export_error_conn', { format: format.toUpperCase() }),
                 );
                 this.generatingIds[genKey] = false;
                 this.cdr.detectChanges();
@@ -1456,12 +1476,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 this.isDeleting = false;
                 this.showDeleteModal = false;
                 this.sessionToDelete = null;
-                this.toast.success('Sesión eliminada correctamente.');
+                this.toast.success(this.translate.instant('dashboard.toast_session_deleted'));
                 this.loadSessions();
             },
             error: () => {
                 this.isDeleting = false;
-                this.toast.error('Error al intentar eliminar la sesión.');
+                this.toast.error(this.translate.instant('dashboard.toast_session_delete_error'));
             }
         });
     }

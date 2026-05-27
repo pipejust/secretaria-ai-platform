@@ -5,7 +5,7 @@ import {
     inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
@@ -49,6 +49,7 @@ export class LandingMessagesComponent implements OnInit {
     private readonly auth = inject(AuthService);
     private readonly toast = inject(ToastService);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly translate = inject(TranslateService);
 
     messages: ContactMessage[] = [];
     selected: ContactMessage | null = null;
@@ -87,7 +88,7 @@ export class LandingMessagesComponent implements OnInit {
     async reload(): Promise<void> {
         const token = this.auth.token;
         if (!token) {
-            this.loadError = 'Tu sesión expiró. Vuelve a iniciar sesión.';
+            this.loadError = this.translate.instant('landing_messages.session_expired');
             this.isLoading = false;
             return;
         }
@@ -106,7 +107,7 @@ export class LandingMessagesComponent implements OnInit {
             }
         } catch (err: any) {
             const detail = err?.error?.detail || err?.message || 'Error desconocido.';
-            this.loadError = `No se pudieron cargar los mensajes: ${detail}`;
+            this.loadError = this.translate.instant('landing_messages.load_error', { detail });
             this.toast.error(this.loadError);
         } finally {
             this.isLoading = false;
@@ -158,7 +159,7 @@ export class LandingMessagesComponent implements OnInit {
         if (!this.selected || this.isUpdating) return;
         const token = this.auth.token;
         if (!token) {
-            this.toast.error('Tu sesión expiró.');
+            this.toast.error(this.translate.instant('landing_messages.session_expired_short'));
             return;
         }
         this.isUpdating = true;
@@ -178,7 +179,7 @@ export class LandingMessagesComponent implements OnInit {
             } else if (previous !== 'new' && status === 'new') {
                 this.unreadCount += 1;
             }
-            this.toast.success(`Mensaje marcado como ${this.statusLabel(status).toLowerCase()}.`);
+            this.toast.success(this.translate.instant('landing_messages.marked_as', { status: this.statusLabel(status).toLowerCase() }));
 
             // Si el filtro activo ya no incluye este estado, recargamos
             // para que desaparezca del listado.
@@ -187,7 +188,7 @@ export class LandingMessagesComponent implements OnInit {
             }
         } catch (err: any) {
             const detail = err?.error?.detail || err?.message || 'Error desconocido.';
-            this.toast.error(`No se pudo actualizar: ${detail}`);
+            this.toast.error(this.translate.instant('landing_messages.update_error', { detail }));
         } finally {
             this.isUpdating = false;
             this.cdr.detectChanges();
@@ -197,12 +198,12 @@ export class LandingMessagesComponent implements OnInit {
     async deleteSelected(): Promise<void> {
         if (!this.selected || this.isUpdating) return;
         const target = this.selected;
-        if (!confirm(`¿Eliminar el mensaje de ${target.name}? Esta acción no se puede deshacer.`)) {
+        if (!confirm(this.translate.instant('landing_messages.confirm_delete', { name: target.name }))) {
             return;
         }
         const token = this.auth.token;
         if (!token) {
-            this.toast.error('Tu sesión expiró.');
+            this.toast.error(this.translate.instant('landing_messages.session_expired_short'));
             return;
         }
         this.isUpdating = true;
@@ -215,10 +216,10 @@ export class LandingMessagesComponent implements OnInit {
             }
             this.selected = null;
             this.isDetailOpenMobile = false;
-            this.toast.success('Mensaje eliminado.');
+            this.toast.success(this.translate.instant('landing_messages.deleted'));
         } catch (err: any) {
             const detail = err?.error?.detail || err?.message || 'Error desconocido.';
-            this.toast.error(`No se pudo eliminar: ${detail}`);
+            this.toast.error(this.translate.instant('landing_messages.delete_error', { detail }));
         } finally {
             this.isUpdating = false;
             this.cdr.detectChanges();
@@ -237,10 +238,10 @@ export class LandingMessagesComponent implements OnInit {
 
     statusLabel(status: ContactMessageStatus): string {
         switch (status) {
-            case 'new': return 'Nuevo';
-            case 'read': return 'Leído';
-            case 'replied': return 'Respondido';
-            case 'archived': return 'Archivado';
+            case 'new': return this.translate.instant('landing_messages.status_new');
+            case 'read': return this.translate.instant('landing_messages.status_read');
+            case 'replied': return this.translate.instant('landing_messages.status_replied');
+            case 'archived': return this.translate.instant('landing_messages.status_archived');
         }
     }
 

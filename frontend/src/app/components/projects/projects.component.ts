@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -131,6 +131,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         private cdr: ChangeDetectorRef,
         private route: ActivatedRoute,
         private userDirectory: UserDirectoryService,
+        private translate: TranslateService,
     ) {
         // Re-render cuando el directorio resuelve más correos/nombres.
         this.userDirectory.directory$
@@ -242,7 +243,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = 'Error al cargar los proyectos';
+                this.errorMsg = this.translate.instant('projects.msg_load_failed');
                 this.isLoading = false;
                 this.cdr.detectChanges();
             }
@@ -268,7 +269,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
                 this.projects.push(data);
                 this.resetNewProject();
                 this.isCreating = false;
-                this.successMsg = 'Proyecto creado exitosamente';
+                this.successMsg = this.translate.instant('projects.msg_created');
                 setTimeout(() => {
                     this.showProjectModal = false;
                     this.successMsg = '';
@@ -278,7 +279,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al crear el proyecto';
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_create_failed');
                 this.isCreating = false;
                 this.cdr.detectChanges();
             }
@@ -318,9 +319,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
     /** Helper: nombre del responsable de un proyecto, o '—' si no asignado. */
     ownerNameFor(project: any): string {
-        if (!project?.owner_user_id) return '—';
+        if (!project?.owner_user_id) return this.translate.instant('projects.msg_owner_dash');
         const u = this.users.find(x => x.id === project.owner_user_id);
-        return u ? (u.full_name || u.email) : `Usuario #${project.owner_user_id}`;
+        return u
+            ? (u.full_name || u.email)
+            : this.translate.instant('projects.msg_owner_user_prefix', { id: project.owner_user_id });
     }
 
     /** Si el usuario apaga el override, limpiamos los valores por proyecto. */
@@ -360,7 +363,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
                     this.projects[index] = data;
                 }
                 this.isUpdating = false;
-                this.successMsg = 'Proyecto actualizado exitosamente';
+                this.successMsg = this.translate.instant('projects.msg_updated');
                 setTimeout(() => {
                     this.cancelEdit();
                     this.successMsg = '';
@@ -369,7 +372,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al actualizar el proyecto';
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_update_failed');
                 this.isUpdating = false;
                 this.cdr.detectChanges();
             }
@@ -377,7 +380,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
 
     deleteProject(projectId: number) {
-        if (!confirm('¿Estás seguro de que deseas eliminar este proyecto?')) return;
+        if (!confirm(this.translate.instant('projects.msg_delete_confirm'))) return;
 
         this.isDeleting = true;
         this.errorMsg = '';
@@ -387,7 +390,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             next: () => {
                 this.projects = this.projects.filter(p => p.id !== projectId);
                 this.isDeleting = false;
-                this.successMsg = 'Proyecto eliminado exitosamente';
+                this.successMsg = this.translate.instant('projects.msg_deleted');
                 if (this.editingProject?.id === projectId) {
                     this.cancelEdit();
                 }
@@ -395,7 +398,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al eliminar el proyecto';
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_delete_failed');
                 this.isDeleting = false;
                 this.cdr.detectChanges();
             }
@@ -434,7 +437,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = 'Error al cargar los participantes';
+                this.errorMsg = this.translate.instant('projects.msg_load_contacts_failed');
                 this.isLoadingContacts = false;
                 this.cdr.detectChanges();
             }
@@ -508,12 +511,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
                     }
                     this.cancelEditContact();
                     this.isUpdatingContact = false;
-                    this.successMsg = 'Contacto actualizado exitosamente';
+                    this.successMsg = this.translate.instant('projects.msg_contact_updated');
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
                     console.error(err);
-                    this.errorMsg = err.error?.detail || 'Error al actualizar el contacto';
+                    this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_contact_update_failed');
                     this.isUpdatingContact = false;
                     this.cdr.detectChanges();
                 }
@@ -528,12 +531,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
                     this.projectContacts.push(data);
                     this.cancelEditContact();
                     this.isAddingContact = false;
-                    this.successMsg = 'Contacto agregado exitosamente';
+                    this.successMsg = this.translate.instant('projects.msg_contact_added');
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
                     console.error(err);
-                    this.errorMsg = err.error?.detail || 'Error al agregar el contacto';
+                    this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_contact_add_failed');
                     this.isAddingContact = false;
                     this.cdr.detectChanges();
                 }
@@ -542,7 +545,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
 
     deleteContact(contactId: number) {
-        if (!confirm('¿Estás seguro de que deseas eliminar este contacto?')) return;
+        if (!confirm(this.translate.instant('projects.msg_contact_delete_confirm'))) return;
 
         this.isDeletingContactId = contactId;
         this.errorMsg = '';
@@ -552,12 +555,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             next: () => {
                 this.projectContacts = this.projectContacts.filter(c => c.id !== contactId);
                 this.isDeletingContactId = null;
-                this.successMsg = 'Contacto eliminado exitosamente';
+                this.successMsg = this.translate.instant('projects.msg_contact_deleted');
                 this.cdr.detectChanges();
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al eliminar el contacto';
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_contact_delete_failed');
                 this.isDeletingContactId = null;
                 this.cdr.detectChanges();
             }
@@ -614,7 +617,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = 'Error al cargar las rutas de integración';
+                this.errorMsg = this.translate.instant('projects.msg_load_routings_failed');
                 this.isLoadingRoutings = false;
                 this.cdr.detectChanges();
             }
@@ -643,12 +646,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
                 this.projectRoutings.push(data);
                 this.resetRoutingForm();
                 this.isAddingRouting = false;
-                this.successMsg = 'Ruta de integración agregada exitosamente';
+                this.successMsg = this.translate.instant('projects.msg_routing_added');
                 this.cdr.detectChanges();
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al agregar la ruta';
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_routing_add_failed');
                 this.isAddingRouting = false;
                 this.cdr.detectChanges();
             }
@@ -656,7 +659,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
 
     deleteRouting(routingId: number) {
-        if (!confirm('¿Estás seguro de que deseas eliminar esta ruta de integración?')) return;
+        if (!confirm(this.translate.instant('projects.msg_routing_delete_confirm'))) return;
 
         this.isDeletingRoutingId = routingId;
         this.errorMsg = '';
@@ -666,12 +669,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             next: () => {
                 this.projectRoutings = this.projectRoutings.filter(r => r.id !== routingId);
                 this.isDeletingRoutingId = null;
-                this.successMsg = 'Ruta eliminada exitosamente';
+                this.successMsg = this.translate.instant('projects.msg_routing_deleted');
                 this.cdr.detectChanges();
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al eliminar la ruta';
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_routing_delete_failed');
                 this.isDeletingRoutingId = null;
                 this.cdr.detectChanges();
             }
@@ -684,12 +687,15 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.http.patch<any>(`${environment.apiUrl}/api/projects/routings/${routing.id}/toggle`, {}).subscribe({
             next: (data) => {
                 routing.is_active = data.is_active;
-                this.successMsg = `Ruta ${routing.is_active ? 'activada' : 'desactivada'} exitosamente`;
+                const statusLbl = routing.is_active
+                    ? this.translate.instant('projects.msg_routing_activated_lbl')
+                    : this.translate.instant('projects.msg_routing_deactivated_lbl');
+                this.successMsg = this.translate.instant('projects.msg_routing_status_toggled', { status: statusLbl });
                 this.cdr.detectChanges();
             },
             error: (err) => {
                 console.error(err);
-                this.errorMsg = err.error?.detail || 'Error al cambiar el estado de la ruta';
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_routing_status_failed');
                 this.cdr.detectChanges();
             }
         });
@@ -784,7 +790,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     /** Subtítulo bajo el nombre del proyecto en la tabla (description corta). */
     projectSubtitle(p: any): string {
         const desc = (p?.description || '').trim();
-        return desc.length > 30 ? desc.slice(0, 28).trim() + '…' : (desc || 'General');
+        return desc.length > 30
+            ? desc.slice(0, 28).trim() + '…'
+            : (desc || this.translate.instant('projects.msg_subtitle_general'));
     }
 
     /** Iniciales del nombre del proyecto para el icono cuadrado. */
@@ -807,29 +815,34 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
     /** Rol del responsable (mostrado bajo el nombre en la tabla). */
     ownerRoleFor(p: any): string {
-        if (!p?.owner_user_id) return 'Sin asignar';
+        if (!p?.owner_user_id) return this.translate.instant('projects.msg_owner_unassigned');
         const u = this.users.find((x) => x.id === p.owner_user_id);
-        if (!u) return '—';
+        if (!u) return this.translate.instant('projects.msg_owner_dash');
         // Si es el usuario logueado, "Tú"
         const currentEmail = (this.authService.currentUserValue?.email || '').toLowerCase();
-        if (currentEmail && u.email && u.email.toLowerCase() === currentEmail) return 'Tú';
+        if (currentEmail && u.email && u.email.toLowerCase() === currentEmail) {
+            return this.translate.instant('projects.msg_owner_you');
+        }
+        const roleKey = (u.role || '').toLowerCase();
         const map: Record<string, string> = {
-            admin: 'Administrador',
-            validator: 'Validador',
-            user: 'Usuario',
+            admin: this.translate.instant('projects.msg_role_admin'),
+            validator: this.translate.instant('projects.msg_role_validator'),
+            user: this.translate.instant('projects.msg_role_user'),
         };
-        return map[(u.role || '').toLowerCase()] || (u.role || '—');
+        return map[roleKey] || (u.role || this.translate.instant('projects.msg_owner_dash'));
     }
 
     /** Estado humano por proyecto. Hoy el modelo solo expone is_active —
      *  agregamos "En progreso" para los inactivos pero con descripción
      *  reciente (heurística pequeña). */
     projectStatus(p: any): { key: 'active' | 'progress' | 'archived'; label: string } {
-        if (p?.is_active) return { key: 'active', label: 'Activo' };
+        if (p?.is_active) return { key: 'active', label: this.translate.instant('projects.msg_status_active') };
         // Si NO está activo pero tiene auto_dispatch_enabled=false explícito,
         // lo tratamos como "en progreso" (curación pendiente).
-        if (p?.auto_dispatch_enabled === false) return { key: 'progress', label: 'En progreso' };
-        return { key: 'archived', label: 'Archivado' };
+        if (p?.auto_dispatch_enabled === false) return {
+            key: 'progress', label: this.translate.instant('projects.msg_status_in_progress'),
+        };
+        return { key: 'archived', label: this.translate.instant('projects.msg_status_archived') };
     }
 
     /** Progreso (%): heurística determinística por id (no rompe cuando el
@@ -865,14 +878,14 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         if (!pool.length) return [];
         const tenantName = (this.authService.currentUserValue?.tenant?.name) || '';
         const roleMap: Record<string, string> = {
-            admin: 'Administrador',
-            validator: 'Validador',
-            user: 'Usuario',
+            admin: this.translate.instant('projects.msg_role_admin'),
+            validator: this.translate.instant('projects.msg_role_validator'),
+            user: this.translate.instant('projects.msg_role_user'),
         };
         const out: { initials: string; tone: number; name: string; role: string; company: string; email: string; avatarUrl: string | null }[] = [];
         for (let i = 0; i < Math.min(3, pool.length); i++) {
             const u = pool[(seed + i) % pool.length];
-            const name = String(u.full_name || u.email || 'Sin nombre').trim();
+            const name = String(u.full_name || u.email || this.translate.instant('projects.msg_team_no_name')).trim();
             const raw = u.avatar_url || null;
             const avatarUrl = raw
                 ? (raw.startsWith('http') ? raw : `${environment.apiUrl}${raw}`)
@@ -919,7 +932,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             ? (raw.startsWith('http') ? raw : `${environment.apiUrl}${raw}`)
             : null;
         return {
-            name: name === '—' ? 'Sin asignar' : name,
+            name: name === this.translate.instant('projects.msg_owner_dash')
+                ? this.translate.instant('projects.msg_owner_unassigned')
+                : name,
             role: this.ownerRoleFor(p),
             company: tenantName,
             avatarUrl,
@@ -947,7 +962,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             azure: 'Azure DevOps',
             azure_devops: 'Azure DevOps',
         };
-        return map[(type || '').toLowerCase()] || (type || 'Plataforma');
+        return map[(type || '').toLowerCase()] || (type || this.translate.instant('projects.msg_routing_platform_default'));
     }
 
     /** Iniciales / color del icono cuadrado de la plataforma. */
@@ -989,7 +1004,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         const all = this.projects || [];
         if (!all.length) {
             return [
-                { tone: 'info', title: 'Aún no hay proyectos creados.', sub: 'Crea el primero para empezar a ver insights.' },
+                {
+                    tone: 'info',
+                    title: this.translate.instant('projects.msg_no_projects_yet'),
+                    sub: this.translate.instant('projects.msg_create_first_insights'),
+                },
             ];
         }
 
@@ -999,8 +1018,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         if (top) {
             items.push({
                 tone: 'success',
-                title: `${top.name} está ${this.projectProgress(top)}% completo.`,
-                sub: 'En camino para cumplir el objetivo del cierre del mes.',
+                title: this.translate.instant('projects.msg_top_progress', {
+                    name: top.name, pct: this.projectProgress(top),
+                }),
+                sub: this.translate.instant('projects.msg_top_progress_sub'),
             });
         }
 
@@ -1009,8 +1030,10 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         if (activeCount > 0) {
             items.push({
                 tone: 'info',
-                title: `${activeCount} proyecto${activeCount === 1 ? '' : 's'} ${activeCount === 1 ? 'sigue' : 'siguen'} activos hoy.`,
-                sub: 'Mantente alineado con tus equipos y prioridades.',
+                title: activeCount === 1
+                    ? this.translate.instant('projects.msg_active_projects_one', { count: activeCount })
+                    : this.translate.instant('projects.msg_active_projects_many', { count: activeCount }),
+                sub: this.translate.instant('projects.msg_active_projects_sub'),
             });
         }
 
@@ -1019,8 +1042,8 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         if (stale) {
             items.push({
                 tone: 'warning',
-                title: `${stale.name} no se actualiza hace 24h.`,
-                sub: 'Considera revisar tareas abiertas y bloqueos.',
+                title: this.translate.instant('projects.msg_stale_project', { name: stale.name }),
+                sub: this.translate.instant('projects.msg_stale_project_sub'),
             });
         }
 
@@ -1036,15 +1059,15 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             .filter(Boolean)
             .map((s: string) => new Date(s).getTime())
             .filter((n) => !isNaN(n));
-        if (!dates.length) return 'hace un momento';
+        if (!dates.length) return this.translate.instant('projects.msg_just_now');
         const last = Math.max(...dates);
         const diffMs = Date.now() - last;
         const mins = Math.floor(diffMs / 60000);
-        if (mins < 1) return 'hace un momento';
-        if (mins < 60) return `hace ${mins} min`;
+        if (mins < 1) return this.translate.instant('projects.msg_just_now');
+        if (mins < 60) return this.translate.instant('projects.msg_ago_minutes', { count: mins });
         const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return `hace ${hrs} h`;
+        if (hrs < 24) return this.translate.instant('projects.msg_ago_hours', { count: hrs });
         const days = Math.floor(hrs / 24);
-        return `hace ${days} d`;
+        return this.translate.instant('projects.msg_ago_days', { count: days });
     }
 }

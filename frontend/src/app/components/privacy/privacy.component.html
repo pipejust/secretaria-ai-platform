@@ -10,7 +10,7 @@
         </a>
         <p class="privacy-eyebrow">{{ 'privacy.title' | translate }}</p>
         <h1 class="privacy-title">{{ 'privacy.intro_subtitle' | translate }}</h1>
-        <p class="privacy-meta">{{ 'privacy.last_updated_label' | translate }} {{ lastUpdated }}</p>
+        <p class="privacy-meta">{{ 'privacy.last_updated_label' | translate }} {{ lastUpdatedKey | translate }}</p>
     </header>
 
     <div class="privacy-layout">
@@ -18,7 +18,7 @@
         <nav class="privacy-toc" [attr.aria-label]="'privacy.toc_aria' | translate">
             <ul>
                 <li *ngFor="let s of sections">
-                    <a [href]="'#' + s.id">{{ s.title }}</a>
+                    <a [href]="'#' + s.id">{{ s.titleKey | translate }}</a>
                 </li>
             </ul>
         </nav>

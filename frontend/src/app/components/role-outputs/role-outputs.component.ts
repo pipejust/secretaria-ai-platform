@@ -8,7 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 interface Template { id: number; name: string; role_type: string; output_format: string; }
 interface SessionOutput { id: number; title: string; body: string; output_format: string; template_id: number; created_at: string; }
@@ -35,6 +35,7 @@ export class RoleOutputsComponent implements OnInit, OnDestroy {
         private auth: AuthService,
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
+        private translate: TranslateService,
     ) {}
 
     ngOnInit(): void {
@@ -56,7 +57,7 @@ export class RoleOutputsComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => { this.templates = data; if (data.length) this.selectedTemplateId = data[0].id; this.cdr.detectChanges(); },
-                error: () => this.toast.error('No pude cargar plantillas.'),
+                error: () => this.toast.error(this.translate.instant('role_outputs.toast_templates_load_error')),
             });
     }
 
@@ -84,12 +85,12 @@ export class RoleOutputsComponent implements OnInit, OnDestroy {
                 next: (out) => {
                     this.isGenerating = false;
                     this.outputs = [out, ...this.outputs];
-                    this.toast.success(`"${out.title}" generado.`);
+                    this.toast.success(this.translate.instant('role_outputs.toast_generated', { title: out.title }));
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
                     this.isGenerating = false;
-                    const detail = err?.error?.detail || 'No se pudo generar.';
+                    const detail = err?.error?.detail || this.translate.instant('role_outputs.toast_generate_error');
                     this.toast.error(detail);
                     this.cdr.detectChanges();
                 },
@@ -97,13 +98,13 @@ export class RoleOutputsComponent implements OnInit, OnDestroy {
     }
 
     deleteOutput(out: SessionOutput): void {
-        if (!confirm(`¿Borrar "${out.title}"?`)) return;
+        if (!confirm(this.translate.instant('role_outputs.confirm_delete', { title: out.title }))) return;
         this.http.delete(`${environment.apiUrl}/api/outputs/${out.id}`,
             { headers: this.auth.getAuthHeaders() })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => { this.outputs = this.outputs.filter(o => o.id !== out.id); this.toast.success('Borrado.'); this.cdr.detectChanges(); },
-                error: () => this.toast.error('No pude borrar.'),
+                next: () => { this.outputs = this.outputs.filter(o => o.id !== out.id); this.toast.success(this.translate.instant('role_outputs.toast_deleted')); this.cdr.detectChanges(); },
+                error: () => this.toast.error(this.translate.instant('role_outputs.toast_delete_error')),
             });
     }
 

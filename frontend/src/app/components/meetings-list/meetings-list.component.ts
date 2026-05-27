@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -129,6 +129,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         private toast: ToastService,
         private userDirectory: UserDirectoryService,
         private branding: BrandingService,
+        private translate: TranslateService,
     ) {
         // Cuando el directorio resuelve nuevos emails (porque otra vista los
         // pidió o porque preload llegó), forzamos re-render para que los
@@ -163,9 +164,10 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     }
 
     getProjectName(projectId: any): string {
-        if (!projectId) return 'General';
+        const fallback = this.translate.instant('meetings_list.project_general');
+        if (!projectId) return fallback;
         const p = this.projects.find(proj => proj.id === projectId);
-        return p ? p.name : 'General';
+        return p ? p.name : fallback;
     }
 
     /** Carga la página actual de sesiones del backend. Status server-side
@@ -711,8 +713,8 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
      *  dedicado en el modelo, todavía no expuesto. */
     sessionSource(s: any): { name: string; key: 'manual' | 'web' } {
         const ff = String(s?.fireflies_id || '').toUpperCase();
-        if (!ff || ff.startsWith('MANUAL-')) return { name: 'Subida manual', key: 'manual' };
-        return { name: 'Web', key: 'web' };
+        if (!ff || ff.startsWith('MANUAL-')) return { name: this.translate.instant('meetings_list.source_manual'), key: 'manual' };
+        return { name: this.translate.instant('meetings_list.source_web'), key: 'web' };
     }
 
     /** Duración estimada del item de tabla. Hasta que exista el campo
@@ -727,11 +729,11 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     /** Texto legible del status para el badge. */
     statusBadge(status: string): { label: string; key: string } {
         switch ((status || '').toLowerCase()) {
-            case 'completed': return { label: 'Analizada', key: 'analyzed' };
-            case 'pending':   return { label: 'Pendiente', key: 'pending' };
-            case 'processing': return { label: 'Procesando', key: 'processing' };
-            case 'archived':  return { label: 'Archivada', key: 'archived' };
-            default:          return { label: 'Borrador', key: 'draft' };
+            case 'completed': return { label: this.translate.instant('meetings_list.status_analyzed'), key: 'analyzed' };
+            case 'pending':   return { label: this.translate.instant('meetings_list.status_pending'), key: 'pending' };
+            case 'processing': return { label: this.translate.instant('meetings_list.status_processing'), key: 'processing' };
+            case 'archived':  return { label: this.translate.instant('meetings_list.status_archived'), key: 'archived' };
+            default:          return { label: this.translate.instant('meetings_list.status_draft'), key: 'draft' };
         }
     }
 
@@ -766,18 +768,15 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         if (!s) return '';
         const explicit = ((s.processing_error || '') as string).trim();
         if (explicit) return explicit;
-        return (
-            'Sesión sin contenido procesado (sin transcripción, resumen, ' +
-            'decisiones ni acuerdos). Probablemente el análisis IA no se completó.'
-        );
+        return this.translate.instant('meetings_list.failing_reason_default');
     }
 
     /** Color del badge de prioridad de las action items del panel. */
     priorityBadge(p: string): { label: string; key: 'high' | 'medium' | 'low' } {
         const v = (p || '').toLowerCase();
-        if (v === 'high' || v === 'alto')    return { label: 'Alta',   key: 'high' };
-        if (v === 'medium' || v === 'medio') return { label: 'Media',  key: 'medium' };
-        return { label: 'Baja', key: 'low' };
+        if (v === 'high' || v === 'alto')    return { label: this.translate.instant('meetings_list.priority_high'),   key: 'high' };
+        if (v === 'medium' || v === 'medio') return { label: this.translate.instant('meetings_list.priority_medium'),  key: 'medium' };
+        return { label: this.translate.instant('meetings_list.priority_low'), key: 'low' };
     }
 
     /** ¿La action item está cerrada? — para tacharla en la lista. */
@@ -823,12 +822,12 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     }
 
     submitUpload() {
-        if (!this.uploadForm.title) { this.toast.warning('El título/motivo es obligatorio.'); return; }
+        if (!this.uploadForm.title) { this.toast.warning(this.translate.instant('meetings_list.toast_title_required')); return; }
         if (this.uploadTab === 'audio' && !this.uploadForm.file) {
-            this.toast.warning('Debe subir un archivo de audio para transcribir.'); return;
+            this.toast.warning(this.translate.instant('meetings_list.toast_audio_required')); return;
         }
         if (this.uploadTab === 'text' && !this.uploadForm.textContent.trim()) {
-            this.toast.warning('Debe pegar el texto de la transcripción.'); return;
+            this.toast.warning(this.translate.instant('meetings_list.toast_text_required')); return;
         }
         this.isUploading = true;
         const formData = new FormData();
@@ -849,14 +848,16 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: () => {
-                    this.toast.success('Sesión creada exitosamente.');
+                    this.toast.success(this.translate.instant('meetings_list.toast_session_created'));
                     this.showUploadModal = false;
                     this.isUploading = false;
                     this.loadSessions();
                 },
                 error: (err) => {
                     this.toast.error(
-                        'Error subiendo o creando la sesión: ' + (err?.error?.detail || err?.message || 'desconocido'),
+                        this.translate.instant('meetings_list.toast_session_upload_error', {
+                            detail: err?.error?.detail || err?.message || 'desconocido',
+                        }),
                     );
                     this.isUploading = false;
                 },
@@ -889,7 +890,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                     this.cdr.detectChanges();
                 },
                 error: () => {
-                    this.toast.error(`Error descargando el documento ${format.toUpperCase()}.`);
+                    this.toast.error(this.translate.instant('meetings_list.toast_export_error', { format: format.toUpperCase() }));
                     this.generatingIds[genKey] = false;
                     this.cdr.detectChanges();
                 },
@@ -910,11 +911,11 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     /** Archiva o desarchiva una reunión sin pedir confirmación adicional.
      *  Usa el endpoint genérico PUT /api/sessions/:id con `{status: ...}`. */
     archiveSession(session: any, evt?: Event): void {
-        this.setSessionStatus(session, 'archived', 'archivada', evt);
+        this.setSessionStatus(session, 'archived', this.translate.instant('meetings_list.status_label_archived'), evt);
     }
 
     unarchiveSession(session: any, evt?: Event): void {
-        this.setSessionStatus(session, 'pending', 'restaurada a Pendientes', evt);
+        this.setSessionStatus(session, 'pending', this.translate.instant('meetings_list.status_label_restored'), evt);
     }
 
     private setSessionStatus(session: any, newStatus: string, humanLabel: string, evt?: Event): void {
@@ -933,7 +934,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: () => {
-                    this.toast.success(`Reunión ${humanLabel}.`);
+                    this.toast.success(this.translate.instant('meetings_list.toast_meeting_status_changed', { status: humanLabel }));
                     // Re-fetch para que la sesión salga (o entre) del tab actual
                     // sin esperar a que el usuario cambie de página.
                     this.loadSessions();
@@ -941,7 +942,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                 error: () => {
                     session.status = prevStatus;
                     this.cdr.detectChanges();
-                    this.toast.error('No pude actualizar el estado de la reunión.');
+                    this.toast.error(this.translate.instant('meetings_list.toast_meeting_status_error'));
                 },
             });
     }
@@ -966,7 +967,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             evt.preventDefault();
         }
         if (!session?.id) {
-            this.toast.error('No puedo identificar la sesión.');
+            this.toast.error(this.translate.instant('meetings_list.toast_retry_session_unknown'));
             return;
         }
         if (this.retryingIds.has(session.id)) {
@@ -984,8 +985,8 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             (rehydrate ? '?rehydrate_from_fireflies=true' : '');
         this.toast.info(
             rehydrate
-                ? 'Re-trayendo de Fireflies y reanalizando con IA. Tarda 30 s a 2 min.'
-                : 'Reanalizando con IA. Tarda 30-60 segundos.',
+                ? this.translate.instant('meetings_list.toast_retry_rehydrate_info')
+                : this.translate.instant('meetings_list.toast_retry_reanalyze_info'),
         );
         this.http.post(url, {}, { headers })
             .pipe(takeUntil(this.destroy$))
@@ -999,8 +1000,8 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                     const detail = err?.error?.detail || err?.message || '';
                     this.toast.error(
                         status
-                            ? `No pude encolar el reintento (HTTP ${status}). ${detail}`
-                            : 'No pude encolar el reintento. Verificá tu conexión.',
+                            ? this.translate.instant('meetings_list.toast_retry_queue_error_http', { status, detail })
+                            : this.translate.instant('meetings_list.toast_retry_queue_error'),
                     );
                     this.cdr.detectChanges();
                 },
@@ -1032,12 +1033,12 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                         if (finished || attempts >= MAX) {
                             this.retryingIds.delete(sessionId);
                             if (completedAt) {
-                                this.toast.success('Pipeline IA completado.');
+                                this.toast.success(this.translate.instant('meetings_list.toast_pipeline_completed'));
                             } else if (errorMsg) {
-                                this.toast.error('El reintento falló: ' + errorMsg.slice(0, 200));
+                                this.toast.error(this.translate.instant('meetings_list.toast_pipeline_retry_failed', { detail: errorMsg.slice(0, 200) }));
                             } else {
                                 this.toast.warning(
-                                    'El pipeline sigue en proceso. Refrescá en unos segundos.',
+                                    this.translate.instant('meetings_list.toast_pipeline_still_processing'),
                                 );
                             }
                             this.loadSessions();
@@ -1071,12 +1072,12 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                     this.isDeleting = false;
                     this.showDeleteModal = false;
                     this.sessionToDelete = null;
-                    this.toast.success('Sesión eliminada correctamente.');
+                    this.toast.success(this.translate.instant('meetings_list.toast_session_deleted'));
                     this.loadSessions();
                 },
                 error: () => {
                     this.isDeleting = false;
-                    this.toast.error('Error al intentar eliminar la sesión.');
+                    this.toast.error(this.translate.instant('meetings_list.toast_session_delete_error'));
                 },
             });
     }

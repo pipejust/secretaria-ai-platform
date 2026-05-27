@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { BrandingService } from '../../services/branding.service';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
 /**
@@ -36,6 +36,7 @@ export class ResetPassword implements OnInit {
     private readonly http = inject(HttpClient);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
+    private readonly translate = inject(TranslateService);
     readonly year = new Date().getFullYear();
 
     ngOnInit() {
@@ -43,8 +44,7 @@ export class ResetPassword implements OnInit {
             this.token = params['token'] || '';
             if (!this.token) {
                 this.tokenMissing = true;
-                this.errorMessage =
-                    'El enlace de recuperación es inválido o está incompleto. Solicita uno nuevo.';
+                this.errorMessage = this.translate.instant('reset_password.errors.invalid_link');
             }
         });
     }
@@ -54,7 +54,9 @@ export class ResetPassword implements OnInit {
     }
 
     /** Diagnóstico simple para mostrar en UI sin lib externa. Aplica al
-     *  `newPassword`; no es la fuente de verdad — el backend re-valida. */
+     *  `newPassword`; no es la fuente de verdad — el backend re-valida.
+     *  Las labels se traducen vía i18n para que el medidor cambie con el
+     *  idioma seleccionado. */
     get passwordStrength(): { score: number; label: string } {
         const pwd = this.newPassword;
         if (!pwd) return { score: 0, label: '' };
@@ -63,20 +65,26 @@ export class ResetPassword implements OnInit {
         if (/[A-Z]/.test(pwd)) score++;
         if (/[0-9]/.test(pwd)) score++;
         if (/[^A-Za-z0-9]/.test(pwd)) score++;
-        const labels = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Excelente'];
-        return { score, label: labels[score] };
+        const keys = [
+            'reset_password.strength.very_weak',
+            'reset_password.strength.weak',
+            'reset_password.strength.acceptable',
+            'reset_password.strength.good',
+            'reset_password.strength.excellent',
+        ];
+        return { score, label: this.translate.instant(keys[score]) };
     }
 
     onSubmit() {
         if (!this.token || !this.newPassword || !this.confirmPassword) return;
 
         if (this.newPassword.length < 8) {
-            this.errorMessage = 'La contraseña debe tener al menos 8 caracteres.';
+            this.errorMessage = this.translate.instant('reset_password.errors.min_length');
             return;
         }
 
         if (this.newPassword !== this.confirmPassword) {
-            this.errorMessage = 'Las contraseñas no coinciden.';
+            this.errorMessage = this.translate.instant('reset_password.errors.mismatch_simple');
             return;
         }
 
@@ -103,7 +111,7 @@ export class ResetPassword implements OnInit {
                     this.isLoading = false;
                     this.errorMessage =
                         err.error?.detail ||
-                        'No pudimos cambiar tu contraseña. El enlace puede haber expirado — solicita uno nuevo.';
+                        this.translate.instant('reset_password.errors.expired_link');
                     console.error('Reset password error:', err);
                 },
             });

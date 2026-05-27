@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -159,6 +159,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
         private authService: AuthService,
         private toast: ToastService,
         private cdr: ChangeDetectorRef,
+        private translate: TranslateService,
     ) {}
 
     ngOnInit(): void { this.load(); }
@@ -184,7 +185,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
                     this.cdr.detectChanges();
                 },
                 error: (err) => {
-                    this.toast.error(err?.error?.detail || 'No se pudo generar el reporte.');
+                    this.toast.error(err?.error?.detail || this.translate.instant('reports.toast_report_load_error'));
                     this.isLoading = false;
                     this.cdr.detectChanges();
                 },
@@ -224,11 +225,11 @@ export class ReportesComponent implements OnInit, OnDestroy {
     }
     applyCustomRange(): void {
         if (!this.customStart || !this.customEnd) {
-            this.toast.warning('Debes seleccionar una fecha de inicio y de fin.');
+            this.toast.warning(this.translate.instant('reports.toast_dates_required'));
             return;
         }
         if (this.customEnd < this.customStart) {
-            this.toast.warning('La fecha de fin no puede ser anterior a la de inicio.');
+            this.toast.warning(this.translate.instant('reports.toast_dates_invalid'));
             return;
         }
         this.period = 'custom';
@@ -386,7 +387,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
                         this.cdr.detectChanges();
                     }
                 },
-                error: () => this.toast.error('No se pudo aplicar el filtro.'),
+                error: () => this.toast.error(this.translate.instant('reports.toast_filter_error')),
             });
     }
 
@@ -538,7 +539,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
                         this.cdr.detectChanges();
                     }
                 },
-                error: () => this.toast.error('No se pudo aplicar el filtro de equipo.'),
+                error: () => this.toast.error(this.translate.instant('reports.toast_team_filter_error')),
             });
     }
 
@@ -671,7 +672,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
                         this.cdr.detectChanges();
                     }
                 },
-                error: () => this.toast.error('No se pudo aplicar el filtro de carga.'),
+                error: () => this.toast.error(this.translate.instant('reports.toast_workload_filter_error')),
             });
     }
 
@@ -806,11 +807,11 @@ export class ReportesComponent implements OnInit, OnDestroy {
 
     confirmExport(): void {
         if (this.exportPeriod === 'custom' && (!this.exportStartDate || !this.exportEndDate)) {
-            this.toast.warning('Selecciona fecha de inicio y de fin.');
+            this.toast.warning(this.translate.instant('reports.toast_export_dates_required'));
             return;
         }
         if (this.exportPeriod === 'custom' && this.exportEndDate < this.exportStartDate) {
-            this.toast.warning('La fecha de fin no puede ser anterior a la de inicio.');
+            this.toast.warning(this.translate.instant('reports.toast_dates_invalid'));
             return;
         }
         this.isExporting = true;
@@ -837,13 +838,13 @@ export class ReportesComponent implements OnInit, OnDestroy {
                     a.click();
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
-                    this.toast.success(`Reporte ${this.exportFormat.toUpperCase()} descargado.`);
+                    this.toast.success(this.translate.instant('reports.toast_export_success', { format: this.exportFormat.toUpperCase() }));
                     this.showExportModal = false;
                     this.cdr.detectChanges();
                 },
                 error: () => {
                     this.isExporting = false;
-                    this.toast.error('No se pudo descargar el reporte.');
+                    this.toast.error(this.translate.instant('reports.toast_export_error'));
                     this.cdr.detectChanges();
                 },
             });

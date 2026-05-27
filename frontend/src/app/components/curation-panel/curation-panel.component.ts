@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -128,6 +128,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private router: Router,
     private toast: ToastService,
+    private translate: TranslateService,
   ) {}
 
   ngOnDestroy(): void {
@@ -138,10 +139,10 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   getTranslatedStatus(status: string): string {
     const rawStatus = (status || '').trim().toLowerCase();
     const statusMap: { [key: string]: string } = {
-      'pending': 'Pendiente de Curación',
-      'processing': 'Procesando IA',
-      'completed': 'Completado',
-      'error': 'Error en Procesamiento'
+      'pending': this.translate.instant('curation.status_pending_curation'),
+      'processing': this.translate.instant('curation.status_processing_ai'),
+      'completed': this.translate.instant('curation.status_completed'),
+      'error': this.translate.instant('curation.status_error'),
     };
     return statusMap[rawStatus] || status;
   }
@@ -188,11 +189,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     if (!m) return '';
     const explicit = ((m.processing_error || '') as string).trim();
     if (explicit) return explicit;
-    return (
-      'No hay contenido procesado: ni resumen ejecutivo, ni transcripción, ' +
-      'ni decisiones, ni riesgos, ni acuerdos, ni tareas. Probablemente el ' +
-      'análisis IA no se completó cuando llegó la sesión.'
-    );
+    return this.translate.instant('curation.failing_reason_default');
   }
 
   ngOnInit() {
@@ -304,7 +301,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => this.projects = data,
-        error: () => this.toast.error('No se pudieron cargar los proyectos.'),
+        error: () => this.toast.error(this.translate.instant('curation.toast_projects_load_error')),
       });
   }
 
@@ -324,7 +321,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
 
               this.meetingData = {
                 id: data.session.id,
-                title: data.session.title || 'Sesión sin título',
+                title: data.session.title || this.translate.instant('curation.session_untitled'),
                 date: parsedDate,
                 project_id: data.session.project_id || null,
                 status: data.session.status || 'pending',
@@ -349,13 +346,13 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
                 this._applyPendingFocus();
               }
           } catch (e) {
-              this.toast.error('Error procesando los datos de la sesión.');
+              this.toast.error(this.translate.instant('curation.toast_session_data_error'));
               this.isLoading = false;
               this.cdr.detectChanges();
           }
         },
         error: () => {
-          this.toast.error('No se pudieron cargar los detalles de la sesión.');
+          this.toast.error(this.translate.instant('curation.toast_session_load_error'));
           this.isLoading = false;
           this.cdr.detectChanges();
         },
@@ -372,8 +369,8 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     if (task.due_date != null) body.append('due_date', task.due_date);
 
     this.http.put(`${environment.apiUrl}/api/sessions/action_items/${task.id}`, body, { headers: this.authService.getAuthHeaders() }).subscribe({
-      next: () => this.showSaveMessage('Tarea actualizada'),
-      error: () => this.showSaveMessage('Error guardando tarea', true)
+      next: () => this.showSaveMessage(this.translate.instant('curation.toast_task_updated')),
+      error: () => this.showSaveMessage(this.translate.instant('curation.toast_task_save_error'), true)
     });
   }
 
@@ -392,7 +389,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
       next: (res: any) => {
         this.isAddingTask = false;
         this.showManualTaskForm = false;
-        this.showSaveMessage('Tarea manual agregada con éxito');
+        this.showSaveMessage(this.translate.instant('curation.toast_manual_task_added'));
         if (res.item) {
           res.item.selected = false;
           this.meetingData.action_items.unshift(res.item); // Add to beginning of list
@@ -403,7 +400,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isAddingTask = false;
-        this.showSaveMessage('Error al agregar la tarea manual', true);
+        this.showSaveMessage(this.translate.instant('curation.toast_manual_task_error'), true);
         this.cdr.detectChanges();
       }
     });
@@ -431,7 +428,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     if (!selectedIds.length) return;
     
     this.isDispatchingEmails = true;
-    this.showSaveMessage('Preparando acta de reunión y enviando correos...', false);
+    this.showSaveMessage(this.translate.instant('curation.toast_preparing_emails'), false);
     this.cdr.detectChanges();
 
     const headers = this.authService.getAuthHeaders();
@@ -444,12 +441,13 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_emails`, payload, { headers }).subscribe({
       next: (res: any) => {
         this.isDispatchingEmails = false;
-        this.showSaveMessage(`Correos enviados: ${res.results.filter((r:any)=>r.status==='success').length}`);
+        const count = res.results.filter((r:any)=>r.status==='success').length;
+        this.showSaveMessage(this.translate.instant('curation.toast_emails_sent', { count }));
         this.cdr.detectChanges();
       },
       error: (err) => {
         this.isDispatchingEmails = false;
-        const msg = err.error && err.error.detail ? err.error.detail : 'Error enviando correos';
+        const msg = err.error && err.error.detail ? err.error.detail : this.translate.instant('curation.toast_emails_error');
         this.showSaveMessage(msg, true);
         this.cdr.detectChanges();
       }
@@ -465,12 +463,13 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_platforms`, { action_item_ids: selectedIds }, { headers }).subscribe({
       next: (res: any) => {
         this.isDispatchingPlatforms = false;
-        this.showSaveMessage(`Tareas enviadas: ${res.results.filter((r:any)=>r.status==='success').length}`);
+        const count = res.results.filter((r:any)=>r.status==='success').length;
+        this.showSaveMessage(this.translate.instant('curation.toast_platforms_sent', { count }));
         this.cdr.detectChanges();
       },
       error: (err) => {
         this.isDispatchingPlatforms = false;
-        const msg = err.error && err.error.detail ? err.error.detail : 'Error enviando a plataformas';
+        const msg = err.error && err.error.detail ? err.error.detail : this.translate.instant('curation.toast_platforms_error');
         this.showSaveMessage(msg, true);
         this.cdr.detectChanges();
       }
@@ -480,15 +479,15 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
 
   regenerateTasks() {
     if (this.meetingData.ai_tasks_regenerated) {
-      this.toast.warning('Las tareas ya fueron regeneradas con IA para esta sesión.');
+      this.toast.warning(this.translate.instant('curation.toast_tasks_already_regenerated'));
       return;
     }
     if (!this.meetingData.raw_transcript) {
-      this.toast.error('No hay transcripción para regenerar tareas.');
+      this.toast.error(this.translate.instant('curation.toast_no_transcript_for_tasks'));
       return;
     }
     this.isRegenerating = true;
-    this.toast.info('Regenerando tareas con OpenAI... Esto tarda unos segundos.');
+    this.toast.info(this.translate.instant('curation.toast_regenerating_tasks'));
     this.cdr.detectChanges();
 
     const headers = this.authService.getAuthHeaders();
@@ -506,7 +505,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
               selected: false,
             }));
           }
-          this.toast.success('Tareas regeneradas con OpenAI.');
+          this.toast.success(this.translate.instant('curation.toast_tasks_regenerated'));
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -514,9 +513,9 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
           if (err?.status === 409) {
             // Backend dice que ya se regeneró: sincronizamos el flag local.
             this.meetingData.ai_tasks_regenerated = true;
-            this.toast.warning('Las tareas ya habían sido regeneradas previamente.');
+            this.toast.warning(this.translate.instant('curation.toast_tasks_already_regenerated_warn'));
           } else {
-            const detail = err?.error?.detail || 'Error al regenerar las tareas.';
+            const detail = err?.error?.detail || this.translate.instant('curation.toast_tasks_regen_error');
             this.toast.error(detail);
           }
           this.cdr.detectChanges();
@@ -534,7 +533,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   refetchSummaryOnly(): void {
     if (this.isRefetchingSummary || !this.sessionId) return;
     if (!this.meetingData.fireflies_id) {
-      this.toast.error('Esta sesión no tiene fireflies_id, no se puede refetchear.');
+      this.toast.error(this.translate.instant('curation.toast_no_fireflies_id'));
       return;
     }
     this.isRefetchingSummary = true;
@@ -547,12 +546,12 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
           this.isRefetchingSummary = false;
           if (res?.status === 'ok') {
             this.toast.success(
-              `Resumen actualizado (${res.summary_chars} caracteres).`,
+              this.translate.instant('curation.toast_summary_updated', { chars: res.summary_chars }),
             );
             this.loadSessionDetails();
           } else {
             this.toast.warning(
-              res?.message || 'Fireflies aún no tiene summary. Probá en unos minutos.',
+              res?.message || this.translate.instant('curation.toast_summary_not_ready'),
             );
           }
           this.cdr.detectChanges();
@@ -560,7 +559,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.isRefetchingSummary = false;
           const detail = err?.error?.detail || err?.message || 'Error desconocido';
-          this.toast.error('No pude refetchear el summary: ' + detail);
+          this.toast.error(this.translate.instant('curation.toast_summary_refetch_error', { detail }));
           this.cdr.detectChanges();
         },
       });
@@ -589,8 +588,8 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
       (rehydrate ? '?rehydrate_from_fireflies=true' : '');
     this.toast.info(
       rehydrate
-        ? 'Volviendo a traer datos de Fireflies y reanalizando con IA. Tarda hasta 1-2 min.'
-        : 'Reanalizando con IA. Tarda 30-60 segundos.',
+        ? this.translate.instant('curation.toast_retry_rehydrate_info')
+        : this.translate.instant('curation.toast_retry_reanalyze_info'),
     );
     this.http.post<any>(url, {}, { headers })
       .pipe(takeUntil(this.destroy$))
@@ -637,16 +636,16 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
                   if (finished || this.retryProgress.current >= MAX) {
                     this.isRetryingPipeline = false;
                     if (completedAt) {
-                      this.toast.success('Pipeline IA completado correctamente.');
+                      this.toast.success(this.translate.instant('curation.toast_pipeline_completed'));
                       this.loadSessionDetails();
                     } else if (errorMsg) {
-                      this.toast.error('El reintento falló: ' + errorMsg.slice(0, 200));
+                      this.toast.error(this.translate.instant('curation.toast_pipeline_retry_failed', { detail: errorMsg.slice(0, 200) }));
                       this.loadSessionDetails();
                     } else {
                       // Timeout sin señal definitiva — refrescamos igual
                       // para mostrar el último estado conocido.
                       this.toast.warning(
-                        'El pipeline sigue en proceso. Refrescá la página en unos segundos para ver el resultado.',
+                        this.translate.instant('curation.toast_pipeline_still_running'),
                       );
                       this.loadSessionDetails();
                     }
@@ -678,8 +677,8 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
           const detail = err?.error?.detail || err?.message || 'Error desconocido';
           this.toast.error(
             status
-              ? `No pude encolar el reintento (HTTP ${status}): ${detail}`
-              : 'No pude encolar el reintento. Verificá tu conexión.',
+              ? this.translate.instant('curation.toast_retry_queue_error_http', { status, detail })
+              : this.translate.instant('curation.toast_retry_queue_error'),
           );
           this.cdr.detectChanges();
         },
@@ -688,15 +687,15 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
 
   regenerateFields() {
     if (this.meetingData.ai_fields_regenerated) {
-      this.toast.warning('Los campos ya fueron sugeridos con IA para esta sesión.');
+      this.toast.warning(this.translate.instant('curation.toast_fields_already_regenerated'));
       return;
     }
     if (!this.meetingData.raw_transcript) {
-      this.toast.error('No hay transcripción para sugerir campos.');
+      this.toast.error(this.translate.instant('curation.toast_no_transcript_for_fields'));
       return;
     }
     this.isRegeneratingFields = true;
-    this.toast.info('Sugiriendo campos con OpenAI... Esto tarda un momento.');
+    this.toast.info(this.translate.instant('curation.toast_regenerating_fields'));
     this.cdr.detectChanges();
 
     const headers = this.authService.getAuthHeaders();
@@ -714,16 +713,16 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
             this.meetingData.processed_agreements = res.fields.processed_agreements ?? this.meetingData.processed_agreements;
             // raw_summary NO se sobrescribe: viene de Fireflies y es editable manualmente.
           }
-          this.toast.success('Campos sugeridos con OpenAI.');
+          this.toast.success(this.translate.instant('curation.toast_fields_regenerated'));
           this.cdr.detectChanges();
         },
         error: (err) => {
           this.isRegeneratingFields = false;
           if (err?.status === 409) {
             this.meetingData.ai_fields_regenerated = true;
-            this.toast.warning('Los campos ya habían sido sugeridos previamente.');
+            this.toast.warning(this.translate.instant('curation.toast_fields_already_regen_warn'));
           } else {
-            const detail = err?.error?.detail || 'Error al sugerir los campos con IA.';
+            const detail = err?.error?.detail || this.translate.instant('curation.toast_fields_regen_error');
             this.toast.error(detail);
           }
           this.cdr.detectChanges();
@@ -732,7 +731,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   }
 
   saveManualEdits() {
-    this.showSaveMessage('Guardando cambios...');
+    this.showSaveMessage(this.translate.instant('curation.toast_saving_changes'));
     const headers = this.authService.getAuthHeaders();
     const payload = {
       title: this.meetingData.title,
@@ -748,11 +747,11 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     this.http.put(`${environment.apiUrl}/api/sessions/${this.sessionId}`, payload, { headers }).subscribe({
       next: (res: any) => {
         this.meetingData.status = 'completed';
-        this.showSaveMessage('Los textos de la sesión se han guardado correctamente.');
+        this.showSaveMessage(this.translate.instant('curation.toast_changes_saved'));
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.showSaveMessage('Error al guardar los cambios de la sesión', true);
+        this.showSaveMessage(this.translate.instant('curation.toast_save_error'), true);
         this.cdr.detectChanges();
       }
     });
@@ -793,7 +792,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     const idx = this.meetingData.action_items.findIndex((t) => t === task);
     if (idx >= 0) {
       this.meetingData.action_items.splice(idx, 1);
-      this.showSaveMessage('Tarea quitada de la vista. Guarda para persistir.');
+      this.showSaveMessage(this.translate.instant('curation.toast_task_removed_local'));
     }
     this.closeTaskMenu();
   }
@@ -808,7 +807,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
 
   approveAct(format: 'word' | 'pdf' = 'word') {
     this.isGeneratingDoc = true;
-    this.showSaveMessage(`Generando Documento en ${format.toUpperCase()}...`);
+    this.showSaveMessage(this.translate.instant('curation.toast_generating_doc', { format: format.toUpperCase() }));
     const headers = this.authService.getAuthHeaders();
     
     this.http.get(`${environment.apiUrl}/api/sessions/${this.sessionId}/export/${format}`, {
@@ -829,12 +828,12 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
         window.URL.revokeObjectURL(url);
         
         this.meetingData.status = 'approved';
-        this.showSaveMessage(`Documento ${format.toUpperCase()} descargado con éxito`);
+        this.showSaveMessage(this.translate.instant('curation.toast_doc_downloaded', { format: format.toUpperCase() }));
         this.cdr.detectChanges();
       },
       error: (err) => {
         this.isGeneratingDoc = false;
-        this.showSaveMessage(`Error descargando el Documento ${format.toUpperCase()}`, true);
+        this.showSaveMessage(this.translate.instant('curation.toast_doc_download_error', { format: format.toUpperCase() }), true);
         this.cdr.detectChanges();
       }
     });

@@ -24,9 +24,11 @@ import {
     EventEmitter,
     forwardRef,
     HostBinding,
+    inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-password-input',
@@ -47,14 +49,14 @@ import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/f
                 [required]="required"
                 [readonly]="readonly"
                 [disabled]="disabled"
-                [attr.aria-label]="ariaLabel || placeholder || 'Contraseña'"
+                [attr.aria-label]="ariaLabel || placeholder || defaultAriaLabel"
                 class="pwi-input"
             />
             <button
                 type="button"
                 class="pwi-toggle"
                 (click)="toggle()"
-                [attr.aria-label]="visible ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                [attr.aria-label]="visible ? hideLabel : showLabel"
                 [attr.aria-pressed]="visible"
                 tabindex="-1">
                 <!-- Eye open: visible -->
@@ -147,6 +149,23 @@ export class PasswordInputComponent implements ControlValueAccessor {
     @Output() valueChange = new EventEmitter<string>();
 
     @HostBinding('class.pwi-host') hostClass = true;
+
+    private readonly translate = inject(TranslateService);
+
+    /** Labels accesibles traducidos en tiempo de uso. Usamos `instant`
+     *  porque las traducciones están listas tras APP_INITIALIZER y el
+     *  componente nunca se renderiza antes. Si en algún caso límite la
+     *  key no resuelve, ngx-translate devuelve la propia key, lo cual
+     *  sigue siendo aceptable para un screen-reader. */
+    get showLabel(): string {
+        return this.translate.instant('password_input.show_password');
+    }
+    get hideLabel(): string {
+        return this.translate.instant('password_input.hide_password');
+    }
+    get defaultAriaLabel(): string {
+        return this.translate.instant('password_input.password');
+    }
 
     toggle(): void { this.visible = !this.visible; }
 

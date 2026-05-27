@@ -3,7 +3,7 @@
 // que el bundle de producción cambie su hash y se note el deploy.
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -172,6 +172,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private auth: AuthService,
     private preferences: PreferencesService,
     private route: ActivatedRoute,
+    private translate: TranslateService,
   ) {
     // Deep-link: si entran con `?section=task-sync` (p.ej. desde el modal
     // de Proyectos > Auto-Curación), abrimos esa sección directamente.
@@ -213,8 +214,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     const url = this.firefliesSettings.webhookUrl;
     if (!url) return;
     navigator.clipboard.writeText(url).then(
-      () => this.toast.success('Webhook URL copiada al portapapeles.'),
-      () => this.toast.error('No se pudo copiar la URL.'),
+      () => this.toast.success(this.translate.instant('settings.msg_webhook_copied')),
+      () => this.toast.error(this.translate.instant('settings.msg_url_copy_failed')),
     );
   }
 
@@ -245,7 +246,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
    *  Aplica side-effects del servicio (dark mode visible, week-start, lang). */
   commitPrefs(): void {
     this.preferences.setAll(this.prefs);
-    this.toast.success('Preferencias guardadas.');
+    this.toast.success(this.translate.instant('settings.msg_prefs_saved'));
   }
 
   /** Revierte el borrador al estado guardado. */
@@ -347,7 +348,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.settingsService.saveSettings(payload).subscribe({
       next: () => {
         this.isSaving = false;
-        this.successMessage = 'Configuración guardada correctamente.';
+        this.successMessage = this.translate.instant('settings.msg_config_saved');
         this.toast.success(this.successMessage);
         this.loadOauthStatus();
         this.cdr.detectChanges();
@@ -358,7 +359,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSaving = false;
-        this.errorMessage = 'Hubo un error guardando la configuración.';
+        this.errorMessage = this.translate.instant('settings.msg_config_save_failed');
         this.toast.error(this.errorMessage);
         console.error(err);
         this.cdr.detectChanges();
@@ -389,16 +390,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
           this.isSendingTest = false;
           if (!res?.smtp_configured) {
             this.toast.warning(
-              `Correo simulado a ${res?.to} (sin SMTP real). Configura la API Key arriba para envío real.`,
+              this.translate.instant('settings.msg_test_email_simulated', { to: res?.to }),
             );
           } else {
-            this.toast.success(`Correo de prueba enviado a ${res.to}.`);
+            this.toast.success(this.translate.instant('settings.msg_test_email_sent', { to: res.to }));
           }
           this.cdr.detectChanges();
         },
         error: (err) => {
           this.isSendingTest = false;
-          this.toast.error(err?.error?.detail || 'No pude enviar el correo de prueba.');
+          this.toast.error(err?.error?.detail || this.translate.instant('settings.msg_test_email_failed'));
           this.cdr.detectChanges();
         },
       });
