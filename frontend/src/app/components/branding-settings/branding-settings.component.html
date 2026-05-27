@@ -337,7 +337,7 @@
                         </label>
                         <button class="br-btn br-btn--danger-ghost" (click)="removeDarkLogo()"
                                 *ngIf="form.logo_dark_data_url" [disabled]="isUploadingDark">
-                            Quitar
+                            {{ 'branding.remove' | translate }}
                         </button>
                     </div>
                 </article>
@@ -372,7 +372,7 @@
                         </label>
                         <button class="br-btn br-btn--danger-ghost" (click)="removeIcon()"
                                 *ngIf="form.icon_data_url" [disabled]="isUploadingIcon">
-                            Quitar
+                            {{ 'branding.remove' | translate }}
                         </button>
                     </div>
                 </article>
@@ -833,17 +833,17 @@
                         <img [src]="emailPreviewLogoUrl" [alt]="form.company_name || 'Acten'"/>
                     </div>
                     <div class="br-email-body">
-                        <p><strong>Hola Juan,</strong></p>
+                        <p><strong>{{ 'branding.hello_example' | translate }}</strong></p>
                         <p>{{ 'common.task_assigned_notif' | translate }} <strong>X</strong>.<br/>
-                           Podés verla y editarla en
-                           <a href="#" [style.color]="form.primary_color">la plataforma</a>.
+                           {{ 'branding.view_edit_in' | translate }}
+                           <a href="#" [style.color]="form.primary_color">{{ 'branding.the_platform' | translate }}</a>.
                         </p>
                         <div class="br-email-task" [style.borderLeftColor]="form.accent_color">
-                            <strong>Tarea:</strong> {{ 'common.review_architecture_doc' | translate }}
+                            <strong>{{ 'project_detail.task' | translate }}:</strong> {{ 'common.review_architecture_doc' | translate }}
                         </div>
                     </div>
                     <div class="br-email-footer">
-                        © {{ form.company_name || 'Acten' }} · Enviado por <strong>{{ branding.platformName() }}</strong>
+                        © {{ form.company_name || 'Acten' }} · {{ 'branding.sent_by' | translate }} <strong>{{ branding.platformName() }}</strong>
                     </div>
                 </div>
             </section>

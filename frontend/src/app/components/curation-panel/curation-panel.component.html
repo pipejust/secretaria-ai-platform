@@ -65,15 +65,13 @@
                 </svg>
             </div>
             <div class="cp-failing-banner-body">
-                <strong>Procesando análisis IA…</strong>
+                <strong>{{ 'curation.processing_ai' | translate }}</strong>
                 <p>
-                    El pipeline IA está corriendo. Esto puede tardar entre 30 segundos
-                    y 2 minutos dependiendo del tamaño de la transcripción y de si
-                    hay que volver a consultar a Fireflies.
+                    {{ 'curation.processing_ai_body' | translate }}
                 </p>
                 <p class="cp-failing-detail" *ngIf="retryProgress.total">
-                    <span class="cp-failing-detail-label">Estado:</span>
-                    Verificando ({{ retryProgress.current }}/{{ retryProgress.total }})…
+                    <span class="cp-failing-detail-label">{{ 'curation.status_label' | translate }}</span>
+                    {{ 'curation.verifying' | translate }} ({{ retryProgress.current }}/{{ retryProgress.total }})…
                 </p>
             </div>
         </div>
@@ -94,15 +92,11 @@
                 </svg>
             </div>
             <div class="cp-failing-banner-body">
-                <strong>Análisis IA incompleto</strong>
-                <p>
-                    No se pudo terminar de procesar la sesión. Mientras esté en
-                    este estado, no se enviará información a integraciones ni
-                    se notificará a los responsables. Presiona <strong>Reintentar</strong>
-                    para volver a ejecutar el proceso completo.
+                <strong>{{ 'curation.ai_incomplete' | translate }}</strong>
+                <p [innerHTML]="'curation.ai_incomplete_body' | translate">
                 </p>
                 <p class="cp-failing-detail">
-                    <span class="cp-failing-detail-label">Motivo:</span>
+                    <span class="cp-failing-detail-label">{{ 'curation.reason_label' | translate }}</span>
                     {{ failingReason() }}
                 </p>
             </div>
@@ -120,9 +114,9 @@
                         <polyline points="23 4 23 10 17 10"></polyline>
                         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                     </svg>
-                    {{ isRetryingPipeline
-                        ? 'Reintentando…'
-                        : (meetingData.fireflies_id ? 'Re-traer de Fireflies + IA' : 'Reintentar análisis IA') }}
+                    {{ (isRetryingPipeline
+                        ? 'curation.retrying'
+                        : (meetingData.fireflies_id ? 'meetings.refetch_fireflies_short' : 'meetings.retry_ai_analysis')) | translate }}
                 </button>
                 <!-- Secundario: solo re-corre IA con la data ya guardada.
                      Útil cuando el contenido en DB se ve OK pero faltan
@@ -132,14 +126,14 @@
                         *ngIf="meetingData.fireflies_id"
                         [disabled]="isRetryingPipeline"
                         (click)="retryPipelineFromCuration(false)"
-                        title="Re-ejecuta IA con la data ya guardada (no consulta Fireflies)">
-                    Solo re-ejecutar IA
+                        [title]="'curation.only_rerun_ai_hint' | translate">
+                    {{ 'curation.only_rerun_ai' | translate }}
                 </button>
             </div>
         </div>
 
         <!-- Breadcrumb superior -->
-        <nav class="cp-breadcrumb" aria-label="Navegación">
+        <nav class="cp-breadcrumb" [attr.aria-label]="'curation.breadcrumb_aria' | translate">
             <a routerLink="/admin/meetings">{{ 'sidebar.meetings' | translate }}</a>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -166,7 +160,7 @@
                            (keyup.enter)="isEditingTitle = false" />
                     <button class="cp-edit-title-btn" type="button"
                             (click)="isEditingTitle = !isEditingTitle"
-                            [title]="isEditingTitle ? 'Aplicar' : 'Editar título'">
+                            [title]="(isEditingTitle ? 'curation.apply' : 'curation.edit_title') | translate">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path *ngIf="!isEditingTitle" d="M12 20h9"></path>
@@ -177,13 +171,13 @@
                 </div>
 
                 <!-- Metadata: labels + badges -->
-                <ul class="cp-meta" aria-label="Información de la sesión">
+                <ul class="cp-meta" [attr.aria-label]="'curation.session_info_aria' | translate">
                     <li>
-                        <span class="cp-meta-label">Fecha:</span>
+                        <span class="cp-meta-label">{{ 'curation.date_label' | translate }}</span>
                         <span class="cp-meta-value">{{ meetingData.date | date:'dd/MM/yyyy HH:mm' }}</span>
                     </li>
                     <li>
-                        <span class="cp-meta-label">Estado:</span>
+                        <span class="cp-meta-label">{{ 'curation.status_label' | translate }}</span>
                         <ng-container *ngIf="isSessionFailing(); else cpStatusOk">
                             <span class="cp-badge cp-badge-status cp-status-failing"
                                   data-status="failing"
@@ -193,7 +187,7 @@
                                     <line x1="12" y1="9" x2="12" y2="13"></line>
                                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                 </svg>
-                                Fallando
+                                {{ 'meetings.failing' | translate }}
                             </span>
                         </ng-container>
                         <ng-template #cpStatusOk>
@@ -204,15 +198,15 @@
                         </ng-template>
                     </li>
                     <li>
-                        <span class="cp-meta-label">Idioma:</span>
-                        <span class="cp-badge cp-badge-lang">{{ meetingData.language || 'Detectando…' }}</span>
+                        <span class="cp-meta-label">{{ 'curation.language_label' | translate }}</span>
+                        <span class="cp-badge cp-badge-lang">{{ meetingData.language || ('curation.detecting' | translate) }}</span>
                     </li>
                     <li class="cp-meta-project">
-                        <span class="cp-meta-label">Proyecto:</span>
+                        <span class="cp-meta-label">{{ 'curation.project_label' | translate }}</span>
                         <span class="cp-badge-select">
                             <select [(ngModel)]="meetingData.project_id"
-                                    aria-label="Cambiar proyecto">
-                                <option [ngValue]="null">Sin proyecto</option>
+                                    [attr.aria-label]="'curation.change_project' | translate">
+                                <option [ngValue]="null">{{ 'curation.no_project' | translate }}</option>
                                 <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
                             </select>
                         </span>
@@ -221,14 +215,14 @@
             </div>
 
             <!-- Acciones principales (alineadas a la derecha) -->
-            <div class="cp-actions" role="toolbar" aria-label="Acciones de la sesión">
+            <div class="cp-actions" role="toolbar" [attr.aria-label]="'curation.session_actions_aria' | translate">
                 <button type="button" class="cp-btn cp-btn-back" (click)="goBack()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="19" y1="12" x2="5" y2="12"></line>
                         <polyline points="12 19 5 12 12 5"></polyline>
                     </svg>
-                    Volver a Sesiones
+                    {{ 'curation.back_to_sessions' | translate }}
                 </button>
                 <button type="button" class="cp-btn cp-btn-word"
                         (click)="approveAct('word')" [disabled]="isGeneratingDoc">
@@ -257,7 +251,7 @@
                         <polyline points="17 21 17 13 7 13 7 21"></polyline>
                         <polyline points="7 3 7 8 15 8"></polyline>
                     </svg>
-                    Guardar cambios
+                    {{ 'common.save_changes' | translate }}
                 </button>
                 <!-- Acciones de IA al final de la fila de acciones — son
                      one-shot: se ejecutan una sola vez por sesión y luego
@@ -266,7 +260,7 @@
                 <button type="button" class="cp-btn cp-btn-ai"
                         [disabled]="isRegeneratingFields || meetingData.ai_fields_regenerated"
                         [class.is-done]="meetingData.ai_fields_regenerated"
-                        [title]="meetingData.ai_fields_regenerated ? 'Ya se sugirieron campos con IA para esta sesión.' : 'Sugerir decisiones, riesgos, acuerdos y temas con IA (un solo uso).'"
+                        [title]="(meetingData.ai_fields_regenerated ? 'curation.fields_already_suggested' : 'curation.suggest_fields_hint') | translate"
                         (click)="regenerateFields()">
                     <svg *ngIf="!meetingData.ai_fields_regenerated"
                          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -279,14 +273,14 @@
                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
-                    <span *ngIf="isRegeneratingFields">Sugiriendo…</span>
-                    <span *ngIf="!isRegeneratingFields && !meetingData.ai_fields_regenerated">Sugerir campos con IA</span>
-                    <span *ngIf="!isRegeneratingFields && meetingData.ai_fields_regenerated">Campos sugeridos</span>
+                    <span *ngIf="isRegeneratingFields">{{ 'curation.suggesting' | translate }}</span>
+                    <span *ngIf="!isRegeneratingFields && !meetingData.ai_fields_regenerated">{{ 'curation.suggest_fields_ai' | translate }}</span>
+                    <span *ngIf="!isRegeneratingFields && meetingData.ai_fields_regenerated">{{ 'curation.fields_suggested' | translate }}</span>
                 </button>
                 <button type="button" class="cp-btn cp-btn-ai"
                         [disabled]="isRegenerating || meetingData.ai_tasks_regenerated"
                         [class.is-done]="meetingData.ai_tasks_regenerated"
-                        [title]="meetingData.ai_tasks_regenerated ? 'Ya se regeneraron tareas con IA para esta sesión.' : 'Regenerar el listado de tareas con IA (un solo uso).'"
+                        [title]="(meetingData.ai_tasks_regenerated ? 'curation.tasks_already_regenerated' : 'curation.regenerate_tasks_hint') | translate"
                         (click)="regenerateTasks()">
                     <svg *ngIf="!meetingData.ai_tasks_regenerated"
                          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -301,9 +295,9 @@
                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
-                    <span *ngIf="isRegenerating">Regenerando…</span>
-                    <span *ngIf="!isRegenerating && !meetingData.ai_tasks_regenerated">Regenerar tareas</span>
-                    <span *ngIf="!isRegenerating && meetingData.ai_tasks_regenerated">Tareas regeneradas</span>
+                    <span *ngIf="isRegenerating">{{ 'curation.regenerating' | translate }}</span>
+                    <span *ngIf="!isRegenerating && !meetingData.ai_tasks_regenerated">{{ 'curation.regenerate_tasks' | translate }}</span>
+                    <span *ngIf="!isRegenerating && meetingData.ai_tasks_regenerated">{{ 'curation.tasks_regenerated' | translate }}</span>
                 </button>
             </div>
         </header>
@@ -329,12 +323,12 @@
                         </div>
                         <div class="cp-card-titles">
                             <h3>{{ 'project_detail.summary' | translate }}</h3>
-                            <p class="cp-card-sub">Resumen nativo de Fireflies. Editable.</p>
+                            <p class="cp-card-sub">{{ 'curation.summary_native_fireflies' | translate }}</p>
                         </div>
                         <button type="button" class="cp-card-edit"
                                 [class.is-editing]="editing.summary"
                                 (click)="toggleEdit('summary')"
-                                [title]="editing.summary ? 'Volver a vista' : 'Editar'">
+                                [title]="(editing.summary ? 'curation.back_to_view' : 'common.edit') | translate">
                             <svg *ngIf="!editing.summary"
                                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -353,11 +347,9 @@
                          [innerHTML]="meetingData.raw_summary | mdRender"></div>
                     <div *ngIf="!editing.summary && !meetingData.raw_summary"
                          class="cp-md-empty cp-summary-empty-state">
-                        <p>No hay resumen disponible.</p>
+                        <p>{{ 'curation.no_summary_available' | translate }}</p>
                         <p class="cp-summary-empty-hint" *ngIf="meetingData.fireflies_id">
-                            Esta reunión viene de Fireflies. El resumen ejecutivo
-                            puede haber tardado en generarse — pulsá el botón
-                            para volver a pedirlo.
+                            {{ 'curation.summary_fireflies_hint' | translate }}
                         </p>
                         <button *ngIf="meetingData.fireflies_id"
                                 type="button"
@@ -370,7 +362,7 @@
                                 <polyline points="23 4 23 10 17 10"></polyline>
                                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                             </svg>
-                            {{ isRefetchingSummary ? 'Pidiendo a Fireflies…' : 'Traer resumen de Fireflies' }}
+                            {{ (isRefetchingSummary ? 'curation.asking_fireflies' : 'curation.bring_summary_fireflies') | translate }}
                         </button>
                     </div>
                     <textarea *ngIf="editing.summary"
@@ -392,7 +384,7 @@
                             </svg>
                         </div>
                         <div class="cp-card-titles">
-                            <h3>Transcripción original</h3>
+                            <h3>{{ 'curation.original_transcript' | translate }}</h3>
                         </div>
                     </header>
                     <!-- La transcripción se queda como textarea editable
@@ -421,7 +413,7 @@
                         <button type="button" class="cp-card-edit"
                                 [class.is-editing]="editing.decisions"
                                 (click)="toggleEdit('decisions')"
-                                [title]="editing.decisions ? 'Volver a vista' : 'Editar'">
+                                [title]="(editing.decisions ? 'curation.back_to_view' : 'common.edit') | translate">
                             <svg *ngIf="!editing.decisions"
                                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -439,7 +431,7 @@
                          class="cp-md-view cp-textarea-scroll"
                          [innerHTML]="meetingData.processed_decisions | mdRender"></div>
                     <div *ngIf="!editing.decisions && !meetingData.processed_decisions"
-                         class="cp-md-empty">Aún no se identificaron decisiones.</div>
+                         class="cp-md-empty">{{ 'curation.no_decisions_yet' | translate }}</div>
                     <textarea *ngIf="editing.decisions"
                               class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.processed_decisions"
@@ -464,7 +456,7 @@
                         <button type="button" class="cp-card-edit"
                                 [class.is-editing]="editing.risks"
                                 (click)="toggleEdit('risks')"
-                                [title]="editing.risks ? 'Volver a vista' : 'Editar'">
+                                [title]="(editing.risks ? 'curation.back_to_view' : 'common.edit') | translate">
                             <svg *ngIf="!editing.risks"
                                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -482,7 +474,7 @@
                          class="cp-md-view cp-textarea-scroll"
                          [innerHTML]="meetingData.processed_risks | mdRender"></div>
                     <div *ngIf="!editing.risks && !meetingData.processed_risks"
-                         class="cp-md-empty">No se identificaron riesgos.</div>
+                         class="cp-md-empty">{{ 'curation.no_risks_identified' | translate }}</div>
                     <textarea *ngIf="editing.risks"
                               class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.processed_risks"
@@ -503,12 +495,12 @@
                             </svg>
                         </div>
                         <div class="cp-card-titles">
-                            <h3>Acuerdos</h3>
+                            <h3>{{ 'project_detail.agreements' | translate }}</h3>
                         </div>
                         <button type="button" class="cp-card-edit"
                                 [class.is-editing]="editing.agreements"
                                 (click)="toggleEdit('agreements')"
-                                [title]="editing.agreements ? 'Volver a vista' : 'Editar'">
+                                [title]="(editing.agreements ? 'curation.back_to_view' : 'common.edit') | translate">
                             <svg *ngIf="!editing.agreements"
                                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -526,7 +518,7 @@
                          class="cp-md-view cp-textarea-scroll"
                          [innerHTML]="meetingData.processed_agreements | mdRender"></div>
                     <div *ngIf="!editing.agreements && !meetingData.processed_agreements"
-                         class="cp-md-empty">No hay acuerdos registrados.</div>
+                         class="cp-md-empty">{{ 'curation.no_agreements' | translate }}</div>
                     <textarea *ngIf="editing.agreements"
                               class="cp-textarea cp-textarea-scroll"
                               [(ngModel)]="meetingData.processed_agreements"
@@ -542,7 +534,7 @@
                     <!-- Toolbar del panel de tareas -->
                     <header class="cp-tasks-head">
                         <h3 class="cp-tasks-title">
-                            Tareas detectadas por IA
+                            {{ 'curation.tasks_detected_by_ai' | translate }}
                             <span class="cp-tasks-count">({{ meetingData.action_items.length }})</span>
                         </h3>
                         <div class="cp-tasks-toolbar">
@@ -553,7 +545,7 @@
                                     <line x1="12" y1="5" x2="12" y2="19"></line>
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                 </svg>
-                                Añadir tarea manual
+                                {{ 'curation.add_manual_task' | translate }}
                             </button>
                             <button type="button" class="cp-btn cp-btn-light"
                                     [disabled]="!hasSelectedTasks || isDispatchingEmails"
@@ -564,7 +556,7 @@
                                     <polyline points="22,6 12,13 2,6"></polyline>
                                 </svg>
                                 <span *ngIf="isDispatchingEmails">{{ 'forgot_password.submitting' | translate }}</span>
-                                <span *ngIf="!isDispatchingEmails">Correos</span>
+                                <span *ngIf="!isDispatchingEmails">{{ 'curation.emails' | translate }}</span>
                             </button>
                             <button type="button" class="cp-btn cp-btn-light"
                                     [disabled]="!hasSelectedTasks || isDispatchingPlatforms"
@@ -577,19 +569,19 @@
                                     <rect x="3" y="14" width="7" height="7"></rect>
                                 </svg>
                                 <span *ngIf="isDispatchingPlatforms">{{ 'forgot_password.submitting' | translate }}</span>
-                                <span *ngIf="!isDispatchingPlatforms">Plataformas</span>
+                                <span *ngIf="!isDispatchingPlatforms">{{ 'curation.platforms' | translate }}</span>
                             </button>
                         </div>
                     </header>
 
                     <!-- Formulario manual -->
                     <div *ngIf="showManualTaskForm" class="cp-manual-form fade-in">
-                        <h4>Nueva tarea manual</h4>
-                        <input type="text" [(ngModel)]="newTask.title" placeholder="Título de la tarea o compromiso…" />
+                        <h4>{{ 'curation.new_manual_task' | translate }}</h4>
+                        <input type="text" [(ngModel)]="newTask.title" [placeholder]="'curation.task_title_placeholder' | translate" />
                         <textarea [(ngModel)]="newTask.description" rows="2"
-                                  placeholder="Descripción detallada de la acción (opcional)…"></textarea>
+                                  [placeholder]="'curation.task_description_placeholder' | translate"></textarea>
                         <div class="cp-manual-form-grid">
-                            <input type="text" [(ngModel)]="newTask.owner_name" placeholder="Responsable" />
+                            <input type="text" [(ngModel)]="newTask.owner_name" [placeholder]="'project_detail.owner' | translate" />
                             <input type="email" [(ngModel)]="newTask.owner_email" placeholder="correo@empresa.com" />
                             <input type="date" [(ngModel)]="newTask.due_date" />
                         </div>
@@ -599,7 +591,7 @@
                             <button type="button" class="cp-btn cp-btn-save"
                                     (click)="addManualTask()"
                                     [disabled]="isAddingTask || !newTask.title">
-                                <span *ngIf="!isAddingTask">Guardar tarea</span>
+                                <span *ngIf="!isAddingTask">{{ 'curation.save_task' | translate }}</span>
                                 <span *ngIf="isAddingTask">{{ 'common.saving' | translate }}</span>
                             </button>
                         </div>
@@ -608,7 +600,7 @@
                     <!-- Seleccionar todas -->
                     <label class="cp-select-all" *ngIf="meetingData.action_items.length">
                         <input type="checkbox" (change)="toggleAllTasks($event)" />
-                        <span>Seleccionar todas las tareas</span>
+                        <span>{{ 'curation.select_all_tasks' | translate }}</span>
                     </label>
 
                     <!-- Lista de tareas -->
@@ -626,11 +618,11 @@
                                 </label>
                                 <input type="text" class="cp-task-title"
                                        [(ngModel)]="task.title"
-                                       placeholder="Título de la tarea"
+                                       [placeholder]="'curation.task_title_simple' | translate"
                                        (blur)="updateTaskField(task)" />
                                 <div class="cp-task-menu-wrap">
                                     <button type="button" class="cp-kebab"
-                                            title="Más opciones"
+                                            [title]="'meetings.more_options' | translate"
                                             (click)="toggleTaskMenu(task.id, $event)">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -647,7 +639,7 @@
                                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <polyline points="20 6 9 17 4 12"></polyline>
                                             </svg>
-                                            {{ task.is_approved ? 'Quitar aprobación' : 'Aprobar tarea' }}
+                                            {{ (task.is_approved ? 'curation.remove_approval' : 'curation.approve_task') | translate }}
                                         </button>
                                         <div class="cp-kebab-divider"></div>
                                         <button type="button" class="cp-kebab-danger"
@@ -658,7 +650,7 @@
                                                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                                                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                                             </svg>
-                                            Quitar tarea
+                                            {{ 'curation.remove_task' | translate }}
                                         </button>
                                     </div>
                                 </div>
@@ -672,16 +664,16 @@
                                  class="cp-task-desc-view"
                                  [innerHTML]="task.description | mdRender"
                                  (click)="toggleTaskExpand(task.id)"
-                                 title="Click para editar"></div>
+                                 [title]="'curation.click_to_edit' | translate"></div>
                             <div *ngIf="expandedTaskId !== task.id && !task.description"
                                  class="cp-task-desc-empty"
                                  (click)="toggleTaskExpand(task.id)">
-                                Click para añadir descripción
+                                {{ 'curation.click_to_add_description' | translate }}
                             </div>
                             <textarea *ngIf="expandedTaskId === task.id"
                                       class="cp-task-desc"
                                       [(ngModel)]="task.description"
-                                      placeholder="Descripción detallada de la tarea"
+                                      [placeholder]="'curation.task_detailed_description' | translate"
                                       rows="4"
                                       (blur)="updateTaskField(task); expandedTaskId = null"></textarea>
 
@@ -695,7 +687,7 @@
                                     </svg>
                                     <input type="text"
                                            [(ngModel)]="task.owner_name"
-                                           placeholder="Responsable"
+                                           [placeholder]="'project_detail.owner' | translate"
                                            (blur)="updateTaskField(task)" />
                                 </div>
                                 <div class="cp-field">
@@ -732,8 +724,8 @@
                             <polyline points="9 11 12 14 22 4"></polyline>
                             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                         </svg>
-                        <h4>No hay tareas detectadas</h4>
-                        <p>Genera tareas desde la transcripción con el botón "Regenerar tareas".</p>
+                        <h4>{{ 'curation.no_tasks_detected' | translate }}</h4>
+                        <p>{{ 'curation.generate_tasks_hint' | translate }}</p>
                     </div>
                 </article>
             </section>

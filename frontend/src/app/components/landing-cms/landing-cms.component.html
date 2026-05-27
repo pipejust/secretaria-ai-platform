@@ -4,11 +4,10 @@
     <header class="lcms-header">
         <div class="lcms-header-left">
             <div class="lcms-title-wrap">
-                <span class="lcms-eyebrow">acten.app · contenido público</span>
-                <h1 class="lcms-title">Landing CMS</h1>
+                <span class="lcms-eyebrow">{{ 'landing_cms.eyebrow' | translate }}</span>
+                <h1 class="lcms-title">{{ 'landing_cms.title' | translate }}</h1>
                 <p class="lcms-subtitle">
-                    Edita todos los textos, capacidades, testimonios, precios y enlaces
-                    del landing público de Acten. Cambios se publican al guardar.
+                    {{ 'landing_cms.subtitle_long' | translate }}
                 </p>
             </div>
         </div>
@@ -17,7 +16,7 @@
                  formulario entre Es/Ca/En. Cada cambio recarga el form con
                  las traducciones del idioma elegido. Al guardar, solo ese
                  idioma se actualiza en el JSON; los demás se preservan. -->
-            <div class="lcms-edit-lang" role="group" aria-label="Idioma de edición">
+            <div class="lcms-edit-lang" role="group" [attr.aria-label]="'landing_cms.edit_language' | translate">
                 <span class="lcms-edit-lang-label">{{ 'landing_cms.edit_in' | translate }}</span>
                 <button *ngFor="let l of availableEditLangs" type="button"
                         class="lcms-edit-lang-btn"
@@ -44,7 +43,7 @@
                     <polyline points="1 4 1 10 7 10"></polyline>
                     <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                 </svg>
-                {{ isResetting ? 'Restableciendo…' : 'Restablecer defaults' }}
+                {{ (isResetting ? 'landing_cms.resetting' : 'landing_cms.reset_defaults') | translate }}
             </button>
         </div>
     </header>
@@ -52,7 +51,7 @@
     <!-- Loading state -->
     <div class="lcms-loading" *ngIf="isLoading">
         <div class="lcms-spinner"></div>
-        <p>Cargando el contenido del landing…</p>
+        <p>{{ 'landing_cms.loading_content' | translate }}</p>
     </div>
 
     <!-- Error state -->
@@ -70,7 +69,7 @@
     <div class="lcms-shell" *ngIf="!isLoading && !loadError && content">
 
         <!-- Navegador de secciones -->
-        <nav class="lcms-sidebar" aria-label="Secciones del landing">
+        <nav class="lcms-sidebar" [attr.aria-label]="'landing_cms.sections_aria' | translate">
             <ul>
                 <li *ngFor="let s of sections">
                     <button type="button"
@@ -98,33 +97,33 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'nav'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Navegación del header</h2>
-                    <p>Los enlaces que aparecen en el menú superior del landing y los CTAs del header.</p>
+                    <h2>{{ 'landing_cms.nav_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.nav_subtitle' | translate }}</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Texto del CTA principal</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_primary_text' | translate }}</span>
                         <input type="text" [(ngModel)]="content.nav.cta_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Texto del enlace "Iniciar sesión"</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.login_link_text' | translate }}</span>
                         <input type="text" [(ngModel)]="content.nav.login_label" maxlength="40" />
                     </label>
                 </div>
 
-                <h3 class="lcms-subheading">Enlaces del menú</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.menu_links' | translate }}</h3>
                 <div class="lcms-list">
                     <div class="lcms-list-row" *ngFor="let item of content.nav.items; let i = index; trackBy: trackByIndex">
                         <label class="lcms-field lcms-field-grow">
-                            <span class="lcms-field-label">Etiqueta</span>
+                            <span class="lcms-field-label">{{ 'landing_cms.label' | translate }}</span>
                             <input type="text" [(ngModel)]="item.label" maxlength="40" />
                         </label>
                         <label class="lcms-field lcms-field-grow">
-                            <span class="lcms-field-label">Anchor o URL</span>
+                            <span class="lcms-field-label">{{ 'landing_cms.anchor_or_url' | translate }}</span>
                             <input type="text" [(ngModel)]="item.anchor" placeholder="#features" />
                         </label>
-                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeNavItem(i)" title="Eliminar enlace">
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeNavItem(i)" [title]="'landing_cms.delete_link' | translate">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
@@ -143,12 +142,12 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'hero'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Hero principal</h2>
-                    <p>La primera pantalla que ve el visitante. Determina el tono de toda la página.</p>
+                    <h2>{{ 'landing_cms.hero_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.hero_subtitle' | translate }}</p>
                 </header>
 
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Badge superior</span>
+                    <span class="lcms-field-label">{{ 'landing_cms.top_badge' | translate }}</span>
                     <input type="text" [(ngModel)]="content.hero.badge" maxlength="120" />
                 </label>
                 <label class="lcms-field">
@@ -162,35 +161,35 @@
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA primario · texto</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_primary_text_lbl' | translate }}</span>
                         <input type="text" [(ngModel)]="content.hero.cta_primary_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA primario · anchor</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_primary_anchor' | translate }}</span>
                         <input type="text" [(ngModel)]="content.hero.cta_primary_anchor" placeholder="#contact" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA secundario · texto</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_secondary_text_lbl' | translate }}</span>
                         <input type="text" [(ngModel)]="content.hero.cta_secondary_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA secundario · anchor</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_secondary_anchor' | translate }}</span>
                         <input type="text" [(ngModel)]="content.hero.cta_secondary_anchor" placeholder="#flow" />
                     </label>
                 </div>
 
-                <h3 class="lcms-subheading">Mockup de producto (panel derecho)</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.mockup_section' | translate }}</h3>
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Eyebrow del mockup</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.mockup_eyebrow' | translate }}</span>
                         <input type="text" [(ngModel)]="content.hero.mockup_eyebrow" maxlength="100" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Título del mockup</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.mockup_title_lbl' | translate }}</span>
                         <input type="text" [(ngModel)]="content.hero.mockup_title" maxlength="100" />
                     </label>
                     <label class="lcms-field lcms-field-full">
-                        <span class="lcms-field-label">Meta (ej. "5 decisiones · 8 tareas")</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.mockup_meta' | translate }}</span>
                         <input type="text" [(ngModel)]="content.hero.mockup_meta" maxlength="120" />
                     </label>
                 </div>
@@ -201,12 +200,12 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'trust'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Logos de confianza</h2>
-                    <p>Empresas que ya usan Acten. Se muestran como wordmarks (sin imágenes).</p>
+                    <h2>{{ 'landing_cms.trust_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.trust_subtitle' | translate }}</p>
                 </header>
 
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Texto introductorio (eyebrow)</span>
+                    <span class="lcms-field-label">{{ 'landing_cms.intro_eyebrow' | translate }}</span>
                     <input type="text" [(ngModel)]="content.trust.eyebrow" maxlength="180" />
                 </label>
 
@@ -226,7 +225,7 @@
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addTrustLogo()">
-                    + Añadir empresa
+                    {{ 'landing_cms.add_company' | translate }}
                 </button>
             </section>
 
@@ -235,13 +234,13 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'features'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Capacidades</h2>
-                    <p>Las 6 capacidades que diferencian a Acten. Cada una tiene un icono.</p>
+                    <h2>{{ 'landing_cms.features_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.features_subtitle' | translate }}</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Eyebrow</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.eyebrow_label' | translate }}</span>
                         <input type="text" [(ngModel)]="content.features.eyebrow" maxlength="60" />
                     </label>
                     <label class="lcms-field">
@@ -254,11 +253,11 @@
                     <textarea [(ngModel)]="content.features.subtitle" rows="2" maxlength="400"></textarea>
                 </label>
 
-                <h3 class="lcms-subheading">Cards de capacidades</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.feature_cards' | translate }}</h3>
                 <div class="lcms-cards">
                     <div class="lcms-card" *ngFor="let item of content.features.items; let i = index; trackBy: trackByIndex">
                         <header class="lcms-card-header">
-                            <span class="lcms-card-index">Capacidad {{ i + 1 }}</span>
+                            <span class="lcms-card-index">{{ 'landing_cms.feature_label' | translate }} {{ i + 1 }}</span>
                             <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFeature(i)" [attr.title]="'common.delete' | translate">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -275,7 +274,7 @@
                             <textarea [(ngModel)]="item.description" rows="3" maxlength="280"></textarea>
                         </label>
                         <label class="lcms-field">
-                            <span class="lcms-field-label">Icono</span>
+                            <span class="lcms-field-label">{{ 'landing_cms.icon' | translate }}</span>
                             <select [(ngModel)]="item.icon">
                                 <option *ngFor="let opt of featureIcons" [value]="opt.value">{{ opt.label }}</option>
                             </select>
@@ -283,7 +282,7 @@
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addFeature()">
-                    + Añadir capacidad
+                    {{ 'landing_cms.add_feature' | translate }}
                 </button>
             </section>
 
@@ -292,13 +291,13 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'flow'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Flujo de 4 pasos</h2>
-                    <p>Captura → Inteligencia → Estructura → Acción.</p>
+                    <h2>{{ 'landing_cms.flow_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.flow_subtitle' | translate }}</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Eyebrow</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.eyebrow_label' | translate }}</span>
                         <input type="text" [(ngModel)]="content.flow.eyebrow" maxlength="60" />
                     </label>
                     <label class="lcms-field">
@@ -311,11 +310,11 @@
                     <textarea [(ngModel)]="content.flow.subtitle" rows="2" maxlength="400"></textarea>
                 </label>
 
-                <h3 class="lcms-subheading">Pasos</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.steps' | translate }}</h3>
                 <div class="lcms-cards">
                     <div class="lcms-card" *ngFor="let step of content.flow.steps; let i = index; trackBy: trackByIndex">
                         <header class="lcms-card-header">
-                            <span class="lcms-card-index">Paso {{ i + 1 }}</span>
+                            <span class="lcms-card-index">{{ 'landing_cms.step_label' | translate }} {{ i + 1 }}</span>
                             <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeStep(i)" [attr.title]="'common.delete' | translate">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -332,7 +331,7 @@
                             <textarea [(ngModel)]="step.description" rows="3" maxlength="280"></textarea>
                         </label>
                         <label class="lcms-field">
-                            <span class="lcms-field-label">Icono</span>
+                            <span class="lcms-field-label">{{ 'landing_cms.icon' | translate }}</span>
                             <select [(ngModel)]="step.icon">
                                 <option *ngFor="let opt of stepIcons" [value]="opt.value">{{ opt.label }}</option>
                             </select>
@@ -340,7 +339,7 @@
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addStep()">
-                    + Añadir paso
+                    {{ 'landing_cms.add_step' | translate }}
                 </button>
             </section>
 
@@ -349,13 +348,13 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'integrations'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Integraciones</h2>
-                    <p>Lista de plataformas con las que Acten se conecta.</p>
+                    <h2>{{ 'sidebar.integrations' | translate }}</h2>
+                    <p>{{ 'landing_cms.integrations_subtitle' | translate }}</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Eyebrow</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.eyebrow_label' | translate }}</span>
                         <input type="text" [(ngModel)]="content.integrations.eyebrow" maxlength="60" />
                     </label>
                     <label class="lcms-field">
@@ -368,7 +367,7 @@
                     <textarea [(ngModel)]="content.integrations.subtitle" rows="2" maxlength="400"></textarea>
                 </label>
 
-                <h3 class="lcms-subheading">Plataformas</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.platforms' | translate }}</h3>
                 <div class="lcms-list">
                     <div class="lcms-list-row" *ngFor="let name of content.integrations.items; let i = index; trackBy: trackByIndex">
                         <label class="lcms-field lcms-field-grow">
@@ -384,7 +383,7 @@
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addIntegration()">
-                    + Añadir integración
+                    {{ 'landing_cms.add_integration' | translate }}
                 </button>
             </section>
 
@@ -393,17 +392,17 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'testimonials'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Testimonios</h2>
-                    <p>Las personas que aparecen en esta sección son reales y se traen del sistema. Aquí editas solo el encabezado y las frases rotativas.</p>
+                    <h2>{{ 'landing_cms.testimonials_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.testimonials_subtitle' | translate }}</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Eyebrow</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.eyebrow_label' | translate }}</span>
                         <input type="text" [(ngModel)]="content.testimonials.eyebrow" maxlength="60" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Título de la sección</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.section_title' | translate }}</span>
                         <input type="text" [(ngModel)]="content.testimonials.title" maxlength="180" />
                     </label>
                 </div>
@@ -415,30 +414,25 @@
                         <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
                     </svg>
                     <div>
-                        <strong>De dónde salen las personas</strong>
-                        Se traen automáticamente de tu sistema: usuarios activos de la plataforma
-                        y contactos registrados en proyectos. Si tienen avatar subido, aparece su foto;
-                        si no, sus iniciales. Para actualizar un cargo (por ejemplo "CEO de Acten"),
-                        edita el perfil del usuario en
-                        <a routerLink="/admin/users">/admin/usuarios</a>.
+                        <strong>{{ 'landing_cms.where_people_from_title' | translate }}</strong>
+                        {{ 'landing_cms.where_people_from_body' | translate }}
+                        <a routerLink="/admin/users">/admin/users</a>.
                     </div>
                 </div>
 
-                <h3 class="lcms-subheading">Frases rotativas</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.rotating_quotes' | translate }}</h3>
                 <p class="lcms-help-text">
-                    Cada card del landing muestra una de estas frases (rotando por orden). Mínimo 3
-                    para que las 3 cards visibles tengan textos distintos. Las personas reales del
-                    sistema se pintan debajo con su nombre y cargo.
+                    {{ 'landing_cms.rotating_quotes_help' | translate }}
                 </p>
                 <div class="lcms-list">
                     <div class="lcms-list-row" *ngFor="let q of (content.testimonials.quotes || []); let i = index; trackBy: trackByIndex">
                         <label class="lcms-field lcms-field-grow">
-                            <span class="lcms-field-label">Frase {{ i + 1 }}</span>
+                            <span class="lcms-field-label">{{ 'landing_cms.quote_label' | translate }} {{ i + 1 }}</span>
                             <textarea [ngModel]="q"
                                       (ngModelChange)="updateTestimonialQuote(i, $event)"
                                       rows="2"
                                       maxlength="320"
-                                      placeholder="Una cita corta sobre el valor de Acten"></textarea>
+                                      [placeholder]="'landing_cms.quote_placeholder' | translate"></textarea>
                         </label>
                         <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTestimonialQuote(i)" [attr.title]="'common.delete' | translate">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -449,7 +443,7 @@
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addTestimonialQuote()">
-                    + Añadir frase
+                    {{ 'landing_cms.add_quote' | translate }}
                 </button>
             </section>
 
@@ -458,13 +452,13 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'pricing'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Precios</h2>
-                    <p>Planes Starter / Business / Enterprise. Marca uno como "destacado" (badge "Más popular").</p>
+                    <h2>{{ 'landing_cms.pricing_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.pricing_subtitle' | translate }}</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Eyebrow</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.eyebrow_label' | translate }}</span>
                         <input type="text" [(ngModel)]="content.pricing.eyebrow" maxlength="60" />
                     </label>
                     <label class="lcms-field">
@@ -477,16 +471,16 @@
                     <textarea [(ngModel)]="content.pricing.subtitle" rows="2" maxlength="400"></textarea>
                 </label>
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Nota al pie (footnote)</span>
+                    <span class="lcms-field-label">{{ 'landing_cms.footnote' | translate }}</span>
                     <input type="text" [(ngModel)]="content.pricing.footnote" maxlength="240" />
                 </label>
 
-                <h3 class="lcms-subheading">Planes</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.plans' | translate }}</h3>
                 <div class="lcms-cards lcms-cards-pricing">
                     <div class="lcms-card" *ngFor="let plan of content.pricing.plans; let i = index; trackBy: trackByIndex">
                         <header class="lcms-card-header">
-                            <span class="lcms-card-index">Plan {{ i + 1 }}</span>
-                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removePlan(i)" title="Eliminar plan">
+                            <span class="lcms-card-index">{{ 'landing_cms.plan_label' | translate }} {{ i + 1 }}</span>
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removePlan(i)" [title]="'landing_cms.delete_plan' | translate">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
@@ -495,38 +489,38 @@
                         </header>
                         <div class="lcms-grid lcms-grid-2">
                             <label class="lcms-field">
-                                <span class="lcms-field-label">Nombre del plan</span>
+                                <span class="lcms-field-label">{{ 'landing_cms.plan_name' | translate }}</span>
                                 <input type="text" [(ngModel)]="plan.name" maxlength="40" />
                             </label>
                             <label class="lcms-field">
-                                <span class="lcms-field-label">Precio</span>
+                                <span class="lcms-field-label">{{ 'landing_cms.price' | translate }}</span>
                                 <input type="text" [(ngModel)]="plan.price" maxlength="20" />
                             </label>
                             <label class="lcms-field">
-                                <span class="lcms-field-label">Facturación (ej. "USD / mes")</span>
+                                <span class="lcms-field-label">{{ 'landing_cms.billing' | translate }}</span>
                                 <input type="text" [(ngModel)]="plan.billing" maxlength="40" />
                             </label>
                             <label class="lcms-field lcms-field-checkbox">
                                 <input type="checkbox" [(ngModel)]="plan.featured" />
-                                <span>Marcar como "Más popular"</span>
+                                <span>{{ 'landing_cms.mark_most_popular' | translate }}</span>
                             </label>
                         </div>
                         <label class="lcms-field">
-                            <span class="lcms-field-label">Descripción corta</span>
+                            <span class="lcms-field-label">{{ 'landing_cms.short_description' | translate }}</span>
                             <textarea [(ngModel)]="plan.description" rows="2" maxlength="280"></textarea>
                         </label>
                         <div class="lcms-grid lcms-grid-2">
                             <label class="lcms-field">
-                                <span class="lcms-field-label">CTA · texto</span>
+                                <span class="lcms-field-label">{{ 'landing_cms.cta_text' | translate }}</span>
                                 <input type="text" [(ngModel)]="plan.cta_label" maxlength="40" />
                             </label>
                             <label class="lcms-field">
-                                <span class="lcms-field-label">CTA · anchor o URL</span>
+                                <span class="lcms-field-label">{{ 'landing_cms.cta_anchor_url' | translate }}</span>
                                 <input type="text" [(ngModel)]="plan.cta_anchor" placeholder="#contact" />
                             </label>
                         </div>
 
-                        <h4 class="lcms-subheading-sm">Beneficios incluidos</h4>
+                        <h4 class="lcms-subheading-sm">{{ 'landing_cms.included_benefits' | translate }}</h4>
                         <div class="lcms-list">
                             <div class="lcms-list-row" *ngFor="let feat of plan.features; let j = index; trackBy: trackByIndex">
                                 <label class="lcms-field lcms-field-grow">
@@ -541,12 +535,12 @@
                             </div>
                         </div>
                         <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addPlanFeature(i)">
-                            + Añadir beneficio
+                            {{ 'landing_cms.add_benefit' | translate }}
                         </button>
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addPlan()">
-                    + Añadir plan
+                    {{ 'landing_cms.add_plan' | translate }}
                 </button>
             </section>
 
@@ -555,13 +549,13 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'contact'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Contacto</h2>
-                    <p>Información de contacto, etiquetas del formulario y mensajes de feedback.</p>
+                    <h2>{{ 'landing_cms.contact_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.contact_subtitle' | translate }}</p>
                 </header>
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Eyebrow</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.eyebrow_label' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.eyebrow" maxlength="60" />
                     </label>
                     <label class="lcms-field">
@@ -574,10 +568,10 @@
                     <textarea [(ngModel)]="content.contact.subtitle" rows="2" maxlength="400"></textarea>
                 </label>
 
-                <h3 class="lcms-subheading">Datos de contacto</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.contact_data' | translate }}</h3>
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Email destino del formulario</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.form_target_email' | translate }}</span>
                         <input type="email" [(ngModel)]="content.contact.email" placeholder="hola@acten.app" />
                     </label>
                     <label class="lcms-field">
@@ -585,46 +579,46 @@
                         <input type="text" [(ngModel)]="content.contact.phone" />
                     </label>
                     <label class="lcms-field lcms-field-full">
-                        <span class="lcms-field-label">Dirección / ubicación</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.address_location' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.address" />
                     </label>
                 </div>
 
-                <h3 class="lcms-subheading">Etiquetas del formulario</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.form_labels' | translate }}</h3>
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Etiqueta · Nombre</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.lbl_name' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.form_name_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Etiqueta · Email</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.lbl_email' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.form_email_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Etiqueta · Empresa</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.lbl_company' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.form_company_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Etiqueta · Cargo</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.lbl_role' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.form_role_label" maxlength="40" />
                     </label>
                     <label class="lcms-field lcms-field-full">
-                        <span class="lcms-field-label">Etiqueta · Mensaje</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.lbl_message' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.form_message_label" maxlength="80" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Texto del botón "Enviar"</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.send_button_text' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.form_cta_label" maxlength="40" />
                     </label>
                 </div>
 
-                <h3 class="lcms-subheading">Mensajes de feedback</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.feedback_messages' | translate }}</h3>
                 <label class="lcms-field">
                     <span class="lcms-field-label">{{ 'common.success_message' | translate }}</span>
                     <input type="text" [(ngModel)]="content.contact.form_success" maxlength="240" />
                 </label>
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Mensaje de error</span>
+                    <span class="lcms-field-label">{{ 'landing_cms.error_message' | translate }}</span>
                     <input type="text" [(ngModel)]="content.contact.form_error" maxlength="240" />
                 </label>
             </section>
@@ -634,12 +628,12 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'final_cta'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>CTA final</h2>
-                    <p>El banner oscuro de cierre justo antes del footer.</p>
+                    <h2>{{ 'landing_cms.final_cta_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.final_cta_subtitle' | translate }}</p>
                 </header>
 
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Eyebrow</span>
+                    <span class="lcms-field-label">{{ 'landing_cms.eyebrow_label' | translate }}</span>
                     <input type="text" [(ngModel)]="content.final_cta.eyebrow" maxlength="60" />
                 </label>
                 <label class="lcms-field">
@@ -653,19 +647,19 @@
 
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA primario · texto</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_primary_text_lbl' | translate }}</span>
                         <input type="text" [(ngModel)]="content.final_cta.cta_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA primario · anchor</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_primary_anchor' | translate }}</span>
                         <input type="text" [(ngModel)]="content.final_cta.cta_anchor" placeholder="#contact" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA secundario · texto</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_secondary_text_lbl' | translate }}</span>
                         <input type="text" [(ngModel)]="content.final_cta.secondary_label" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA secundario · anchor</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.cta_secondary_anchor' | translate }}</span>
                         <input type="text" [(ngModel)]="content.final_cta.secondary_anchor" placeholder="#pricing" />
                     </label>
                 </div>
@@ -676,16 +670,16 @@
                  ============================================================ -->
             <section *ngIf="activeSection === 'footer'" class="lcms-section">
                 <header class="lcms-section-header">
-                    <h2>Footer</h2>
-                    <p>Columnas de enlaces, newsletter y copyright.</p>
+                    <h2>{{ 'landing_cms.footer_title' | translate }}</h2>
+                    <p>{{ 'landing_cms.footer_subtitle' | translate }}</p>
                 </header>
 
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Tagline (texto bajo el logo)</span>
+                    <span class="lcms-field-label">{{ 'landing_cms.tagline_under_logo' | translate }}</span>
                     <input type="text" [(ngModel)]="content.footer.tagline" maxlength="240" />
                 </label>
 
-                <h3 class="lcms-subheading">Newsletter</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.newsletter' | translate }}</h3>
                 <div class="lcms-grid lcms-grid-2">
                     <label class="lcms-field">
                         <span class="lcms-field-label">{{ 'common.title' | translate }}</span>
@@ -696,7 +690,7 @@
                         <input type="text" [(ngModel)]="content.footer.newsletter_subtitle" maxlength="160" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">CTA del botón</span>
+                        <span class="lcms-field-label">{{ 'landing_cms.button_cta' | translate }}</span>
                         <input type="text" [(ngModel)]="content.footer.newsletter_cta" maxlength="40" />
                     </label>
                     <label class="lcms-field">
@@ -705,11 +699,11 @@
                     </label>
                 </div>
 
-                <h3 class="lcms-subheading">Columnas de enlaces</h3>
+                <h3 class="lcms-subheading">{{ 'landing_cms.link_columns' | translate }}</h3>
                 <div class="lcms-cards">
                     <div class="lcms-card" *ngFor="let col of content.footer.columns; let i = index; trackBy: trackByIndex">
                         <header class="lcms-card-header">
-                            <span class="lcms-card-index">Columna {{ i + 1 }}</span>
+                            <span class="lcms-card-index">{{ 'landing_cms.column_label' | translate }} {{ i + 1 }}</span>
                             <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFooterColumn(i)">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -718,17 +712,17 @@
                             </button>
                         </header>
                         <label class="lcms-field">
-                            <span class="lcms-field-label">Título de la columna</span>
+                            <span class="lcms-field-label">{{ 'landing_cms.column_title' | translate }}</span>
                             <input type="text" [(ngModel)]="col.title" maxlength="60" />
                         </label>
-                        <h4 class="lcms-subheading-sm">Enlaces</h4>
+                        <h4 class="lcms-subheading-sm">{{ 'landing_cms.links' | translate }}</h4>
                         <div class="lcms-list">
                             <div class="lcms-list-row" *ngFor="let link of col.links; let j = index; trackBy: trackByIndex">
                                 <label class="lcms-field lcms-field-grow">
-                                    <input type="text" [(ngModel)]="link.label" placeholder="Etiqueta" maxlength="60" />
+                                    <input type="text" [(ngModel)]="link.label" [placeholder]="'landing_cms.label' | translate" maxlength="60" />
                                 </label>
                                 <label class="lcms-field lcms-field-grow">
-                                    <input type="text" [(ngModel)]="link.url" placeholder="/ruta o https://..." />
+                                    <input type="text" [(ngModel)]="link.url" [placeholder]="'landing_cms.url_placeholder' | translate" />
                                 </label>
                                 <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFooterLink(i, j)">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -744,11 +738,11 @@
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addFooterColumn()">
-                    + Añadir columna
+                    {{ 'landing_cms.add_column' | translate }}
                 </button>
 
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Copyright</span>
+                    <span class="lcms-field-label">{{ 'landing_cms.copyright' | translate }}</span>
                     <input type="text" [(ngModel)]="content.footer.copyright" maxlength="160" />
                 </label>
             </section>
@@ -776,12 +770,12 @@
                     <line x1="12" y1="8" x2="12" y2="12"></line>
                     <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                Tienes cambios sin guardar
+                {{ 'landing_cms.unsaved' | translate }}
             </span>
         </div>
         <div class="lcms-bottombar-actions">
             <button type="button" class="lcms-btn lcms-btn-ghost" (click)="cancelChanges()" [disabled]="!isDirty || isSaving">
-                Cancelar cambios
+                {{ 'landing_cms.cancel_changes' | translate }}
             </button>
             <button type="button" class="lcms-btn lcms-btn-primary" (click)="save()" [disabled]="!isDirty || isSaving">
                 <svg *ngIf="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -789,7 +783,7 @@
                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
                     <polyline points="7 3 7 8 15 8"></polyline>
                 </svg>
-                {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
+                {{ (isSaving ? 'common.saving' : 'common.save_changes') | translate }}
             </button>
         </div>
     </footer>

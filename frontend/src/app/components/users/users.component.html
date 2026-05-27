@@ -689,14 +689,14 @@
                            placeholder="+57 300 000 0000"/>
                 </div>
                 <div class="us-field">
-                    <label>Departamento</label>
+                    <label>{{ 'profile.department' | translate }}</label>
                     <select name="e_department" [(ngModel)]="editUserData.department">
-                        <option value="">— Sin departamento —</option>
+                        <option value="">{{ 'users.no_department' | translate }}</option>
                         <option *ngFor="let d of departmentOptions" [value]="d">{{ d }}</option>
                     </select>
                 </div>
                 <div class="us-field">
-                    <label>Cargo</label>
+                    <label>{{ 'profile.position' | translate }}</label>
                     <input type="text" name="e_position" [(ngModel)]="editUserData.position"
                            [placeholder]="'users.position_placeholder' | translate"/>
                 </div>
@@ -750,8 +750,8 @@
                 <div><dt>{{ 'profile.role' | translate }}</dt><dd><span class="us-role us-role--{{ roleBadgeKey(u.role) }} us-role--inline">{{ u.role || '—' }}</span></dd></div>
                 <div><dt>{{ 'common.status' | translate }}</dt><dd><span class="us-status us-status--{{ u.status }} us-status--inline"><span class="us-status-dot"></span>{{ statusLabel(u.status) }}</span></dd></div>
                 <div><dt>{{ 'common.phone' | translate }}</dt><dd>{{ u.phone || '—' }}</dd></div>
-                <div><dt>Departamento</dt><dd>{{ u.department || '—' }}</dd></div>
-                <div><dt>Cargo</dt><dd>{{ u.position || '—' }}</dd></div>
+                <div><dt>{{ 'profile.department' | translate }}</dt><dd>{{ u.department || '—' }}</dd></div>
+                <div><dt>{{ 'profile.position' | translate }}</dt><dd>{{ u.position || '—' }}</dd></div>
                 <div><dt>{{ 'users.last_login' | translate }}</dt><dd>{{ formatLastAccess(u.last_login_at).line1 }} <span class="us-dd-sub">{{ formatLastAccess(u.last_login_at).line2 }}</span></dd></div>
                 <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatCreationDate(u.created_at) }}</dd></div>
             </div>
