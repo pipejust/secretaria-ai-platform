@@ -94,9 +94,12 @@ const MONTH_LABELS_BY_LANG: Record<string, string[]> = {
          'July', 'August', 'September', 'October', 'November', 'December'],
 };
 // Default 'es' para callers que no quieran lidiar con el idioma.
-const DAY_LABELS = DAY_LABELS_BY_LANG.es;
-const DAY_LABELS_FULL = DAY_LABELS_FULL_BY_LANG.es;
-const MONTH_LABELS = MONTH_LABELS_BY_LANG.es;
+// NB: bracket access en vez de dot — `Record<string, ...>` con
+// `noPropertyAccessFromIndexSignature: true` (strict config de prod)
+// prohibe el `.es`.
+const DAY_LABELS = DAY_LABELS_BY_LANG['es'];
+const DAY_LABELS_FULL = DAY_LABELS_FULL_BY_LANG['es'];
+const MONTH_LABELS = MONTH_LABELS_BY_LANG['es'];
 // "de" conector entre día y mes en formato largo. CA y EN no usan
 // el mismo patrón pero damos algo razonable para los 3.
 const DATE_CONNECTORS: Record<string, { de: string }> = {
@@ -165,11 +168,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
      *  change-detection cycle. */
     get DAY_LABELS(): string[] {
         const lang = (this.lang?.currentLang() || 'es');
-        return DAY_LABELS_BY_LANG[lang] || DAY_LABELS_BY_LANG.es;
+        return DAY_LABELS_BY_LANG[lang] || DAY_LABELS_BY_LANG['es'];
     }
     get MONTH_LABELS(): string[] {
         const lang = (this.lang?.currentLang() || 'es');
-        return MONTH_LABELS_BY_LANG[lang] || MONTH_LABELS_BY_LANG.es;
+        return MONTH_LABELS_BY_LANG[lang] || MONTH_LABELS_BY_LANG['es'];
     }
     readonly EVENT_PALETTE = EVENT_PALETTE;
 
@@ -948,13 +951,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
         // 2026" / "Wednesday, May 27 2026" según idioma activo. ES/CA usan
         // mes en minúsculas con conector "de"; EN preserva capitalización.
         const lang = (this.lang?.currentLang() || 'es');
-        const wd = (DAY_LABELS_FULL_BY_LANG[lang] || DAY_LABELS_FULL_BY_LANG.es)[d.getDay()];
-        const monthsArr = (MONTH_LABELS_BY_LANG[lang] || MONTH_LABELS_BY_LANG.es);
+        const wd = (DAY_LABELS_FULL_BY_LANG[lang] || DAY_LABELS_FULL_BY_LANG['es'])[d.getDay()];
+        const monthsArr = (MONTH_LABELS_BY_LANG[lang] || MONTH_LABELS_BY_LANG['es']);
         if (lang === 'en') {
             return `${wd}, ${monthsArr[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}`;
         }
         const mn = monthsArr[d.getMonth()].toLowerCase();
-        const de = (DATE_CONNECTORS[lang] || DATE_CONNECTORS.es).de;
+        const de = (DATE_CONNECTORS[lang] || DATE_CONNECTORS['es']).de;
         return `${wd}, ${d.getDate()} ${de} ${mn} ${de} ${d.getFullYear()}`;
     }
 
