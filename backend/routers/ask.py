@@ -633,11 +633,21 @@ async def ask(
             "de las actas relevantes.\n"
         )
 
+    # Resolvemos el idioma de salida de la respuesta:
+    # 1) User.language (preferencia explícita del user logueado)
+    # 2) Tenant.default_language (config del workspace)
+    # 3) 'es' (fallback final por backwards-compat)
+    # El LLM responde mejor cuando le pedimos el idioma EN MAYÚSCULAS y
+    # en su propio idioma, así que usamos lang_label() de i18n_pipeline.
+    from services.i18n_pipeline import lang_label
+    out_lang_code = (getattr(user, "language", None) or tenant.default_language or "es").lower()[:2]
+    out_lang_name = lang_label(out_lang_code)
+
     system = (
-        "Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
-        "con esta estructura EXACTA:\n"
+        f"Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
+        f"con esta estructura EXACTA:\n"
         "{\n"
-        '  "intro": "<resumen introductorio en español, 1-2 frases>",\n'
+        f'  "intro": "<resumen introductorio en {out_lang_name}, 1-2 frases>",\n'
         '  "decisions": [\n'
         '    {"text": "<decisión textual>", "source_sessions": [<id_int>, ...]}\n'
         "  ],\n"
@@ -655,7 +665,10 @@ async def ask(
         "  ]\n"
         "}\n\n"
         "REGLAS ESTRICTAS — su violación produce respuestas inutilizables:\n"
-        "1. Responde EXCLUSIVAMENTE en español.\n"
+        f"1. Responde EXCLUSIVAMENTE en {out_lang_name}. TODOS los campos de "
+        f"texto (intro, decisions[].text, action_items[].title/owner, risks[].text, "
+        f"agreements[].text) deben estar en {out_lang_name}, sin importar el "
+        f"idioma original de las actas del contexto.\n"
         "2. Cada decisión y cada tarea DEBE incluir el `source_sessions` con "
         "los IDs numéricos (sin '#') de las sesiones del contexto donde aparece. "
         "El ID es el número que ves después de `Sesión #` en el header del bloque.\n"
