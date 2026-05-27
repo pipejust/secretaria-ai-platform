@@ -60,7 +60,16 @@ export class LanguageService {
         this.translate.addLangs(SUPPORTED);
         this.translate.setFallbackLang(DEFAULT_LANG);
         const initial = this.resolveInitialLang();
-        await this.applyLanguage(initial, { persistLocal: true, syncServer: false });
+        // CRITICAL: bootstrap NUNCA debe bloquear el render. Si los JSON
+        // fallan (server devuelve HTML por SPA fallback, network error,
+        // CORS, etc.) NO debemos lanzar — la app debe arrancar igual con
+        // las claves literales como fallback ("login.title" si no se
+        // resolvió). Esto evita pantalla blanca por un fallo de i18n.
+        try {
+            await this.applyLanguage(initial, { persistLocal: true, syncServer: false });
+        } catch (err) {
+            console.error('[LanguageService] bootstrap falló — la app arranca sin traducciones:', err);
+        }
     }
 
     /**
