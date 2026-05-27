@@ -1,6 +1,6 @@
 <div class="privacy-page">
     <header class="privacy-header">
-        <a href="#" class="privacy-back" aria-label="Volver" (click)="goBack($event)">
+        <a href="#" class="privacy-back" [attr.aria-label]="'privacy.back' | translate" (click)="goBack($event)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -10,12 +10,12 @@
         </a>
         <p class="privacy-eyebrow">{{ 'privacy.title' | translate }}</p>
         <h1 class="privacy-title">{{ 'privacy.intro_subtitle' | translate }}</h1>
-        <p class="privacy-meta">Última actualización: {{ lastUpdated }}</p>
+        <p class="privacy-meta">{{ 'privacy.last_updated_label' | translate }} {{ lastUpdated }}</p>
     </header>
 
     <div class="privacy-layout">
         <!-- TOC izquierda -->
-        <nav class="privacy-toc" aria-label="Tabla de contenidos">
+        <nav class="privacy-toc" [attr.aria-label]="'privacy.toc_aria' | translate">
             <ul>
                 <li *ngFor="let s of sections">
                     <a [href]="'#' + s.id">{{ s.title }}</a>
@@ -26,160 +26,141 @@
         <!-- Contenido -->
         <article class="privacy-content">
             <section id="intro">
-                <h2>{{ 'privacy.section_intro' | translate }}</h2>
+                <h2>{{ 'privacy.s1_title' | translate }}</h2>
+                <p>{{ 'privacy.s1_p1' | translate }}</p>
                 <p>
-                    En Acten transformamos conversaciones en decisiones, responsabilidades y
-                    entregables. Para hacerlo, procesamos transcripciones de tus reuniones y
-                    los metadatos asociados. Esta política explica qué datos recopilamos, cómo
-                    los usamos, con quién los compartimos (casi nadie) y qué controles tienes
-                    sobre ellos.
-                </p>
-                <p>
-                    Estamos diseñados para cumplir con el <strong>Reglamento General de
-                    Protección de Datos (GDPR)</strong> de la UE y con leyes equivalentes de
-                    América Latina (Ley 1581 de Colombia, LFPDPPP de México, LGPD de Brasil).
+                    {{ 'privacy.s1_p2_a' | translate }}
+                    <strong>{{ 'privacy.s1_p2_strong' | translate }}</strong>
+                    {{ 'privacy.s1_p2_b' | translate }}
                 </p>
             </section>
 
             <section id="datos">
-                <h2>2. Datos que recopilamos</h2>
+                <h2>{{ 'privacy.s2_title' | translate }}</h2>
                 <ul>
-                    <li><strong>Cuenta:</strong> email, nombre, rol, hash de contraseña.</li>
-                    <li><strong>Reuniones:</strong> transcripciones de texto generadas por
-                        Fireflies o subidas manualmente. <em>No conservamos el audio
-                        original</em> después de la transcripción.</li>
-                    <li><strong>Insights derivados:</strong> decisiones, riesgos, acuerdos,
-                        tareas y asistentes extraídos por IA.</li>
-                    <li><strong>Integraciones:</strong> credenciales API de servicios que
-                        conectes (Trello, Jira, ClickUp, etc.). Las almacenamos cifradas y
-                        sólo dentro de tu tenant.</li>
-                    <li><strong>Auditoría:</strong> log de acciones (login, edición, dispatch)
-                        para cumplimiento SOC 2.</li>
-                    <li><strong>Operacionales:</strong> IP, user-agent y horario de acceso para
-                        seguridad y resolución de incidentes.</li>
+                    <li><strong>{{ 'privacy.s2_li1_label' | translate }}</strong> {{ 'privacy.s2_li1_text' | translate }}</li>
+                    <li>
+                        <strong>{{ 'privacy.s2_li2_label' | translate }}</strong>
+                        {{ 'privacy.s2_li2_text_a' | translate }}
+                        <em>{{ 'privacy.s2_li2_em' | translate }}</em>
+                        {{ 'privacy.s2_li2_text_b' | translate }}
+                    </li>
+                    <li><strong>{{ 'privacy.s2_li3_label' | translate }}</strong> {{ 'privacy.s2_li3_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s2_li4_label' | translate }}</strong> {{ 'privacy.s2_li4_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s2_li5_label' | translate }}</strong> {{ 'privacy.s2_li5_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s2_li6_label' | translate }}</strong> {{ 'privacy.s2_li6_text' | translate }}</li>
                 </ul>
             </section>
 
             <section id="uso">
-                <h2>{{ 'privacy.section_how_we_use' | translate }}</h2>
-                <p>Sólo usamos tus datos para:</p>
+                <h2>{{ 'privacy.s3_title' | translate }}</h2>
+                <p>{{ 'privacy.s3_p1' | translate }}</p>
                 <ul>
-                    <li>Generar las actas, tareas y reportes que contrataste.</li>
-                    <li>Mantener la seguridad de tu cuenta y de la plataforma.</li>
-                    <li>Cumplir con obligaciones legales (auditoría, fiscal).</li>
+                    <li>{{ 'privacy.s3_li1' | translate }}</li>
+                    <li>{{ 'privacy.s3_li2' | translate }}</li>
+                    <li>{{ 'privacy.s3_li3' | translate }}</li>
                 </ul>
                 <p>
-                    <strong>NO vendemos tus datos</strong>, no los usamos para entrenar
-                    modelos públicos de IA, ni los compartimos con anunciantes.
+                    <strong>{{ 'privacy.s3_p2_strong' | translate }}</strong>
+                    {{ 'privacy.s3_p2_text' | translate }}
                 </p>
             </section>
 
             <section id="aislamiento">
-                <h2>4. Aislamiento entre empresas</h2>
+                <h2>{{ 'privacy.s4_title' | translate }}</h2>
                 <p>
-                    Acten es multi-tenant: cada empresa cliente vive en un espacio aislado.
-                    A nivel de base de datos cada fila lleva un identificador de tenant y
-                    todas las consultas filtran por ese identificador. Una empresa
-                    <strong>nunca</strong> puede ver datos, integraciones, branding ni
-                    usuarios de otra. Verificamos este aislamiento con tests automatizados
-                    en cada despliegue.
+                    {{ 'privacy.s4_p1_a' | translate }}
+                    <strong>{{ 'privacy.s4_p1_strong' | translate }}</strong>
+                    {{ 'privacy.s4_p1_b' | translate }}
                 </p>
             </section>
 
             <section id="compartir">
-                <h2>{{ 'privacy.section_who_we_share_with' | translate }}</h2>
-                <p>Sólo con los proveedores estrictamente necesarios para operar:</p>
+                <h2>{{ 'privacy.s5_title' | translate }}</h2>
+                <p>{{ 'privacy.s5_p1' | translate }}</p>
                 <ul>
-                    <li><strong>Fireflies.ai:</strong> transcripciones de reuniones (si
-                        conectas tu cuenta).</li>
-                    <li><strong>OpenAI / Groq:</strong> procesamiento IA de insights. Los
-                        prompts se envían sin metadatos personales adicionales y los
-                        proveedores se comprometen a no entrenar con tus datos.</li>
-                    <li><strong>Resend:</strong> envío de correos transaccionales.</li>
-                    <li><strong>Render / Supabase:</strong> hosting y base de datos.</li>
-                    <li><strong>Integraciones que tú elijas:</strong> Trello, Jira, ClickUp,
-                        Slack, etc. — sólo cuando dispatchás manualmente.</li>
+                    <li><strong>{{ 'privacy.s5_li1_label' | translate }}</strong> {{ 'privacy.s5_li1_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s5_li2_label' | translate }}</strong> {{ 'privacy.s5_li2_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s5_li3_label' | translate }}</strong> {{ 'privacy.s5_li3_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s5_li4_label' | translate }}</strong> {{ 'privacy.s5_li4_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s5_li5_label' | translate }}</strong> {{ 'privacy.s5_li5_text' | translate }}</li>
                 </ul>
             </section>
 
             <section id="seguridad">
-                <h2>6. Seguridad</h2>
+                <h2>{{ 'privacy.s6_title' | translate }}</h2>
                 <ul>
-                    <li>Cifrado en tránsito (TLS 1.3) y en reposo (AES-256).</li>
-                    <li>Contraseñas con bcrypt rounds=12.</li>
-                    <li>JWT firmado HS256 con rotación de SECRET_KEY trimestral.</li>
-                    <li>Rate limiting global (120 req/min por IP).</li>
-                    <li>Webhook tokens únicos por tenant — verificados con hmac.</li>
-                    <li>Audit log inmutable para acciones críticas (login, dispatch, delete).</li>
+                    <li>{{ 'privacy.s6_li1' | translate }}</li>
+                    <li>{{ 'privacy.s6_li2' | translate }}</li>
+                    <li>{{ 'privacy.s6_li3' | translate }}</li>
+                    <li>{{ 'privacy.s6_li4' | translate }}</li>
+                    <li>{{ 'privacy.s6_li5' | translate }}</li>
+                    <li>{{ 'privacy.s6_li6' | translate }}</li>
                 </ul>
             </section>
 
             <section id="derechos">
-                <h2>7. Tus derechos (GDPR)</h2>
-                <p>Tienes derecho a:</p>
+                <h2>{{ 'privacy.s7_title' | translate }}</h2>
+                <p>{{ 'privacy.s7_p1' | translate }}</p>
                 <ul>
-                    <li><strong>Acceso:</strong> exportar todos tus datos en JSON desde
-                        <code>GET /api/me/export</code>.</li>
-                    <li><strong>Rectificación:</strong> editar tu perfil en cualquier
-                        momento.</li>
-                    <li><strong>Borrado ("derecho al olvido"):</strong> solicitar borrado
-                        desde <code>DELETE /api/me/account</code>. Marcamos tu cuenta para
-                        purga y eliminamos físicamente los datos a los 30 días.</li>
-                    <li><strong>Portabilidad:</strong> el export incluye sesiones, action
-                        items, comentarios y permisos en formato estándar.</li>
-                    <li><strong>Oposición:</strong> contactanos si querés que dejemos de
-                        procesar un dato específico.</li>
+                    <li>
+                        <strong>{{ 'privacy.s7_li1_label' | translate }}</strong>
+                        {{ 'privacy.s7_li1_text' | translate }}
+                        <code>GET /api/me/export</code>.
+                    </li>
+                    <li><strong>{{ 'privacy.s7_li2_label' | translate }}</strong> {{ 'privacy.s7_li2_text' | translate }}</li>
+                    <li>
+                        <strong>{{ 'privacy.s7_li3_label' | translate }}</strong>
+                        {{ 'privacy.s7_li3_text_a' | translate }}
+                        <code>DELETE /api/me/account</code>.
+                        {{ 'privacy.s7_li3_text_b' | translate }}
+                    </li>
+                    <li><strong>{{ 'privacy.s7_li4_label' | translate }}</strong> {{ 'privacy.s7_li4_text' | translate }}</li>
+                    <li><strong>{{ 'privacy.s7_li5_label' | translate }}</strong> {{ 'privacy.s7_li5_text' | translate }}</li>
                 </ul>
             </section>
 
             <section id="retencion">
-                <h2>{{ 'privacy.section_retention' | translate }}</h2>
+                <h2>{{ 'privacy.s8_title' | translate }}</h2>
                 <ul>
-                    <li>Reuniones y action items: mientras tu cuenta esté activa.</li>
-                    <li>Audit log: 24 meses (cumplimiento SOC 2).</li>
-                    <li>Backups: 30 días, cifrados.</li>
-                    <li>Cuenta cancelada: 30 días de gracia, luego purga física.</li>
+                    <li>{{ 'privacy.s8_li1' | translate }}</li>
+                    <li>{{ 'privacy.s8_li2' | translate }}</li>
+                    <li>{{ 'privacy.s8_li3' | translate }}</li>
+                    <li>{{ 'privacy.s8_li4' | translate }}</li>
                 </ul>
             </section>
 
             <section id="cookies">
-                <h2>9. Cookies y tracking</h2>
+                <h2>{{ 'privacy.s9_title' | translate }}</h2>
                 <p>
-                    Usamos cookies <strong>de sesión únicamente</strong> para mantener tu
-                    login activo. <strong>No usamos cookies de tracking de terceros</strong>
-                    (sin Google Analytics, sin Meta Pixel, sin Hotjar). El localStorage
-                    guarda tu JWT y el slug del tenant para recordar tu workspace.
+                    {{ 'privacy.s9_p1_a' | translate }}
+                    <strong>{{ 'privacy.s9_p1_strong1' | translate }}</strong>
+                    {{ 'privacy.s9_p1_b' | translate }}
+                    <strong>{{ 'privacy.s9_p1_strong2' | translate }}</strong>
+                    {{ 'privacy.s9_p1_c' | translate }}
                 </p>
             </section>
 
             <section id="cambios">
-                <h2>10. Cambios a esta política</h2>
-                <p>
-                    Si actualizamos esta política te notificaremos por correo al menos 14
-                    días antes de que entren en vigor los cambios materiales.
-                </p>
+                <h2>{{ 'privacy.s10_title' | translate }}</h2>
+                <p>{{ 'privacy.s10_p1' | translate }}</p>
             </section>
 
             <section id="contacto">
-                <h2>11. Contacto</h2>
-                <p>
-                    Para ejercer tus derechos o cualquier pregunta sobre privacidad:
-                </p>
+                <h2>{{ 'privacy.s11_title' | translate }}</h2>
+                <p>{{ 'privacy.s11_p1' | translate }}</p>
                 <ul>
-                    <li>Email: <a href="mailto:privacidad@acten.app">privacidad&#64;acten.app</a></li>
-                    <li>Postal: Acten, Inc. · Bogotá, Colombia.</li>
-                    <li>DPO: Felipe Cortés.</li>
+                    <li>{{ 'privacy.s11_li1_label' | translate }} <a href="mailto:privacidad@acten.app">privacidad&#64;acten.app</a></li>
+                    <li>{{ 'privacy.s11_li2' | translate }}</li>
+                    <li>{{ 'privacy.s11_li3' | translate }}</li>
                 </ul>
-                <p>
-                    También puedes presentar una reclamación ante tu autoridad de protección
-                    de datos local.
-                </p>
+                <p>{{ 'privacy.s11_p2' | translate }}</p>
             </section>
         </article>
     </div>
 
     <footer class="privacy-footer">
-        <span>© {{ year }} Acten, Inc. Todos los derechos reservados.</span>
+        <span>{{ 'privacy.footer_copyright' | translate: { year: year } }}</span>
         <a routerLink="/help">{{ 'help.title' | translate }}</a>
     </footer>
 </div>

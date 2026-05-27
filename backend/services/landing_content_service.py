@@ -133,45 +133,90 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Capacidades (features grid) ────────────────────────────────────
     "features": {
-        "eyebrow": "UN ASISTENTE, TODO EL CICLO",
-        "title_lead": "Todo lo que tu equipo necesita, ",
-        "title_highlight": "automáticamente.",
-        "title": "Todo lo que tu equipo necesita, automáticamente.",
-        "subtitle": (
-            "Acten cierra el ciclo completo de tus reuniones: captura, "
-            "interpreta, organiza, documenta, asigna y da seguimiento."
-        ),
-        "link_label": "Conocer todas las funciones",
+        "eyebrow": {
+            "es": "UN ASISTENTE, TODO EL CICLO",
+            "ca": "UN ASSISTENT, TOT EL CICLE",
+            "en": "ONE ASSISTANT, FULL CYCLE",
+        },
+        "title_lead": {
+            "es": "Todo lo que tu equipo necesita, ",
+            "ca": "Tot el que el teu equip necessita, ",
+            "en": "Everything your team needs, ",
+        },
+        "title_highlight": {
+            "es": "automáticamente.",
+            "ca": "automàticament.",
+            "en": "automatically.",
+        },
+        "title": {
+            "es": "Todo lo que tu equipo necesita, automáticamente.",
+            "ca": "Tot el que el teu equip necessita, automàticament.",
+            "en": "Everything your team needs, automatically.",
+        },
+        "subtitle": {
+            "es": "Acten cierra el ciclo completo de tus reuniones: captura, interpreta, organiza, documenta, asigna y da seguimiento.",
+            "ca": "Acten tanca el cicle complet de les teves reunions: captura, interpreta, organitza, documenta, assigna i fa seguiment.",
+            "en": "Acten closes the full meeting cycle: capture, interpret, organize, document, assign and follow up.",
+        },
+        "link_label": {
+            "es": "Conocer todas las funciones",
+            "ca": "Conèixer totes les funcions",
+            "en": "Explore all features",
+        },
         "link_anchor": "#flow",
         "items": [
             {
-                "title": "Captura e interpreta",
-                "description": "Transcripción multilenguaje con identificación de hablantes, temas y contexto.",
+                "title": {"es": "Captura e interpreta", "ca": "Captura i interpreta", "en": "Capture and interpret"},
+                "description": {
+                    "es": "Transcripción multilenguaje con identificación de hablantes, temas y contexto.",
+                    "ca": "Transcripció multilingüe amb identificació de parlants, temes i context.",
+                    "en": "Multilingual transcription with speaker, topic and context identification.",
+                },
                 "icon": "capture",
             },
             {
-                "title": "Decisiones y riesgos",
-                "description": "Extracción automática de decisiones, riesgos y bloqueos con responsable y severidad.",
+                "title": {"es": "Decisiones y riesgos", "ca": "Decisions i riscos", "en": "Decisions and risks"},
+                "description": {
+                    "es": "Extracción automática de decisiones, riesgos y bloqueos con responsable y severidad.",
+                    "ca": "Extracció automàtica de decisions, riscos i bloquejos amb responsable i severitat.",
+                    "en": "Automatic extraction of decisions, risks and blockers with owner and severity.",
+                },
                 "icon": "decisions",
             },
             {
-                "title": "Tareas y responsables",
-                "description": "Acciones concretas con responsable, fecha límite y prioridad — listas para asignar.",
+                "title": {"es": "Tareas y responsables", "ca": "Tasques i responsables", "en": "Tasks and owners"},
+                "description": {
+                    "es": "Acciones concretas con responsable, fecha límite y prioridad — listas para asignar.",
+                    "ca": "Accions concretes amb responsable, data límit i prioritat — llestes per assignar.",
+                    "en": "Concrete actions with owner, due date and priority — ready to assign.",
+                },
                 "icon": "tasks",
             },
             {
-                "title": "Documentos profesionales",
-                "description": "Actas en Word y PDF con tu marca, tipografía y plantilla custom por proyecto.",
+                "title": {"es": "Documentos profesionales", "ca": "Documents professionals", "en": "Professional documents"},
+                "description": {
+                    "es": "Actas en Word y PDF con tu marca, tipografía y plantilla custom por proyecto.",
+                    "ca": "Actes en Word i PDF amb la teva marca, tipografia i plantilla personalitzada per projecte.",
+                    "en": "Minutes in Word and PDF with your brand, typography and custom template per project.",
+                },
                 "icon": "docs",
             },
             {
-                "title": "Correos personalizados",
-                "description": "Envío automático a cada responsable con sus tareas, contexto y fechas. Sin reenvíos manuales.",
+                "title": {"es": "Correos personalizados", "ca": "Correus personalitzats", "en": "Personalized emails"},
+                "description": {
+                    "es": "Envío automático a cada responsable con sus tareas, contexto y fechas. Sin reenvíos manuales.",
+                    "ca": "Enviament automàtic a cada responsable amb les seves tasques, context i dates. Sense reenviaments manuals.",
+                    "en": "Auto-sent to every owner with their tasks, context and dates. No manual forwards.",
+                },
                 "icon": "email",
             },
             {
-                "title": "Integraciones nativas",
-                "description": "Trello, Jira, ClickUp, Azure DevOps, Slack y calendarios. Acten sincroniza sin esfuerzo.",
+                "title": {"es": "Integraciones nativas", "ca": "Integracions natives", "en": "Native integrations"},
+                "description": {
+                    "es": "Trello, Jira, ClickUp, Azure DevOps, Slack y calendarios. Acten sincroniza sin esfuerzo.",
+                    "ca": "Trello, Jira, ClickUp, Azure DevOps, Slack i calendaris. Acten sincronitza sense esforç.",
+                    "en": "Trello, Jira, ClickUp, Azure DevOps, Slack and calendars. Acten syncs effortlessly.",
+                },
                 "icon": "integrations",
             },
         ],
@@ -179,35 +224,72 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Flujo de 4 pasos ────────────────────────────────────────────────
     "flow": {
-        "eyebrow": "DEL DICHO AL HECHO",
-        "title_lead": "Un flujo inteligente que convierte reuniones en ",
-        "title_highlight": "resultados.",
-        "title": "Un flujo inteligente que convierte reuniones en resultados.",
-        "subtitle": (
-            "Acten procesa, estructura y distribuye la información para que "
-            "nada se pierda y todo se ejecute."
-        ),
-        "link_label": "Ver flujo completo",
+        "eyebrow": {
+            "es": "DEL DICHO AL HECHO",
+            "ca": "DEL DIT AL FET",
+            "en": "FROM TALK TO ACTION",
+        },
+        "title_lead": {
+            "es": "Un flujo inteligente que convierte reuniones en ",
+            "ca": "Un flux intel·ligent que converteix reunions en ",
+            "en": "An intelligent flow that turns meetings into ",
+        },
+        "title_highlight": {
+            "es": "resultados.",
+            "ca": "resultats.",
+            "en": "results.",
+        },
+        "title": {
+            "es": "Un flujo inteligente que convierte reuniones en resultados.",
+            "ca": "Un flux intel·ligent que converteix reunions en resultats.",
+            "en": "An intelligent flow that turns meetings into results.",
+        },
+        "subtitle": {
+            "es": "Acten procesa, estructura y distribuye la información para que nada se pierda y todo se ejecute.",
+            "ca": "Acten processa, estructura i distribueix la informació perquè no es perdi res i tot s'executi.",
+            "en": "Acten processes, structures and distributes information so nothing gets lost and everything ships.",
+        },
+        "link_label": {
+            "es": "Ver flujo completo",
+            "ca": "Veure flux complet",
+            "en": "See full flow",
+        },
         "link_anchor": "#contact",
         "steps": [
             {
-                "title": "Captura",
-                "description": "Conecta Fireflies, Meet, Teams o sube grabaciones. Acten transcribe automáticamente.",
+                "title": {"es": "Captura", "ca": "Captura", "en": "Capture"},
+                "description": {
+                    "es": "Conecta Fireflies, Meet, Teams o sube grabaciones. Acten transcribe automáticamente.",
+                    "ca": "Connecta Fireflies, Meet, Teams o puja gravacions. Acten transcriu automàticament.",
+                    "en": "Connect Fireflies, Meet, Teams or upload recordings. Acten transcribes automatically.",
+                },
                 "icon": "mic",
             },
             {
-                "title": "Inteligencia",
-                "description": "La IA analiza el contexto, identifica decisiones, riesgos y compromisos.",
+                "title": {"es": "Inteligencia", "ca": "Intel·ligència", "en": "Intelligence"},
+                "description": {
+                    "es": "La IA analiza el contexto, identifica decisiones, riesgos y compromisos.",
+                    "ca": "La IA analitza el context, identifica decisions, riscos i compromisos.",
+                    "en": "The AI analyzes context and identifies decisions, risks and commitments.",
+                },
                 "icon": "brain",
             },
             {
-                "title": "Estructura",
-                "description": "Genera acta profesional, lista de tareas y correos personalizados por responsable.",
+                "title": {"es": "Estructura", "ca": "Estructura", "en": "Structure"},
+                "description": {
+                    "es": "Genera acta profesional, lista de tareas y correos personalizados por responsable.",
+                    "ca": "Genera acta professional, llista de tasques i correus personalitzats per responsable.",
+                    "en": "Generates a professional minute, a task list and personalized emails per owner.",
+                },
                 "icon": "list",
             },
             {
-                "title": "Acción",
-                "description": "Despacha a tus plataformas: Trello, Jira, ClickUp, Azure. Seguimiento automático.",
+                "title": {"es": "Acción", "ca": "Acció", "en": "Action"},
+                "description": {
+                    "es": "Despacha a tus plataformas: Trello, Jira, ClickUp, Azure. Seguimiento automático.",
+                    "ca": "Despatxa a les teves plataformes: Trello, Jira, ClickUp, Azure. Seguiment automàtic.",
+                    "en": "Dispatches to your platforms: Trello, Jira, ClickUp, Azure. Automatic follow-up.",
+                },
                 "icon": "send",
             },
         ],
@@ -215,10 +297,18 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Integraciones ──────────────────────────────────────────────────
     "integrations": {
-        "eyebrow": "INTEGRACIONES QUE POTENCIAN TU EQUIPO",
-        "title": "Conecta Acten con las herramientas que ya usas.",
-        "subtitle": "",
-        "see_all_label": "Ver todas",
+        "eyebrow": {
+            "es": "INTEGRACIONES QUE POTENCIAN TU EQUIPO",
+            "ca": "INTEGRACIONS QUE POTENCIEN EL TEU EQUIP",
+            "en": "INTEGRATIONS THAT EMPOWER YOUR TEAM",
+        },
+        "title": {
+            "es": "Conecta Acten con las herramientas que ya usas.",
+            "ca": "Connecta Acten amb les eines que ja utilitzes.",
+            "en": "Connect Acten to the tools you already use.",
+        },
+        "subtitle": {"es": "", "ca": "", "en": ""},
+        "see_all_label": {"es": "Ver todas", "ca": "Veure totes", "en": "See all"},
         "see_all_anchor": "#integrations",
         "items": [
             "Jira", "Trello", "ClickUp", "Azure DevOps",
@@ -234,16 +324,40 @@ DEFAULT_CONTENT: Dict[str, Any] = {
     # a cada card (por índice). `items` queda como legacy para no romper
     # tenants que ya guardaron contenido, pero el frontend lo ignora.
     "testimonials": {
-        "eyebrow": "EMPRESAS QUE YA TRANSFORMARON SUS REUNIONES",
-        "title": "Más claridad. Más acción. Mejores resultados.",
+        "eyebrow": {
+            "es": "EMPRESAS QUE YA TRANSFORMARON SUS REUNIONES",
+            "ca": "EMPRESES QUE JA HAN TRANSFORMAT LES SEVES REUNIONS",
+            "en": "COMPANIES THAT HAVE ALREADY TRANSFORMED THEIR MEETINGS",
+        },
+        "title": {
+            "es": "Más claridad. Más acción. Mejores resultados.",
+            "ca": "Més claredat. Més acció. Millors resultats.",
+            "en": "More clarity. More action. Better results.",
+        },
         # Pool de frases rotativas. La card N usa quotes[N % len(quotes)].
         # Mantener mínimo 3 para que las 3 cards visibles tengan frases
         # distintas.
         "quotes": [
-            "Acten transformó la forma en que mi equipo ejecuta sus decisiones.",
-            "Pasamos de reuniones que terminan en olvido a tareas que sí se ejecutan.",
-            "La precisión y el seguimiento automático elevaron nuestra disciplina.",
-            "Las actas profesionales y la asignación de tareas son indispensables ya.",
+            {
+                "es": "Acten transformó la forma en que mi equipo ejecuta sus decisiones.",
+                "ca": "Acten ha transformat la manera com el meu equip executa les seves decisions.",
+                "en": "Acten transformed how my team executes their decisions.",
+            },
+            {
+                "es": "Pasamos de reuniones que terminan en olvido a tareas que sí se ejecutan.",
+                "ca": "Hem passat de reunions que acaben en l'oblit a tasques que sí s'executen.",
+                "en": "We went from forgettable meetings to tasks that actually get done.",
+            },
+            {
+                "es": "La precisión y el seguimiento automático elevaron nuestra disciplina.",
+                "ca": "La precisió i el seguiment automàtic han elevat la nostra disciplina.",
+                "en": "Precision and automatic follow-up raised our discipline.",
+            },
+            {
+                "es": "Las actas profesionales y la asignación de tareas son indispensables ya.",
+                "ca": "Les actes professionals i l'assignació de tasques ja són indispensables.",
+                "en": "The professional minutes and task assignment are now indispensable.",
+            },
         ],
         # Legacy — testimonios estáticos. El frontend ya no los usa porque
         # ahora muestra personas reales del sistema. Conservados solo para
@@ -253,103 +367,161 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Precios ─────────────────────────────────────────────────────────
     "pricing": {
-        "eyebrow": "Precios",
-        "title": "Un plan para cada tamaño de equipo.",
-        "subtitle": (
-            "Sin contratos largos. Todos los planes incluyen actas profesionales, "
-            "tareas asignadas y correos personalizados. Escalas cuando lo necesitas."
-        ),
+        "eyebrow": {"es": "Precios", "ca": "Preus", "en": "Pricing"},
+        "title": {
+            "es": "Un plan para cada tamaño de equipo.",
+            "ca": "Un pla per a cada mida d'equip.",
+            "en": "A plan for every team size.",
+        },
+        "subtitle": {
+            "es": "Sin contratos largos. Todos los planes incluyen actas profesionales, tareas asignadas y correos personalizados. Escalas cuando lo necesitas.",
+            "ca": "Sense contractes llargs. Tots els plans inclouen actes professionals, tasques assignades i correus personalitzats. Escales quan ho necessitis.",
+            "en": "No long contracts. Every plan includes professional minutes, assigned tasks and personalized emails. Scale when you need to.",
+        },
         "plans": [
             {
                 "name": "Starter",
                 "price": "$49",
-                "billing": "USD / mes",
-                "description": "Para equipos pequeños que empiezan a estructurar sus reuniones.",
+                "billing": {"es": "USD / mes", "ca": "USD / mes", "en": "USD / month"},
+                "description": {
+                    "es": "Para equipos pequeños que empiezan a estructurar sus reuniones.",
+                    "ca": "Per a equips petits que comencen a estructurar les seves reunions.",
+                    "en": "For small teams starting to structure their meetings.",
+                },
                 "features": [
-                    "Hasta 20 reuniones / mes",
-                    "5 usuarios incluidos",
-                    "Actas profesionales en Word y PDF",
-                    "Tareas asignadas por responsable",
-                    "Correo a cada participante",
-                    "Soporte por email",
+                    {"es": "Hasta 20 reuniones / mes", "ca": "Fins a 20 reunions / mes", "en": "Up to 20 meetings / month"},
+                    {"es": "5 usuarios incluidos", "ca": "5 usuaris inclosos", "en": "5 users included"},
+                    {"es": "Actas profesionales en Word y PDF", "ca": "Actes professionals en Word i PDF", "en": "Professional minutes in Word and PDF"},
+                    {"es": "Tareas asignadas por responsable", "ca": "Tasques assignades per responsable", "en": "Tasks assigned per owner"},
+                    {"es": "Correo a cada participante", "ca": "Correu a cada participant", "en": "Email to every participant"},
+                    {"es": "Soporte por email", "ca": "Suport per correu", "en": "Email support"},
                 ],
-                "cta_label": "Solicitar demo",
+                "cta_label": {"es": "Solicitar demo", "ca": "Demana demo", "en": "Request a demo"},
                 "cta_anchor": "#contact",
                 "featured": False,
             },
             {
                 "name": "Business",
                 "price": "$149",
-                "billing": "USD / mes",
-                "description": "Para equipos en crecimiento con integraciones a sus plataformas.",
+                "billing": {"es": "USD / mes", "ca": "USD / mes", "en": "USD / month"},
+                "description": {
+                    "es": "Para equipos en crecimiento con integraciones a sus plataformas.",
+                    "ca": "Per a equips en creixement amb integracions a les seves plataformes.",
+                    "en": "For growing teams with integrations to their platforms.",
+                },
                 "features": [
-                    "Hasta 100 reuniones / mes",
-                    "Usuarios ilimitados",
-                    "Todo lo de Starter",
-                    "Integraciones: Jira, Trello, ClickUp, Azure DevOps",
-                    "Plantillas custom por proyecto",
-                    "Pregúntale a la IA (RAG)",
-                    "Soporte prioritario",
+                    {"es": "Hasta 100 reuniones / mes", "ca": "Fins a 100 reunions / mes", "en": "Up to 100 meetings / month"},
+                    {"es": "Usuarios ilimitados", "ca": "Usuaris il·limitats", "en": "Unlimited users"},
+                    {"es": "Todo lo de Starter", "ca": "Tot el de Starter", "en": "Everything in Starter"},
+                    {"es": "Integraciones: Jira, Trello, ClickUp, Azure DevOps", "ca": "Integracions: Jira, Trello, ClickUp, Azure DevOps", "en": "Integrations: Jira, Trello, ClickUp, Azure DevOps"},
+                    {"es": "Plantillas custom por proyecto", "ca": "Plantilles personalitzades per projecte", "en": "Custom templates per project"},
+                    {"es": "Pregúntale a la IA (RAG)", "ca": "Pregunta a la IA (RAG)", "en": "Ask the AI (RAG)"},
+                    {"es": "Soporte prioritario", "ca": "Suport prioritari", "en": "Priority support"},
                 ],
-                "cta_label": "Solicitar demo",
+                "cta_label": {"es": "Solicitar demo", "ca": "Demana demo", "en": "Request a demo"},
                 "cta_anchor": "#contact",
                 "featured": True,
             },
             {
                 "name": "Enterprise",
-                "price": "A medida",
-                "billing": "Contrato anual",
-                "description": "Para organizaciones con seguridad, gobierno de datos y onboarding dedicado.",
+                "price": {"es": "A medida", "ca": "A mida", "en": "Custom"},
+                "billing": {"es": "Contrato anual", "ca": "Contracte anual", "en": "Annual contract"},
+                "description": {
+                    "es": "Para organizaciones con seguridad, gobierno de datos y onboarding dedicado.",
+                    "ca": "Per a organitzacions amb seguretat, govern de dades i onboarding dedicat.",
+                    "en": "For organizations with security, data governance and dedicated onboarding.",
+                },
                 "features": [
-                    "Reuniones ilimitadas",
-                    "Multi-tenant white-label",
-                    "SSO / SAML",
-                    "Auditoría SOC 2 / GDPR",
-                    "Onboarding dedicado",
-                    "SLA de soporte 24/7",
+                    {"es": "Reuniones ilimitadas", "ca": "Reunions il·limitades", "en": "Unlimited meetings"},
+                    {"es": "Multi-tenant white-label", "ca": "Multi-tenant white-label", "en": "Multi-tenant white-label"},
+                    {"es": "SSO / SAML", "ca": "SSO / SAML", "en": "SSO / SAML"},
+                    {"es": "Auditoría SOC 2 / GDPR", "ca": "Auditoria SOC 2 / RGPD", "en": "SOC 2 / GDPR audit"},
+                    {"es": "Onboarding dedicado", "ca": "Onboarding dedicat", "en": "Dedicated onboarding"},
+                    {"es": "SLA de soporte 24/7", "ca": "SLA de suport 24/7", "en": "24/7 support SLA"},
                 ],
-                "cta_label": "Solicitar demo",
+                "cta_label": {"es": "Solicitar demo", "ca": "Demana demo", "en": "Request a demo"},
                 "cta_anchor": "#contact",
                 "featured": False,
             },
         ],
-        "footnote": "Todos los planes incluyen actualizaciones de IA sin costo adicional.",
+        "footnote": {
+            "es": "Todos los planes incluyen actualizaciones de IA sin costo adicional.",
+            "ca": "Tots els plans inclouen actualitzacions d'IA sense cost addicional.",
+            "en": "Every plan includes AI updates at no additional cost.",
+        },
     },
 
     # ─── Recursos ────────────────────────────────────────────────────────
     "resources": {
-        "eyebrow": "Recursos",
-        "title": "Aprende a sacarle todo el jugo a tus reuniones.",
-        "subtitle": (
-            "Guías, casos de uso y mejores prácticas para que tu equipo "
-            "deje de perder decisiones."
-        ),
+        "eyebrow": {"es": "Recursos", "ca": "Recursos", "en": "Resources"},
+        "title": {
+            "es": "Aprende a sacarle todo el jugo a tus reuniones.",
+            "ca": "Aprèn a treure tot el suc a les teves reunions.",
+            "en": "Learn how to get the most out of your meetings.",
+        },
+        "subtitle": {
+            "es": "Guías, casos de uso y mejores prácticas para que tu equipo deje de perder decisiones.",
+            "ca": "Guies, casos d'ús i bones pràctiques perquè el teu equip deixi de perdre decisions.",
+            "en": "Guides, use cases and best practices so your team stops losing decisions.",
+        },
         "items": [
             {
-                "category": "Guía",
-                "title": "Cómo escribir actas que sí se ejecutan",
-                "description": "El framework de 6 pasos que usan los equipos más rápidos para que cada reunión termine con acción.",
+                "category": {"es": "Guía", "ca": "Guia", "en": "Guide"},
+                "title": {
+                    "es": "Cómo escribir actas que sí se ejecutan",
+                    "ca": "Com escriure actes que sí s'executen",
+                    "en": "How to write minutes that actually get executed",
+                },
+                "description": {
+                    "es": "El framework de 6 pasos que usan los equipos más rápidos para que cada reunión termine con acción.",
+                    "ca": "El framework de 6 passos que utilitzen els equips més ràpids perquè cada reunió acabi amb acció.",
+                    "en": "The 6-step framework used by the fastest teams to end every meeting with action.",
+                },
                 "url": "#",
                 "icon": "guide",
             },
             {
-                "category": "Caso de uso",
-                "title": "Colpensiones: 4 horas semanales recuperadas",
-                "description": "Cómo el equipo de Producto pasó de actas manuales a actas automáticas con seguimiento.",
+                "category": {"es": "Caso de uso", "ca": "Cas d'ús", "en": "Use case"},
+                "title": {
+                    "es": "Colpensiones: 4 horas semanales recuperadas",
+                    "ca": "Colpensiones: 4 hores setmanals recuperades",
+                    "en": "Colpensiones: 4 hours per week recovered",
+                },
+                "description": {
+                    "es": "Cómo el equipo de Producto pasó de actas manuales a actas automáticas con seguimiento.",
+                    "ca": "Com l'equip de Producte va passar d'actes manuals a actes automàtiques amb seguiment.",
+                    "en": "How the Product team moved from manual minutes to automated minutes with follow-up.",
+                },
                 "url": "#",
                 "icon": "case",
             },
             {
-                "category": "Video",
-                "title": "Demo en 3 minutos",
-                "description": "Mira cómo Acten convierte una reunión real en un acta profesional con tareas asignadas.",
+                "category": {"es": "Video", "ca": "Vídeo", "en": "Video"},
+                "title": {
+                    "es": "Demo en 3 minutos",
+                    "ca": "Demo en 3 minuts",
+                    "en": "3-minute demo",
+                },
+                "description": {
+                    "es": "Mira cómo Acten convierte una reunión real en un acta profesional con tareas asignadas.",
+                    "ca": "Mira com Acten converteix una reunió real en una acta professional amb tasques assignades.",
+                    "en": "See how Acten turns a real meeting into a professional minute with assigned tasks.",
+                },
                 "url": "#",
                 "icon": "video",
             },
             {
-                "category": "Blog",
-                "title": "5 errores frecuentes al hacer seguimiento de tareas",
-                "description": "Diagnóstico y solución a los patrones que hacen que las decisiones se pierdan entre reunión y reunión.",
+                "category": {"es": "Blog", "ca": "Blog", "en": "Blog"},
+                "title": {
+                    "es": "5 errores frecuentes al hacer seguimiento de tareas",
+                    "ca": "5 errors freqüents en fer seguiment de tasques",
+                    "en": "5 common mistakes when following up on tasks",
+                },
+                "description": {
+                    "es": "Diagnóstico y solución a los patrones que hacen que las decisiones se pierdan entre reunión y reunión.",
+                    "ca": "Diagnòstic i solució als patrons que fan que les decisions es perdin entre reunió i reunió.",
+                    "en": "Diagnosis and fix for the patterns that make decisions get lost between meetings.",
+                },
                 "url": "#",
                 "icon": "blog",
             },
@@ -358,87 +530,140 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Empresa ─────────────────────────────────────────────────────────
     "company": {
-        "eyebrow": "Quiénes somos",
-        "title": "Construimos la capa de inteligencia que les faltaba a tus reuniones.",
-        "subtitle": "",
-        "story": (
-            "Acten nació de una frustración compartida: las decisiones más importantes "
-            "de las empresas se toman en reuniones, pero terminan dispersas en chats, "
-            "documentos perdidos y memorias frágiles. Creemos que la IA puede cerrar "
-            "esa brecha — no reemplazando la conversación humana, sino capturándola, "
-            "estructurándola y convirtiéndola en acción concreta."
-        ),
-        "mission": (
-            "Hacer que cada reunión empresarial termine con decisiones claras, "
-            "responsables asignados y trazabilidad completa — sin trabajo manual."
-        ),
+        "eyebrow": {"es": "Quiénes somos", "ca": "Qui som", "en": "About us"},
+        "title": {
+            "es": "Construimos la capa de inteligencia que les faltaba a tus reuniones.",
+            "ca": "Construïm la capa d'intel·ligència que els faltava a les teves reunions.",
+            "en": "We build the intelligence layer your meetings were missing.",
+        },
+        "subtitle": {"es": "", "ca": "", "en": ""},
+        "story": {
+            "es": "Acten nació de una frustración compartida: las decisiones más importantes de las empresas se toman en reuniones, pero terminan dispersas en chats, documentos perdidos y memorias frágiles. Creemos que la IA puede cerrar esa brecha — no reemplazando la conversación humana, sino capturándola, estructurándola y convirtiéndola en acción concreta.",
+            "ca": "Acten va néixer d'una frustració compartida: les decisions més importants de les empreses es prenen en reunions, però acaben disperses en xats, documents perduts i memòries fràgils. Creiem que la IA pot tancar aquesta bretxa — no substituint la conversa humana, sinó capturant-la, estructurant-la i convertint-la en acció concreta.",
+            "en": "Acten was born from a shared frustration: the most important business decisions are made in meetings, yet they end up scattered across chats, lost documents and fragile memories. We believe AI can close that gap — not by replacing human conversation but by capturing, structuring and turning it into concrete action.",
+        },
+        "mission": {
+            "es": "Hacer que cada reunión empresarial termine con decisiones claras, responsables asignados y trazabilidad completa — sin trabajo manual.",
+            "ca": "Aconseguir que cada reunió empresarial acabi amb decisions clares, responsables assignats i traçabilitat completa — sense feina manual.",
+            "en": "Make every business meeting end with clear decisions, assigned owners and full traceability — with no manual work.",
+        },
         "values": [
             {
-                "title": "Claridad sobre velocidad",
-                "description": "Preferimos un acta clara a una rápida. La inteligencia útil requiere precisión.",
+                "title": {"es": "Claridad sobre velocidad", "ca": "Claredat sobre velocitat", "en": "Clarity over speed"},
+                "description": {
+                    "es": "Preferimos un acta clara a una rápida. La inteligencia útil requiere precisión.",
+                    "ca": "Preferim una acta clara a una de ràpida. La intel·ligència útil requereix precisió.",
+                    "en": "We prefer a clear minute over a fast one. Useful intelligence demands precision.",
+                },
             },
             {
-                "title": "Privacidad por diseño",
-                "description": "Tus datos viven aislados por tenant. Nunca entrenamos modelos con tu información.",
+                "title": {"es": "Privacidad por diseño", "ca": "Privadesa per disseny", "en": "Privacy by design"},
+                "description": {
+                    "es": "Tus datos viven aislados por tenant. Nunca entrenamos modelos con tu información.",
+                    "ca": "Les teves dades viuen aïllades per tenant. Mai entrenem models amb la teva informació.",
+                    "en": "Your data lives isolated per tenant. We never train models with your information.",
+                },
             },
             {
-                "title": "Open en lo que se puede",
-                "description": "Documentamos APIs, soportamos webhooks y nos integramos con tu stack actual.",
+                "title": {"es": "Open en lo que se puede", "ca": "Obert en el que es pot", "en": "Open where we can"},
+                "description": {
+                    "es": "Documentamos APIs, soportamos webhooks y nos integramos con tu stack actual.",
+                    "ca": "Documentem APIs, suportem webhooks i ens integrem amb la teva stack actual.",
+                    "en": "We document APIs, support webhooks and integrate with your current stack.",
+                },
             },
             {
-                "title": "Equipo distribuido",
-                "description": "Construimos desde LATAM con foco global. Nuestra zona horaria es la del cliente.",
+                "title": {"es": "Equipo distribuido", "ca": "Equip distribuït", "en": "Distributed team"},
+                "description": {
+                    "es": "Construimos desde LATAM con foco global. Nuestra zona horaria es la del cliente.",
+                    "ca": "Construïm des de LATAM amb focus global. La nostra zona horària és la del client.",
+                    "en": "We build from LATAM with a global focus. Our timezone is the client's.",
+                },
             },
         ],
         "stats": [
-            {"label": "Reuniones procesadas", "value": "12K+"},
-            {"label": "Horas ahorradas / mes", "value": "1.8K"},
-            {"label": "Tasa de tareas ejecutadas", "value": "94%"},
-            {"label": "Idiomas soportados", "value": "11"},
+            {"label": {"es": "Reuniones procesadas", "ca": "Reunions processades", "en": "Meetings processed"}, "value": "12K+"},
+            {"label": {"es": "Horas ahorradas / mes", "ca": "Hores estalviades / mes", "en": "Hours saved / month"}, "value": "1.8K"},
+            {"label": {"es": "Tasa de tareas ejecutadas", "ca": "Taxa de tasques executades", "en": "Task execution rate"}, "value": "94%"},
+            {"label": {"es": "Idiomas soportados", "ca": "Idiomes suportats", "en": "Languages supported"}, "value": "11"},
         ],
     },
 
     # ─── Contacto / Demo ─────────────────────────────────────────────────
     "contact": {
-        "eyebrow": "Hablemos",
-        "title": "Agenda una demo o cuéntanos qué necesitas.",
-        "subtitle": (
-            "Te respondemos en menos de 24h hábiles con una demo personalizada "
-            "para tu equipo."
-        ),
+        "eyebrow": {"es": "Hablemos", "ca": "Parlem", "en": "Let's talk"},
+        "title": {
+            "es": "Agenda una demo o cuéntanos qué necesitas.",
+            "ca": "Agenda una demo o explica'ns què necessites.",
+            "en": "Book a demo or tell us what you need.",
+        },
+        "subtitle": {
+            "es": "Te respondemos en menos de 24h hábiles con una demo personalizada para tu equipo.",
+            "ca": "Et responem en menys de 24h hàbils amb una demo personalitzada per al teu equip.",
+            "en": "We reply within 24 business hours with a personalized demo for your team.",
+        },
         "email": "hola@acten.app",
         "phone": "+57 300 000 0000",
-        "address": "Bogotá, Colombia · Remoto LATAM",
-        "form_name_label": "Nombre",
-        "form_email_label": "Correo corporativo",
-        "form_company_label": "Empresa",
-        "form_role_label": "Cargo (opcional)",
-        "form_message_label": "¿En qué te podemos ayudar?",
-        "form_cta_label": "Enviar mensaje",
-        "form_success": "¡Mensaje recibido! Te contactamos en menos de 24h hábiles.",
-        "form_error": "No pudimos enviar tu mensaje. Escríbenos directo a hola@acten.app.",
+        "address": {
+            "es": "Bogotá, Colombia · Remoto LATAM",
+            "ca": "Bogotà, Colòmbia · Remot LATAM",
+            "en": "Bogotá, Colombia · Remote LATAM",
+        },
+        "form_name_label": {"es": "Nombre", "ca": "Nom", "en": "Name"},
+        "form_email_label": {"es": "Correo corporativo", "ca": "Correu corporatiu", "en": "Business email"},
+        "form_company_label": {"es": "Empresa", "ca": "Empresa", "en": "Company"},
+        "form_role_label": {"es": "Cargo (opcional)", "ca": "Càrrec (opcional)", "en": "Role (optional)"},
+        "form_message_label": {
+            "es": "¿En qué te podemos ayudar?",
+            "ca": "En què et podem ajudar?",
+            "en": "How can we help?",
+        },
+        "form_cta_label": {"es": "Enviar mensaje", "ca": "Enviar missatge", "en": "Send message"},
+        "form_success": {
+            "es": "¡Mensaje recibido! Te contactamos en menos de 24h hábiles.",
+            "ca": "Missatge rebut! Et contactem en menys de 24h hàbils.",
+            "en": "Message received! We'll be in touch within 24 business hours.",
+        },
+        "form_error": {
+            "es": "No pudimos enviar tu mensaje. Escríbenos directo a hola@acten.app.",
+            "ca": "No hem pogut enviar el teu missatge. Escriu-nos directament a hola@acten.app.",
+            "en": "We couldn't send your message. Write us directly at hola@acten.app.",
+        },
     },
 
     # ─── CTA final ───────────────────────────────────────────────────────
     "final_cta": {
-        "eyebrow": "",
-        "title_lead": "Convierte cada reunión en una ",
-        "title_highlight": "ventaja competitiva.",
-        "title": "Convierte cada reunión en una ventaja competitiva.",
-        "subtitle": (
-            "Solicita una demo personalizada y descubre cómo Acten puede "
-            "transformar la productividad de tu equipo."
-        ),
-        "cta_label": "Solicitar demo",
+        "eyebrow": {"es": "", "ca": "", "en": ""},
+        "title_lead": {
+            "es": "Convierte cada reunión en una ",
+            "ca": "Converteix cada reunió en un ",
+            "en": "Turn every meeting into a ",
+        },
+        "title_highlight": {
+            "es": "ventaja competitiva.",
+            "ca": "avantatge competitiu.",
+            "en": "competitive advantage.",
+        },
+        "title": {
+            "es": "Convierte cada reunión en una ventaja competitiva.",
+            "ca": "Converteix cada reunió en un avantatge competitiu.",
+            "en": "Turn every meeting into a competitive advantage.",
+        },
+        "subtitle": {
+            "es": "Solicita una demo personalizada y descubre cómo Acten puede transformar la productividad de tu equipo.",
+            "ca": "Demana una demo personalitzada i descobreix com Acten pot transformar la productivitat del teu equip.",
+            "en": "Request a personalized demo and discover how Acten can transform your team's productivity.",
+        },
+        "cta_label": {"es": "Solicitar demo", "ca": "Demana demo", "en": "Request a demo"},
         "cta_anchor": "#contact",
-        "secondary_label": "Hablar con ventas",
+        "secondary_label": {"es": "Hablar con ventas", "ca": "Parlar amb vendes", "en": "Talk to sales"},
         "secondary_anchor": "#contact",
         # Panel derecho con estados — visual demostrativo
         "status_items": [
-            {"label": "Decisión tomada", "tone": "success"},
-            {"label": "Tarea asignada", "tone": "success"},
-            {"label": "Riesgo identificado", "tone": "warning"},
-            {"label": "Documento generado", "tone": "success"},
+            {"label": {"es": "Decisión tomada", "ca": "Decisió presa", "en": "Decision made"}, "tone": "success"},
+            {"label": {"es": "Tarea asignada", "ca": "Tasca assignada", "en": "Task assigned"}, "tone": "success"},
+            {"label": {"es": "Riesgo identificado", "ca": "Risc identificat", "en": "Risk identified"}, "tone": "warning"},
+            {"label": {"es": "Documento generado", "ca": "Document generat", "en": "Document generated"}, "tone": "success"},
         ],
     },
 

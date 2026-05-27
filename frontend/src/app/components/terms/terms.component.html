@@ -1,6 +1,6 @@
 <div class="privacy-page">
     <header class="privacy-header">
-        <a href="#" class="privacy-back" aria-label="Volver" (click)="goBack($event)">
+        <a href="#" class="privacy-back" [attr.aria-label]="'terms.back' | translate" (click)="goBack($event)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -10,12 +10,12 @@
         </a>
         <p class="privacy-eyebrow">{{ 'terms.title_long' | translate }}</p>
         <h1 class="privacy-title">{{ 'terms.subtitle_short' | translate }}</h1>
-        <p class="privacy-meta">Última actualización: {{ lastUpdated }}</p>
+        <p class="privacy-meta">{{ 'terms.last_updated_label' | translate }} {{ lastUpdated }}</p>
     </header>
 
     <div class="privacy-layout">
         <!-- TOC izquierda -->
-        <nav class="privacy-toc" aria-label="Tabla de contenidos">
+        <nav class="privacy-toc" [attr.aria-label]="'terms.toc_aria' | translate">
             <ul>
                 <li *ngFor="let s of sections">
                     <a [href]="'#' + s.id">{{ s.title }}</a>
@@ -26,162 +26,118 @@
         <!-- Contenido -->
         <article class="privacy-content">
             <section id="intro">
-                <h2>{{ 'privacy.section_intro' | translate }}</h2>
+                <h2>{{ 'terms.s1_title' | translate }}</h2>
                 <p>
-                    Estos Términos rigen el uso de la plataforma <strong>Acten</strong> (la
-                    "Plataforma") por parte de tu empresa y de los usuarios que la
-                    administran ("vos", "tu equipo"). Al crear una cuenta o usar la
-                    Plataforma aceptás estos Términos. Si no estás de acuerdo, no la uses.
+                    {{ 'terms.s1_p1_a' | translate }}
+                    <strong>Acten</strong>
+                    {{ 'terms.s1_p1_b' | translate }}
                 </p>
                 <p>
-                    Estos Términos se complementan con nuestra
-                    <a routerLink="/privacy">Política de Privacidad</a>.
+                    {{ 'terms.s1_p2_a' | translate }}
+                    <a routerLink="/privacy">{{ 'terms.s1_p2_link' | translate }}</a>.
                 </p>
             </section>
 
             <section id="cuenta">
-                <h2>2. Tu cuenta</h2>
+                <h2>{{ 'terms.s2_title' | translate }}</h2>
                 <ul>
-                    <li>Tu empresa es responsable de las acciones realizadas con cualquier
-                        cuenta creada dentro de su workspace.</li>
-                    <li>El administrador del workspace es quien autoriza altas, bajas y
-                        cambios de rol.</li>
-                    <li>Las contraseñas son personales e intransferibles. Si sospechás
-                        compromiso de una credencial, cambiala de inmediato.</li>
+                    <li>{{ 'terms.s2_li1' | translate }}</li>
+                    <li>{{ 'terms.s2_li2' | translate }}</li>
+                    <li>{{ 'terms.s2_li3' | translate }}</li>
                 </ul>
             </section>
 
             <section id="uso">
-                <h2>3. Uso aceptable</h2>
-                <p>No podés usar Acten para:</p>
+                <h2>{{ 'terms.s3_title' | translate }}</h2>
+                <p>{{ 'terms.s3_p1' | translate }}</p>
                 <ul>
-                    <li>Procesar contenido ilegal, infractor o que viole derechos de terceros.</li>
-                    <li>Intentar acceder a tenants ajenos, hacer scraping masivo, o ejecutar
-                        ataques contra la infraestructura.</li>
-                    <li>Reutilizar la salida de la IA para entrenar modelos competidores.</li>
+                    <li>{{ 'terms.s3_li1' | translate }}</li>
+                    <li>{{ 'terms.s3_li2' | translate }}</li>
+                    <li>{{ 'terms.s3_li3' | translate }}</li>
                 </ul>
             </section>
 
             <section id="contenido">
-                <h2>4. Tu contenido</h2>
-                <p>
-                    Conservás la propiedad de las transcripciones, audios y notas que subís
-                    a la Plataforma. Nos concedés una licencia limitada únicamente para:
-                </p>
+                <h2>{{ 'terms.s4_title' | translate }}</h2>
+                <p>{{ 'terms.s4_p1' | translate }}</p>
                 <ul>
-                    <li>Procesarlas con IA y devolverte los resultados.</li>
-                    <li>Almacenarlas dentro del aislamiento de tu tenant.</li>
-                    <li>Hacer respaldos cifrados para garantizar continuidad del servicio.</li>
+                    <li>{{ 'terms.s4_li1' | translate }}</li>
+                    <li>{{ 'terms.s4_li2' | translate }}</li>
+                    <li>{{ 'terms.s4_li3' | translate }}</li>
                 </ul>
-                <p>
-                    No usamos tu contenido para entrenar modelos genéricos. Cada workspace
-                    es estanco.
-                </p>
+                <p>{{ 'terms.s4_p2' | translate }}</p>
             </section>
 
             <section id="ia">
-                <h2>5. Servicios de IA</h2>
+                <h2>{{ 'terms.s5_title' | translate }}</h2>
                 <p>
-                    Los insights generados por IA (decisiones, riesgos, tareas, resúmenes)
-                    son <strong>recomendaciones</strong>, no verdades absolutas. Tu equipo
-                    debe revisarlos antes de actuar. No nos responsabilizamos por decisiones
-                    de negocio tomadas exclusivamente con base en sugerencias automatizadas.
+                    {{ 'terms.s5_p1_a' | translate }}
+                    <strong>{{ 'terms.s5_p1_strong' | translate }}</strong>{{ 'terms.s5_p1_b' | translate }}
                 </p>
             </section>
 
             <section id="integraciones">
-                <h2>6. Integraciones de terceros</h2>
-                <p>
-                    Las integraciones con Google Calendar, Microsoft, Trello, Jira, ClickUp,
-                    Slack u otros se rigen por los términos de cada proveedor. Acten actúa
-                    como intermediario y no controla la disponibilidad ni el comportamiento
-                    de esos servicios.
-                </p>
+                <h2>{{ 'terms.s6_title' | translate }}</h2>
+                <p>{{ 'terms.s6_p1' | translate }}</p>
             </section>
 
             <section id="planes">
-                <h2>7. Planes y facturación</h2>
+                <h2>{{ 'terms.s7_title' | translate }}</h2>
                 <ul>
-                    <li>Los precios y límites de cada plan se publican en la web o se
-                        acuerdan en contrato comercial.</li>
-                    <li>La facturación es por adelantado, por mes o por año según el plan.</li>
-                    <li>Los impuestos aplicables se agregan según jurisdicción.</li>
-                    <li>El no pago puede suspender el acceso al workspace después de un
-                        período de gracia razonable.</li>
+                    <li>{{ 'terms.s7_li1' | translate }}</li>
+                    <li>{{ 'terms.s7_li2' | translate }}</li>
+                    <li>{{ 'terms.s7_li3' | translate }}</li>
+                    <li>{{ 'terms.s7_li4' | translate }}</li>
                 </ul>
             </section>
 
             <section id="propiedad">
-                <h2>8. Propiedad intelectual</h2>
-                <p>
-                    La Plataforma, su código, marca, diseño y documentación son propiedad de
-                    Acten, Inc. No te otorgamos derechos sobre ellos más allá del uso
-                    permitido bajo estos Términos.
-                </p>
+                <h2>{{ 'terms.s8_title' | translate }}</h2>
+                <p>{{ 'terms.s8_p1' | translate }}</p>
             </section>
 
             <section id="garantia">
-                <h2>9. Limitación de garantías</h2>
-                <p>
-                    Acten se ofrece "tal como está". Hacemos esfuerzos razonables por
-                    mantener el servicio disponible y seguro, pero no garantizamos
-                    funcionamiento ininterrumpido o libre de errores.
-                </p>
+                <h2>{{ 'terms.s9_title' | translate }}</h2>
+                <p>{{ 'terms.s9_p1' | translate }}</p>
             </section>
 
             <section id="responsabilidad">
-                <h2>10. Limitación de responsabilidad</h2>
-                <p>
-                    En la medida permitida por la ley, nuestra responsabilidad total frente
-                    a tu empresa por cualquier reclamo relacionado con la Plataforma se
-                    limita al monto pagado por ella en los doce meses anteriores al hecho.
-                </p>
+                <h2>{{ 'terms.s10_title' | translate }}</h2>
+                <p>{{ 'terms.s10_p1' | translate }}</p>
             </section>
 
             <section id="terminacion">
-                <h2>11. Terminación</h2>
+                <h2>{{ 'terms.s11_title' | translate }}</h2>
                 <ul>
-                    <li>Podés cancelar la cuenta en cualquier momento desde la
-                        configuración del workspace.</li>
-                    <li>Podemos suspender o terminar cuentas que violen estos Términos.</li>
-                    <li>Al terminar, exportamos los datos a tu solicitud y los borramos
-                        según lo descrito en la Política de Privacidad.</li>
+                    <li>{{ 'terms.s11_li1' | translate }}</li>
+                    <li>{{ 'terms.s11_li2' | translate }}</li>
+                    <li>{{ 'terms.s11_li3' | translate }}</li>
                 </ul>
             </section>
 
             <section id="ley">
-                <h2>12. Ley aplicable</h2>
-                <p>
-                    Estos Términos se rigen por la legislación de Colombia. Cualquier
-                    controversia se resuelve en los tribunales competentes de Bogotá, salvo
-                    que la ley aplicable a tu país de operación disponga otra cosa.
-                </p>
+                <h2>{{ 'terms.s12_title' | translate }}</h2>
+                <p>{{ 'terms.s12_p1' | translate }}</p>
             </section>
 
             <section id="cambios">
-                <h2>13. Cambios a estos términos</h2>
-                <p>
-                    Podemos actualizar estos Términos para reflejar mejoras del servicio o
-                    requisitos legales. Te avisamos por email o dentro de la Plataforma con
-                    al menos 30 días de anticipación cuando los cambios sean materiales.
-                </p>
+                <h2>{{ 'terms.s13_title' | translate }}</h2>
+                <p>{{ 'terms.s13_p1' | translate }}</p>
             </section>
 
             <section id="contacto">
-                <h2>14. Contacto</h2>
-                <p>
-                    Para preguntas sobre estos Términos:
-                </p>
+                <h2>{{ 'terms.s14_title' | translate }}</h2>
+                <p>{{ 'terms.s14_p1' | translate }}</p>
                 <ul>
-                    <li>Email: <a href="mailto:legal@acten.app">legal&#64;acten.app</a></li>
-                    <li>Postal: Acten, Inc. · Bogotá, Colombia.</li>
+                    <li>{{ 'terms.s14_li1_label' | translate }} <a href="mailto:legal@acten.app">legal&#64;acten.app</a></li>
+                    <li>{{ 'terms.s14_li2' | translate }}</li>
                 </ul>
             </section>
         </article>
     </div>
 
     <footer class="privacy-footer">
-        <span>© {{ year }} Acten, Inc. Todos los derechos reservados.</span>
+        <span>{{ 'terms.footer_copyright' | translate: { year: year } }}</span>
         <a routerLink="/privacy">{{ 'privacy.title' | translate }}</a>
         <a routerLink="/help">{{ 'help.title' | translate }}</a>
     </footer>
