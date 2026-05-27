@@ -4,12 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { BrandingService } from '../../services/branding.service';
+import { LanguageService } from '../../services/language.service';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { TranslateModule } from '@ngx-translate/core';
 import { TenantService } from '../../services/tenant.service';
 
 @Component({
     selector: 'app-login',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.css']
 })
@@ -39,6 +42,7 @@ export class LoginComponent implements OnInit {
 
     /** Marca white-label expuesta al template (logo, nombre, colores). */
     readonly branding = inject(BrandingService);
+    readonly lang = inject(LanguageService);
     private readonly tenants = inject(TenantService);
     readonly year = new Date().getFullYear();
 
@@ -105,6 +109,9 @@ export class LoginComponent implements OnInit {
                     return;
                 }
                 this.branding.loadFromServer();
+                // Sync de idioma desde el perfil del user — si tiene una
+                // preferencia distinta a la actual, la aplica antes de navegar.
+                if (res?.language) this.lang.syncFromUserProfile(res.language);
                 // Si el backend devuelve must_change_password=true, redirigir
                 // a la pantalla de cambio obligatorio antes del dashboard.
                 if (res?.must_change_password) {

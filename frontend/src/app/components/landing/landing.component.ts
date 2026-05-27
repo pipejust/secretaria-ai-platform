@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem, LandingPerson } from '../../services/landing-cms.service';
+import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 
 /**
  * Landing pública de Acten — rediseño "Acten Premium" 2026-Q2.
@@ -23,7 +24,7 @@ import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem, La
 @Component({
     selector: 'app-landing',
     standalone: true,
-    imports: [CommonModule, FormsModule, HttpClientModule],
+    imports: [CommonModule, FormsModule, HttpClientModule, LanguageSelectorComponent],
     templateUrl: './landing.component.html',
     styleUrls: ['./landing.component.css'],
 })

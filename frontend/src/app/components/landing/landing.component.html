@@ -45,6 +45,8 @@
       </nav>
 
       <div class="al-header__actions">
+        <!-- Selector de idioma — pequeño, color claro sobre header navy. -->
+        <app-language-selector variant="compact" class="al-lang-selector"></app-language-selector>
         <a class="al-btn al-btn--ghost-light" [href]="loginUrl">{{ c.nav.login_label }}</a>
         <a class="al-btn al-btn--primary" href="#contact" (click)="scrollTo('#contact', $event)">
           {{ c.nav.cta_label }}

@@ -255,6 +255,22 @@
 }
 
 /* ===================== MAIN CREAM ===================== */
+/* Selector de idioma top-right. Color contrastante con el fondo cream. */
+.login-lang-bar {
+    position: absolute;
+    top: 16px; right: 24px;
+    z-index: 5;
+    color: #475569;  /* slate-600 — buen contraste sobre cream */
+}
+.login-lang-bar ::ng-deep .lang-selector__wrap {
+    border-color: rgba(15, 23, 42, 0.10);
+    background: #ffffff;
+}
+.login-lang-bar ::ng-deep .lang-selector__wrap:hover {
+    background: #f1f5f9;
+    border-color: rgba(15, 23, 42, 0.20);
+}
+
 .login-main {
     background: var(--color-bg-base);
     display: flex;

@@ -47,6 +47,9 @@ class Tenant(SQLModel, table=True):
     )
     is_active: bool = Field(default=True)
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    # Idioma por defecto del tenant — se usa como fallback cuando un usuario
+    # no tiene preferencia setteada. Valores soportados: es | ca | en.
+    default_language: str = Field(default="es", max_length=4, description="Idioma fallback del tenant.")
 
 
 class Role(SQLModel, table=True):
@@ -136,6 +139,11 @@ class User(SQLModel, table=True):
     # invitación con password temporal; el primer login responde un payload
     # con must_change_password=true y el frontend redirige a /change-password.
     must_change_password: bool = Field(default=False, description="Fuerza cambio de password en el próximo login.")
+
+    # Idioma preferido del usuario en la UI. Tres opciones soportadas:
+    # 'es' (español, default), 'ca' (catalán), 'en' (inglés). El frontend
+    # respeta esta preferencia y la sincroniza con localStorage.
+    language: str = Field(default="es", max_length=4, description="Idioma de la UI: es | ca | en")
 
     # Autenticación en dos pasos (2FA) — método email-OTP.
     two_factor_enabled: bool = Field(default=False, description="Si True, el login exige verificación adicional por email.")

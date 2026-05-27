@@ -7,10 +7,13 @@ import {
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { authInterceptor } from './interceptors/auth-interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor';
 import { tenantInterceptor } from './interceptors/tenant.interceptor';
 import { BrandingService } from './services/branding.service';
+import { LanguageService } from './services/language.service';
 
 import { routes } from './app.routes';
 
@@ -36,6 +39,13 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(withInterceptors([tenantInterceptor, authInterceptor, errorInterceptor])),
+    // i18n provider — registra TranslateService + el loader HTTP que lee
+    // /assets/i18n/{lang}.json. El LanguageService.bootstrap() llamado vía
+    // APP_INITIALIZER aplica el idioma elegido (user > localStorage >
+    // navigator > 'es') antes de que arranquen las rutas.
+    provideTranslateService({ fallbackLang: 'es' }),
+    provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' }),
     provideAppInitializer(() => inject(BrandingService).loadFromServer()),
+    provideAppInitializer(() => inject(LanguageService).bootstrap()),
   ],
 };

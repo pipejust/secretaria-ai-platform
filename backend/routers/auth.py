@@ -285,6 +285,10 @@ def _login_success_payload(user: User, tenant: Tenant, request: Optional[Request
         # antes de mostrar el dashboard. El endpoint POST /auth/me/change-
         # password-forced se encarga de validar y limpiar el flag.
         "must_change_password": bool(user.must_change_password),
+        # Idioma preferido del usuario. Si está vacío, cae al default del
+        # tenant. El frontend lo aplica inmediatamente y lo cachea en
+        # localStorage para próximas sesiones sin login.
+        "language": user.language or tenant.default_language or "es",
     }
 
 
@@ -662,6 +666,7 @@ def _serialize_user_profile(user: User, tenant: Tenant) -> dict:
             "enabled": bool(user.two_factor_enabled),
             "method": user.two_factor_method or "email",
         },
+        "language": user.language or tenant.default_language or "es",
     }
 
 
@@ -681,6 +686,9 @@ class ProfileUpdateRequest(BaseModel):
     location:    Optional[str] = None
     bio:         Optional[str] = None
     avatar_url:  Optional[str] = None
+    # 'es' | 'ca' | 'en' — el usuario puede cambiar su idioma desde Mi Perfil
+    # o desde el selector en login/landing (se persiste al server al login).
+    language:    Optional[str] = Field(default=None, pattern=r"^(es|ca|en)$")
 
 
 @router.put("/me")
@@ -717,6 +725,8 @@ def update_my_profile(
         current_user.bio = bio_val or None
     if "avatar_url" in data:
         current_user.avatar_url = (data["avatar_url"] or "").strip() or None
+    if "language" in data and data["language"]:
+        current_user.language = data["language"]
 
     current_user.updated_at = datetime.now().isoformat()
     db.add(current_user)

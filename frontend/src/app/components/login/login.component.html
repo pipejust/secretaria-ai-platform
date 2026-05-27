@@ -180,12 +180,17 @@
 
     <!-- ===================== MAIN CREAM ===================== -->
     <main class="login-main">
+        <!-- Selector de idioma persistido en localStorage + sincronizado
+             con server al loguear. Aparece arriba a la derecha del card. -->
+        <div class="login-lang-bar">
+            <app-language-selector variant="compact"></app-language-selector>
+        </div>
         <section class="login-card-wrap">
             <div class="login-card">
                 <header class="login-card-head">
-                    <h2 class="login-headline">Bienvenido de nuevo</h2>
+                    <h2 class="login-headline">{{ 'login.title' | translate }}</h2>
                     <p class="login-sub">
-                        Inicia sesión en tu espacio de
+                        {{ 'login.subtitle' | translate }}
                         <strong>{{ branding.companyName() || 'Acten' }}</strong>.
                     </p>
                 </header>
