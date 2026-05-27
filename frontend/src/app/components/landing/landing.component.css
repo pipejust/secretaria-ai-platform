@@ -331,6 +331,30 @@ section[id] { scroll-margin-top: 88px; }
   gap: 10px;
 }
 
+/* Selector de idioma en el header del landing — fondo navy oscuro.
+   FORZAR color blanco porque el componente <app-language-selector> usa
+   color:inherit y el header no propaga el color desde un ancestro. Sin
+   esto, el texto se ve negro sobre fondo navy (ilegible). */
+.al-lang-selector,
+.al-lang-selector ::ng-deep .lang-sel__trigger,
+.al-lang-selector ::ng-deep .lang-sel__text,
+.al-lang-selector ::ng-deep .lang-sel__icon,
+.al-lang-selector ::ng-deep .lang-sel__chev {
+  color: #ffffff;
+}
+.al-lang-selector ::ng-deep .lang-sel__trigger {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.18);
+}
+.al-lang-selector ::ng-deep .lang-sel__trigger:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.32);
+}
+/* El menú dropdown del selector queda sobre el fondo navy del header —
+   el menú en sí ya es blanco (estilo default del componente), así que
+   las opciones dentro NO se forzan. Solo aseguramos que el trigger sea
+   visible. */
+
 .al-header__burger {
   display: none;
   width: 38px; height: 38px;
