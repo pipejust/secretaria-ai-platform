@@ -130,16 +130,22 @@ export class LanguageService {
     }
 
     private resolveInitialLang(): SupportedLang {
-        // 1) localStorage
+        // 1) localStorage — preferencia explícita del usuario en este browser
         if (typeof localStorage !== 'undefined') {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored && SUPPORTED.includes(stored as SupportedLang)) {
                 return stored as SupportedLang;
             }
         }
-        // 2) navigator.language
+        // 2) navigator.language SOLO si es 'ca' (catalán) — el caso único
+        // donde detectar autoidioma agrega valor. Para 'en' ignoramos porque
+        // la mayoría de visitantes hispanos pueden tener navegadores en
+        // inglés y la plataforma es hispana por default. Esto evita que la
+        // landing arranque en inglés para usuarios de español/catalán que
+        // tienen Chrome configurado en inglés.
         if (typeof navigator !== 'undefined' && navigator.language) {
-            return this.normalize(navigator.language);
+            const detected = this.normalize(navigator.language);
+            if (detected === 'ca') return 'ca';
         }
         return DEFAULT_LANG;
     }

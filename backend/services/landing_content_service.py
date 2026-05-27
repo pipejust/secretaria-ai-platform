@@ -48,50 +48,86 @@ DEFAULT_CONTENT: Dict[str, Any] = {
         # confían en Acten") porque es lo más cercano a una sección de
         # casos de éxito en la home.
         "items": [
-            {"label": "Producto", "anchor": "#features"},
-            {"label": "Cómo funciona", "anchor": "#flow"},
-            {"label": "Integraciones", "anchor": "#integrations"},
-            {"label": "Precios", "anchor": "#pricing"},
-            {"label": "Empresa", "anchor": "#trust"},
-            {"label": "Contacto", "anchor": "#contact"},
+            {"label": {"es": "Producto", "ca": "Producte", "en": "Product"}, "anchor": "#features"},
+            {"label": {"es": "Cómo funciona", "ca": "Com funciona", "en": "How it works"}, "anchor": "#flow"},
+            {"label": {"es": "Integraciones", "ca": "Integracions", "en": "Integrations"}, "anchor": "#integrations"},
+            {"label": {"es": "Precios", "ca": "Preus", "en": "Pricing"}, "anchor": "#pricing"},
+            {"label": {"es": "Empresa", "ca": "Empresa", "en": "Company"}, "anchor": "#trust"},
+            {"label": {"es": "Contacto", "ca": "Contacte", "en": "Contact"}, "anchor": "#contact"},
         ],
-        "cta_label": "Solicitar demo",
-        "login_label": "Iniciar sesión",
+        "cta_label": {"es": "Solicitar demo", "ca": "Demana demo", "en": "Request a demo"},
+        "login_label": {"es": "Iniciar sesión", "ca": "Inicia sessió", "en": "Log in"},
     },
 
     # ─── Hero ────────────────────────────────────────────────────────────
     "hero": {
-        "badge": "AI MEETING ASSISTANT",
-        "title_lead": "De conversación a claridad.",
-        "title_highlight_prefix": "De claridad a ",
-        "title_highlight_word": "impacto.",
+        "badge": {
+            "es": "AI MEETING ASSISTANT",
+            "ca": "AI MEETING ASSISTANT",
+            "en": "AI MEETING ASSISTANT",
+        },
+        "title_lead": {
+            "es": "De conversación a claridad.",
+            "ca": "De conversa a claredat.",
+            "en": "From conversation to clarity.",
+        },
+        "title_highlight_prefix": {
+            "es": "De claridad a ",
+            "ca": "De claredat a ",
+            "en": "From clarity to ",
+        },
+        "title_highlight_word": {
+            "es": "impacto.",
+            "ca": "impacte.",
+            "en": "impact.",
+        },
         # Legacy combined title (kept para compat con código que aún lo lea).
-        "title": "De conversación a claridad. De claridad a impacto.",
-        "subtitle": (
-            "Acten transforma conversaciones habladas en decisiones, tareas y "
-            "entregables profesionales. Escucha, interpreta, organiza y da "
-            "seguimiento para que tu equipo ejecute lo que importa."
-        ),
-        "cta_primary_label": "Solicitar demo",
+        "title": {
+            "es": "De conversación a claridad. De claridad a impacto.",
+            "ca": "De conversa a claredat. De claredat a impacte.",
+            "en": "From conversation to clarity. From clarity to impact.",
+        },
+        "subtitle": {
+            "es": "Acten transforma conversaciones habladas en decisiones, tareas y entregables profesionales. Escucha, interpreta, organiza y da seguimiento para que tu equipo ejecute lo que importa.",
+            "ca": "Acten transforma converses parlades en decisions, tasques i lliuraments professionals. Escolta, interpreta, organitza i fa seguiment perquè el teu equip executi el que importa.",
+            "en": "Acten turns spoken conversations into decisions, tasks and professional deliverables. It listens, interprets, organizes and follows up so your team executes what matters.",
+        },
+        "cta_primary_label": {
+            "es": "Solicitar demo",
+            "ca": "Demana demo",
+            "en": "Request a demo",
+        },
         "cta_primary_anchor": "#contact",
-        "cta_secondary_label": "Ver cómo funciona",
+        "cta_secondary_label": {
+            "es": "Ver cómo funciona",
+            "ca": "Veure com funciona",
+            "en": "See how it works",
+        },
         "cta_secondary_anchor": "#flow",
         # 4 atributos chip bajo los CTAs del hero.
         "attributes": [
-            {"label": "IA avanzada", "icon": "sparkles"},
-            {"label": "Multilenguaje", "icon": "globe"},
-            {"label": "Seguro y privado", "icon": "shield"},
-            {"label": "Enterprise ready", "icon": "building"},
+            {"label": {"es": "IA avanzada", "ca": "IA avançada", "en": "Advanced AI"}, "icon": "sparkles"},
+            {"label": {"es": "Multilenguaje", "ca": "Multilingüe", "en": "Multilingual"}, "icon": "globe"},
+            {"label": {"es": "Seguro y privado", "ca": "Segur i privat", "en": "Secure & private"}, "icon": "shield"},
+            {"label": {"es": "Enterprise ready", "ca": "Enterprise ready", "en": "Enterprise ready"}, "icon": "building"},
         ],
         # Mockup (decorativo, ilustrativo — no editable fino).
         "mockup_eyebrow": "Q2 Product Roadmap",
-        "mockup_title": "Reunión de planificación · Q2",
+        "mockup_title": {
+            "es": "Reunión de planificación · Q2",
+            "ca": "Reunió de planificació · Q2",
+            "en": "Planning meeting · Q2",
+        },
         "mockup_meta": "16 may, 2024 · 10:00 a. m. · 45 min · 6 participantes",
     },
 
     # ─── Trust logos (clientes / empresas) ──────────────────────────────
     "trust": {
-        "eyebrow": "Equipos de alto rendimiento ya confían en Acten",
+        "eyebrow": {
+            "es": "Equipos de alto rendimiento ya confían en Acten",
+            "ca": "Equips d'alt rendiment ja confien en Acten",
+            "en": "High-performance teams already trust Acten",
+        },
         "logos": ["Microsoft", "Google", "Siemens", "BBVA", "Santander", "Deloitte"],
     },
 
@@ -621,17 +657,28 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── Footer ──────────────────────────────────────────────────────────
     "footer": {
-        "tagline": (
-            "El asistente inteligente de reuniones que transforma conversaciones "
-            "en claridad, decisiones y acción."
-        ),
-        "newsletter_title": "Suscríbete a nuestro newsletter",
-        "newsletter_subtitle": (
-            "Recibe novedades y mejores prácticas para equipos de alto rendimiento."
-        ),
+        "tagline": {
+            "es": "El asistente inteligente de reuniones que transforma conversaciones en claridad, decisiones y acción.",
+            "ca": "L'assistent intel·ligent de reunions que transforma converses en claredat, decisions i acció.",
+            "en": "The intelligent meeting assistant that turns conversations into clarity, decisions, and action.",
+        },
+        "newsletter_title": {
+            "es": "Suscríbete a nuestro newsletter",
+            "ca": "Subscriu-te al nostre butlletí",
+            "en": "Subscribe to our newsletter",
+        },
+        "newsletter_subtitle": {
+            "es": "Recibe novedades y mejores prácticas para equipos de alto rendimiento.",
+            "ca": "Rep novetats i bones pràctiques per a equips d'alt rendiment.",
+            "en": "Get updates and best practices for high-performance teams.",
+        },
         "newsletter_placeholder": "tu@email.com",
-        "newsletter_cta": "Suscribirme",
-        "newsletter_success": "¡Gracias! Te avisamos cuando salga algo bueno.",
+        "newsletter_cta": {"es": "Suscribirme", "ca": "Subscriu-me", "en": "Subscribe"},
+        "newsletter_success": {
+            "es": "¡Gracias! Te avisamos cuando salga algo bueno.",
+            "ca": "Gràcies! T'avisarem quan tinguem novetats.",
+            "en": "Thanks! We'll let you know when something good drops.",
+        },
         "social_links": [
             {"label": "LinkedIn", "icon": "linkedin", "url": "https://linkedin.com/company/acten"},
             {"label": "X", "icon": "x", "url": "https://x.com/acten_app"},
@@ -686,17 +733,30 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _deep_merge(base: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge `overrides` sobre `base` recursivamente.
+    """Merge `overrides` sobre `base` recursivamente, con soporte i18n.
 
     - dicts se mergean recursivamente
     - listas y valores escalares se REEMPLAZAN (no concatenan) — es lo que
       queremos para listas como features/testimonials: si el admin quita uno,
       el array nuevo es la verdad.
+
+    SOPORTE I18N: si en `base` un campo es i18n dict {es,ca,en} y en
+    `overrides` es un string plano (legacy, tenant viejo sin traducciones),
+    el string se "promociona" a {es: string} preservando ca/en del default.
+    Esto garantiza que tenants antiguos automáticamente reciban las
+    traducciones ca/en de los DEFAULTS aunque tengan strings planos
+    guardados en su landing_content_json.
     """
     out = copy.deepcopy(base)
     for key, val in overrides.items():
-        if isinstance(val, dict) and isinstance(out.get(key), dict):
-            out[key] = _deep_merge(out[key], val)
+        base_val = out.get(key)
+        # i18n promotion: base es dict de idiomas, override es string plano
+        if isinstance(val, str) and _is_i18n_dict(base_val):
+            promoted = dict(base_val)  # preserva ca/en del default
+            promoted["es"] = val        # tenant override solo cambia 'es'
+            out[key] = promoted
+        elif isinstance(val, dict) and isinstance(base_val, dict):
+            out[key] = _deep_merge(base_val, val)
         else:
             out[key] = copy.deepcopy(val)
     return out
