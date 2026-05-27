@@ -8,7 +8,7 @@
     <header class="tk-hero">
         <div class="tk-hero-text">
             <h1 class="tk-title">{{ 'meetings.tabs.tasks' | translate }}</h1>
-            <p class="tk-sub">Rastrea, administra y completa tareas de tus proyectos.</p>
+            <p class="tk-sub">{{ 'pendientes.subtitle' | translate }}</p>
         </div>
         <div class="tk-hero-actions">
             <button type="button" class="tk-btn tk-btn-primary" (click)="openCreateModal()">
@@ -17,7 +17,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Agregar tarea
+                {{ 'pendientes.add_task' | translate }}
             </button>
         </div>
     </header>
@@ -68,13 +68,13 @@
             <!-- ===== Tabs ===== -->
             <nav class="tk-tabs" role="tablist">
                 <button type="button" [class.active]="activeTab==='todas'"
-                        role="tab" (click)="setTab('todas')">Todas las tareas</button>
+                        role="tab" (click)="setTab('todas')">{{ 'pendientes.all_tasks' | translate }}</button>
                 <button type="button" [class.active]="activeTab==='mias'"
-                        role="tab" (click)="setTab('mias')">Mis tareas</button>
+                        role="tab" (click)="setTab('mias')">{{ 'pendientes.my_tasks' | translate }}</button>
                 <button type="button" [class.active]="activeTab==='proyecto'"
-                        role="tab" (click)="setTab('proyecto')">Por proyecto</button>
+                        role="tab" (click)="setTab('proyecto')">{{ 'pendientes.by_project' | translate }}</button>
                 <button type="button" [class.active]="activeTab==='prioridad'"
-                        role="tab" (click)="setTab('prioridad')">Por prioridad</button>
+                        role="tab" (click)="setTab('prioridad')">{{ 'pendientes.by_priority' | translate }}</button>
             </nav>
 
             <!-- ===== Card de tabla ===== -->
@@ -82,14 +82,14 @@
 
                 <!-- ── Filtros (mismo patrón EXACTO que /admin/meetings) ── -->
                 <div class="tk-filters-wrap">
-                    <section class="mt-search-row" aria-label="Buscar tareas">
+                    <section class="mt-search-row" [attr.aria-label]="'pendientes.search_aria' | translate">
                         <div class="filter-search">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                             </svg>
-                            <input type="text" placeholder="Buscar por título, descripción o responsable…"
+                            <input type="text" [placeholder]="'pendientes.search_placeholder' | translate"
                                    [(ngModel)]="searchQuery" />
                         </div>
 
@@ -102,7 +102,7 @@
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                             </svg>
-                            Filtros
+                            {{ 'common.filters' | translate }}
                             <span class="filters-btn-count" *ngIf="activeFiltersCount > 0">{{ activeFiltersCount }}</span>
                             <svg class="filters-btn-chevron" [class.flipped]="showFilters"
                                  width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -112,11 +112,11 @@
                         </button>
                     </section>
 
-                    <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+                    <section class="mt-filters" *ngIf="showFilters" [attr.aria-label]="'projects.advanced_filters' | translate">
                         <div class="filter-group">
                             <label>{{ 'project_detail.owner' | translate }}</label>
                             <input type="text" [(ngModel)]="ownerFilter" (keyup.enter)="load()"
-                                   placeholder="Todos" />
+                                   [placeholder]="'common.all' | translate" />
                         </div>
 
                         <div class="filter-group">
@@ -128,9 +128,9 @@
                         </div>
 
                         <div class="filter-group">
-                            <label>Prioridad</label>
+                            <label>{{ 'pendientes.priority' | translate }}</label>
                             <select [(ngModel)]="priorityFilter">
-                                <option value="">Todas</option>
+                                <option value="">{{ 'common.all' | translate }}</option>
                                 <option value="alta">{{ 'common.high' | translate }}</option>
                                 <option value="media">{{ 'common.medium' | translate }}</option>
                                 <option value="baja">{{ 'common.low' | translate }}</option>
@@ -138,12 +138,12 @@
                         </div>
 
                         <div class="filter-group">
-                            <label>Vencimiento</label>
+                            <label>{{ 'pendientes.due' | translate }}</label>
                             <select [(ngModel)]="bucket" (change)="setBucket(bucket)">
-                                <option value="activos">Todas activas</option>
-                                <option value="vencido">Vencidas</option>
+                                <option value="activos">{{ 'pendientes.all_active' | translate }}</option>
+                                <option value="vencido">{{ 'pendientes.overdue_plural' | translate }}</option>
                                 <option value="proximo">{{ 'common.upcoming_7d' | translate }}</option>
-                                <option value="sin_fecha">Sin fecha</option>
+                                <option value="sin_fecha">{{ 'pendientes.no_date' | translate }}</option>
                             </select>
                         </div>
 
@@ -151,11 +151,11 @@
                             <label>{{ 'common.status' | translate }}</label>
                             <select [(ngModel)]="statusFilter">
                                 <option value="">{{ 'common.all' | translate }}</option>
-                                <option value="abierta">Abierta</option>
+                                <option value="abierta">{{ 'pendientes.status_open' | translate }}</option>
                                 <option value="en progreso">{{ 'common.in_progress' | translate }}</option>
-                                <option value="vencida">Vencida</option>
-                                <option value="completada">Completada</option>
-                                <option value="bloqueada">Bloqueada</option>
+                                <option value="vencida">{{ 'pendientes.status_overdue' | translate }}</option>
+                                <option value="completada">{{ 'pendientes.status_completed' | translate }}</option>
+                                <option value="bloqueada">{{ 'pendientes.status_blocked' | translate }}</option>
                             </select>
                         </div>
 
@@ -173,16 +173,16 @@
                                 <th class="th-task">{{ 'project_detail.task' | translate }}</th>
                                 <th class="th-project">{{ 'common.project' | translate }}</th>
                                 <th class="th-owner">{{ 'project_detail.owner' | translate }}</th>
-                                <th class="th-priority">Prioridad</th>
+                                <th class="th-priority">{{ 'pendientes.priority' | translate }}</th>
                                 <th class="th-due">
-                                    Fecha de vencimiento
+                                    {{ 'pendientes.due_date' | translate }}
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="6 9 12 15 18 9"></polyline>
                                     </svg>
                                 </th>
                                 <th class="th-status">{{ 'common.status' | translate }}</th>
-                                <th class="th-progress">Progreso</th>
+                                <th class="th-progress">{{ 'projects.progress' | translate }}</th>
                                 <th class="th-actions">{{ 'common.actions' | translate }}</th>
                             </tr>
                         </thead>
@@ -238,8 +238,8 @@
                                         <button type="button" class="tk-row-kebab"
                                                 [class.is-active]="openActionsId === it.id"
                                                 (click)="toggleActions(it.id, $event)"
-                                                [attr.aria-label]="'Acciones de ' + it.title"
-                                                title="Más acciones">
+                                                [attr.aria-label]="('pendientes.actions_for' | translate) + ' ' + it.title"
+                                                [attr.title]="'projects.more_actions' | translate">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="1"></circle>
@@ -255,7 +255,7 @@
                                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                                     <polyline points="14 2 14 8 20 8"></polyline>
                                                 </svg>
-                                                Ir a la reunión origen
+                                                {{ 'pendientes.go_to_source_meeting' | translate }}
                                             </button>
                                             <button type="button" class="tk-action"
                                                     *ngIf="it.status !== 'done'"
@@ -264,7 +264,7 @@
                                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                     <polyline points="20 6 9 17 4 12"></polyline>
                                                 </svg>
-                                                Marcar como completada
+                                                {{ 'pendientes.mark_completed' | translate }}
                                             </button>
                                             <button type="button" class="tk-action"
                                                     *ngIf="it.status === 'done'"
@@ -274,7 +274,7 @@
                                                     <path d="M3 12a9 9 0 1 0 9-9c-2.4 0-4.6 1-6.3 2.6L3 8"></path>
                                                     <polyline points="3 3 3 8 8 8"></polyline>
                                                 </svg>
-                                                Reabrir tarea
+                                                {{ 'pendientes.reopen_task' | translate }}
                                             </button>
                                             <button type="button" class="tk-action"
                                                     *ngIf="it.status !== 'blocked' && it.status !== 'done'"
@@ -284,7 +284,7 @@
                                                     <circle cx="12" cy="12" r="10"></circle>
                                                     <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
                                                 </svg>
-                                                Marcar como bloqueada
+                                                {{ 'pendientes.mark_blocked' | translate }}
                                             </button>
                                             <div class="tk-action-sep"></div>
                                             <button type="button" class="tk-action tk-action-danger"
@@ -295,7 +295,7 @@
                                                     <polyline points="3 6 5 6 21 6"></polyline>
                                                     <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
                                                 </svg>
-                                                Cancelar tarea
+                                                {{ 'pendientes.cancel_task' | translate }}
                                             </button>
                                         </div>
                                     </div>
@@ -303,7 +303,7 @@
                             </tr>
                             <tr *ngIf="!pagedItems.length && !isLoading">
                                 <td colspan="8" class="tk-empty">
-                                    No hay tareas que coincidan con los filtros aplicados.
+                                    {{ 'pendientes.no_tasks_match' | translate }}
                                 </td>
                             </tr>
                             <tr *ngFor="let _ of (isLoading ? [1,2,3,4,5,6] : [])" class="tk-skeleton-row">
@@ -325,11 +325,11 @@
                 <!-- ── Paginación ── -->
                 <footer class="tk-pagination" *ngIf="totalFiltered > 0">
                     <span class="tk-pag-info">
-                        Mostrando {{ pageStart }} a {{ pageEnd }} de {{ totalFiltered }} tareas
+                        {{ 'pendientes.showing_pagination' | translate:{ start: pageStart, end: pageEnd, total: totalFiltered } }}
                     </span>
                     <div class="tk-pag-controls">
                         <button type="button" class="tk-pag-btn" (click)="goToPage(currentPage - 1)"
-                                [disabled]="currentPage === 1" aria-label="Anterior">
+                                [disabled]="currentPage === 1" [attr.aria-label]="'common.previous' | translate">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="15 18 9 12 15 6"></polyline>
@@ -340,7 +340,7 @@
                                 [class.is-active]="p === currentPage"
                                 (click)="goToPage(p)">{{ p }}</button>
                         <button type="button" class="tk-pag-btn" (click)="goToPage(currentPage + 1)"
-                                [disabled]="currentPage === totalPages" aria-label="Siguiente">
+                                [disabled]="currentPage === totalPages" [attr.aria-label]="'common.next' | translate">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="9 18 15 12 9 6"></polyline>
@@ -349,9 +349,9 @@
                     </div>
                     <label class="tk-pag-size">
                         <select [(ngModel)]="pageSize" (change)="goToPage(1)">
-                            <option [ngValue]="12">Mostrar 12</option>
-                            <option [ngValue]="24">Mostrar 24</option>
-                            <option [ngValue]="48">Mostrar 48</option>
+                            <option [ngValue]="12">{{ 'pendientes.show_12' | translate }}</option>
+                            <option [ngValue]="24">{{ 'pendientes.show_24' | translate }}</option>
+                            <option [ngValue]="48">{{ 'pendientes.show_48' | translate }}</option>
                         </select>
                     </label>
                 </footer>
@@ -365,7 +365,7 @@
             <article class="tk-card tk-side-card">
                 <header class="tk-side-head">
                     <h3>{{ 'dashboard.workload' | translate }}</h3>
-                    <a routerLink="/admin/reportes" class="tk-side-link">Ver reporte completo</a>
+                    <a routerLink="/admin/reportes" class="tk-side-link">{{ 'pendientes.see_full_report' | translate }}</a>
                 </header>
 
                 <!-- Mini filtros del workload (proyecto + rango).
@@ -376,7 +376,7 @@
                         <option *ngFor="let p of projects" [value]="p.name">{{ p.name }}</option>
                     </select>
                     <select class="tk-mini-select" [(ngModel)]="workloadRangeFilter">
-                        <option value="all">Todo el periodo</option>
+                        <option value="all">{{ 'pendientes.all_period' | translate }}</option>
                         <option value="week">{{ 'common.this_week' | translate }}</option>
                         <option value="month">{{ 'common.this_month' | translate }}</option>
                     </select>
@@ -402,7 +402,7 @@
                     <div class="tk-donut-center">
                         <ng-container *ngIf="hoveredSliceIndex < 0; else hoverInfo">
                             <div class="tk-donut-num">{{ workloadTotal }}</div>
-                            <div class="tk-donut-lbl">Tareas totales</div>
+                            <div class="tk-donut-lbl">{{ 'pendientes.total_tasks' | translate }}</div>
                         </ng-container>
                         <ng-template #hoverInfo>
                             <div class="tk-donut-num">{{ workloadSlices[hoveredSliceIndex]?.count }}</div>
@@ -423,7 +423,7 @@
                         <span class="tk-legend-num">{{ s.count }} ({{ s.pct }}%)</span>
                     </li>
                     <li *ngIf="!workloadSlices.length" class="tk-legend-empty">
-                        Sin datos de carga aún.
+                        {{ 'pendientes.no_workload_data' | translate }}
                     </li>
                 </ul>
             </article>
@@ -450,7 +450,7 @@
                         </app-user-chip>
                     </li>
                     <li *ngIf="!overdueItems.length" class="tk-side-empty">
-                        Sin tareas vencidas
+                        {{ 'pendientes.no_overdue' | translate }}
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-left:4px;">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
@@ -474,8 +474,8 @@
                                 </svg>
                             </span>
                             <div class="tk-quick-body">
-                                <strong>Crear nueva tarea</strong>
-                                <small>Agrega una nueva tarea a tu lista.</small>
+                                <strong>{{ 'pendientes.create_new_task' | translate }}</strong>
+                                <small>{{ 'pendientes.create_new_task_sub' | translate }}</small>
                             </div>
                         </button>
                     </li>
@@ -489,14 +489,14 @@
                                 </svg>
                             </span>
                             <div class="tk-quick-body">
-                                <strong>Plantillas de tareas</strong>
-                                <small>Usa plantillas predefinidas.</small>
+                                <strong>{{ 'pendientes.task_templates' | translate }}</strong>
+                                <small>{{ 'pendientes.task_templates_sub' | translate }}</small>
                             </div>
                         </a>
                     </li>
                     <li>
                         <button type="button" class="tk-quick" disabled
-                                title="Próximamente: importar tareas desde CSV o Jira.">
+                                [attr.title]="'pendientes.import_soon_hint' | translate">
                             <span class="tk-quick-icon" data-color="amber">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -506,8 +506,8 @@
                                 </svg>
                             </span>
                             <div class="tk-quick-body">
-                                <strong>Importar tareas</strong>
-                                <small>Importar desde CSV u otras herramientas.</small>
+                                <strong>{{ 'pendientes.import_tasks' | translate }}</strong>
+                                <small>{{ 'pendientes.import_tasks_sub' | translate }}</small>
                             </div>
                         </button>
                     </li>
@@ -522,8 +522,8 @@
                                 </svg>
                             </span>
                             <div class="tk-quick-body">
-                                <strong>Reporte de tareas</strong>
-                                <small>Ver analítica de tareas.</small>
+                                <strong>{{ 'pendientes.task_report' | translate }}</strong>
+                                <small>{{ 'pendientes.task_report_sub' | translate }}</small>
                             </div>
                         </a>
                     </li>
@@ -533,8 +533,8 @@
             <!-- ── Próximos vencimientos ── -->
             <article class="tk-card tk-side-card">
                 <header class="tk-side-head">
-                    <h3>Próximos vencimientos</h3>
-                    <a class="tk-side-link" routerLink="/admin/calendar">Ver calendario</a>
+                    <h3>{{ 'pendientes.upcoming_due_dates' | translate }}</h3>
+                    <a class="tk-side-link" routerLink="/admin/calendar">{{ 'pendientes.see_calendar' | translate }}</a>
                 </header>
                 <ul class="tk-upcoming-list">
                     <li *ngFor="let it of upcomingItems; trackBy: trackById">
@@ -551,7 +551,7 @@
                         </app-user-chip>
                     </li>
                     <li *ngIf="!upcomingItems.length" class="tk-side-empty">
-                        Sin vencimientos en los próximos días.
+                        {{ 'pendientes.no_upcoming' | translate }}
                     </li>
                 </ul>
             </article>
@@ -563,10 +563,10 @@
         <div class="tk-modal" (click)="$event.stopPropagation()">
             <header class="tk-modal-head">
                 <div>
-                    <h3 class="tk-modal-title">Agregar tarea</h3>
+                    <h3 class="tk-modal-title">{{ 'pendientes.add_task' | translate }}</h3>
                     <p class="tk-modal-sub">
-                        <ng-container *ngIf="createMode === 'chooser'">¿Dónde quieres registrar la nueva tarea?</ng-container>
-                        <ng-container *ngIf="createMode === 'meeting'">Crea una tarea asociada a una reunión existente.</ng-container>
+                        <ng-container *ngIf="createMode === 'chooser'">{{ 'pendientes.where_register_q' | translate }}</ng-container>
+                        <ng-container *ngIf="createMode === 'meeting'">{{ 'pendientes.task_associated_with_meeting' | translate }}</ng-container>
                     </p>
                 </div>
                 <button type="button" class="tk-modal-close" (click)="closeCreateModal()" [attr.title]="'common.close' | translate">
@@ -592,8 +592,8 @@
                         </svg>
                     </span>
                     <div class="tk-choice-body">
-                        <strong>Asociar a una reunión</strong>
-                        <small>Vincula la tarea a un acta para mantener su trazabilidad.</small>
+                        <strong>{{ 'pendientes.associate_to_meeting' | translate }}</strong>
+                        <small>{{ 'pendientes.associate_to_meeting_sub' | translate }}</small>
                     </div>
                     <svg class="tk-choice-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -615,8 +615,8 @@
                         </svg>
                     </span>
                     <div class="tk-choice-body">
-                        <strong>Programar en el calendario</strong>
-                        <small>Crea la tarea como evento en tu calendario.</small>
+                        <strong>{{ 'pendientes.schedule_on_calendar' | translate }}</strong>
+                        <small>{{ 'pendientes.schedule_on_calendar_sub' | translate }}</small>
                     </div>
                     <svg class="tk-choice-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -639,7 +639,7 @@
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                             </svg>
                             <input type="text" [(ngModel)]="sessionSearch"
-                                   placeholder="Buscar por título o ID..." />
+                                   [placeholder]="'pendientes.search_session_placeholder' | translate" />
                         </div>
                         <ul class="tk-session-list">
                             <li *ngFor="let s of filteredSessions; trackBy: trackBySid">
@@ -667,23 +667,23 @@
                                 </button>
                             </li>
                             <li *ngIf="!filteredSessions.length" class="tk-session-empty">
-                                Sin reuniones que coincidan.
+                                {{ 'pendientes.no_matching_meetings' | translate }}
                             </li>
                         </ul>
                     </div>
 
                     <!-- 2. Detalles -->
                     <div class="tk-form-row">
-                        <label class="tk-form-label">Título de la tarea</label>
+                        <label class="tk-form-label">{{ 'pendientes.task_title' | translate }}</label>
                         <input type="text" class="tk-input" [(ngModel)]="newTask.title"
-                               placeholder="Ej: Validar pruebas funcionales en QA" />
+                               [placeholder]="'pendientes.task_title_placeholder' | translate" />
                     </div>
 
                     <div class="tk-form-grid">
                         <div class="tk-form-row">
                             <label class="tk-form-label">{{ 'project_detail.owner' | translate }}</label>
                             <input type="text" class="tk-input" [(ngModel)]="newTask.owner_name"
-                                   placeholder="Nombre" />
+                                   [placeholder]="'common.name' | translate" />
                         </div>
                         <div class="tk-form-row">
                             <label class="tk-form-label">{{ 'common.email' | translate }}</label>
@@ -691,7 +691,7 @@
                                    placeholder="correo@empresa.com" />
                         </div>
                         <div class="tk-form-row">
-                            <label class="tk-form-label">Prioridad</label>
+                            <label class="tk-form-label">{{ 'pendientes.priority' | translate }}</label>
                             <select class="tk-input" [(ngModel)]="newTask.priority">
                                 <option value="alta">{{ 'common.high' | translate }}</option>
                                 <option value="media">{{ 'common.medium' | translate }}</option>
@@ -706,27 +706,27 @@
                             <input type="date" class="tk-input" [(ngModel)]="newTask.due_date" />
                         </div>
                         <div class="tk-form-row">
-                            <label class="tk-form-label">Hora límite <small>(opcional)</small></label>
+                            <label class="tk-form-label">{{ 'pendientes.due_time' | translate }} <small>({{ 'common.optional' | translate }})</small></label>
                             <input type="time" class="tk-input" [(ngModel)]="newTask.due_time" />
                         </div>
                     </div>
 
                     <div class="tk-form-row">
-                        <label class="tk-form-label">{{ 'projects.description' | translate }} <small>(opcional)</small></label>
+                        <label class="tk-form-label">{{ 'projects.description' | translate }} <small>({{ 'common.optional' | translate }})</small></label>
                         <textarea class="tk-input tk-textarea" rows="3" [(ngModel)]="newTask.description"
-                                  placeholder="Detalle, contexto, criterios de aceptación..."></textarea>
+                                  [placeholder]="'pendientes.description_placeholder' | translate"></textarea>
                     </div>
                 </div>
             </div>
 
             <footer class="tk-modal-foot" *ngIf="createMode === 'meeting'">
                 <button type="button" class="tk-btn tk-btn-secondary" (click)="createMode = 'chooser'">
-                    Volver
+                    {{ 'common.back' | translate }}
                 </button>
                 <button type="button" class="tk-btn tk-btn-primary"
                         (click)="submitNewTask()"
                         [disabled]="isCreating || !newTask.session_id || !newTask.title.trim()">
-                    {{ isCreating ? 'Creando…' : 'Crear tarea' }}
+                    {{ (isCreating ? 'pendientes.creating' : 'pendientes.create_task') | translate }}
                 </button>
             </footer>
         </div>

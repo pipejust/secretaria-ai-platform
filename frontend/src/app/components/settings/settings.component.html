@@ -15,7 +15,7 @@
     <header class="st-hero">
         <div class="st-hero-text">
             <h1 class="st-title">{{ 'sidebar.settings' | translate }}</h1>
-            <p class="st-sub">Gestiona tus preferencias, ajustes del workspace e integraciones.</p>
+            <p class="st-sub">{{ 'settings.subtitle_header' | translate }}</p>
         </div>
         <div class="st-hero-actions">
             <button type="button" class="st-btn st-btn-secondary" (click)="ngOnInit()">
@@ -24,14 +24,14 @@
                     <polyline points="23 4 23 10 17 10"></polyline>
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                 </svg>
-                Recargar
+                {{ 'settings.reload' | translate }}
             </button>
             <button type="button" class="st-btn st-btn-primary" (click)="saveSettings()" [disabled]="isSaving">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                {{ isSaving ? 'Guardando…' : 'Guardar cambios' }}
+                {{ (isSaving ? 'common.saving' : 'common.save_changes') | translate }}
             </button>
         </div>
     </header>
@@ -100,7 +100,7 @@
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">Preferencias generales</h2>
+                            <h2 class="st-card-title">{{ 'settings.general_prefs' | translate }}</h2>
                             <p class="st-card-sub">{{ 'settings.subtitle' | translate }}</p>
                         </div>
                     </header>
@@ -154,12 +154,12 @@
                             </label>
 
                             <div class="st-field">
-                                <span class="st-field-label">Modo oscuro</span>
+                                <span class="st-field-label">{{ 'settings.dark_mode' | translate }}</span>
                                 <button type="button" class="st-toggle-row" (click)="toggleDarkMode()">
                                     <span class="st-switch" [class.is-on]="prefs.darkMode" aria-hidden="true">
                                         <span class="st-switch-thumb"></span>
                                     </span>
-                                    <span class="st-toggle-text">Activar modo oscuro en toda la plataforma</span>
+                                    <span class="st-toggle-text">{{ 'settings.enable_dark_mode' | translate }}</span>
                                 </button>
                             </div>
                         </div>
@@ -170,17 +170,17 @@
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">Ajustes del workspace</h2>
+                            <h2 class="st-card-title">{{ 'settings.workspace_settings' | translate }}</h2>
                             <p class="st-card-sub">
-                                La marca, logo y nombre de la empresa se configuran en
-                                <a routerLink="/admin/branding" class="st-inline-link">Marca</a>.
+                                {{ 'settings.brand_configured_in_prefix' | translate }}
+                                <a routerLink="/admin/branding" class="st-inline-link">{{ 'sidebar.brand' | translate }}</a>.
                             </p>
                         </div>
                     </header>
                     <div class="st-card-body">
                         <div class="st-grid st-grid-2">
                             <label class="st-field">
-                                <span class="st-field-label">La semana inicia el</span>
+                                <span class="st-field-label">{{ 'settings.week_starts_on' | translate }}</span>
                                 <div class="st-field-input">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -189,14 +189,14 @@
                                         <line x1="8" y1="2" x2="8" y2="6"></line>
                                     </svg>
                                     <select [(ngModel)]="prefs.weekStartsOn" (change)="markPrefsDirty()">
-                                        <option value="monday">Lunes</option>
-                                        <option value="sunday">Domingo</option>
+                                        <option value="monday">{{ 'settings.monday' | translate }}</option>
+                                        <option value="sunday">{{ 'settings.sunday' | translate }}</option>
                                     </select>
                                 </div>
                             </label>
 
                             <label class="st-field">
-                                <span class="st-field-label">Archivar proyectos completados después de</span>
+                                <span class="st-field-label">{{ 'settings.archive_after' | translate }}</span>
                                 <div class="st-field-input">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -211,9 +211,7 @@
                             </label>
                         </div>
                         <p class="st-help st-mt-16">
-                            Los proyectos completados se ocultarán de los listados automáticamente
-                            cuando hayan pasado el tiempo seleccionado desde su cierre.
-                            Se mantienen accesibles desde el filtro "Archivados".
+                            {{ 'settings.archive_hint' | translate }}
                         </p>
                     </div>
                 </article>
@@ -225,8 +223,8 @@
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">Integraciones de calendario</h2>
-                            <p class="st-card-sub">Credenciales OAuth para conectar Google Calendar y Microsoft 365.</p>
+                            <h2 class="st-card-title">{{ 'settings.calendar_integrations' | translate }}</h2>
+                            <p class="st-card-sub">{{ 'settings.oauth_credentials' | translate }}</p>
                         </div>
                     </header>
                     <div class="st-card-body st-stack">
@@ -247,7 +245,7 @@
                                     <strong>Google Calendar</strong>
                                 </div>
                                 <span class="st-pill" [attr.data-tone]="oauthStatus.google.ready ? 'green' : 'gray'">
-                                    {{ oauthStatus.google.ready ? 'Configurado' : 'Sin configurar' }}
+                                    {{ (oauthStatus.google.ready ? 'settings.configured' : 'settings.not_configured') | translate }}
                                 </span>
                             </div>
                             <div class="st-grid st-grid-2">
@@ -263,7 +261,7 @@
                                                placeholder="••••••••" />
                                         <button type="button" class="st-pw-toggle"
                                                 (click)="togglePassword('google_secret')"
-                                                [attr.aria-label]="isPwVisible('google_secret') ? 'Ocultar' : 'Mostrar'">
+                                                [attr.aria-label]="(isPwVisible('google_secret') ? 'common.hide' : 'common.show') | translate">
                                             <svg *ngIf="!isPwVisible('google_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -306,7 +304,7 @@
                                     <strong>Microsoft 365</strong>
                                 </div>
                                 <span class="st-pill" [attr.data-tone]="oauthStatus.microsoft.ready ? 'green' : 'gray'">
-                                    {{ oauthStatus.microsoft.ready ? 'Configurado' : 'Sin configurar' }}
+                                    {{ (oauthStatus.microsoft.ready ? 'settings.configured' : 'settings.not_configured') | translate }}
                                 </span>
                             </div>
                             <div class="st-grid st-grid-2">
@@ -320,7 +318,7 @@
                                                class="st-input" [(ngModel)]="microsoftCalendarSettings.client_secret" placeholder="••••••••" />
                                         <button type="button" class="st-pw-toggle"
                                                 (click)="togglePassword('ms_secret')"
-                                                [attr.aria-label]="isPwVisible('ms_secret') ? 'Ocultar' : 'Mostrar'">
+                                                [attr.aria-label]="(isPwVisible('ms_secret') ? 'common.hide' : 'common.show') | translate">
                                             <svg *ngIf="!isPwVisible('ms_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -373,7 +371,7 @@
                                         <span class="st-switch-thumb"></span>
                                     </span>
                                     <input type="checkbox" hidden [(ngModel)]="trelloSettings.isActive" />
-                                    <span>{{ trelloSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                    <span>{{ (trelloSettings.isActive ? 'common.active' : 'common.inactive') | translate }}</span>
                                 </label>
                             </div>
                             <div class="st-grid st-grid-3">
@@ -414,7 +412,7 @@
                                         <span class="st-switch-thumb"></span>
                                     </span>
                                     <input type="checkbox" hidden [(ngModel)]="jiraSettings.isActive" />
-                                    <span>{{ jiraSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                    <span>{{ (jiraSettings.isActive ? 'common.active' : 'common.inactive') | translate }}</span>
                                 </label>
                             </div>
                             <div class="st-grid st-grid-3">
@@ -430,7 +428,7 @@
                                         </button>
                                     </div>
                                 </label>
-                                <label class="st-field"><span class="st-field-label">Dominio</span>
+                                <label class="st-field"><span class="st-field-label">{{ 'branding.domain' | translate }}</span>
                                     <input type="text" class="st-input" [(ngModel)]="jiraSettings.domain"
                                            placeholder="empresa.atlassian.net" /></label>
                             </div>
@@ -448,7 +446,7 @@
                                         <span class="st-switch-thumb"></span>
                                     </span>
                                     <input type="checkbox" hidden [(ngModel)]="azureSettings.isActive" />
-                                    <span>{{ azureSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                    <span>{{ (azureSettings.isActive ? 'common.active' : 'common.inactive') | translate }}</span>
                                 </label>
                             </div>
                             <div class="st-grid st-grid-3">
@@ -481,7 +479,7 @@
                                         <span class="st-switch-thumb"></span>
                                     </span>
                                     <input type="checkbox" hidden [(ngModel)]="clickupSettings.isActive" />
-                                    <span>{{ clickupSettings.isActive ? 'Activo' : 'Inactivo' }}</span>
+                                    <span>{{ (clickupSettings.isActive ? 'common.active' : 'common.inactive') | translate }}</span>
                                 </label>
                             </div>
                             <div class="st-grid st-grid-2">
@@ -509,13 +507,13 @@
                     <header class="st-card-head">
                         <div>
                             <h2 class="st-card-title">{{ 'common.email' | translate }}</h2>
-                            <p class="st-card-sub">Proveedor SMTP para enviar correos transaccionales y notificaciones.</p>
+                            <p class="st-card-sub">{{ 'settings.smtp_provider_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="st-card-body">
                         <div class="st-grid st-grid-3">
                             <label class="st-field">
-                                <span class="st-field-label">Proveedor</span>
+                                <span class="st-field-label">{{ 'settings.provider' | translate }}</span>
                                 <div class="st-field-input">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -542,7 +540,7 @@
                                 </div>
                             </label>
                             <label class="st-field">
-                                <span class="st-field-label">Email remitente</span>
+                                <span class="st-field-label">{{ 'settings.sender_email' | translate }}</span>
                                 <input type="email" class="st-input" [(ngModel)]="smtpSettings.senderEmail"
                                        placeholder="notificaciones@tuempresa.com" />
                             </label>
@@ -564,7 +562,7 @@
                             <div class="st-test-email-row">
                                 <input type="email" class="st-input"
                                        [(ngModel)]="testEmailTo"
-                                       placeholder="destinatario@empresa.com (vacío = enviar a ti)"
+                                       [placeholder]="'settings.test_email_placeholder' | translate"
                                        [disabled]="isSendingTest"/>
                                 <button type="button" class="st-btn st-btn-primary"
                                         (click)="sendTestEmail()"
@@ -574,7 +572,7 @@
                                         <line x1="22" y1="2" x2="11" y2="13"></line>
                                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                                     </svg>
-                                    {{ isSendingTest ? 'Enviando…' : 'Probar envío de correos' }}
+                                    {{ (isSendingTest ? 'common.sending' : 'settings.test_email_button') | translate }}
                                 </button>
                             </div>
                         </div>
@@ -589,9 +587,7 @@
                         <div>
                             <h2 class="st-card-title">{{ 'settings.tasks_emails_sync' | translate }}</h2>
                             <p class="st-card-sub">
-                                Configura cómo y cuándo se envían automáticamente los correos a los
-                                responsables y las tareas a las plataformas conectadas (Trello, Jira,
-                                ClickUp, Azure DevOps) cuando Fireflies entrega una nueva reunión.
+                                {{ 'settings.task_sync_sub' | translate }}
                             </p>
                         </div>
                     </header>
@@ -599,27 +595,14 @@
                         <div class="st-toggle-card">
                             <div>
                                 <strong>{{ 'settings.auto_send' | translate }}</strong>
-                                <small>
-                                    <strong>Flujo:</strong> cuando llega una reunión nueva vía
-                                    Fireflies <em>primero</em> se procesa con IA (transcribe,
-                                    extrae tareas y decisiones). Cuando el procesamiento termina,
-                                    el admin del proyecto recibe un correo de aviso con el estado
-                                    (incluido si faltan correos en tareas o participantes).
-                                    <br><br>
-                                    Si esta opción está <strong>activa</strong>, además, al cumplirse
-                                    el tiempo definido abajo y siempre que <em>todas</em> las tareas
-                                    tengan correo de responsable, los correos y las tareas externas
-                                    (Trello, Jira, ClickUp, Azure DevOps) se envían automáticamente
-                                    sin requerir confirmación manual. Si faltan correos al timeout,
-                                    el sistema NO envía y avisa al admin para que complete.
-                                </small>
+                                <small [innerHTML]="'settings.auto_send_hint' | translate"></small>
                             </div>
                             <label class="st-toggle-pill" [class.is-on]="autoCurationSettings.isEnabled">
                                 <span class="st-switch" [class.is-on]="autoCurationSettings.isEnabled">
                                     <span class="st-switch-thumb"></span>
                                 </span>
                                 <input type="checkbox" hidden [(ngModel)]="autoCurationSettings.isEnabled" />
-                                <span>{{ autoCurationSettings.isEnabled ? 'Activo' : 'Inactivo' }}</span>
+                                <span>{{ (autoCurationSettings.isEnabled ? 'common.active' : 'common.inactive') | translate }}</span>
                             </label>
                         </div>
 
@@ -629,19 +612,12 @@
                                 <input type="number" min="1" max="10080" class="st-input"
                                        [(ngModel)]="autoCurationSettings.timeoutMinutes" />
                                 <small class="st-help">
-                                    Minutos desde que llega la reunión hasta que se envían los correos
-                                    y se crean las tareas en las plataformas. Sugerencia: usa 60 (1 hora)
-                                    o más para dar margen a editar correos y nombres de participantes.
-                                    El job revisa pendientes cada 1 minuto.
+                                    {{ 'settings.timeout_hint' | translate }}
                                 </small>
                             </label>
                         </div>
 
-                        <div class="st-help st-mt-16">
-                            <strong>Modo manual</strong>: si esta opción está inactiva, el correo y las
-                            tareas externas no salen hasta que el curador las dispare desde el detalle
-                            de la reunión. La reunión queda en el listado de Reuniones esperando acción.
-                        </div>
+                        <div class="st-help st-mt-16" [innerHTML]="'settings.manual_mode_hint' | translate"></div>
                     </div>
                 </article>
             </ng-container>
@@ -651,8 +627,8 @@
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">Fireflies (transcripciones)</h2>
-                            <p class="st-card-sub">Webhook que recibe las grabaciones procesadas por Fireflies.</p>
+                            <h2 class="st-card-title">{{ 'settings.fireflies_title' | translate }}</h2>
+                            <p class="st-card-sub">{{ 'settings.fireflies_sub' | translate }}</p>
                         </div>
                     </header>
                     <div class="st-card-body">
@@ -669,11 +645,11 @@
                                 </div>
                             </label>
                             <label class="st-field">
-                                <span class="st-field-label">Webhook token</span>
+                                <span class="st-field-label">{{ 'settings.webhook_token' | translate }}</span>
                                 <div class="st-pw-wrap">
                                     <input [type]="isPwVisible('ff_token') ? 'text' : 'password'"
                                            class="st-input" [(ngModel)]="firefliesSettings.webhook_token"
-                                           placeholder="Token secreto opcional" />
+                                           [placeholder]="'settings.webhook_token_placeholder' | translate" />
                                     <button type="button" class="st-pw-toggle" (click)="togglePassword('ff_token')">
                                         <svg *ngIf="!isPwVisible('ff_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                         <svg *ngIf="isPwVisible('ff_token')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -689,7 +665,7 @@
                             </label>
                         </div>
                         <p class="st-callout">
-                            Pega esta URL en la sección "Webhooks" de tu dashboard de Fireflies.
+                            {{ 'settings.webhook_paste_hint' | translate }}
                         </p>
                     </div>
                 </article>

@@ -1,27 +1,26 @@
 <div class="ro-container">
   <header class="header">
-    <a [routerLink]="['/admin/curation', sessionId]" class="back">← Volver al acta</a>
-    <h1>Generar artefactos role-específicos</h1>
-    <p class="subtitle">Genera un PRD, Deal Brief, Status Update u otro documento
-       a partir del transcript de esta sesión.</p>
+    <a [routerLink]="['/admin/curation', sessionId]" class="back">← {{ 'role_outputs.back_to_minutes' | translate }}</a>
+    <h1>{{ 'role_outputs.title' | translate }}</h1>
+    <p class="subtitle">{{ 'role_outputs.subtitle' | translate }}</p>
   </header>
 
   <section class="composer">
-    <label>Plantilla</label>
+    <label>{{ 'role_outputs.template' | translate }}</label>
     <select [(ngModel)]="selectedTemplateId">
       <option *ngFor="let t of templates" [ngValue]="t.id">{{ t.name }} <small>({{ t.role_type }})</small></option>
     </select>
-    <label>LLM</label>
+    <label>{{ 'role_outputs.llm' | translate }}</label>
     <select [(ngModel)]="provider">
-      <option value="openai">OpenAI gpt-4o (precisión)</option>
-      <option value="groq">Groq Llama 3.3 70B (rápido)</option>
+      <option value="openai">{{ 'role_outputs.openai_option' | translate }}</option>
+      <option value="groq">{{ 'role_outputs.groq_option' | translate }}</option>
     </select>
     <button class="btn" [disabled]="isGenerating || !selectedTemplateId" (click)="generate()">
       <span *ngIf="!isGenerating" style="display:inline-flex;align-items:center;gap:6px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
         </svg>
-        Generar
+        {{ 'role_outputs.generate' | translate }}
       </span>
       <span *ngIf="isGenerating" style="display:inline-flex;align-items:center;gap:6px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;">
@@ -34,20 +33,20 @@
           <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
           <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
         </svg>
-        Generando…
+        {{ 'role_outputs.generating' | translate }}
       </span>
     </button>
   </section>
 
   <section class="outputs">
-    <h2>Artefactos generados</h2>
-    <p *ngIf="!outputs.length" class="hint">Aún no has generado ningún artefacto. Selecciona una plantilla arriba.</p>
+    <h2>{{ 'role_outputs.generated_artifacts' | translate }}</h2>
+    <p *ngIf="!outputs.length" class="hint">{{ 'role_outputs.no_artifacts' | translate }}</p>
     <article *ngFor="let out of outputs; trackBy: trackById" class="output">
       <header>
         <strong>{{ out.title }}</strong>
         <span class="meta">{{ out.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
-        <button class="btn-link" (click)="download(out)">⬇ Descargar .md</button>
-        <button class="btn-link danger" (click)="deleteOutput(out)">Borrar</button>
+        <button class="btn-link" (click)="download(out)">⬇ {{ 'role_outputs.download_md' | translate }}</button>
+        <button class="btn-link danger" (click)="deleteOutput(out)">{{ 'common.delete' | translate }}</button>
       </header>
       <pre>{{ out.body }}</pre>
     </article>

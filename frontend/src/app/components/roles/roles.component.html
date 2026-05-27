@@ -5,8 +5,8 @@
          ============================================================ -->
     <header class="rl-header">
         <div class="rl-header-text">
-            <h1>Gestión de Roles</h1>
-            <p class="rl-subtitle">Administra los niveles de acceso y permisos del sistema.</p>
+            <h1>{{ 'roles.title' | translate }}</h1>
+            <p class="rl-subtitle">{{ 'roles.subtitle' | translate }}</p>
         </div>
         <button class="rl-btn rl-btn--primary rl-btn--lg" (click)="openCreateModal()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -14,7 +14,7 @@
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            Crear nuevo rol
+            {{ 'roles.create_new_role' | translate }}
         </button>
     </header>
 
@@ -33,7 +33,7 @@
                 </svg>
             </div>
             <div class="rl-kpi-body">
-                <span class="rl-kpi-label">Roles totales</span>
+                <span class="rl-kpi-label">{{ 'roles.total_roles' | translate }}</span>
                 <span class="rl-kpi-value">{{ totalRoles }}</span>
                 <span class="rl-kpi-hint">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -41,7 +41,7 @@
                         <line x1="12" y1="19" x2="12" y2="5"></line>
                         <polyline points="5 12 12 5 19 12"></polyline>
                     </svg>
-                    Todos los roles del sistema
+                    {{ 'roles.all_system_roles' | translate }}
                 </span>
             </div>
         </article>
@@ -55,7 +55,7 @@
                 </svg>
             </div>
             <div class="rl-kpi-body">
-                <span class="rl-kpi-label">Roles activos</span>
+                <span class="rl-kpi-label">{{ 'roles.active_roles' | translate }}</span>
                 <span class="rl-kpi-value">{{ activeRoles }}</span>
                 <span class="rl-kpi-hint">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -63,7 +63,7 @@
                         <line x1="12" y1="19" x2="12" y2="5"></line>
                         <polyline points="5 12 12 5 19 12"></polyline>
                     </svg>
-                    {{ activeRolesPct }}% del total
+                    {{ activeRolesPct }}{{ 'meetings.pct_of_total' | translate }}
                 </span>
             </div>
         </article>
@@ -87,7 +87,7 @@
                         <line x1="12" y1="19" x2="12" y2="5"></line>
                         <polyline points="5 12 12 5 19 12"></polyline>
                     </svg>
-                    Distribuidos en roles
+                    {{ 'roles.distributed_in_roles' | translate }}
                 </span>
             </div>
         </article>
@@ -101,7 +101,7 @@
                 </svg>
             </div>
             <div class="rl-kpi-body">
-                <span class="rl-kpi-label">Permisos personalizados</span>
+                <span class="rl-kpi-label">{{ 'roles.custom_permissions' | translate }}</span>
                 <span class="rl-kpi-value">{{ customPermissions }}</span>
                 <span class="rl-kpi-hint">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -109,7 +109,7 @@
                         <line x1="12" y1="19" x2="12" y2="5"></line>
                         <polyline points="5 12 12 5 19 12"></polyline>
                     </svg>
-                    Permisos configurados
+                    {{ 'roles.permissions_configured' | translate }}
                 </span>
             </div>
         </article>
@@ -130,7 +130,7 @@
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input type="text" placeholder="Buscar rol por nombre, descripción o ID..."
+                    <input type="text" [placeholder]="'roles.search_placeholder' | translate"
                            [(ngModel)]="searchText" (input)="onFilterChange()"/>
                 </div>
 
@@ -139,13 +139,13 @@
                          stroke-linecap="round" stroke-linejoin="round" class="rl-btn-ico">
                         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                     </svg>
-                    Filtros
+                    {{ 'common.filters' | translate }}
                     <span class="rl-filter-count" *ngIf="activeFilterCount">{{ activeFilterCount }}</span>
                 </button>
 
                 <div class="rl-view-switch">
                     <button [class.is-active]="viewMode === 'list'" (click)="setViewMode('list')"
-                            aria-label="Vista lista">
+                            [attr.aria-label]="'tenants.view_list' | translate">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round">
                             <line x1="8" y1="6" x2="21" y2="6"></line>
@@ -157,7 +157,7 @@
                         </svg>
                     </button>
                     <button [class.is-active]="viewMode === 'grid'" (click)="setViewMode('grid')"
-                            aria-label="Vista cuadrícula">
+                            [attr.aria-label]="'tenants.view_grid' | translate">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="7" height="7"></rect>
@@ -179,18 +179,18 @@
                     </select>
                 </div>
                 <div class="rl-select-group">
-                    <label>Tipo de rol</label>
+                    <label>{{ 'roles.role_type' | translate }}</label>
                     <select [(ngModel)]="filterType" (change)="onFilterChange()">
                         <option value="all">{{ 'common.all' | translate }}</option>
-                        <option value="system">Sistema</option>
-                        <option value="custom">Personalizados</option>
+                        <option value="system">{{ 'roles.type_system' | translate }}</option>
+                        <option value="custom">{{ 'roles.type_custom' | translate }}</option>
                     </select>
                 </div>
                 <div class="rl-select-group">
                     <label>{{ 'users.assigned_users' | translate }}</label>
                     <select [(ngModel)]="filterUsers" (change)="onFilterChange()">
                         <option value="all">{{ 'common.all' | translate }}</option>
-                        <option value="with">Con usuarios</option>
+                        <option value="with">{{ 'roles.with_users' | translate }}</option>
                         <option value="without">{{ 'users.no_users' | translate }}</option>
                     </select>
                 </div>
@@ -228,7 +228,7 @@
                      (click)="selectRole(r)">
                     <span class="rl-td rl-td--id">#{{ r.id }}</span>
                     <span class="rl-td"><span class="rl-role-badge">{{ r.name }}</span></span>
-                    <span class="rl-td rl-td--desc">{{ r.description || 'Sin descripción' }}</span>
+                    <span class="rl-td rl-td--desc">{{ r.description || ('roles.no_description' | translate) }}</span>
                     <span class="rl-td">
                         <span class="rl-avatars"
                               *ngIf="usersForRole(r).length"
@@ -240,7 +240,7 @@
                                 <span class="avatar-tip" role="tooltip">
                                     <strong class="avatar-tip-name">{{ userTitle(u) }}</strong>
                                     <span class="avatar-tip-meta" *ngIf="u.email && u.full_name">{{ u.email }}</span>
-                                    <span class="avatar-tip-meta">{{ u.is_active === false ? 'Inactivo' : 'Activo' }}</span>
+                                    <span class="avatar-tip-meta">{{ (u.is_active === false ? 'common.inactive' : 'common.active') | translate }}</span>
                                 </span>
                             </span>
                             <span class="avatar-more avatar-more-sm" *ngIf="extraUsersForRole(r) > 0">
@@ -253,7 +253,7 @@
                         <span class="rl-status" [class.rl-status--active]="r.is_active !== false"
                               [class.rl-status--inactive]="r.is_active === false">
                             <span class="rl-status-dot"></span>
-                            {{ r.is_active === false ? 'Inactivo' : 'Activo' }}
+                            {{ (r.is_active === false ? 'common.inactive' : 'common.active') | translate }}
                         </span>
                     </span>
 
@@ -261,7 +261,7 @@
                     <span class="rl-td rl-t-actions" (click)="$event.stopPropagation()"
                           [class.has-open-menu]="openRowMenuId === r.id">
                         <div class="kebab-wrap" [class.is-open]="openRowMenuId === r.id">
-                            <button class="kebab" (click)="toggleRowMenu(r.id, $event)" title="Más opciones">
+                            <button class="kebab" (click)="toggleRowMenu(r.id, $event)" [attr.title]="'meetings.more_options' | translate">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="1"></circle>
@@ -284,7 +284,7 @@
                                         <path d="M12 20h9"></path>
                                         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
                                     </svg>
-                                    Editar
+                                    {{ 'common.edit' | translate }}
                                 </button>
                                 <button (click)="toggleActive(r, $event); closeRowMenu()">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -292,7 +292,7 @@
                                         <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
                                         <line x1="12" y1="2" x2="12" y2="12"></line>
                                     </svg>
-                                    {{ r.is_active === false ? 'Activar' : 'Desactivar' }}
+                                    {{ (r.is_active === false ? 'users.activate' : 'users.deactivate') | translate }}
                                 </button>
                                 <div class="kebab-divider"></div>
                                 <button class="kebab-danger" (click)="deleteRole(r, $event); closeRowMenu()">
@@ -302,7 +302,7 @@
                                         <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                                         <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                                     </svg>
-                                    Eliminar
+                                    {{ 'common.delete' | translate }}
                                 </button>
                             </div>
                         </div>
@@ -310,7 +310,7 @@
                 </div>
 
                 <div class="rl-empty" *ngIf="!pagedRoles.length">
-                    <h4>No hay roles que coincidan con los filtros.</h4>
+                    <h4>{{ 'roles.no_roles_match' | translate }}</h4>
                     <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">{{ 'common.clear_filters' | translate }}</button>
                 </div>
             </section>
@@ -326,10 +326,10 @@
                         <span class="rl-status" [class.rl-status--active]="r.is_active !== false"
                               [class.rl-status--inactive]="r.is_active === false">
                             <span class="rl-status-dot"></span>
-                            {{ r.is_active === false ? 'Inactivo' : 'Activo' }}
+                            {{ (r.is_active === false ? 'common.inactive' : 'common.active') | translate }}
                         </span>
                     </div>
-                    <p class="rl-card-desc">{{ r.description || 'Sin descripción' }}</p>
+                    <p class="rl-card-desc">{{ r.description || ('roles.no_description' | translate) }}</p>
                     <div class="rl-card-foot">
                         <span class="rl-avatars">
                             <span class="avatar avatar-sm avatar-tip-host"
@@ -356,7 +356,7 @@
                 <div class="rl-pg-controls">
                     <button class="rl-pg-btn"
                             [disabled]="currentPage === 1"
-                            (click)="setPage(currentPage - 1)" aria-label="Anterior">
+                            (click)="setPage(currentPage - 1)" [attr.aria-label]="'common.previous' | translate">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="15 18 9 12 15 6"></polyline>
@@ -368,14 +368,14 @@
                             (click)="setPage(i + 1)">{{ i + 1 }}</button>
                     <button class="rl-pg-btn"
                             [disabled]="currentPage === totalFilteredPages"
-                            (click)="setPage(currentPage + 1)" aria-label="Siguiente">
+                            (click)="setPage(currentPage + 1)" [attr.aria-label]="'common.next' | translate">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
                     </button>
                 </div>
-                <span class="rl-pg-size">Mostrar {{ pageSize }}</span>
+                <span class="rl-pg-size">{{ 'projects.show' | translate }} {{ pageSize }}</span>
             </section>
         </div>
 
@@ -386,10 +386,10 @@
 
             <article class="rl-card">
                 <header class="rl-card-head">
-                    <h3>Rol seleccionado</h3>
+                    <h3>{{ 'roles.selected_role' | translate }}</h3>
                     <button class="rl-icon-btn rl-icon-btn--ghost"
                             (click)="togglePanel()"
-                            [title]="panelCollapsed ? 'Expandir' : 'Contraer'">
+                            [title]="(panelCollapsed ? 'roles.expand' : 'roles.collapse') | translate">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round">
                             <polyline *ngIf="!panelCollapsed" points="18 15 12 9 6 15"></polyline>
@@ -409,15 +409,15 @@
                                 <span class="rl-status" [class.rl-status--active]="sel.is_active !== false"
                                       [class.rl-status--inactive]="sel.is_active === false">
                                     <span class="rl-status-dot"></span>
-                                    {{ sel.is_active === false ? 'Inactivo' : 'Activo' }}
+                                    {{ (sel.is_active === false ? 'common.inactive' : 'common.active') | translate }}
                                 </span>
                             </div>
-                            <p class="rl-selected-desc">{{ sel.description || 'Sin descripción' }}</p>
+                            <p class="rl-selected-desc">{{ sel.description || ('roles.no_description' | translate) }}</p>
                         </div>
                     </div>
 
                     <dl class="rl-selected-meta">
-                        <div><dt>ID de rol</dt><dd>#{{ sel.id }}</dd></div>
+                        <div><dt>{{ 'roles.role_id' | translate }}</dt><dd>#{{ sel.id }}</dd></div>
                         <div><dt>{{ 'common.status' | translate }}</dt><dd>{{ roleTypeLabel(sel) }}</dd></div>
                         <div><dt>{{ 'users.assigned_users' | translate }}</dt><dd>{{ usersCountForRole(sel) }}</dd></div>
                         <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(sel.created_at) }}</dd></div>
@@ -444,12 +444,12 @@
                     </div>
                 </ng-container>
 
-                <p class="rl-empty-side" *ngIf="!selectedRole">Selecciona un rol para ver sus detalles.</p>
+                <p class="rl-empty-side" *ngIf="!selectedRole">{{ 'roles.select_to_see_details' | translate }}</p>
             </article>
 
             <!-- Resumen de permisos — global, no del rol -->
             <article class="rl-card" *ngIf="permSummary">
-                <header class="rl-card-head"><h3>Resumen de permisos</h3></header>
+                <header class="rl-card-head"><h3>{{ 'roles.permissions_summary' | translate }}</h3></header>
                 <ul class="rl-perm-list">
                     <li>
                         <span class="rl-perm-ico">
@@ -460,7 +460,7 @@
                                 <polyline points="2 12 12 17 22 12"></polyline>
                             </svg>
                         </span>
-                        <span class="rl-perm-label">Módulos habilitados</span>
+                        <span class="rl-perm-label">{{ 'roles.modules_enabled' | translate }}</span>
                         <span class="rl-perm-value">{{ permSummary.modules_count }}</span>
                     </li>
                     <li>
@@ -470,7 +470,7 @@
                                 <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
                             </svg>
                         </span>
-                        <span class="rl-perm-label">Permisos totales</span>
+                        <span class="rl-perm-label">{{ 'roles.total_permissions' | translate }}</span>
                         <span class="rl-perm-value">{{ permSummary.permissions_total }}</span>
                     </li>
                     <li>
@@ -480,7 +480,7 @@
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                             </svg>
                         </span>
-                        <span class="rl-perm-label">Permisos críticos</span>
+                        <span class="rl-perm-label">{{ 'roles.critical_permissions' | translate }}</span>
                         <span class="rl-perm-value">{{ permSummary.permissions_critical }}</span>
                     </li>
                     <li>
@@ -490,7 +490,7 @@
                                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                             </svg>
                         </span>
-                        <span class="rl-perm-label">Integraciones accesibles</span>
+                        <span class="rl-perm-label">{{ 'roles.integrations_accessible' | translate }}</span>
                         <span class="rl-perm-value">{{ permSummary.integrations_accessible }}</span>
                     </li>
                 </ul>
@@ -512,7 +512,7 @@
                     </li>
                 </ul>
                 <p class="rl-empty-side" *ngIf="!selectedActivity.length">
-                    {{ selectedRole ? 'Sin actividad registrada para este rol.' : 'Selecciona un rol.' }}
+                    {{ (selectedRole ? 'roles.no_activity_for_role' : 'roles.select_a_role') | translate }}
                 </p>
             </article>
         </aside>
@@ -526,7 +526,7 @@
 <div class="rl-modal-overlay" *ngIf="showRoleModal" (click)="closeRoleModal()">
     <div class="rl-modal rl-modal--wide" (click)="$event.stopPropagation()">
         <header class="rl-modal-head">
-            <h3>{{ roleModalMode === 'create' ? 'Crear nuevo rol' : 'Editar rol' }}</h3>
+            <h3>{{ (roleModalMode === 'create' ? 'roles.create_new_role' : 'roles.edit_role') | translate }}</h3>
             <button class="rl-icon-btn" (click)="closeRoleModal()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
@@ -542,14 +542,14 @@
                 <div class="rl-form-row">
                     <label class="rl-field">
                         <span>{{ 'roles.role_name' | translate }} <em>*</em></span>
-                        <input type="text" [(ngModel)]="roleForm.name" placeholder="ej: supervisor" autofocus/>
+                        <input type="text" [(ngModel)]="roleForm.name" [placeholder]="'roles.role_name_placeholder' | translate" autofocus/>
                     </label>
                     <label class="rl-field rl-field--toggle">
                         <span>{{ 'common.status' | translate }}</span>
                         <div class="rl-toggle">
                             <input type="checkbox" [(ngModel)]="roleForm.is_active" id="rl-active-toggle"/>
                             <label for="rl-active-toggle"></label>
-                            <span>{{ roleForm.is_active ? 'Activo' : 'Inactivo' }}</span>
+                            <span>{{ (roleForm.is_active ? 'common.active' : 'common.inactive') | translate }}</span>
                         </div>
                     </label>
                 </div>
@@ -557,13 +557,13 @@
                 <label class="rl-field">
                     <span>{{ 'projects.description' | translate }}</span>
                     <textarea [(ngModel)]="roleForm.description" rows="2"
-                              placeholder="Describe el alcance y propósito del rol…"></textarea>
+                              [placeholder]="'roles.role_description_placeholder' | translate"></textarea>
                 </label>
 
                 <div class="rl-perm-matrix">
                     <header>
-                        <span class="rl-perm-title">Permisos por módulo y vista</span>
-                        <span class="rl-perm-sub">Marca lo que este rol podrá ver y hacer dentro de la plataforma.</span>
+                        <span class="rl-perm-title">{{ 'roles.permissions_matrix_title' | translate }}</span>
+                        <span class="rl-perm-sub">{{ 'roles.permissions_matrix_sub' | translate }}</span>
                     </header>
 
                     <div class="rl-perm-grid">
@@ -596,9 +596,9 @@
                     <button type="button" class="rl-btn rl-btn--primary"
                             [disabled]="isSavingRole || !roleForm.name.trim()"
                             (click)="saveRole()">
-                        {{ isSavingRole
-                            ? 'Guardando…'
-                            : (roleModalMode === 'create' ? 'Crear rol' : 'Guardar cambios') }}
+                        {{ (isSavingRole
+                            ? 'common.saving'
+                            : (roleModalMode === 'create' ? 'roles.create_role' : 'common.save_changes')) | translate }}
                     </button>
                 </div>
             </div>
@@ -613,7 +613,7 @@
 <div class="rl-modal-overlay" *ngIf="showDetailModal && detailRole" (click)="closeDetailModal()">
     <div class="rl-modal" (click)="$event.stopPropagation()">
         <header class="rl-modal-head">
-            <h3>Detalle del rol</h3>
+            <h3>{{ 'roles.role_detail' | translate }}</h3>
             <button class="rl-icon-btn" (click)="closeDetailModal()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
@@ -633,10 +633,10 @@
                         <span class="rl-status" [class.rl-status--active]="detailRole.is_active !== false"
                               [class.rl-status--inactive]="detailRole.is_active === false">
                             <span class="rl-status-dot"></span>
-                            {{ detailRole.is_active === false ? 'Inactivo' : 'Activo' }}
+                            {{ (detailRole.is_active === false ? 'common.inactive' : 'common.active') | translate }}
                         </span>
                     </div>
-                    <p class="rl-selected-desc">{{ detailRole.description || 'Sin descripción' }}</p>
+                    <p class="rl-selected-desc">{{ detailRole.description || ('roles.no_description' | translate) }}</p>
                 </div>
             </div>
 
@@ -644,13 +644,13 @@
                 <div><dt>ID</dt><dd>#{{ detailRole.id }}</dd></div>
                 <div><dt>{{ 'common.status' | translate }}</dt><dd>{{ roleTypeLabel(detailRole) }}</dd></div>
                 <div><dt>{{ 'users.assigned_users' | translate }}</dt><dd>{{ usersCountForRole(detailRole) }}</dd></div>
-                <div><dt>Permisos activos</dt><dd>{{ selectedPermissions.length }}</dd></div>
+                <div><dt>{{ 'roles.active_permissions' | translate }}</dt><dd>{{ selectedPermissions.length }}</dd></div>
                 <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(detailRole.created_at) }}</dd></div>
                 <div><dt>{{ 'common.last_edit' | translate }}</dt><dd>{{ formatDate(detailRole.updated_at) }}</dd></div>
             </dl>
 
             <section class="rl-detail-section" *ngIf="selectedUsers.length">
-                <h4>Usuarios con este rol ({{ selectedUsers.length }})</h4>
+                <h4>{{ 'roles.users_with_role' | translate:{ n: selectedUsers.length } }}</h4>
                 <ul class="rl-detail-users">
                     <li *ngFor="let u of selectedUsers; trackBy: trackUser">
                         <span class="avatar avatar-sm" [style.background]="avatarColor(u.email || '')">
@@ -664,21 +664,21 @@
                               [class.rl-status--active]="u.is_active !== false"
                               [class.rl-status--inactive]="u.is_active === false">
                             <span class="rl-status-dot"></span>
-                            {{ u.is_active === false ? 'Inactivo' : 'Activo' }}
+                            {{ (u.is_active === false ? 'common.inactive' : 'common.active') | translate }}
                         </span>
                     </li>
                 </ul>
             </section>
 
             <section class="rl-detail-section">
-                <h4>Permisos asignados ({{ selectedPermissions.length }})</h4>
+                <h4>{{ 'roles.assigned_permissions' | translate:{ n: selectedPermissions.length } }}</h4>
                 <ul class="rl-detail-perms" *ngIf="selectedPermissions.length">
                     <li *ngFor="let p of selectedPermissions">
                         <span class="rl-perm-mod">{{ p.module_key }}</span>
                         <span class="rl-perm-act">{{ actionLabel(p.action) }}</span>
                     </li>
                 </ul>
-                <p class="rl-empty-side" *ngIf="!selectedPermissions.length">Este rol aún no tiene permisos asignados.</p>
+                <p class="rl-empty-side" *ngIf="!selectedPermissions.length">{{ 'roles.no_permissions_assigned' | translate }}</p>
             </section>
 
             <div class="rl-modal-actions">
@@ -698,7 +698,7 @@
 <div class="rl-modal-overlay" *ngIf="showDeleteModal && deleteTarget" (click)="cancelDelete()">
     <div class="rl-modal rl-modal--sm" (click)="$event.stopPropagation()">
         <header class="rl-modal-head">
-            <h3>Eliminar rol</h3>
+            <h3>{{ 'roles.delete_role' | translate }}</h3>
             <button class="rl-icon-btn" (click)="cancelDelete()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
@@ -709,12 +709,12 @@
         </header>
         <div class="rl-modal-body">
             <p style="margin: 0 0 12px; color:#475569; font-size:0.875rem;">
-                ¿Eliminar el rol <strong>{{ deleteTarget.name }}</strong>? Esta acción no se puede deshacer.
+                {{ 'roles.confirm_delete_prefix' | translate }} <strong>{{ deleteTarget.name }}</strong>{{ 'roles.confirm_delete_suffix' | translate }}
             </p>
             <div class="rl-modal-actions">
                 <button class="rl-btn rl-btn--ghost" (click)="cancelDelete()" [disabled]="isDeleting">{{ 'common.cancel' | translate }}</button>
                 <button class="rl-btn rl-btn--danger" (click)="confirmDelete()" [disabled]="isDeleting">
-                    {{ isDeleting ? 'Eliminando…' : 'Sí, eliminar' }}
+                    {{ (isDeleting ? 'roles.deleting' : 'common.yes_delete') | translate }}
                 </button>
             </div>
         </div>

@@ -5,11 +5,11 @@
   <section class="cal-toolbar">
     <div class="cal-toolbar-left">
       <div class="cal-nav-group">
-        <button class="cal-icon-btn" (click)="prevMonth()" aria-label="Mes anterior">
+        <button class="cal-icon-btn" (click)="prevMonth()" [attr.aria-label]="'calendar.previous_month' | translate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <button class="cal-icon-btn" (click)="nextMonth()" aria-label="Mes siguiente">
+        <button class="cal-icon-btn" (click)="nextMonth()" [attr.aria-label]="'calendar.next_month' | translate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
@@ -22,13 +22,13 @@
       <div class="cal-view-switch" role="tablist">
         <button class="cal-view-tab"
                 [class.is-active]="viewMode === 'month'"
-                (click)="setViewMode('month')">Mes</button>
+                (click)="setViewMode('month')">{{ 'calendar.month' | translate }}</button>
         <button class="cal-view-tab"
                 [class.is-active]="viewMode === 'week'"
-                (click)="setViewMode('week')">Semana</button>
+                (click)="setViewMode('week')">{{ 'calendar.week' | translate }}</button>
         <button class="cal-view-tab"
                 [class.is-active]="viewMode === 'agenda'"
-                (click)="setViewMode('agenda')">Agenda</button>
+                (click)="setViewMode('agenda')">{{ 'calendar.agenda' | translate }}</button>
       </div>
 
       <button class="cal-btn cal-btn--ghost"
@@ -38,7 +38,7 @@
              stroke-linecap="round" stroke-linejoin="round" class="cal-btn-ico">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
         </svg>
-        Filtros
+        {{ 'common.filters' | translate }}
       </button>
 
       <!-- Único trigger del lado derecho: dropdown con Conectar Google /
@@ -48,7 +48,7 @@
                 [class.is-active]="showSourcesMenu"
                 (click)="toggleSourcesMenu()"
                 aria-haspopup="true"
-                aria-label="Cuentas y sincronización">
+                [attr.aria-label]="'calendar.accounts_sync' | translate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round" class="cal-btn-ico">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -56,7 +56,7 @@
             <line x1="8" y1="2" x2="8" y2="6"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          Calendarios
+          {{ 'settings.calendars' | translate }}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round" class="cal-btn-chev">
             <polyline points="6 9 12 15 18 9"/>
@@ -66,7 +66,7 @@
 
         <div class="cal-sources-menu" *ngIf="showSourcesMenu">
           <div class="cal-sources-section">
-            <div class="cal-sources-title">Conectadas</div>
+            <div class="cal-sources-title">{{ 'calendar.connected' | translate }}</div>
             <p class="cal-sources-empty" *ngIf="!accounts.length">
               {{ 'calendar.empty_no_account' | translate }}
             </p>
@@ -79,10 +79,10 @@
                   <span class="cal-source-email">{{ a.account_email }}</span>
                   <span class="cal-source-status"
                         [class.is-off]="!a.is_active">
-                    {{ a.is_active ? 'Activa' : 'Inactiva' }}
+                    {{ (a.is_active ? 'integrations.active' : 'integrations.inactive') | translate }}
                   </span>
                 </div>
-                <button class="cal-source-disconnect" (click)="disconnect(a)" title="Desconectar">
+                <button class="cal-source-disconnect" (click)="disconnect(a)" [attr.title]="'integrations.disconnect' | translate">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                        stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -96,14 +96,14 @@
           <div class="cal-sources-divider"></div>
 
           <div class="cal-sources-section">
-            <div class="cal-sources-title">Conectar nueva cuenta</div>
+            <div class="cal-sources-title">{{ 'calendar.connect_new_account' | translate }}</div>
             <button class="cal-source-cta cal-source-cta--google" (click)="connect('google')">
               <span class="cal-source-badge cal-source-badge--google">G</span>
-              <span>Conectar Google Calendar</span>
+              <span>{{ 'calendar.connect_google' | translate }}</span>
             </button>
             <button class="cal-source-cta cal-source-cta--ms" (click)="connect('microsoft')">
               <span class="cal-source-badge cal-source-badge--microsoft">M</span>
-              <span>Conectar Microsoft 365</span>
+              <span>{{ 'calendar.connect_microsoft' | translate }}</span>
             </button>
           </div>
 
@@ -123,7 +123,7 @@
                   <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/>
                 </svg>
               </span>
-              <span>{{ isSyncing ? 'Sincronizando…' : 'Sincronizar ahora' }}</span>
+              <span>{{ (isSyncing ? 'calendar.syncing' : 'calendar.sync_now') | translate }}</span>
             </button>
           </div>
         </div>
@@ -139,19 +139,19 @@
     <div class="cal-filter-field">
       <span class="cal-filter-label">{{ 'common.search' | translate }}</span>
       <input type="text" class="cal-filter-input"
-             placeholder="Título, asistente, responsable…"
+             [placeholder]="'calendar.search_placeholder' | translate"
              [(ngModel)]="filterSearch"/>
     </div>
     <div class="cal-filter-field">
-      <span class="cal-filter-label">Estado reuniones</span>
+      <span class="cal-filter-label">{{ 'calendar.meetings_status' | translate }}</span>
       <div class="cal-segmented">
-        <button [class.is-active]="filterStatus==='all'"     (click)="filterStatus='all'">Todas</button>
-        <button [class.is-active]="filterStatus==='linked'"  (click)="filterStatus='linked'">Con acta</button>
+        <button [class.is-active]="filterStatus==='all'"     (click)="filterStatus='all'">{{ 'common.all' | translate }}</button>
+        <button [class.is-active]="filterStatus==='linked'"  (click)="filterStatus='linked'">{{ 'calendar.with_minutes' | translate }}</button>
         <button [class.is-active]="filterStatus==='pending'" (click)="filterStatus='pending'">{{ 'sidebar.pending' | translate }}</button>
       </div>
     </div>
     <div class="cal-filter-field">
-      <span class="cal-filter-label">Capas</span>
+      <span class="cal-filter-label">{{ 'calendar.layers' | translate }}</span>
       <div class="cal-toggles">
         <label class="cal-toggle">
           <input type="checkbox" [(ngModel)]="showMeetings"/>
@@ -166,7 +166,7 @@
         <label class="cal-toggle">
           <input type="checkbox" [(ngModel)]="showCompletedTasks"/>
           <span class="cal-toggle-dot cal-toggle-dot--emerald"></span>
-          Incluir completadas
+          {{ 'calendar.include_completed' | translate }}
         </label>
       </div>
     </div>
@@ -218,7 +218,7 @@
                 </li>
               </ul>
               <span class="cal-cell-more" *ngIf="hiddenCount(cell) > 0">
-                +{{ hiddenCount(cell) }} más
+                +{{ hiddenCount(cell) }} {{ 'common.more' | translate }}
               </span>
             </div>
           </ng-container>
@@ -261,7 +261,7 @@
                 <span class="cal-pill-title">{{ t.title }}</span>
               </li>
               <li class="cal-cell-empty"
-                  *ngIf="!cell.events.length && !cell.tasks.length">Sin actividad</li>
+                  *ngIf="!cell.events.length && !cell.tasks.length">{{ 'calendar.no_activity' | translate }}</li>
             </ul>
           </div>
         </div>
@@ -271,7 +271,7 @@
       <ng-container *ngIf="viewMode === 'agenda'">
         <div class="cal-agenda">
           <p class="cal-agenda-empty" *ngIf="!agendaGroups.length">
-            No hay reuniones en este rango. Sincroniza tu calendario externo para verlas aquí.
+            {{ 'calendar.no_meetings_in_range' | translate }}
           </p>
           <div class="cal-agenda-day" *ngFor="let g of agendaGroups">
             <h3 class="cal-agenda-date">{{ g.label }}</h3>
@@ -338,7 +338,7 @@
           <button class="cal-btn cal-btn--primary cal-btn--sm"
                   type="button"
                   (click)="openNewTaskForSelectedDay()"
-                  title="Crear una nueva tarea para este día">
+                  [attr.title]="'calendar.create_task_for_day' | translate">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -347,7 +347,7 @@
             {{ 'common.new_task' | translate }}
           </button>
           <button class="cal-icon-btn cal-icon-btn--soft"
-                  (click)="closeDetailPanel()" aria-label="Cerrar panel">
+                  (click)="closeDetailPanel()" [attr.aria-label]="'calendar.close_panel' | translate">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"/>
@@ -402,7 +402,7 @@
                      class="cal-link-soft">{{ 'common.view_minutes' | translate }}</a>
                   <button *ngIf="ev.meeting_url"
                           class="cal-link-soft"
-                          (click)="openMeetingLink(ev, $event)">Unirse →</button>
+                          (click)="openMeetingLink(ev, $event)">{{ 'calendar.join' | translate }}</button>
                 </div>
               </div>
               <div class="cal-meeting-actions cal-meeting-actions--solo"
@@ -412,7 +412,7 @@
                    class="cal-link-soft">{{ 'common.view_minutes' | translate }}</a>
                 <button *ngIf="ev.meeting_url"
                         class="cal-link-soft"
-                        (click)="openMeetingLink(ev, $event)">Unirse →</button>
+                        (click)="openMeetingLink(ev, $event)">{{ 'calendar.join' | translate }}</button>
               </div>
             </div>
           </li>
@@ -462,7 +462,7 @@
       <!-- Deadlines -->
       <div class="cal-panel-section cal-panel-section--deadlines">
         <header class="cal-section-head">
-          <h4>Vencimientos</h4>
+          <h4>{{ 'calendar.deadlines' | translate }}</h4>
           <a class="cal-section-link" [routerLink]="['/admin/pendientes']">{{ 'common.show_all' | translate }}</a>
         </header>
         <p class="cal-panel-empty" *ngIf="!deadlines.length">
@@ -484,7 +484,7 @@
                 <span class="cal-deadline-when">{{ d.when }}</span>
               </div>
             </div>
-            <span class="cal-deadline-badge" *ngIf="d.urgent">Vence hoy</span>
+            <span class="cal-deadline-badge" *ngIf="d.urgent">{{ 'calendar.due_today' | translate }}</span>
           </li>
         </ul>
       </div>
@@ -492,31 +492,31 @@
       <!-- Notes -->
       <div class="cal-panel-section cal-panel-section--notes">
         <header class="cal-section-head">
-          <h4>Notas</h4>
+          <h4>{{ 'calendar.notes' | translate }}</h4>
           <button class="cal-section-link cal-section-link--btn" (click)="openNoteEditor()">
-            + Agregar nota
+            + {{ 'calendar.add_note' | translate }}
           </button>
         </header>
         <div class="cal-note-form" *ngIf="showNoteEditor">
           <textarea class="cal-note-input"
                     rows="3"
-                    placeholder="Escribe una nota para este día…"
+                    [placeholder]="'calendar.note_placeholder' | translate"
                     [(ngModel)]="newNoteText"
                     (keydown.enter)="$event.preventDefault(); addNote()"></textarea>
           <div class="cal-note-form-actions">
             <button class="cal-link-soft" (click)="cancelNoteEditor()">{{ 'common.cancel' | translate }}</button>
-            <button class="cal-btn cal-btn--soft" (click)="addNote()">Guardar nota</button>
+            <button class="cal-btn cal-btn--soft" (click)="addNote()">{{ 'calendar.save_note' | translate }}</button>
           </div>
         </div>
         <p class="cal-panel-empty" *ngIf="!notes.length && !showNoteEditor">
-          Aún no hay notas. Toca "Agregar nota" para registrar una idea.
+          {{ 'calendar.no_notes_yet' | translate }}
         </p>
         <ul class="cal-note-list" *ngIf="notes.length">
           <li *ngFor="let n of notes; trackBy: trackById" class="cal-note">
             <p class="cal-note-text">{{ n.text }}</p>
             <div class="cal-note-foot">
-              <span class="cal-note-meta">Actualizado por ti · {{ noteDate(n) }}</span>
-              <button class="cal-note-del" (click)="removeNote(n.id)" aria-label="Eliminar nota">
+              <span class="cal-note-meta">{{ 'calendar.updated_by_you' | translate }} · {{ noteDate(n) }}</span>
+              <button class="cal-note-del" (click)="removeNote(n.id)" [attr.aria-label]="'calendar.delete_note' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"/>
@@ -531,7 +531,7 @@
 
     <!-- Reopen panel handle when closed -->
     <button class="cal-panel-reopen" *ngIf="!showDetailPanel"
-            (click)="openDetailPanel()" aria-label="Abrir panel del día">
+            (click)="openDetailPanel()" [attr.aria-label]="'calendar.open_day_panel' | translate">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"/>
@@ -571,20 +571,20 @@
         <div class="cal-form-row">
           <label class="cal-form-label">{{ 'common.title' | translate }}</label>
           <input type="text" class="cal-input" [(ngModel)]="newTask.title"
-                 placeholder="Ej: Revisar pruebas funcionales en QA" />
+                 [placeholder]="'calendar.task_title_placeholder' | translate" />
         </div>
 
         <div class="cal-form-grid">
           <div class="cal-form-row">
             <label class="cal-form-label">{{ 'project_detail.owner' | translate }}</label>
-            <input type="text" class="cal-input" [(ngModel)]="newTask.owner_name" placeholder="Nombre" />
+            <input type="text" class="cal-input" [(ngModel)]="newTask.owner_name" [placeholder]="'common.name' | translate" />
           </div>
           <div class="cal-form-row">
             <label class="cal-form-label">{{ 'common.email' | translate }}</label>
             <input type="email" class="cal-input" [(ngModel)]="newTask.owner_email" placeholder="correo@empresa.com" />
           </div>
           <div class="cal-form-row">
-            <label class="cal-form-label">Prioridad</label>
+            <label class="cal-form-label">{{ 'pendientes.priority' | translate }}</label>
             <select class="cal-input" [(ngModel)]="newTask.priority">
               <option value="alta">{{ 'common.high' | translate }}</option>
               <option value="media">{{ 'common.medium' | translate }}</option>
@@ -599,15 +599,15 @@
             <input type="date" class="cal-input" [(ngModel)]="newTask.due_date" />
           </div>
           <div class="cal-form-row">
-            <label class="cal-form-label">Hora <small>(opcional)</small></label>
+            <label class="cal-form-label">{{ 'calendar.time' | translate }} <small>({{ 'common.optional' | translate }})</small></label>
             <input type="time" class="cal-input" [(ngModel)]="newTask.due_time" />
           </div>
         </div>
 
         <div class="cal-form-row">
-          <label class="cal-form-label">{{ 'projects.description' | translate }} <small>(opcional)</small></label>
+          <label class="cal-form-label">{{ 'projects.description' | translate }} <small>({{ 'common.optional' | translate }})</small></label>
           <textarea class="cal-input cal-textarea" rows="3" [(ngModel)]="newTask.description"
-                    placeholder="Detalle, contexto, criterios de aceptación..."></textarea>
+                    [placeholder]="'pendientes.description_placeholder' | translate"></textarea>
         </div>
       </div>
 
@@ -616,7 +616,7 @@
         <button type="button" class="cal-btn cal-btn--primary"
                 (click)="submitNewTask()"
                 [disabled]="isCreatingTask || !newTask.session_id || !newTask.title.trim()">
-          {{ isCreatingTask ? 'Creando…' : 'Crear tarea' }}
+          {{ (isCreatingTask ? 'pendientes.creating' : 'pendientes.create_task') | translate }}
         </button>
       </footer>
     </div>

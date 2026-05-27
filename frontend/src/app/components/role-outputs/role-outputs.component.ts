@@ -8,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface Template { id: number; name: string; role_type: string; output_format: string; }
 interface SessionOutput { id: number; title: string; body: string; output_format: string; template_id: number; created_at: string; }
@@ -15,7 +16,7 @@ interface SessionOutput { id: number; title: string; body: string; output_format
 @Component({
     selector: 'app-role-outputs',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
     templateUrl: './role-outputs.component.html',
     styleUrls: ['./role-outputs.component.css'],
 })

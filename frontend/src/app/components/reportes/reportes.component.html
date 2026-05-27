@@ -5,8 +5,8 @@
          ============================================================ -->
     <header class="rp-header">
         <div class="rp-header-text">
-            <h1>Reportes</h1>
-            <p class="rp-subtitle">Haz seguimiento al rendimiento, progreso y resultados de tus proyectos y reuniones.</p>
+            <h1>{{ 'sidebar.reports' | translate }}</h1>
+            <p class="rp-subtitle">{{ 'reports.subtitle' | translate }}</p>
         </div>
 
         <div class="rp-header-actions">
@@ -30,13 +30,13 @@
                 <div class="rp-period-menu" *ngIf="showPeriodMenu">
                     <button [class.is-active]="period === 'week'"  (click)="pickPeriod('week')">{{ 'common.this_week' | translate }}</button>
                     <button [class.is-active]="period === 'month'" (click)="pickPeriod('month')">{{ 'common.this_month' | translate }}</button>
-                    <button [class.is-active]="period === 'all'"   (click)="pickPeriod('all')">Siempre</button>
+                    <button [class.is-active]="period === 'all'"   (click)="pickPeriod('all')">{{ 'reports.always' | translate }}</button>
                     <div class="rp-period-divider"></div>
                     <div class="rp-period-custom">
-                        <span class="rp-period-title">Rango personalizado</span>
-                        <label>Desde</label>
+                        <span class="rp-period-title">{{ 'reports.custom_range' | translate }}</span>
+                        <label>{{ 'dashboard.range_from' | translate }}</label>
                         <input type="date" name="rp_custom_start" [(ngModel)]="customStart"/>
-                        <label>Hasta</label>
+                        <label>{{ 'dashboard.range_to' | translate }}</label>
                         <input type="date" name="rp_custom_end"   [(ngModel)]="customEnd"/>
                         <label>{{ 'common.project' | translate }}</label>
                         <!-- Sin (change) automático: el proyecto se aplica
@@ -48,7 +48,7 @@
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <button class="rp-btn rp-btn--primary rp-btn--block"
-                                (click)="applyCustomRange()">Aplicar rango</button>
+                                (click)="applyCustomRange()">{{ 'reports.apply_range' | translate }}</button>
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                Exportar
+                {{ 'reports.export' | translate }}
             </button>
         </div>
     </header>
@@ -133,7 +133,7 @@
                             <line x1="12" y1="19" x2="12" y2="5"></line>
                             <polyline points="6 12 12 5 18 12"></polyline>
                         </svg>
-                        {{ metricProjects }} este mes
+                        {{ metricProjects }} {{ 'reports.this_month_short' | translate }}
                     </span>
                 </div>
             </article>
@@ -147,7 +147,7 @@
                     </svg>
                 </div>
                 <div class="rp-kpi-body">
-                    <span class="rp-kpi-label">Tasa de finalización</span>
+                    <span class="rp-kpi-label">{{ 'reports.completion_rate' | translate }}</span>
                     <span class="rp-kpi-value">{{ metricCompletionRate }}%</span>
                     <span class="rp-kpi-delta">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -155,7 +155,7 @@
                             <line x1="12" y1="19" x2="12" y2="5"></line>
                             <polyline points="6 12 12 5 18 12"></polyline>
                         </svg>
-                        {{ data.metrics.action_items_by_status['done'] || 0 }} tareas hechas
+                        {{ data.metrics.action_items_by_status['done'] || 0 }} {{ 'reports.tasks_done' | translate }}
                     </span>
                 </div>
             </article>
@@ -179,7 +179,7 @@
                             <line x1="12" y1="19" x2="12" y2="5"></line>
                             <polyline points="6 12 12 5 18 12"></polyline>
                         </svg>
-                        {{ data.metrics.sessions_count }} reuniones
+                        {{ data.metrics.sessions_count }} {{ 'reports.meetings_lc' | translate }}
                     </span>
                 </div>
             </article>
@@ -202,7 +202,7 @@
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <polyline points="6 12 12 19 18 12"></polyline>
                         </svg>
-                        Requieren atención
+                        {{ 'reports.requires_attention' | translate }}
                     </span>
                 </div>
             </article>
@@ -217,7 +217,7 @@
             <article class="rp-card">
                 <header class="rp-card-head">
                     <div class="rp-card-title">
-                        <h2>Resumen de progreso de proyectos</h2>
+                        <h2>{{ 'reports.projects_progress_summary' | translate }}</h2>
                     </div>
                     <div class="rp-card-tools">
                         <select class="rp-mini-select"
@@ -289,7 +289,7 @@
             <article class="rp-card">
                 <header class="rp-card-head">
                     <div class="rp-card-title">
-                        <h2>Decisiones en el tiempo</h2>
+                        <h2>{{ 'reports.decisions_over_time' | translate }}</h2>
                     </div>
                     <div class="rp-card-tools">
                         <select class="rp-mini-select"
@@ -299,7 +299,7 @@
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <button class="rp-card-link rp-card-link--btn" (click)="onDecisionsViewDetails()">
-                            Ver detalles
+                            {{ 'reports.see_details' | translate }}
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -358,12 +358,12 @@
                             <strong>{{ hoveredLinePoint.label }}</strong>
                         </div>
                         <span class="rp-line-tooltip-value">{{ hoveredLinePoint.value }}</span>
-                        <span class="rp-line-tooltip-sub">decisiones acumuladas</span>
+                        <span class="rp-line-tooltip-sub">{{ 'reports.cumulative_decisions' | translate }}</span>
                         <span class="rp-line-tooltip-delta"
                               *ngIf="hoveredLineDelta"
                               [class.is-up]="hoveredLineDelta.sign === '+'"
                               [class.is-down]="hoveredLineDelta.sign === '−'">
-                            {{ hoveredLineDelta.sign }}{{ hoveredLineDelta.pct }}% vs anterior
+                            {{ hoveredLineDelta.sign }}{{ hoveredLineDelta.pct }}% {{ 'reports.vs_previous' | translate }}
                         </span>
                     </div>
                     <div class="rp-line-tooltip rp-line-tooltip--static"
@@ -373,7 +373,7 @@
                             <strong>{{ linePoints[linePoints.length-1].label }}</strong>
                         </div>
                         <span class="rp-line-tooltip-value">{{ linePoints[linePoints.length-1].value }}</span>
-                        <span class="rp-line-tooltip-sub">decisiones</span>
+                        <span class="rp-line-tooltip-sub">{{ 'meetings.tabs.decisions' | translate }}</span>
                     </div>
 
                     <div class="rp-line-legend">
@@ -385,9 +385,9 @@
                 <!-- Drawer "Ver detalles" -->
                 <div class="rp-decisions-detail" id="rp-decisions-detail">
                     <div class="rp-detail-grid">
-                        <span class="rp-detail-label">Total acumulado</span>
+                        <span class="rp-detail-label">{{ 'reports.cumulative_total' | translate }}</span>
                         <span class="rp-detail-value">{{ linePoints.length ? linePoints[linePoints.length-1].value : 0 }}</span>
-                        <span class="rp-detail-label">Periodo</span>
+                        <span class="rp-detail-label">{{ 'reports.period' | translate }}</span>
                         <span class="rp-detail-value">{{ data.label }}</span>
                         <span class="rp-detail-label">{{ 'common.project' | translate }}</span>
                         <span class="rp-detail-value">{{ data.project_name }}</span>
@@ -420,13 +420,13 @@
                                 [(ngModel)]="workloadStatus">
                             <option value="all">{{ 'common.all_statuses' | translate }}</option>
                             <option value="pending">{{ 'sidebar.pending' | translate }}</option>
-                            <option value="done">Completadas</option>
-                            <option value="blocked">Bloqueadas</option>
-                            <option value="overdue">Vencidas</option>
+                            <option value="done">{{ 'project_detail.completed' | translate }}</option>
+                            <option value="blocked">{{ 'reports.blocked_plural' | translate }}</option>
+                            <option value="overdue">{{ 'project_detail.overdue' | translate }}</option>
                         </select>
                         <select class="rp-mini-select" [(ngModel)]="workloadSortBy">
                             <option value="total">{{ 'common.more_tasks' | translate }}</option>
-                            <option value="overdue">Más vencidas</option>
+                            <option value="overdue">{{ 'reports.more_overdue' | translate }}</option>
                             <option value="meetings">{{ 'dashboard.more_meetings' | translate }}</option>
                         </select>
                     </div>
@@ -460,7 +460,7 @@
                             <ng-template #donutTotal>
                                 <span class="rp-donut-value">{{ workloadTotal }}</span>
                                 <span class="rp-donut-label">
-                                    {{ workloadStatus === 'all' ? 'Tareas activas' : 'Tareas filtradas' }}
+                                    {{ (workloadStatus === 'all' ? 'reports.active_tasks' : 'reports.filtered_tasks') | translate }}
                                 </span>
                             </ng-template>
                         </div>
@@ -471,15 +471,15 @@
                         <div class="rp-workload-summary">
                             <div class="rp-workload-kpi">
                                 <span class="rp-workload-kpi-num">{{ workloadFiltered.length }}</span>
-                                <span class="rp-workload-kpi-lbl">Responsables</span>
+                                <span class="rp-workload-kpi-lbl">{{ 'reports.owners' | translate }}</span>
                             </div>
                             <div class="rp-workload-kpi rp-workload-kpi--bad">
                                 <span class="rp-workload-kpi-num">{{ metricOverdue }}</span>
-                                <span class="rp-workload-kpi-lbl">Vencidas</span>
+                                <span class="rp-workload-kpi-lbl">{{ 'project_detail.overdue' | translate }}</span>
                             </div>
                             <div class="rp-workload-kpi rp-workload-kpi--ok">
                                 <span class="rp-workload-kpi-num">{{ metricTasksCompleted }}</span>
-                                <span class="rp-workload-kpi-lbl">Completadas</span>
+                                <span class="rp-workload-kpi-lbl">{{ 'project_detail.completed' | translate }}</span>
                             </div>
                         </div>
 
@@ -502,12 +502,12 @@
                                         </span>
                                     </div>
                                     <div class="rp-workload-counts">
-                                        <span class="rp-workload-chip rp-workload-chip--pending"   *ngIf="r.by_status.pending">{{ r.by_status.pending }} pend.</span>
-                                        <span class="rp-workload-chip rp-workload-chip--done"      *ngIf="r.by_status.done">{{ r.by_status.done }} hechas</span>
-                                        <span class="rp-workload-chip rp-workload-chip--blocked"   *ngIf="r.by_status.blocked">{{ r.by_status.blocked }} bloq.</span>
-                                        <span class="rp-workload-chip rp-workload-chip--overdue"   *ngIf="r.by_status.overdue">{{ r.by_status.overdue }} vencidas</span>
-                                        <span class="rp-workload-chip rp-workload-chip--cancelled" *ngIf="r.by_status.cancelled">{{ r.by_status.cancelled }} canc.</span>
-                                        <span class="rp-workload-chip rp-workload-chip--meetings"  *ngIf="r.meetings">{{ r.meetings }} reuniones</span>
+                                        <span class="rp-workload-chip rp-workload-chip--pending"   *ngIf="r.by_status.pending">{{ r.by_status.pending }} {{ 'reports.chip_pend' | translate }}</span>
+                                        <span class="rp-workload-chip rp-workload-chip--done"      *ngIf="r.by_status.done">{{ r.by_status.done }} {{ 'reports.chip_done' | translate }}</span>
+                                        <span class="rp-workload-chip rp-workload-chip--blocked"   *ngIf="r.by_status.blocked">{{ r.by_status.blocked }} {{ 'reports.chip_blocked' | translate }}</span>
+                                        <span class="rp-workload-chip rp-workload-chip--overdue"   *ngIf="r.by_status.overdue">{{ r.by_status.overdue }} {{ 'reports.chip_overdue' | translate }}</span>
+                                        <span class="rp-workload-chip rp-workload-chip--cancelled" *ngIf="r.by_status.cancelled">{{ r.by_status.cancelled }} {{ 'reports.chip_cancelled' | translate }}</span>
+                                        <span class="rp-workload-chip rp-workload-chip--meetings"  *ngIf="r.meetings">{{ r.meetings }} {{ 'reports.meetings_lc' | translate }}</span>
                                     </div>
                                 </div>
                             </li>
@@ -515,7 +515,7 @@
                     </div>
                 </div>
                 <ng-template #workloadEmpty>
-                    <div class="rp-table-empty">Sin carga de trabajo en el periodo seleccionado.</div>
+                    <div class="rp-table-empty">{{ 'reports.no_workload_in_period' | translate }}</div>
                 </ng-template>
             </article>
         </section>
@@ -531,7 +531,7 @@
             <article class="rp-card">
                 <header class="rp-card-head">
                     <div class="rp-card-title">
-                        <h2>Actividad del equipo</h2>
+                        <h2>{{ 'reports.team_activity' | translate }}</h2>
                     </div>
                     <div class="rp-card-tools">
                         <select class="rp-mini-select"
@@ -543,7 +543,7 @@
                         <select class="rp-mini-select"
                                 [(ngModel)]="teamActivitySort"
                                 (change)="setTeamSort(teamActivitySort)">
-                            <option value="combined">Más activos</option>
+                            <option value="combined">{{ 'reports.most_active' | translate }}</option>
                             <option value="actions">{{ 'common.more_tasks' | translate }}</option>
                             <option value="meetings">{{ 'dashboard.more_meetings' | translate }}</option>
                         </select>
@@ -583,16 +583,16 @@
                     </div>
                 </div>
                 <ng-template #teamEmpty>
-                    <div class="rp-table-empty">Sin actividad del equipo en el periodo.</div>
+                    <div class="rp-table-empty">{{ 'reports.no_team_activity' | translate }}</div>
                 </ng-template>
                 <div class="rp-team-legend">
                     <span class="rp-legend-pair">
                         <span class="rp-legend-dot" style="background:#155EEF"></span>
-                        Reuniones aportadas
+                        {{ 'reports.meetings_contributed' | translate }}
                     </span>
                     <span class="rp-legend-pair">
                         <span class="rp-legend-dot" style="background:#7C3AED"></span>
-                        Tareas aportadas
+                        {{ 'reports.tasks_contributed' | translate }}
                     </span>
                 </div>
             </article>
@@ -601,7 +601,7 @@
             <article class="rp-card">
                 <header class="rp-card-head">
                     <div class="rp-card-title">
-                        <h2>Principales proyectos por progreso</h2>
+                        <h2>{{ 'reports.top_projects_by_progress' | translate }}</h2>
                     </div>
                     <div class="rp-card-tools">
                         <select class="rp-mini-select"
@@ -626,7 +626,7 @@
                         <div class="rp-tr rp-th">
                             <span>{{ 'common.project' | translate }}</span>
                             <span>{{ 'project_detail.owner' | translate }}</span>
-                            <span>Progreso</span>
+                            <span>{{ 'projects.progress' | translate }}</span>
                             <span>{{ 'common.status' | translate }}</span>
                         </div>
                         <ng-container *ngIf="topProjectsPaged.length; else emptyProjects">
@@ -659,7 +659,7 @@
                             </div>
                         </ng-container>
                         <ng-template #emptyProjects>
-                            <div class="rp-table-empty">No hay proyectos para mostrar con los filtros actuales.</div>
+                            <div class="rp-table-empty">{{ 'reports.no_projects_to_show' | translate }}</div>
                         </ng-template>
                     </div>
 
@@ -668,7 +668,7 @@
                         <div class="rp-pg-controls">
                             <button class="rp-pg-btn"
                                     [disabled]="topProjectsPage === 1"
-                                    (click)="goToTopProjectsPage(topProjectsPage - 1)" aria-label="Anterior">
+                                    (click)="goToTopProjectsPage(topProjectsPage - 1)" [attr.aria-label]="'common.previous' | translate">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                      stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="15 18 9 12 15 6"></polyline>
@@ -680,7 +680,7 @@
                                     (click)="goToTopProjectsPage(p)">{{ p }}</button>
                             <button class="rp-pg-btn"
                                     [disabled]="topProjectsPage === topProjectsPages"
-                                    (click)="goToTopProjectsPage(topProjectsPage + 1)" aria-label="Siguiente">
+                                    (click)="goToTopProjectsPage(topProjectsPage + 1)" [attr.aria-label]="'common.next' | translate">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                      stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="9 18 15 12 9 6"></polyline>
@@ -700,7 +700,7 @@
 <div class="rp-modal-backdrop" *ngIf="showExportModal" (click)="closeExportModal()">
     <div class="rp-modal" (click)="$event.stopPropagation()">
         <header class="rp-modal-head">
-            <h3>Exportar reporte</h3>
+            <h3>{{ 'reports.export_report' | translate }}</h3>
             <button class="rp-modal-close" (click)="closeExportModal()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
@@ -711,7 +711,7 @@
         </header>
         <div class="rp-modal-body">
             <div class="rp-modal-field">
-                <label>Formato</label>
+                <label>{{ 'reports.format' | translate }}</label>
                 <div class="rp-format-options">
                     <button [class.is-active]="exportFormat === 'pdf'"
                             (click)="exportFormat = 'pdf'">
@@ -738,22 +738,22 @@
             </div>
 
             <div class="rp-modal-field">
-                <label>Periodo</label>
+                <label>{{ 'reports.period' | translate }}</label>
                 <div class="rp-format-options rp-format-options--four">
-                    <button [class.is-active]="exportPeriod === 'week'"   (click)="exportPeriod = 'week'">Semana</button>
-                    <button [class.is-active]="exportPeriod === 'month'"  (click)="exportPeriod = 'month'">Mes</button>
-                    <button [class.is-active]="exportPeriod === 'all'"    (click)="exportPeriod = 'all'">Siempre</button>
-                    <button [class.is-active]="exportPeriod === 'custom'" (click)="exportPeriod = 'custom'">Personalizado</button>
+                    <button [class.is-active]="exportPeriod === 'week'"   (click)="exportPeriod = 'week'">{{ 'calendar.week' | translate }}</button>
+                    <button [class.is-active]="exportPeriod === 'month'"  (click)="exportPeriod = 'month'">{{ 'calendar.month' | translate }}</button>
+                    <button [class.is-active]="exportPeriod === 'all'"    (click)="exportPeriod = 'all'">{{ 'reports.always' | translate }}</button>
+                    <button [class.is-active]="exportPeriod === 'custom'" (click)="exportPeriod = 'custom'">{{ 'reports.custom' | translate }}</button>
                 </div>
             </div>
 
             <div class="rp-modal-field rp-modal-field--row" *ngIf="exportPeriod === 'custom'">
                 <div>
-                    <label>Desde</label>
+                    <label>{{ 'dashboard.range_from' | translate }}</label>
                     <input type="date" [(ngModel)]="exportStartDate"/>
                 </div>
                 <div>
-                    <label>Hasta</label>
+                    <label>{{ 'dashboard.range_to' | translate }}</label>
                     <input type="date" [(ngModel)]="exportEndDate"/>
                 </div>
             </div>
@@ -776,7 +776,7 @@
                     <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
                 <span class="rp-spinner rp-spinner--sm" *ngIf="isExporting"></span>
-                {{ isExporting ? 'Generando…' : 'Descargar' }}
+                {{ (isExporting ? 'reports.generating' : 'common.download') | translate }}
             </button>
         </footer>
     </div>

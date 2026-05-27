@@ -3,14 +3,13 @@
     <!-- ── Header ──────────────────────────────────────────────────────── -->
     <header class="lmsg-header">
         <div class="lmsg-header-left">
-            <span class="lmsg-eyebrow">Landing público</span>
+            <span class="lmsg-eyebrow">{{ 'landing_messages.eyebrow' | translate }}</span>
             <h1 class="lmsg-title">{{ 'landing_messages.title' | translate }}</h1>
             <p class="lmsg-subtitle">
-                Bandeja de contactos recibidos desde el formulario público de acten.app.
-                Marca como leídos, respondidos o archivados a medida que los procesas.
+                {{ 'landing_messages.subtitle_long' | translate }}
             </p>
 
-            <div class="lmsg-filters" role="tablist" aria-label="Filtrar por estado">
+            <div class="lmsg-filters" role="tablist" [attr.aria-label]="'landing_messages.filter_by_status' | translate">
                 <button
                     *ngFor="let f of filters"
                     type="button"
@@ -29,25 +28,25 @@
         <div class="lmsg-header-actions">
             <div class="lmsg-counter" *ngIf="!isLoading && !loadError">
                 <span class="lmsg-counter-item lmsg-counter-new">
-                    <strong>{{ unreadCount }}</strong> nuevos
+                    <strong>{{ unreadCount }}</strong> {{ 'landing_messages.new_lc' | translate }}
                 </span>
                 <span class="lmsg-counter-sep" aria-hidden="true">·</span>
                 <span class="lmsg-counter-item">
-                    <strong>{{ readCount }}</strong> leídos
+                    <strong>{{ readCount }}</strong> {{ 'landing_messages.read_lc' | translate }}
                 </span>
                 <span class="lmsg-counter-sep" aria-hidden="true">·</span>
                 <span class="lmsg-counter-item">
-                    <strong>{{ archivedCount }}</strong> archivados
+                    <strong>{{ archivedCount }}</strong> {{ 'landing_messages.archived_lc' | translate }}
                 </span>
             </div>
             <button type="button" class="lmsg-btn lmsg-btn-ghost lmsg-btn-sm" (click)="reload()" [disabled]="isLoading"
-                    title="Recargar mensajes">
+                    [attr.title]="'landing_messages.reload_messages' | translate">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path>
                     <path d="M21 3v5h-5"></path>
                 </svg>
-                <span>Recargar</span>
+                <span>{{ 'settings.reload' | translate }}</span>
             </button>
         </div>
     </header>
@@ -66,7 +65,7 @@
     <!-- ── Loading ─────────────────────────────────────────────────────── -->
     <div class="lmsg-loading" *ngIf="isLoading">
         <div class="lmsg-spinner" aria-hidden="true"></div>
-        <p>Cargando bandeja de mensajes…</p>
+        <p>{{ 'landing_messages.loading_inbox' | translate }}</p>
     </div>
 
     <!-- ── Shell: lista + detalle ──────────────────────────────────────── -->
@@ -106,7 +105,7 @@
                             <div class="lmsg-card-bottom">
                                 <span class="lmsg-card-email">{{ m.email }}</span>
                                 <span class="lmsg-card-email-status" *ngIf="m.email_status === 'sent'"
-                                      title="Notificación enviada correctamente">
+                                      [attr.title]="'landing_messages.email_sent_ok' | translate">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                          fill="none" stroke="currentColor" stroke-width="2.5"
                                          stroke-linecap="round" stroke-linejoin="round">
@@ -115,7 +114,7 @@
                                 </span>
                                 <span class="lmsg-card-email-status lmsg-card-email-failed"
                                       *ngIf="m.email_status === 'failed'"
-                                      title="Fallo enviando la notificación por email">
+                                      [attr.title]="'landing_messages.email_failed' | translate">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                          fill="none" stroke="currentColor" stroke-width="2"
                                          stroke-linecap="round" stroke-linejoin="round">
@@ -139,10 +138,9 @@
                             <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
                         </svg>
                     </div>
-                    <h3>Sin mensajes por ahora</h3>
+                    <h3>{{ 'landing_messages.no_messages_yet' | translate }}</h3>
                     <p>
-                        Cuando alguien escriba desde el formulario del landing público,
-                        aparecerá aquí.
+                        {{ 'landing_messages.no_messages_hint' | translate }}
                     </p>
                 </div>
             </ng-template>
@@ -152,7 +150,7 @@
         <section class="lmsg-detail-pane" *ngIf="selected; else noSelectionTpl">
 
             <header class="lmsg-detail-header">
-                <button type="button" class="lmsg-back-btn" (click)="closeMobileDetail()" title="Volver a la lista">
+                <button type="button" class="lmsg-back-btn" (click)="closeMobileDetail()" [attr.title]="'common.back_to_list' | translate">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -182,31 +180,31 @@
 
             <dl class="lmsg-meta">
                 <div class="lmsg-meta-row">
-                    <dt>Recibido</dt>
+                    <dt>{{ 'landing_messages.received' | translate }}</dt>
                     <dd>{{ formatDateTime(selected.created_at) }}</dd>
                 </div>
                 <div class="lmsg-meta-row" *ngIf="selected.read_at">
-                    <dt>Leído</dt>
+                    <dt>{{ 'landing_messages.read' | translate }}</dt>
                     <dd>{{ formatDateTime(selected.read_at) }}</dd>
                 </div>
                 <div class="lmsg-meta-row" *ngIf="selected.replied_at">
-                    <dt>Respondido</dt>
+                    <dt>{{ 'landing_messages.replied' | translate }}</dt>
                     <dd>{{ formatDateTime(selected.replied_at) }}</dd>
                 </div>
                 <div class="lmsg-meta-row" *ngIf="selected.ip">
-                    <dt>IP origen</dt>
+                    <dt>{{ 'landing_messages.source_ip' | translate }}</dt>
                     <dd><code>{{ selected.ip }}</code></dd>
                 </div>
                 <div class="lmsg-meta-row">
-                    <dt>Notificación email</dt>
+                    <dt>{{ 'landing_messages.email_notification' | translate }}</dt>
                     <dd>
                         <span class="lmsg-email-pill"
                               [class.pill-sent]="selected.email_status === 'sent'"
                               [class.pill-failed]="selected.email_status === 'failed'"
                               [class.pill-pending]="selected.email_status === 'pending'">
                             <ng-container [ngSwitch]="selected.email_status">
-                                <span *ngSwitchCase="'sent'">Enviada</span>
-                                <span *ngSwitchCase="'failed'">Falló</span>
+                                <span *ngSwitchCase="'sent'">{{ 'landing_messages.sent' | translate }}</span>
+                                <span *ngSwitchCase="'failed'">{{ 'landing_messages.failed' | translate }}</span>
                                 <span *ngSwitchCase="'pending'">{{ 'common.pending' | translate }}</span>
                                 <span *ngSwitchDefault>{{ selected.email_status }}</span>
                             </ng-container>
@@ -220,7 +218,7 @@
             </dl>
 
             <div class="lmsg-body">
-                <h3 class="lmsg-subheading">Mensaje</h3>
+                <h3 class="lmsg-subheading">{{ 'landing_messages.message' | translate }}</h3>
                 <pre class="lmsg-body-text">{{ selected.message }}</pre>
             </div>
 
@@ -231,12 +229,12 @@
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                         <polyline points="22,6 12,13 2,6"></polyline>
                     </svg>
-                    <span>Responder por email</span>
+                    <span>{{ 'landing_messages.reply_by_email' | translate }}</span>
                 </a>
                 <button type="button" class="lmsg-btn lmsg-btn-ghost"
                         (click)="setStatus('replied')"
                         [disabled]="isUpdating || selected.status === 'replied'">
-                    Marcar como respondido
+                    {{ 'landing_messages.mark_replied' | translate }}
                 </button>
                 <button type="button" class="lmsg-btn lmsg-btn-ghost"
                         (click)="setStatus('archived')"
@@ -246,7 +244,7 @@
                 <button type="button" class="lmsg-btn lmsg-btn-danger"
                         (click)="deleteSelected()"
                         [disabled]="isUpdating">
-                    Eliminar
+                    {{ 'common.delete' | translate }}
                 </button>
             </footer>
         </section>
@@ -261,12 +259,12 @@
                             <polyline points="22,6 12,13 2,6"></polyline>
                         </svg>
                     </div>
-                    <h3>Selecciona un mensaje</h3>
+                    <h3>{{ 'landing_messages.select_a_message' | translate }}</h3>
                     <p *ngIf="messages.length > 0">
-                        Elige un mensaje de la lista para ver el detalle completo y responder.
+                        {{ 'landing_messages.select_hint' | translate }}
                     </p>
                     <p *ngIf="messages.length === 0">
-                        Aún no hay mensajes que mostrar con este filtro.
+                        {{ 'landing_messages.no_messages_in_filter' | translate }}
                     </p>
                 </div>
             </section>

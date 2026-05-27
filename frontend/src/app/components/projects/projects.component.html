@@ -4,7 +4,7 @@
 <div class="ap-modal-overlay" *ngIf="showProjectModal" (click)="cancelEdit()">
     <div class="ap-modal ap-modal-md" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
-            <h2 class="ap-modal-title">{{ editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h2>
+            <h2 class="ap-modal-title">{{ (editingProject ? 'projects.edit_project' : 'projects.new_project') | translate }}</h2>
             <button type="button" class="ap-modal-close" (click)="cancelEdit()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -20,19 +20,19 @@
                 <div class="ap-alert ap-alert-success" *ngIf="successMsg">{{ successMsg }}</div>
 
                 <div class="ap-field">
-                    <label class="ap-label">Nombre Identificador <span class="ap-required">*</span></label>
+                    <label class="ap-label">{{ 'projects.identifier_name' | translate }} <span class="ap-required">*</span></label>
                     <input class="ap-input" type="text" name="name" [(ngModel)]="newProject.name" required
-                           placeholder="ej: Reclutamiento" />
+                           [placeholder]="'projects.identifier_placeholder' | translate" />
                 </div>
 
                 <div class="ap-field">
                     <label class="ap-label">{{ 'projects.description' | translate }}</label>
                     <textarea class="ap-textarea" name="description" [(ngModel)]="newProject.description"
-                              rows="4" placeholder="Contexto del proyecto..."></textarea>
+                              rows="4" [placeholder]="'projects.description_placeholder' | translate"></textarea>
                 </div>
 
                 <div class="ap-field">
-                    <label class="ap-label">Responsable del proyecto</label>
+                    <label class="ap-label">{{ 'projects.project_owner' | translate }}</label>
                     <div class="ap-select-wrap">
                         <svg class="ap-select-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -40,12 +40,12 @@
                             <circle cx="12" cy="7" r="4"></circle>
                         </svg>
                         <select class="ap-select" name="owner_user_id" [(ngModel)]="newProject.owner_user_id">
-                            <option [ngValue]="null">— Sin responsable asignado —</option>
+                            <option [ngValue]="null">{{ 'projects.no_owner_assigned' | translate }}</option>
                             <option *ngFor="let u of users" [ngValue]="u.id">{{ u.full_name || u.email }} ({{ u.role }})</option>
                         </select>
                     </div>
                     <small class="ap-hint">
-                        Quien hace seguimiento de los pendientes y recibe los reportes ejecutivos.
+                        {{ 'projects.project_owner_hint' | translate }}
                     </small>
                 </div>
 
@@ -61,7 +61,7 @@
                                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                                     </svg>
                                 </span>
-                                <strong class="ap-inner-card-title">Auto-Dispatch para este proyecto</strong>
+                                <strong class="ap-inner-card-title">{{ 'projects.auto_dispatch_title' | translate }}</strong>
                             </div>
                             <div class="ap-inner-card-info" *ngIf="!autoDispatchOverride">
                                 <svg class="ap-info-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -71,10 +71,10 @@
                                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                                 </svg>
                                 <p>
-                                    Este proyecto sigue el ajuste global de
+                                    {{ 'projects.auto_dispatch_follows_global_prefix' | translate }}
                                     <a routerLink="/admin/settings"
                                        [queryParams]="{ section: 'task-sync' }"
-                                       (click)="cancelEdit()">Configuración &gt; Sincronización de tareas y correos</a>.
+                                       (click)="cancelEdit()">{{ 'projects.auto_dispatch_settings_link' | translate }}</a>.
                                 </p>
                             </div>
                         </div>
@@ -83,7 +83,7 @@
                             <input type="checkbox" id="ad_override" name="ad_override"
                                    [(ngModel)]="autoDispatchOverride"
                                    (change)="onAutoDispatchOverrideChange()" />
-                            <span>Sobrescribir el ajuste<br/>global para este proyecto</span>
+                            <span [innerHTML]="'projects.override_global_setting' | translate"></span>
                         </label>
                     </div>
 
@@ -91,19 +91,16 @@
                         <label class="ap-checkbox-row">
                             <input type="checkbox" id="ad_enabled" name="ad_enabled"
                                    [(ngModel)]="newProject.auto_dispatch_enabled" />
-                            <span>Activar envío automático de tareas y correos para este proyecto</span>
+                            <span>{{ 'projects.enable_auto_dispatch_for_project' | translate }}</span>
                         </label>
                         <div class="ap-field">
                             <label class="ap-label">{{ 'settings.wait_before_send' | translate }}</label>
                             <input class="ap-input" type="number" min="1" max="10080" step="1" name="ad_timeout_min"
                                    [(ngModel)]="autoDispatchTimeoutMinutes"
                                    (ngModelChange)="onAutoDispatchTimeoutMinutesChange($event)"
-                                   placeholder="Ej: 60" />
+                                   [placeholder]="'projects.timeout_placeholder' | translate" />
                             <small class="ap-hint">
-                                Minutos desde que la IA termina de procesar la reunión hasta que se
-                                envían los correos y se crean las tareas. Sugerencia: 60 (1 hora)
-                                para dar margen a editar correos y nombres. Si lo dejas vacío, usa
-                                el ajuste global (Configuración → Sincronización de tareas y correos).
+                                {{ 'projects.auto_dispatch_timeout_hint' | translate }}
                             </small>
                         </div>
                     </div>
@@ -114,7 +111,7 @@
                 <button type="button" class="ap-btn ap-btn-secondary" (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
                 <button type="submit" class="ap-btn ap-btn-primary"
                         [disabled]="!projectForm.form.valid || isCreating || isUpdating">
-                    <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Guardar cambios' : 'Guardar proyecto' }}</span>
+                    <span *ngIf="!(isCreating || isUpdating)">{{ (editingProject ? 'common.save_changes' : 'projects.save_project') | translate }}</span>
                     <span *ngIf="isCreating || isUpdating">{{ 'common.processing' | translate }}</span>
                 </button>
             </footer>
@@ -128,7 +125,7 @@
 <div class="ap-modal-overlay" *ngIf="managingContactsForProject" (click)="closeContacts()">
     <div class="ap-modal ap-modal-lg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
-            <h2 class="ap-modal-title">Participantes: {{ managingContactsForProject.name }}</h2>
+            <h2 class="ap-modal-title">{{ 'meetings.participants' | translate }}: {{ managingContactsForProject.name }}</h2>
             <button type="button" class="ap-modal-close" (click)="closeContacts()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -154,7 +151,7 @@
                 </div>
             </div>
             <div *ngIf="!isLoadingContacts && projectContacts.length === 0" class="ap-modal-empty">
-                Sin participantes guardados para este proyecto.
+                {{ 'projects.no_participants_saved' | translate }}
             </div>
 
             <ul class="ap-contact-list" *ngIf="!isLoadingContacts && projectContacts.length > 0">
@@ -184,7 +181,7 @@
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path>
                                 </svg>
-                                Tel: {{ contact.phone }}
+                                {{ 'projects.tel_short' | translate }}: {{ contact.phone }}
                             </span>
                             <span class="ap-contact-meta-sep" *ngIf="contact.entity && (contact.phone || contact.role)">|</span>
                             <span class="ap-contact-meta-item" *ngIf="contact.entity">{{ contact.entity }}</span>
@@ -199,7 +196,7 @@
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
-                            Editar
+                            {{ 'common.edit' | translate }}
                         </button>
                         <button type="button" class="ap-btn-delete"
                                 (click)="deleteContact(contact.id)"
@@ -209,7 +206,7 @@
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
                             </svg>
-                            Eliminar
+                            {{ 'common.delete' | translate }}
                         </button>
                     </div>
                 </li>
@@ -218,29 +215,29 @@
             <!-- Separador + formulario "Agregar nuevo contacto" -->
             <div class="ap-modal-divider"></div>
 
-            <h3 class="ap-modal-section-title">{{ editingContactId ? 'Editar Contacto' : 'Agregar Nuevo Contacto' }}</h3>
+            <h3 class="ap-modal-section-title">{{ (editingContactId ? 'projects.edit_contact' : 'projects.add_new_contact') | translate }}</h3>
 
             <form (ngSubmit)="submitContact()" #contactForm="ngForm" class="ap-contact-form">
                 <div class="ap-grid-2">
                     <div class="ap-field">
                         <label class="ap-label">{{ 'common.name' | translate }} <span class="ap-required">*</span></label>
-                        <input class="ap-input" type="text" name="contactName" [(ngModel)]="newContact.name" required placeholder="ej: Juan Pérez" />
+                        <input class="ap-input" type="text" name="contactName" [(ngModel)]="newContact.name" required [placeholder]="'projects.contact_name_placeholder' | translate" />
                     </div>
                     <div class="ap-field">
                         <label class="ap-label">{{ 'common.email' | translate }} <span class="ap-required">*</span></label>
                         <input class="ap-input" type="email" name="contactEmail" [(ngModel)]="newContact.email" required placeholder="juan@empresa.com" />
                     </div>
                     <div class="ap-field">
-                        <label class="ap-label">Rol / Cargo <span class="ap-required">*</span></label>
-                        <input class="ap-input" type="text" name="contactRole" [(ngModel)]="newContact.role" required placeholder="ej: Gerente IT" />
+                        <label class="ap-label">{{ 'projects.role_position' | translate }} <span class="ap-required">*</span></label>
+                        <input class="ap-input" type="text" name="contactRole" [(ngModel)]="newContact.role" required [placeholder]="'projects.role_placeholder' | translate" />
                     </div>
                     <div class="ap-field">
-                        <label class="ap-label">Entidad (Opcional)</label>
-                        <input class="ap-input" type="text" name="contactEntity" [(ngModel)]="newContact.entity" placeholder="ej: Secretaria AI, Ministerio..." />
+                        <label class="ap-label">{{ 'projects.entity_optional' | translate }}</label>
+                        <input class="ap-input" type="text" name="contactEntity" [(ngModel)]="newContact.entity" [placeholder]="'projects.entity_placeholder' | translate" />
                     </div>
                 </div>
                 <div class="ap-field">
-                    <label class="ap-label">Teléfono (Opcional)</label>
+                    <label class="ap-label">{{ 'projects.phone_optional' | translate }}</label>
                     <input class="ap-input" type="text" name="contactPhone" [(ngModel)]="newContact.phone" placeholder="+12345678" />
                 </div>
             </form>
@@ -251,13 +248,13 @@
                     *ngIf="editingContactId"
                     (click)="cancelEditContact()"
                     [disabled]="isUpdatingContact">
-                Cancelar Edición
+                {{ 'projects.cancel_edit' | translate }}
             </button>
             <button type="button" class="ap-btn ap-btn-primary"
                     (click)="submitContact()"
                     [disabled]="!newContact.name || !newContact.email || !newContact.role || isAddingContact || isUpdatingContact">
-                <span *ngIf="!isAddingContact && !isUpdatingContact">{{ editingContactId ? 'Actualizar Contacto' : 'Guardar Contacto' }}</span>
-                <span *ngIf="isAddingContact || isUpdatingContact">{{ editingContactId ? 'Actualizando…' : 'Guardando…' }}</span>
+                <span *ngIf="!isAddingContact && !isUpdatingContact">{{ (editingContactId ? 'projects.update_contact' : 'projects.save_contact') | translate }}</span>
+                <span *ngIf="isAddingContact || isUpdatingContact">{{ (editingContactId ? 'projects.updating' : 'common.saving') | translate }}</span>
             </button>
         </footer>
     </div>
@@ -269,7 +266,7 @@
 <div class="ap-modal-overlay" *ngIf="managingRoutingsForProject" (click)="closeRoutings()">
     <div class="ap-modal ap-modal-lg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
-            <h2 class="ap-modal-title">Rutas de Integración: {{ managingRoutingsForProject.name }}</h2>
+            <h2 class="ap-modal-title">{{ 'projects.integration_routes' | translate }}: {{ managingRoutingsForProject.name }}</h2>
             <button type="button" class="ap-modal-close" (click)="closeRoutings()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -287,14 +284,14 @@
             <section class="ap-inner-card">
                 <header class="ap-inner-card-toprow">
                     <div class="ap-inner-card-titlewrap">
-                        <strong class="ap-inner-card-title">Rutas configuradas</strong>
+                        <strong class="ap-inner-card-title">{{ 'projects.configured_routes' | translate }}</strong>
                         <span class="ap-inner-card-badge">{{ projectRoutings.length }}</span>
                     </div>
                 </header>
 
                 <div *ngIf="isLoadingRoutings" class="ap-modal-loading">{{ 'common.loading' | translate }}</div>
                 <div *ngIf="!isLoadingRoutings && projectRoutings.length === 0" class="ap-modal-empty">
-                    Sin rutas de integración configuradas para este proyecto. Cero tareas serán despachadas.
+                    {{ 'projects.no_routes_configured' | translate }}
                 </div>
 
                 <ul class="ap-routing-list" *ngIf="!isLoadingRoutings && projectRoutings.length > 0">
@@ -312,9 +309,9 @@
                               [class.is-on]="routing.is_active"
                               (click)="toggleRoutingStatus(routing)"
                               role="button"
-                              [title]="routing.is_active ? 'Click para desactivar' : 'Click para activar'">
+                              [title]="(routing.is_active ? 'projects.click_to_deactivate' : 'projects.click_to_activate') | translate">
                             <span class="ap-routing-state-dot"></span>
-                            {{ routing.is_active ? 'Activa' : 'Inactiva' }}
+                            {{ (routing.is_active ? 'integrations.active' : 'integrations.inactive') | translate }}
                         </span>
                         <button type="button" class="ap-btn-delete"
                                 (click)="deleteRouting(routing.id)"
@@ -324,7 +321,7 @@
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
                             </svg>
-                            Eliminar
+                            {{ 'common.delete' | translate }}
                         </button>
                     </li>
                 </ul>
@@ -332,10 +329,10 @@
 
             <!-- Card "Agregar Nueva Ruta" -->
             <section class="ap-inner-card ap-inner-card-form">
-                <h3 class="ap-modal-section-title">Agregar Nueva Ruta</h3>
+                <h3 class="ap-modal-section-title">{{ 'projects.add_new_route' | translate }}</h3>
                 <form (ngSubmit)="addRouting()" #routingForm="ngForm">
                     <div class="ap-field">
-                        <label class="ap-label">Plataforma de Destino <span class="ap-required">*</span></label>
+                        <label class="ap-label">{{ 'projects.destination_platform' | translate }} <span class="ap-required">*</span></label>
                         <div class="ap-select-wrap">
                             <span class="ap-select-icon-img"
                                   *ngIf="newRouting.destination_type"
@@ -352,7 +349,7 @@
                                     {{ integration.name }}
                                 </option>
                                 <option *ngIf="activeIntegrations.length === 0" value="" disabled selected>
-                                    Primero activa una integración en Ajustes
+                                    {{ 'projects.activate_integration_first' | translate }}
                                 </option>
                             </select>
                         </div>
@@ -366,12 +363,7 @@
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        <p>
-                            <strong>¿Dónde encuentro los IDs?</strong>
-                            Ingresa a un tablero de Trello y agrega <code>.json</code> a la URL
-                            (ej: <code>trello.com/b/ABC/mi-tablero.json</code>). Busca <code>"id"</code>
-                            para el tablero y el array <code>"lists"</code> para obtener el ID de la lista.
-                        </p>
+                        <p [innerHTML]="'projects.trello_help' | translate"></p>
                     </div>
                     <div class="ap-grid-2" *ngIf="newRouting.destination_type === 'trello'">
                         <div class="ap-field">
@@ -396,11 +388,7 @@
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        <p>
-                            <strong>¿Dónde encuentro la Project Key?</strong>
-                            Es el prefijo corto en mayúsculas de todos tus tickets en ese proyecto.
-                            Si un ticket es <code>PROJ-123</code>, la Project Key es <code>PROJ</code>.
-                        </p>
+                        <p [innerHTML]="'projects.jira_help' | translate"></p>
                     </div>
                     <div class="ap-field" *ngIf="newRouting.destination_type === 'jira'">
                         <label class="ap-label">Jira Project Key <span class="ap-required">*</span></label>
@@ -417,11 +405,7 @@
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        <p>
-                            <strong>¿Dónde encuentro el List ID?</strong>
-                            Abre tu lista en ClickUp. En la URL (ej: <code>.../v/l/li/1234567</code>),
-                            el ID de la lista son los números del final.
-                        </p>
+                        <p [innerHTML]="'projects.clickup_help' | translate"></p>
                     </div>
                     <div class="ap-field" *ngIf="newRouting.destination_type === 'clickup'">
                         <label class="ap-label">ClickUp List ID <span class="ap-required">*</span></label>
@@ -438,15 +422,10 @@
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        <p>
-                            <strong>¿Area Path?</strong>
-                            Si tu proyecto usa subdivisiones (Area Paths), ingrésala aquí
-                            (ej: <code>MiProyecto\EquipoFrontend</code>). Déjalo en blanco para enviar
-                            las tareas a la bandeja general del Proyecto.
-                        </p>
+                        <p [innerHTML]="'projects.azure_help' | translate"></p>
                     </div>
                     <div class="ap-field" *ngIf="newRouting.destination_type === 'azure'">
-                        <label class="ap-label">Azure Area Path (Opcional)</label>
+                        <label class="ap-label">Azure Area Path ({{ 'common.optional' | translate }})</label>
                         <input class="ap-input" type="text" name="azureAreaPath"
                                [(ngModel)]="destinationConfig['azure'].area_path"
                                placeholder="ej: MyProject\MyArea" />
@@ -460,7 +439,7 @@
             <button type="button" class="ap-btn ap-btn-primary"
                     (click)="addRouting()"
                     [disabled]="isAddingRouting || activeIntegrations.length === 0 || !newRouting.destination_type">
-                <span *ngIf="!isAddingRouting">Guardar ruta</span>
+                <span *ngIf="!isAddingRouting">{{ 'projects.save_route' | translate }}</span>
                 <span *ngIf="isAddingRouting">{{ 'common.saving' | translate }}</span>
             </button>
         </footer>
@@ -481,7 +460,7 @@
     <header class="ap-header">
         <div class="ap-header-left">
             <h1 class="ap-title">{{ 'sidebar.projects' | translate }}</h1>
-            <p class="ap-sub">Gestiona, sincroniza y prioriza los proyectos de tu equipo.</p>
+            <p class="ap-sub">{{ 'projects.subtitle_header' | translate }}</p>
         </div>
         <button type="button" class="ap-cta" (click)="showProjectModal = true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -489,7 +468,7 @@
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            Nuevo Proyecto
+            {{ 'projects.new_project' | translate }}
         </button>
     </header>
 
@@ -500,14 +479,14 @@
 
             <!-- Búsqueda principal + botón toggle de filtros (mismo patrón
                  que /admin/meetings: search ancho + "Filtros" colapsable). -->
-            <section class="mt-search-row" aria-label="Buscar proyectos">
+            <section class="mt-search-row" [attr.aria-label]="'projects.search_aria' | translate">
                 <div class="filter-search">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                     <input type="text"
-                           placeholder="Buscar proyectos por nombre, responsable o palabra clave…"
+                           [placeholder]="'projects.search_main_placeholder' | translate"
                            [(ngModel)]="searchText"
                            (input)="onSearchInput()" />
                 </div>
@@ -522,7 +501,7 @@
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                     </svg>
-                    Filtros
+                    {{ 'common.filters' | translate }}
                     <span class="filters-btn-count" *ngIf="activeFiltersCount > 0">
                         {{ activeFiltersCount }}
                     </span>
@@ -536,13 +515,13 @@
 
             <!-- Panel de filtros expandible — solo visible al togglear el
                  botón "Filtros". Misma estructura que /admin/meetings. -->
-            <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+            <section class="mt-filters" *ngIf="showFilters" [attr.aria-label]="'projects.advanced_filters' | translate">
                 <div class="filter-group">
                     <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus" (change)="onSearchInput()">
                         <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="active">{{ 'common.active' | translate }}</option>
-                        <option value="archived">Archivados</option>
+                        <option value="archived">{{ 'projects.archived' | translate }}</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -553,15 +532,15 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Equipo</label>
+                    <label>{{ 'projects.team' | translate }}</label>
                     <select [(ngModel)]="filterTeam">
                         <option value="all">{{ 'common.all' | translate }}</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Etiquetas</label>
+                    <label>{{ 'projects.tags' | translate }}</label>
                     <select [(ngModel)]="filterTag">
-                        <option value="all">Todas</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                     </select>
                 </div>
             </section>
@@ -577,13 +556,13 @@
                             (click)="setTab('active')">{{ 'common.active' | translate }}</button>
                     <button type="button"
                             [class.active]="activeTab === 'archived'"
-                            (click)="setTab('archived')">Archivados</button>
+                            (click)="setTab('archived')">{{ 'projects.archived' | translate }}</button>
                 </nav>
 
                 <div class="ap-table-wrap">
                     <!-- Skeleton durante loading -->
                     <div *ngIf="isLoading" class="ap-loading">
-                        <p>Cargando proyectos…</p>
+                        <p>{{ 'projects.loading_projects' | translate }}</p>
                     </div>
 
                     <table class="ap-table" *ngIf="!isLoading">
@@ -592,9 +571,9 @@
                                 <th>{{ 'common.project' | translate }}</th>
                                 <th>{{ 'project_detail.owner' | translate }}</th>
                                 <th>{{ 'common.status' | translate }}</th>
-                                <th>Última sincronización</th>
-                                <th>Progreso</th>
-                                <th>Equipo</th>
+                                <th>{{ 'projects.last_sync' | translate }}</th>
+                                <th>{{ 'projects.progress' | translate }}</th>
+                                <th>{{ 'projects.team' | translate }}</th>
                                 <th class="t-right">{{ 'common.actions' | translate }}</th>
                             </tr>
                         </thead>
@@ -702,7 +681,7 @@
                                     <div class="ap-actions-wrap" (click)="$event.stopPropagation()">
                                         <button type="button" class="ap-actions-btn"
                                                 (click)="toggleActions(p.id, $event)"
-                                                title="Más acciones">
+                                                [attr.title]="'projects.more_actions' | translate">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="5" r="1"></circle>
@@ -726,7 +705,7 @@
                                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                                                 </svg>
-                                                Rutas de integración
+                                                {{ 'projects.integration_routes' | translate }}
                                             </li>
                                             <li (click)="editProject(p); closeActions()">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -734,7 +713,7 @@
                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                 </svg>
-                                                Editar
+                                                {{ 'common.edit' | translate }}
                                             </li>
                                             <li class="danger" (click)="deleteProject(p.id); closeActions()">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -742,7 +721,7 @@
                                                     <polyline points="3 6 5 6 21 6"></polyline>
                                                     <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
                                                 </svg>
-                                                Eliminar
+                                                {{ 'common.delete' | translate }}
                                             </li>
                                         </ul>
                                     </div>
@@ -756,8 +735,8 @@
                                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                                     </svg>
-                                    <p>No hay proyectos que coincidan con los filtros.</p>
-                                    <button class="ap-cta" (click)="showProjectModal = true">+ Nuevo Proyecto</button>
+                                    <p>{{ 'projects.no_projects_match_filters' | translate }}</p>
+                                    <button class="ap-cta" (click)="showProjectModal = true">+ {{ 'projects.new_project' | translate }}</button>
                                 </td>
                             </tr>
                         </tbody>
@@ -767,23 +746,23 @@
                 <!-- Paginación -->
                 <footer class="ap-pagination">
                     <span class="ap-pag-info">
-                        Mostrando {{ pageStart }} a {{ pageEnd }} de {{ filteredProjects.length }} proyectos
+                        {{ 'projects.showing_pagination' | translate:{ start: pageStart, end: pageEnd, total: filteredProjects.length } }}
                     </span>
                     <div class="ap-pag-controls">
-                        <button type="button" class="ap-pag-btn" (click)="prevPage()" [disabled]="currentPage === 1" title="Anterior">
+                        <button type="button" class="ap-pag-btn" (click)="prevPage()" [disabled]="currentPage === 1" [attr.title]="'common.previous' | translate">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="15 18 9 12 15 6"></polyline>
                             </svg>
                         </button>
-                        <button type="button" class="ap-pag-btn is-active" title="Página actual">{{ currentPage }}</button>
-                        <button type="button" class="ap-pag-btn" (click)="nextPage()" [disabled]="currentPage >= totalPagesCount" title="Siguiente">
+                        <button type="button" class="ap-pag-btn is-active" [attr.title]="'projects.current_page' | translate">{{ currentPage }}</button>
+                        <button type="button" class="ap-pag-btn" (click)="nextPage()" [disabled]="currentPage >= totalPagesCount" [attr.title]="'common.next' | translate">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="9 18 15 12 9 6"></polyline>
                             </svg>
                         </button>
-                        <span class="ap-pag-sep">Mostrar</span>
+                        <span class="ap-pag-sep">{{ 'projects.show' | translate }}</span>
                         <select class="ap-pag-size" [(ngModel)]="pageSize" (change)="currentPage = 1">
                             <option [ngValue]="10">10</option>
                             <option [ngValue]="20">20</option>
@@ -800,15 +779,15 @@
             <!-- Sync Status -->
             <article class="ap-card ap-card-sync">
                 <header class="ap-card-head">
-                    <h2 class="ap-card-title">ESTADO DE SINCRONIZACIÓN</h2>
+                    <h2 class="ap-card-title">{{ 'projects.sync_status_upper' | translate }}</h2>
                 </header>
                 <div class="ap-sync-row">
                     <div class="ap-sync-body">
                         <p class="ap-sync-main">
                             <span class="ap-sync-pulse"></span>
-                            Todos los sistemas operativos
+                            {{ 'projects.all_systems_operational' | translate }}
                         </p>
-                        <p class="ap-sync-sub">Última sincronización {{ lastSyncLabel }}</p>
+                        <p class="ap-sync-sub">{{ 'projects.last_sync' | translate }} {{ lastSyncLabel }}</p>
                     </div>
                     <div class="ap-sync-icon">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -825,7 +804,7 @@
             <!-- Project Overview -->
             <article class="ap-card">
                 <header class="ap-card-head">
-                    <h2 class="ap-card-title">RESUMEN DE PROYECTOS</h2>
+                    <h2 class="ap-card-title">{{ 'projects.overview_upper' | translate }}</h2>
                 </header>
                 <ul class="ap-overview-list">
                     <li>
@@ -838,7 +817,7 @@
                                 <line x1="3" y1="10" x2="21" y2="10"></line>
                             </svg>
                         </span>
-                        <span class="ov-label">Total de proyectos</span>
+                        <span class="ov-label">{{ 'projects.total_projects' | translate }}</span>
                         <span class="ov-value">{{ overviewCounts.total }}</span>
                     </li>
                     <li>
@@ -863,7 +842,7 @@
                                 <line x1="10" y1="12" x2="14" y2="12"></line>
                             </svg>
                         </span>
-                        <span class="ov-label">Proyectos archivados</span>
+                        <span class="ov-label">{{ 'projects.archived_projects' | translate }}</span>
                         <span class="ov-value">{{ overviewCounts.archived }}</span>
                     </li>
                     <li>
@@ -883,7 +862,7 @@
             <!-- Insights -->
             <article class="ap-card">
                 <header class="ap-card-head">
-                    <h2 class="ap-card-title">INSIGHTS</h2>
+                    <h2 class="ap-card-title">{{ 'projects.insights_upper' | translate }}</h2>
                 </header>
                 <ul class="ap-insights-list">
                     <li *ngFor="let ins of sidePanelInsights" [attr.data-tone]="ins.tone">
@@ -911,7 +890,7 @@
                         </div>
                     </li>
                 </ul>
-                <a class="ap-insights-link" routerLink="/admin/dashboard">Ver todos los insights →</a>
+                <a class="ap-insights-link" routerLink="/admin/dashboard">{{ 'projects.see_all_insights' | translate }}</a>
             </article>
         </aside>
     </div>

@@ -8,7 +8,7 @@
     <header class="tpl-header">
         <div class="tpl-header-text">
             <h1 class="tpl-title">{{ 'sidebar.templates' | translate }}</h1>
-            <p class="tpl-sub">Gestiona y reutiliza plantillas documentales para reuniones, proyectos y reportes.</p>
+            <p class="tpl-sub">{{ 'templates.subtitle_long' | translate }}</p>
         </div>
         <div class="tpl-header-actions">
             <button class="tpl-btn tpl-btn-primary" type="button" (click)="openCreateModal()">
@@ -29,7 +29,7 @@
     <div class="tpl-grid" [class.has-detail]="selectedTemplate">
 
         <!-- ====== Categorías ====== -->
-        <aside class="tpl-categories" aria-label="Categorías de plantillas">
+        <aside class="tpl-categories" [attr.aria-label]="'templates.categories_aria' | translate">
             <header class="tpl-cat-head">{{ 'profile.categories' | translate }}</header>
             <ul class="tpl-cat-list">
                 <li *ngFor="let cat of categories"
@@ -76,17 +76,17 @@
         </aside>
 
         <!-- ====== Lista central ====== -->
-        <section class="tpl-list-wrap" aria-label="Listado de plantillas">
+        <section class="tpl-list-wrap" [attr.aria-label]="'templates.list_aria' | translate">
 
             <!-- Búsqueda + botón Filtros toggle (mismo patrón que Meetings) -->
-            <section class="tpl-search-row" aria-label="Buscar plantillas">
+            <section class="tpl-search-row" [attr.aria-label]="'templates.search_aria' | translate">
                 <div class="tpl-search">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input type="text" placeholder="Buscar plantillas…" [(ngModel)]="searchText" />
+                    <input type="text" [placeholder]="'templates.search_placeholder' | translate" [(ngModel)]="searchText" />
                 </div>
                 <button class="tpl-filters-btn"
                         type="button"
@@ -98,7 +98,7 @@
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                     </svg>
-                    Filtros
+                    {{ 'common.filters' | translate }}
                     <span class="tpl-filters-count" *ngIf="activeFiltersCount > 0">{{ activeFiltersCount }}</span>
                     <svg class="tpl-filters-chev" [class.flipped]="showFilters"
                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -109,14 +109,14 @@
             </section>
 
             <!-- Panel de filtros expandible -->
-            <section class="tpl-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+            <section class="tpl-filters" *ngIf="showFilters" [attr.aria-label]="'projects.advanced_filters' | translate">
                 <div class="tpl-filter-group">
                     <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus">
                         <option value="all">{{ 'common.all_statuses' | translate }}</option>
-                        <option value="active">Activas</option>
-                        <option value="inactive">Inactivas</option>
-                        <option value="archived">Archivadas</option>
+                        <option value="active">{{ 'templates.active_plural' | translate }}</option>
+                        <option value="inactive">{{ 'templates.inactive_plural' | translate }}</option>
+                        <option value="archived">{{ 'meetings.archived_plural' | translate }}</option>
                     </select>
                 </div>
             </section>
@@ -124,11 +124,11 @@
             <!-- Tabla con cards -->
             <div class="tpl-table">
                 <div class="tpl-tr tpl-th">
-                    <span>Plantilla</span>
-                    <span>{{ 'common.status' | translate }}</span>
+                    <span>{{ 'templates.template_singular' | translate }}</span>
+                    <span>{{ 'templates.type' | translate }}</span>
                     <span>{{ 'common.version' | translate }}</span>
                     <span>{{ 'common.status' | translate }}</span>
-                    <span>Actualizado</span>
+                    <span>{{ 'templates.updated_label' | translate }}</span>
                     <span class="t-right">{{ 'common.actions' | translate }}</span>
                 </div>
 
@@ -204,7 +204,7 @@
                     </div>
 
                     <div class="tpl-cell-actions t-right">
-                        <button class="tpl-kebab" (click)="toggleRowMenu(t.id, $event)" title="Más opciones">
+                        <button class="tpl-kebab" (click)="toggleRowMenu(t.id, $event)" [attr.title]="'meetings.more_options' | translate">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="1"></circle>
@@ -219,26 +219,26 @@
                                     <polyline points="7 10 12 15 17 10"></polyline>
                                     <line x1="12" y1="15" x2="12" y2="3"></line>
                                 </svg>
-                                Descargar .docx
+                                {{ 'templates.download_docx' | translate }}
                             </button>
                             <button type="button" (click)="openConfigurator(t); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="3"></circle>
                                 </svg>
-                                Configurar bloques
+                                {{ 'templates.configure_blocks' | translate }}
                             </button>
                             <button type="button" (click)="editTemplate(t); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
-                                Editar
+                                {{ 'common.edit' | translate }}
                             </button>
                             <button type="button" (click)="toggleActive(t); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
-                                {{ statusOf(t).key === 'active' ? 'Inactivar' : 'Activar' }}
+                                {{ (statusOf(t).key === 'active' ? 'templates.inactivate' : 'users.activate') | translate }}
                             </button>
                             <div class="tpl-kebab-divider"></div>
                             <button type="button" class="tpl-kebab-danger" (click)="deleteTemplate(t.id); closeRowMenu()">
@@ -247,7 +247,7 @@
                                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                                     <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                                 </svg>
-                                Eliminar
+                                {{ 'common.delete' | translate }}
                             </button>
                         </div>
                     </div>
@@ -259,14 +259,14 @@
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                     </svg>
-                    <h4>Aún no hay plantillas</h4>
-                    <p>Sube tu primer documento .docx para empezar.</p>
+                    <h4>{{ 'templates.no_templates_yet' | translate }}</h4>
+                    <p>{{ 'templates.upload_first_hint' | translate }}</p>
                 </div>
             </div>
 
             <div class="tpl-pagination" *ngIf="filteredTemplates.length">
                 <span class="tpl-page-info">
-                    1–{{ filteredTemplates.length }} de {{ templates.length }} plantillas
+                    1–{{ filteredTemplates.length }} {{ 'common.of' | translate }} {{ templates.length }} {{ 'templates.templates_lc' | translate }}
                 </span>
                 <div class="tpl-page-center">
                     <button class="tpl-page-arrow" disabled>‹</button>
@@ -275,16 +275,16 @@
                 </div>
                 <div class="tpl-page-right">
                     <select>
-                        <option>Mostrar 10</option>
-                        <option>Mostrar 20</option>
-                        <option>Mostrar 50</option>
+                        <option>{{ 'common.per_page_10' | translate }}</option>
+                        <option>{{ 'common.per_page_20' | translate }}</option>
+                        <option>{{ 'common.per_page_50' | translate }}</option>
                     </select>
                 </div>
             </div>
         </section>
 
         <!-- ====== Panel de detalle ====== -->
-        <aside class="tpl-detail" *ngIf="selectedTemplate" aria-label="Detalle de la plantilla">
+        <aside class="tpl-detail" *ngIf="selectedTemplate" [attr.aria-label]="'templates.detail_aria' | translate">
             <header class="tpl-detail-head">
                 <div class="tpl-detail-head-text">
                     <span class="tpl-detail-icon" [attr.data-cat]="typeOf(selectedTemplate).id">
@@ -336,7 +336,7 @@
                         <div class="tpl-preview-skeleton-bar tpl-preview-skeleton-bar--shorter"></div>
                     </div>
                     <iframe [src]="previewUrl"
-                            title="Vista previa de la plantilla"
+                            [title]="'templates.preview_title' | translate"
                             frameborder="0"
                             allowfullscreen
                             loading="lazy"
@@ -349,12 +349,12 @@
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                         </svg>
-                        <p>Esta plantilla no tiene archivo cargado todavía.</p>
+                        <p>{{ 'templates.no_file_loaded' | translate }}</p>
                     </div>
                 </ng-template>
 
                 <section class="tpl-detail-section">
-                    <h4>Casos de uso</h4>
+                    <h4>{{ 'templates.use_cases' | translate }}</h4>
                     <div class="tpl-chip-list">
                         <span class="tpl-chip" *ngFor="let u of useCasesOf(selectedTemplate)">{{ u }}</span>
                     </div>
@@ -377,7 +377,7 @@
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                             </svg>
-                            Usar plantilla
+                            {{ 'templates.use_template' | translate }}
                         </button>
                         <!-- Vista previa = abrir en nueva pestaña -->
                         <button class="tpl-btn tpl-btn-outline tpl-btn-block"
@@ -398,7 +398,7 @@
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                             </svg>
-                            Duplicar
+                            {{ 'templates.duplicate' | translate }}
                         </button>
                         <button class="tpl-btn tpl-btn-outline tpl-btn-block"
                                 (click)="editTemplate(selectedTemplate)">
@@ -407,7 +407,7 @@
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
-                            Editar
+                            {{ 'common.edit' | translate }}
                         </button>
                         <!-- Toggle Activar/Inactivar -->
                         <button class="tpl-btn tpl-btn-outline tpl-btn-block"
@@ -446,11 +446,11 @@
                         <dt>{{ 'common.status' | translate }}</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>
                         <dt>{{ 'common.version' | translate }}</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
                         <dt>{{ 'common.status' | translate }}</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
-                        <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small *ngIf="updatedAgo(selectedTemplate)">({{ updatedAgo(selectedTemplate) }})</small></dd>
+                        <dt>{{ 'templates.updated_label_fem' | translate }}</dt><dd>{{ updatedOf(selectedTemplate) }} <small *ngIf="updatedAgo(selectedTemplate)">({{ updatedAgo(selectedTemplate) }})</small></dd>
                         <dt>{{ 'common.project' | translate }}</dt><dd>{{ selectedTemplate.project_id || '—' }}</dd>
-                        <dt>Archivo</dt>
+                        <dt>{{ 'templates.file_label' | translate }}</dt>
                         <dd>
-                            <a *ngIf="selectedTemplate.file_path" [href]="selectedTemplate.file_path" target="_blank" rel="noopener">Ver archivo Word</a>
+                            <a *ngIf="selectedTemplate.file_path" [href]="selectedTemplate.file_path" target="_blank" rel="noopener">{{ 'templates.view_word_file' | translate }}</a>
                             <span *ngIf="!selectedTemplate.file_path">—</span>
                         </dd>
                     </dl>
@@ -459,7 +459,7 @@
 
             <div *ngIf="detailTab === 'history'" class="tpl-detail-body">
                 <section class="tpl-detail-section" *ngIf="historyOf(selectedTemplate).length; else noHistory">
-                    <h4>Historial de cambios</h4>
+                    <h4>{{ 'templates.change_history' | translate }}</h4>
                     <ul class="tpl-history-list">
                         <li *ngFor="let h of historyOf(selectedTemplate); let i = index"
                             class="tpl-history-item"
@@ -506,7 +506,7 @@
                     </ul>
                 </section>
                 <ng-template #noHistory>
-                    <p class="tpl-detail-empty">Aún no hay cambios registrados para esta plantilla.</p>
+                    <p class="tpl-detail-empty">{{ 'templates.no_changes_recorded' | translate }}</p>
                 </ng-template>
             </div>
         </aside>
@@ -522,8 +522,8 @@
     <div class="tpl-modal tpl-modal-sm" (click)="$event.stopPropagation()">
         <header class="tpl-modal-head">
             <div>
-                <h2 class="tpl-modal-title">{{ editingTemplateId ? 'Editar plantilla' : 'Nueva plantilla' }}</h2>
-                <p class="tpl-modal-sub">Sube un archivo Word (.docx) y elige tipo y proyecto destino.</p>
+                <h2 class="tpl-modal-title">{{ (editingTemplateId ? 'templates.edit_template' : 'templates.create_template') | translate }}</h2>
+                <p class="tpl-modal-sub">{{ 'templates.upload_sub' | translate }}</p>
             </div>
             <button class="tpl-modal-close" (click)="showUploadModal = false; errorMsg = ''; successMsg = ''">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -539,35 +539,35 @@
 
             <form (ngSubmit)="uploadFile()" #uploadForm="ngForm" class="tpl-form">
                 <div class="tpl-field">
-                    <label>Nombre de la plantilla <span class="req">*</span></label>
+                    <label>{{ 'templates.template_name' | translate }} <span class="req">*</span></label>
                     <input type="text" [(ngModel)]="templateName" name="templateName" required
-                           placeholder="Ej. Acta de reunión" />
+                           [placeholder]="'templates.template_name_placeholder' | translate" />
                 </div>
                 <div class="tpl-field">
-                    <label>Tipo / categoría <span class="req">*</span></label>
+                    <label>{{ 'templates.type_category' | translate }} <span class="req">*</span></label>
                     <select [(ngModel)]="templateType" name="templateType" required>
                         <option value="meeting">{{ 'common.meeting' | translate }}</option>
-                        <option value="project">Gestión de proyectos</option>
-                        <option value="reports">Reportes</option>
-                        <option value="finance">Finanzas</option>
-                        <option value="comms">Comunicación</option>
-                        <option value="strategy">Estrategia</option>
+                        <option value="project">{{ 'templates.cat_project' | translate }}</option>
+                        <option value="reports">{{ 'sidebar.reports' | translate }}</option>
+                        <option value="finance">{{ 'templates.cat_finance' | translate }}</option>
+                        <option value="comms">{{ 'templates.cat_comms' | translate }}</option>
+                        <option value="strategy">{{ 'templates.cat_strategy' | translate }}</option>
                     </select>
                 </div>
                 <div class="tpl-field">
-                    <label>Proyecto destino <span class="req">*</span></label>
+                    <label>{{ 'templates.target_project' | translate }} <span class="req">*</span></label>
                     <select [(ngModel)]="selectedProjectId" name="project_id" required>
-                        <option value="" disabled>Selecciona un proyecto</option>
+                        <option value="" disabled>{{ 'templates.select_a_project' | translate }}</option>
                         <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                     </select>
                 </div>
                 <div class="tpl-field">
-                    <label>Descripción (opcional)</label>
+                    <label>{{ 'templates.description_optional' | translate }}</label>
                     <input type="text" [(ngModel)]="templateDescription" name="templateDescription"
-                           placeholder="Breve descripción del uso de esta plantilla" />
+                           [placeholder]="'templates.description_placeholder' | translate" />
                 </div>
                 <div class="tpl-field">
-                    <label>Documento Word (.docx) <span class="req" *ngIf="!editingTemplateId">*</span></label>
+                    <label>{{ 'templates.word_doc' | translate }} <span class="req" *ngIf="!editingTemplateId">*</span></label>
                     <label class="tpl-file-drop">
                         <input type="file" (change)="onFileSelected($event)" accept=".docx" hidden />
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -576,8 +576,8 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <span *ngIf="!selectedFile && !editingTemplateId">Click para subir un archivo .docx</span>
-                        <span *ngIf="!selectedFile && editingTemplateId">Opcional · deja vacío para conservar el archivo actual</span>
+                        <span *ngIf="!selectedFile && !editingTemplateId">{{ 'templates.click_to_upload' | translate }}</span>
+                        <span *ngIf="!selectedFile && editingTemplateId">{{ 'templates.keep_current_file' | translate }}</span>
                         <strong *ngIf="selectedFile">{{ selectedFile.name }}</strong>
                     </label>
                 </div>
@@ -590,7 +590,7 @@
             <button type="button" class="tpl-btn tpl-btn-primary"
                     (click)="uploadFile()"
                     [disabled]="!templateName.trim() || !selectedProjectId || (!selectedFile && !editingTemplateId) || isUploading">
-                <span *ngIf="!isUploading">{{ editingTemplateId ? 'Actualizar plantilla' : 'Subir plantilla' }}</span>
+                <span *ngIf="!isUploading">{{ (editingTemplateId ? 'templates.update_template' : 'templates.upload_template') | translate }}</span>
                 <span *ngIf="isUploading">{{ 'common.saving' | translate }}</span>
             </button>
         </footer>
@@ -606,11 +606,8 @@
 
         <header class="tpl-modal-head">
             <div>
-                <h2 class="tpl-modal-title">Constructor Visual de Documento</h2>
-                <p class="tpl-modal-sub">
-                    Tu archivo Word se usará para preservar la cabecera, logos y pie de página.<br>
-                    Arrastra los bloques a la derecha en el orden que desees que aparezcan en el cuerpo del documento.
-                </p>
+                <h2 class="tpl-modal-title">{{ 'templates.builder_title' | translate }}</h2>
+                <p class="tpl-modal-sub" [innerHTML]="'templates.builder_sub' | translate"></p>
             </div>
             <button class="tpl-modal-close" (click)="showConfigurator = false; showUploadModal = false; saveMappingSuccessMsg = ''">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -629,7 +626,7 @@
 
                 <!-- Col 1: Bloques disponibles -->
                 <section class="tpl-builder-col">
-                    <header class="tpl-builder-col-head">BLOQUES DISPONIBLES</header>
+                    <header class="tpl-builder-col-head">{{ 'templates.available_blocks' | translate }}</header>
                     <div cdkDropList
                          [cdkDropListData]="availableTokens"
                          class="tpl-block-list"
@@ -638,7 +635,7 @@
                              *ngFor="let item of availableTokens; trackBy: trackById"
                              cdkDrag [cdkDragData]="item"
                              (dblclick)="addToStructure(item)"
-                             title="Doble-click o arrastra para agregar">
+                             [attr.title]="'templates.double_click_drag_hint' | translate">
                             <span class="tpl-block-grip" cdkDragHandle>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="9" cy="6" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="18" r="1"></circle>
@@ -681,19 +678,19 @@
                             </div>
                         </div>
                         <p class="tpl-block-empty" *ngIf="!availableTokens.length">
-                            Todos los bloques están en la estructura.
+                            {{ 'templates.all_blocks_in_structure' | translate }}
                         </p>
                     </div>
                     <p class="tpl-builder-hint">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        Arrastra o haz doble-click en un bloque para agregarlo.
+                        {{ 'templates.drag_hint' | translate }}
                     </p>
                 </section>
 
                 <!-- Col 2: Estructura del documento -->
                 <section class="tpl-builder-col">
-                    <header class="tpl-builder-col-head">ESTRUCTURA DEL DOCUMENTO</header>
-                    <p class="tpl-builder-col-sub">Ordena los bloques que formarán el cuerpo del documento.</p>
+                    <header class="tpl-builder-col-head">{{ 'templates.document_structure' | translate }}</header>
+                    <p class="tpl-builder-col-sub">{{ 'templates.document_structure_sub' | translate }}</p>
                     <div cdkDropList
                          [cdkDropListData]="activeTokens"
                          class="tpl-structure-list"
@@ -710,7 +707,7 @@
                             </span>
                             <span class="tpl-structure-label">{{ item.label }}</span>
                             <button class="tpl-structure-action tpl-structure-action-danger"
-                                    type="button" title="Quitar"
+                                    type="button" [attr.title]="'templates.remove' | translate"
                                     *ngIf="item.id !== 'meta'"
                                     (click)="removeFromStructure(item)">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -728,18 +725,18 @@
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                             </svg>
-                            <span>Suelta aquí para agregar un bloque</span>
+                            <span>{{ 'templates.drop_here' | translate }}</span>
                         </div>
                     </div>
                 </section>
 
                 <!-- Col 3: Estilos estéticos -->
                 <section class="tpl-builder-col">
-                    <header class="tpl-builder-col-head">ESTILOS ESTÉTICOS</header>
-                    <p class="tpl-builder-col-sub">Personaliza la apariencia de las cabeceras y tablas.</p>
+                    <header class="tpl-builder-col-head">{{ 'templates.aesthetic_styles' | translate }}</header>
+                    <p class="tpl-builder-col-sub">{{ 'templates.aesthetic_styles_sub' | translate }}</p>
                     <div class="tpl-style-form">
                         <div class="tpl-field">
-                            <label>Familia tipográfica</label>
+                            <label>{{ 'templates.font_family' | translate }}</label>
                             <select [(ngModel)]="styleConfig.fontFamily">
                                 <option>Arial</option>
                                 <option>Calibri</option>
@@ -750,43 +747,43 @@
                             </select>
                         </div>
                         <div class="tpl-field">
-                            <label>Tamaño de fuente (pt)</label>
+                            <label>{{ 'templates.font_size' | translate }}</label>
                             <input type="number" min="8" max="24" [(ngModel)]="styleConfig.fontSize" />
                         </div>
                         <div class="tpl-field">
-                            <label>Fondo cabeceras (Identificación, Resumen, etc.)</label>
+                            <label>{{ 'templates.heading_bg' | translate }}</label>
                             <div class="tpl-color-input">
                                 <input type="color" [(ngModel)]="styleConfig.headingColor" />
                                 <input type="text" [(ngModel)]="styleConfig.headingColor" />
                             </div>
                         </div>
                         <div class="tpl-field">
-                            <label>Texto cabeceras (Identificación, Resumen, etc.)</label>
+                            <label>{{ 'templates.heading_text' | translate }}</label>
                             <div class="tpl-color-input">
                                 <input type="color" [(ngModel)]="styleConfig.headingTextColor" />
                                 <input type="text" [(ngModel)]="styleConfig.headingTextColor" />
                             </div>
                         </div>
                         <div class="tpl-field">
-                            <label>Color texto general</label>
+                            <label>{{ 'templates.text_color' | translate }}</label>
                             <div class="tpl-color-input">
                                 <input type="color" [(ngModel)]="styleConfig.textColor" />
                                 <input type="text" [(ngModel)]="styleConfig.textColor" />
                             </div>
                         </div>
                         <div class="tpl-field">
-                            <label>Espaciado cabeceras (pt)</label>
+                            <label>{{ 'templates.heading_spacing' | translate }}</label>
                             <input type="number" min="0" max="50" [(ngModel)]="styleConfig.headingMargin" />
                         </div>
                         <div class="tpl-field">
-                            <label>Fondo cabecera tabla</label>
+                            <label>{{ 'templates.table_header_bg' | translate }}</label>
                             <div class="tpl-color-input">
                                 <input type="color" [(ngModel)]="styleConfig.tableHeaderBg" />
                                 <input type="text" [(ngModel)]="styleConfig.tableHeaderBg" />
                             </div>
                         </div>
                         <div class="tpl-field">
-                            <label>Texto cabecera tabla</label>
+                            <label>{{ 'templates.table_header_text' | translate }}</label>
                             <div class="tpl-color-input">
                                 <input type="color" [(ngModel)]="styleConfig.tableHeaderTextColor" />
                                 <input type="text" [(ngModel)]="styleConfig.tableHeaderTextColor" />
@@ -812,7 +809,7 @@
                         <polyline points="17 21 17 13 7 13 7 21"></polyline>
                         <polyline points="7 3 7 8 15 8"></polyline>
                     </svg>
-                    {{ isSavingMapping ? 'Guardando…' : 'Guardar cambios' }}
+                    {{ (isSavingMapping ? 'common.saving' : 'common.save_changes') | translate }}
                 </button>
             </div>
         </footer>
@@ -826,8 +823,8 @@
     <div class="tpl-modal tpl-modal-preview" (click)="$event.stopPropagation()">
         <header class="tpl-modal-head">
             <div>
-                <h2 class="tpl-modal-title">{{ previewTemplate?.name || 'Vista previa' }}</h2>
-                <p class="tpl-modal-sub">Documento Word rendereado por Microsoft Office Online Viewer.</p>
+                <h2 class="tpl-modal-title">{{ previewTemplate?.name || ('branding.preview' | translate) }}</h2>
+                <p class="tpl-modal-sub">{{ 'templates.preview_sub' | translate }}</p>
             </div>
             <button class="tpl-modal-close" (click)="closePreviewModal()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -845,7 +842,7 @@
                 <div class="tpl-preview-skeleton-bar tpl-preview-skeleton-bar--shorter"></div>
             </div>
             <iframe [src]="url"
-                    title="Vista previa de la plantilla"
+                    [title]="'templates.preview_title' | translate"
                     frameborder="0"
                     allowfullscreen></iframe>
         </div>
@@ -860,7 +857,7 @@
                     <polyline points="15 3 21 3 21 9"></polyline>
                     <line x1="10" y1="14" x2="21" y2="3"></line>
                 </svg>
-                Abrir en pestaña nueva
+                {{ 'templates.open_new_tab' | translate }}
             </a>
             <div class="tpl-modal-foot-right">
                 <button type="button" class="tpl-btn tpl-btn-outline" (click)="closePreviewModal()">{{ 'common.close' | translate }}</button>

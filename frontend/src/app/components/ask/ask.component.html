@@ -19,7 +19,7 @@
                 </span>
                 {{ 'common.ask_acten' | translate }}
             </h1>
-            <p class="aa-sub">Tu asistente inteligente de reuniones</p>
+            <p class="aa-sub">{{ 'ask.subtitle' | translate }}</p>
         </div>
         <div class="aa-hero-actions">
             <button type="button" class="aa-btn aa-btn-primary" (click)="newQuestion()">
@@ -28,7 +28,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Nueva pregunta
+                {{ 'ask.new_question' | translate }}
             </button>
 
             <!-- Historial de la sesión actual: dropdown con las preguntas
@@ -38,7 +38,7 @@
                         [class.is-active]="showHistory"
                         (click)="toggleHistory(); $event.stopPropagation()"
                         [disabled]="!historyList.length"
-                        [title]="historyList.length ? 'Ver preguntas anteriores' : 'Aún no has hecho preguntas'">
+                        [title]="(historyList.length ? 'ask.see_previous_questions' : 'ask.no_questions_yet_short') | translate">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -50,17 +50,17 @@
                 <div class="aa-history-pop" *ngIf="showHistory && historyList.length"
                      (click)="$event.stopPropagation()">
                     <header class="aa-history-head">
-                        <p class="aa-history-title">Preguntas anteriores</p>
+                        <p class="aa-history-title">{{ 'ask.previous_questions' | translate }}</p>
                         <button type="button" class="aa-history-clear"
                                 (click)="clearAllHistory()"
-                                title="Borrar todo el historial">
+                                [attr.title]="'ask.clear_history' | translate">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
                                 <path d="M10 11v6"></path><path d="M14 11v6"></path>
                             </svg>
-                            Borrar todo
+                            {{ 'ask.delete_all' | translate }}
                         </button>
                     </header>
                     <ul class="aa-history-list">
@@ -72,7 +72,7 @@
                                 </button>
                                 <button type="button" class="aa-history-del"
                                         (click)="deleteHistoryEntry(t, $event)"
-                                        title="Borrar esta pregunta">
+                                        [attr.title]="'ask.delete_question' | translate">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -93,13 +93,13 @@
         <!-- ============= PANEL IZQ: SUGERENCIAS ============= -->
         <aside class="aa-suggested">
             <header class="aa-suggested-head">
-                <h2 class="aa-suggested-title">Preguntas sugeridas</h2>
-                <p class="aa-suggested-sub">Empieza con estas ideas</p>
+                <h2 class="aa-suggested-title">{{ 'ask.suggested_questions' | translate }}</h2>
+                <p class="aa-suggested-sub">{{ 'ask.start_with_ideas' | translate }}</p>
             </header>
 
             <!-- Filtro por proyecto preservado del componente original. -->
             <div class="aa-filter">
-                <label class="aa-filter-label">Filtrar por proyecto</label>
+                <label class="aa-filter-label">{{ 'ask.filter_by_project' | translate }}</label>
                 <div class="aa-filter-select">
                     <select [(ngModel)]="projectId" [disabled]="isAsking">
                         <option [ngValue]="null">{{ 'common.all' | translate }}</option>
@@ -151,9 +151,9 @@
                         <path d="M19 16l.7 2 2 .7-2 .7L19 22l-.7-2-2-.7 2-.7z"></path>
                     </svg>
                 </div>
-                <p class="aa-empty-title">Aún no has realizado preguntas</p>
+                <p class="aa-empty-title">{{ 'ask.no_questions_yet' | translate }}</p>
                 <p class="aa-empty-sub">
-                    Elige una sugerencia del panel izquierdo o escribe tu consulta abajo para comenzar.
+                    {{ 'ask.empty_sub' | translate }}
                 </p>
             </div>
 
@@ -185,7 +185,7 @@
                     </div>
                 </div>
                 <p class="aa-loading-caption" style="margin-top: 10px; opacity: 0.75; font-size: 13px">
-                    Acten está consultando el contexto…
+                    {{ 'ask.consulting_context' | translate }}
                 </p>
             </div>
 
@@ -216,25 +216,24 @@
                                         {{ turn.structured?.intro }}
                                     </ng-container>
                                     <ng-template #genericIntro>
-                                        Esta es la respuesta de Acten basada en
-                                        {{ turn.chunks_used }} fragmentos de contexto.
+                                        {{ 'ask.generic_intro' | translate:{ n: turn.chunks_used } }}
                                     </ng-template>
                                 </p>
                                 <div class="aa-a-actions">
-                                    <button type="button" class="aa-a-action" (click)="copyAnswer(turn)" title="Copiar respuesta">
+                                    <button type="button" class="aa-a-action" (click)="copyAnswer(turn)" [attr.title]="'ask.copy_answer' | translate">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                         </svg>
                                     </button>
-                                    <button type="button" class="aa-a-action" (click)="rateAnswer(turn, 'up')" title="Me gusta">
+                                    <button type="button" class="aa-a-action" (click)="rateAnswer(turn, 'up')" [attr.title]="'ask.like' | translate">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
                                         </svg>
                                     </button>
-                                    <button type="button" class="aa-a-action" (click)="rateAnswer(turn, 'down')" title="No me gusta">
+                                    <button type="button" class="aa-a-action" (click)="rateAnswer(turn, 'down')" [attr.title]="'ask.dislike' | translate">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
@@ -309,7 +308,7 @@
                                                     <th class="th-owner">{{ 'project_detail.owner' | translate }}</th>
                                                     <th class="th-due">{{ 'common.due_date' | translate }}</th>
                                                     <th class="th-status">{{ 'common.status' | translate }}</th>
-                                                    <th class="th-src">Fuente</th>
+                                                    <th class="th-src">{{ 'ask.source' | translate }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -406,7 +405,7 @@
                                                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                                             </svg>
                                         </span>
-                                        Acuerdos
+                                        {{ 'project_detail.agreements' | translate }}
                                     </h3>
                                     <ul class="aa-decision-list">
                                         <li class="aa-decision aa-decision--agreement"
@@ -456,7 +455,7 @@
                                             <polyline points="14 2 14 8 20 8"></polyline>
                                         </svg>
                                     </span>
-                                    Fuentes
+                                    {{ 'ask.sources' | translate }}
                                 </h3>
                                 <ul class="aa-source-list">
                                     <li class="aa-source"
@@ -485,11 +484,10 @@
                             <footer class="aa-a-foot">
                                 <span class="aa-confidence" [attr.data-tone]="confidenceLabel(turn).tone">
                                     <span class="aa-confidence-dot"></span>
-                                    Confianza: {{ confidenceLabel(turn).text }}
+                                    {{ 'ask.confidence' | translate }}: {{ confidenceLabel(turn).text }}
                                 </span>
                                 <span class="aa-source-count" *ngIf="uniqueSourceCount(turn) > 0">
-                                    Respuesta generada a partir de {{ uniqueSourceCount(turn) }}
-                                    {{ uniqueSourceCount(turn) === 1 ? 'fuente' : 'fuentes' }}
+                                    {{ 'ask.answer_from_n_sources' | translate:{ n: uniqueSourceCount(turn), suffix: (uniqueSourceCount(turn) === 1 ? ('ask.source' | translate) : ('ask.sources' | translate)) } }}
                                 </span>
                             </footer>
                         </div>
@@ -504,7 +502,7 @@
                         class="aa-chat-textarea"
                         [(ngModel)]="question"
                         rows="2"
-                        placeholder="Haz una pregunta de seguimiento..."
+                        [placeholder]="'ask.followup_placeholder' | translate"
                         (keydown.enter)="onEnter($event)"
                         [disabled]="isAsking"></textarea>
                     <div class="aa-chat-input-foot">
@@ -515,12 +513,12 @@
                                         [class.is-active]="showAttachMenu"
                                         (click)="toggleAttachMenu(); $event.stopPropagation()"
                                         [disabled]="isAsking || isOcr"
-                                        title="Adjuntar contexto a tu pregunta">
+                                        [attr.title]="'ask.attach_context' | translate">
                                     <svg *ngIf="!isOcr" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                                     </svg>
-                                    <span *ngIf="isOcr" class="aa-spinner" aria-label="Procesando…"></span>
+                                    <span *ngIf="isOcr" class="aa-spinner" [attr.aria-label]="'common.processing' | translate"></span>
                                 </button>
 
                                 <div class="aa-attach-pop" *ngIf="showAttachMenu" (click)="$event.stopPropagation()">
@@ -536,8 +534,8 @@
                                             </svg>
                                         </span>
                                         <div class="aa-attach-text">
-                                            <strong>Adjuntar texto</strong>
-                                            <small>.txt, .md, .json, .csv (≤ 200 KB)</small>
+                                            <strong>{{ 'ask.attach_text' | translate }}</strong>
+                                            <small>{{ 'ask.attach_text_sub' | translate }}</small>
                                         </div>
                                     </button>
 
@@ -552,8 +550,8 @@
                                             </svg>
                                         </span>
                                         <div class="aa-attach-text">
-                                            <strong>Adjuntar imagen</strong>
-                                            <small>OCR de capturas, fotos o screenshots</small>
+                                            <strong>{{ 'ask.attach_image' | translate }}</strong>
+                                            <small>{{ 'ask.attach_image_sub' | translate }}</small>
                                         </div>
                                     </button>
 
@@ -570,8 +568,8 @@
                                             </svg>
                                         </span>
                                         <div class="aa-attach-text">
-                                            <strong>Enfocar en una reunión</strong>
-                                            <small>La búsqueda solo usará esa acta</small>
+                                            <strong>{{ 'ask.focus_on_meeting' | translate }}</strong>
+                                            <small>{{ 'ask.focus_on_meeting_sub' | translate }}</small>
                                         </div>
                                     </button>
                                 </div>
@@ -586,14 +584,14 @@
 
                             <!-- Chip de sesión pinneada -->
                             <span class="aa-pin-chip" *ngIf="pinnedSession"
-                                  [title]="'Búsqueda enfocada en ' + pinnedSession.title">
+                                  [title]="('ask.search_focused_on' | translate) + ' ' + pinnedSession.title">
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="17" x2="12" y2="22"></line>
                                     <path d="M5 17h14l-1.7-3.4a2 2 0 0 0-.8-.9L15 11V6a3 3 0 0 0-6 0v5l-1.5 1.7a2 2 0 0 0-.8.9z"></path>
                                 </svg>
                                 <span class="aa-pin-text">{{ pinnedSession.title }}</span>
-                                <button type="button" class="aa-pin-close" (click)="unpinSession()" title="Quitar enfoque">
+                                <button type="button" class="aa-pin-close" (click)="unpinSession()" [attr.title]="'ask.unpin' | translate">
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -608,7 +606,7 @@
                                         [class.is-active]="showAdvanced"
                                         (click)="toggleAdvanced(); $event.stopPropagation()"
                                         [disabled]="isAsking"
-                                        title="Ajustes de búsqueda">
+                                        [attr.title]="'ask.search_settings' | translate">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="4" y1="21" x2="4" y2="14"></line>
@@ -623,17 +621,17 @@
                                     </svg>
                                 </button>
                                 <div class="aa-advanced-pop" *ngIf="showAdvanced" (click)="$event.stopPropagation()">
-                                    <p class="aa-advanced-title">Ajustes de búsqueda</p>
+                                    <p class="aa-advanced-title">{{ 'ask.search_settings' | translate }}</p>
                                     <label class="aa-advanced-row">
                                         <span class="aa-advanced-label">
-                                            Fragmentos de contexto
+                                            {{ 'ask.context_chunks' | translate }}
                                             <strong>{{ topK }}</strong>
                                         </span>
                                         <input type="range" min="3" max="20" step="1"
                                                [(ngModel)]="topK"
                                                class="aa-range" />
                                         <span class="aa-advanced-hint">
-                                            Más fragmentos = respuesta más rica, pero más lenta.
+                                            {{ 'ask.more_chunks_hint' | translate }}
                                         </span>
                                     </label>
                                 </div>
@@ -643,13 +641,13 @@
                         <div class="aa-chat-input-right">
                             <!-- Select real para cambiar modelo (pill compacta) -->
                             <label class="aa-model-select"
-                                   [title]="'Modelo: ' + (selectedModelObj()?.label || '') + ' · ' + (selectedModelObj()?.sublabel || '')">
+                                   [title]="('ask.model' | translate) + ': ' + (selectedModelObj()?.label || '') + ' · ' + (selectedModelObj()?.sublabel || '')">
                                 <svg class="aa-model-icon" width="12" height="12" viewBox="0 0 24 24" fill="none"
                                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"></path>
                                 </svg>
-                                <span class="aa-model-label">{{ selectedModelObj()?.label || 'Modelo' }}</span>
-                                <select [(ngModel)]="selectedModel" [disabled]="isAsking" aria-label="Modelo de IA">
+                                <span class="aa-model-label">{{ selectedModelObj()?.label || ('ask.model' | translate) }}</span>
+                                <select [(ngModel)]="selectedModel" [disabled]="isAsking" [attr.aria-label]="'ask.ai_model' | translate">
                                     <option *ngFor="let m of modelOptions"
                                             [value]="m.id"
                                             [disabled]="m.disabled">
@@ -661,7 +659,7 @@
                             <button type="button" class="aa-send"
                                     (click)="submit()"
                                     [disabled]="isAsking || !question.trim()"
-                                    title="Enviar pregunta">
+                                    [attr.title]="'ask.send_question' | translate">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -681,8 +679,8 @@
         <div class="aa-modal" (click)="$event.stopPropagation()">
             <header class="aa-modal-head">
                 <div>
-                    <h3 class="aa-modal-title">Enfocar la búsqueda en una reunión</h3>
-                    <p class="aa-modal-sub">La próxima pregunta solo usará esa acta como contexto.</p>
+                    <h3 class="aa-modal-title">{{ 'ask.focus_search_title' | translate }}</h3>
+                    <p class="aa-modal-sub">{{ 'ask.focus_search_sub' | translate }}</p>
                 </div>
                 <button type="button" class="aa-modal-close" (click)="closeSessionPicker()" [attr.title]="'common.close' | translate">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -700,7 +698,7 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input type="text" [(ngModel)]="sessionPickerQuery"
-                       placeholder="Buscar por título o ID de sesión…"
+                       [placeholder]="'ask.search_session_id_placeholder' | translate"
                        autofocus />
             </div>
 
@@ -725,7 +723,7 @@
                     </button>
                 </li>
                 <li *ngIf="!filteredSessions.length" class="aa-modal-empty">
-                    No se encontraron sesiones que coincidan.
+                    {{ 'ask.no_sessions_match' | translate }}
                 </li>
             </ul>
         </div>

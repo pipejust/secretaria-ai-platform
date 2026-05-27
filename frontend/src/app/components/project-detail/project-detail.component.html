@@ -27,7 +27,7 @@
   <ng-container *ngIf="!isLoading && data as d">
     <header class="header">
       <div>
-        <a routerLink="/admin/projects" class="back-link">← Volver a proyectos</a>
+        <a routerLink="/admin/projects" class="back-link">← {{ 'project_detail.back_to_projects' | translate }}</a>
         <h1 class="title">{{ d.project.name }}</h1>
         <p class="subtitle" *ngIf="d.project.description">{{ d.project.description }}</p>
       </div>
@@ -39,12 +39,12 @@
         <div class="meta-row">
           <span class="meta-key">{{ 'settings.auto_dispatch' | translate }}</span>
           <span class="meta-val">
-            <ng-container *ngIf="d.project.auto_dispatch_enabled === null">Heredado del global</ng-container>
+            <ng-container *ngIf="d.project.auto_dispatch_enabled === null">{{ 'project_detail.inherited_from_global' | translate }}</ng-container>
             <ng-container *ngIf="d.project.auto_dispatch_enabled === true">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px;">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              Activo · {{ d.project.auto_dispatch_timeout_hours
+              {{ 'common.active' | translate }} · {{ d.project.auto_dispatch_timeout_hours
                 ? (d.project.auto_dispatch_timeout_hours * 60 | number:'1.0-0') + ' min'
                 : '?' }}
             </ng-container>
@@ -53,7 +53,7 @@
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
-              Desactivado
+              {{ 'project_detail.disabled' | translate }}
             </ng-container>
           </span>
         </div>
@@ -67,11 +67,11 @@
       </article>
       <article class="metric-card metric-card--blue">
         <span class="metric-num">{{ d.metrics.active_action_items }}</span>
-        <span class="metric-label">Tareas activas</span>
+        <span class="metric-label">{{ 'project_detail.active_tasks_short' | translate }}</span>
       </article>
       <article class="metric-card metric-card--red">
         <span class="metric-num">{{ d.metrics.overdue }}</span>
-        <span class="metric-label">Vencidas</span>
+        <span class="metric-label">{{ 'project_detail.overdue' | translate }}</span>
       </article>
       <article class="metric-card metric-card--amber">
         <span class="metric-num">{{ d.metrics.upcoming_7d }}</span>
@@ -79,7 +79,7 @@
       </article>
       <article class="metric-card metric-card--green">
         <span class="metric-num">{{ d.metrics.completed_action_items }}</span>
-        <span class="metric-label">Completadas</span>
+        <span class="metric-label">{{ 'project_detail.completed' | translate }}</span>
       </article>
       <article class="metric-card metric-card--neutral">
         <span class="metric-num">{{ d.metrics.contacts_count }}</span>
@@ -87,13 +87,13 @@
       </article>
       <article class="metric-card metric-card--neutral">
         <span class="metric-num">{{ d.metrics.routings_active }}</span>
-        <span class="metric-label">Integraciones activas</span>
+        <span class="metric-label">{{ 'project_detail.active_integrations' | translate }}</span>
       </article>
     </section>
 
     <div class="grid">
       <section class="panel">
-        <h2>Decisiones recientes</h2>
+        <h2>{{ 'project_detail.decisions' | translate }}</h2>
         <p class="hint" *ngIf="!d.recent_decisions.length">{{ 'project_detail.no_decisions' | translate }}</p>
         <article *ngFor="let dec of d.recent_decisions; trackBy: trackByDecision" class="decision">
           <div class="decision-head">
@@ -106,7 +106,7 @@
 
       <section class="panel">
         <h2>{{ 'dashboard.recent_meetings' | translate }}</h2>
-        <p class="hint" *ngIf="!d.last_sessions.length">Sin reuniones registradas.</p>
+        <p class="hint" *ngIf="!d.last_sessions.length">{{ 'project_detail.no_meetings_recorded' | translate }}</p>
         <ul class="session-list">
           <li *ngFor="let s of d.last_sessions; trackBy: trackById">
             <a [routerLink]="['/admin/curation', s.id]" class="session-link">{{ s.title }}</a>
@@ -122,7 +122,7 @@
 
     <section class="panel">
       <h2>{{ 'project_detail.active_tasks' | translate }}</h2>
-      <p class="hint" *ngIf="!d.active_action_items.length">No hay tareas activas en este proyecto.</p>
+      <p class="hint" *ngIf="!d.active_action_items.length">{{ 'project_detail.no_active_tasks' | translate }}</p>
       <table *ngIf="d.active_action_items.length" class="action-table">
         <thead>
           <tr>
@@ -138,7 +138,7 @@
               [class.row-overdue]="it.is_overdue"
               [class.row-upcoming]="it.is_upcoming">
             <td>{{ it.title }}</td>
-            <td>{{ it.owner_name || 'Sin asignar' }}</td>
+            <td>{{ it.owner_name || ('common.unassigned' | translate) }}</td>
             <td>{{ formatDate(it.due_date) }}</td>
             <td>{{ statusLabel(it.status) }}</td>
             <td><a [routerLink]="['/admin/curation', it.session_id]">#{{ it.session_id }}</a></td>
