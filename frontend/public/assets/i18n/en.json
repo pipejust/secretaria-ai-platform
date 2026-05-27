@@ -152,7 +152,18 @@
     "task_assigned_notif": "We assigned you a new task in the project minutes",
     "review_architecture_doc": "Review the architecture document",
     "view_minutes": "View minutes →",
-    "back_to_login": "Back to login"
+    "back_to_login": "Back to login",
+    "secure_private_enterprise": "Secure. Private. Enterprise-ready.",
+    "sending": "Sending…",
+    "show": "Show",
+    "hide": "Hide",
+    "company": "Company",
+    "workspace": "workspace",
+    "help_center": "Help center",
+    "privacy": "Privacy",
+    "open_menu": "Open menu",
+    "footer_links": "Footer links",
+    "close_notification": "Close notification"
   },
   "lang": {
     "es": "Español",
@@ -197,7 +208,9 @@
     "aside_sub_platform": "The AI assistant for meetings that turns conversations into decisions, responsibilities and professional deliverables.",
     "aside_sub_client": "Artificial intelligence for your meetings — powered by",
     "entering_as_company": "Entering as company",
-    "signing_in": "Signing in…"
+    "signing_in": "Signing in…",
+    "code_expires_10min": "Expires in 10 minutes.",
+    "verify_and_enter": "Verify and continue"
   },
   "forgot_password": {
     "title": "Recover your password",
@@ -219,7 +232,9 @@
     "well_send_link": "and we'll send you a link to create a new password.",
     "indicate_workspace": "Indicate the workspace your account belongs to.",
     "send_link": "Send link",
-    "change_company": "Change company"
+    "change_company": "Change company",
+    "check_email": "Check your email",
+    "no_email_received": "Didn't receive it? Check your spam folder or try again in a few minutes."
   },
   "reset_password": {
     "title": "Reset your password",
@@ -239,7 +254,15 @@
     "define_new": "Define a new",
     "secure_password": "secure password.",
     "create_secure": "Create a secure password for your account at",
-    "you_will_be_logged_in": ". You'll be signed in as soon as you confirm it."
+    "you_will_be_logged_in": ". You'll be signed in as soon as you confirm it.",
+    "subtitle_long": "Pick a password you aren't using elsewhere. A good mix of uppercase letters, numbers and symbols makes a real difference.",
+    "min_8_chars": "Minimum 8 characters",
+    "repeat_new_password": "Repeat your new password",
+    "done_title": "Done!",
+    "redirect_login_soon": "We'll take you to the sign-in page in a few seconds…",
+    "go_to_login_now": "Go to sign in",
+    "invalid_link": "Invalid link",
+    "request_new_link": "Request a new link"
   },
   "change_password": {
     "title": "Set your password",
@@ -284,7 +307,12 @@
     "no_notifications": "No notifications",
     "see_all": "See all",
     "powered_by": "Powered by",
-    "operations": "Operations"
+    "operations": "Operations",
+    "calendar": "Calendar",
+    "reports": "Reports",
+    "brand": "Brand",
+    "roles": "Roles",
+    "system_active": "System Active"
   },
   "dashboard": {
     "title": "Overview",
@@ -629,5 +657,32 @@
   },
   "landing": {
     "plus_n_more": "+2 more"
+  },
+  "footer": {
+    "all_rights_reserved": "All rights reserved."
+  },
+  "admin_layout": {
+    "no_matches_for": "We couldn't find matches for",
+    "notify_new_sessions": "We'll let you know when new sessions or pending tasks arrive.",
+    "my_profile": "My profile",
+    "meetings_aria": "Meetings — full list of sessions",
+    "ask_aria": "Ask the AI about your minutes (RAG)",
+    "tasks_aria": "Task traceability",
+    "companies_aria": "Company management — super-admin only",
+    "go_home": "Go home",
+    "dashboard_title": "Overview — metrics and executive view",
+    "calendar_title": "Connect Google/Microsoft Calendar",
+    "reports_title": "Weekly and monthly reports",
+    "landing_cms_title": "Edit the public acten.app landing",
+    "landing_messages_title": "Messages from the public landing form",
+    "brand_title": "Customize your brand: logo, colors, your company's details",
+    "search_placeholder": "Search meetings, projects, tasks, people...",
+    "searching": "Searching…",
+    "mark_all_read": "Mark all as read"
+  },
+  "help_center": {
+    "lead": "Quick guides, FAQs and contact with human support. If you can't find what you need, write to us.",
+    "back_to_login": "Back to sign in",
+    "search_placeholder": "Search articles, guides and shortcuts…"
   }
 }

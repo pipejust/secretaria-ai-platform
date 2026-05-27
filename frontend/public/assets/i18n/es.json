@@ -152,7 +152,18 @@
     "task_assigned_notif": "Te asignamos una nueva tarea en el acta del proyecto",
     "review_architecture_doc": "Revisar el documento de arquitectura",
     "view_minutes": "Ver acta →",
-    "back_to_login": "Volver al inicio de sesión"
+    "back_to_login": "Volver al inicio de sesión",
+    "secure_private_enterprise": "Seguro. Privado. Listo para empresas.",
+    "sending": "Enviando…",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "company": "Empresa",
+    "workspace": "workspace",
+    "help_center": "Centro de ayuda",
+    "privacy": "Privacidad",
+    "open_menu": "Abrir menú",
+    "footer_links": "Enlaces de pie de página",
+    "close_notification": "Cerrar notificación"
   },
   "lang": {
     "es": "Español",
@@ -197,7 +208,9 @@
     "aside_sub_platform": "El asistente de IA para reuniones que transforma las\n                    conversaciones en decisiones, responsabilidades y\n                    entregables profesionales.",
     "aside_sub_client": "Inteligencia artificial para tus reuniones —\n                    operado con",
     "entering_as_company": "Entrando como empresa",
-    "signing_in": "Iniciando sesión…"
+    "signing_in": "Iniciando sesión…",
+    "code_expires_10min": "Caduca en 10 minutos.",
+    "verify_and_enter": "Verificar y entrar"
   },
   "forgot_password": {
     "title": "Recupera tu contraseña",
@@ -219,7 +232,9 @@
     "well_send_link": "y te enviaremos un enlace para crear una nueva contraseña.",
     "indicate_workspace": "Indica el workspace al que pertenece tu cuenta.",
     "send_link": "Enviar enlace",
-    "change_company": "Cambiar de empresa"
+    "change_company": "Cambiar de empresa",
+    "check_email": "Revisa tu correo",
+    "no_email_received": "¿No te llegó? Revisa la carpeta de spam o vuelve a intentarlo en unos minutos."
   },
   "reset_password": {
     "title": "Restablecé tu contraseña",
@@ -239,7 +254,15 @@
     "define_new": "Define una nueva",
     "secure_password": "contraseña segura.",
     "create_secure": "Crea una contraseña segura para tu cuenta de",
-    "you_will_be_logged_in": ".\n                            Tendrás sesión iniciada en cuanto la confirmes."
+    "you_will_be_logged_in": ".\n                            Tendrás sesión iniciada en cuanto la confirmes.",
+    "subtitle_long": "Elige una contraseña que no estés usando en otros servicios. Una buena combinación de mayúsculas, números y símbolos marca la diferencia.",
+    "min_8_chars": "Mínimo 8 caracteres",
+    "repeat_new_password": "Repite tu nueva contraseña",
+    "done_title": "¡Listo!",
+    "redirect_login_soon": "Te llevaremos al inicio de sesión en unos segundos…",
+    "go_to_login_now": "Ir al inicio de sesión",
+    "invalid_link": "Enlace no válido",
+    "request_new_link": "Solicitar enlace nuevo"
   },
   "change_password": {
     "title": "Establecé tu contraseña",
@@ -284,7 +307,12 @@
     "no_notifications": "No tienes notificaciones",
     "see_all": "Ver todas",
     "powered_by": "Hecho con",
-    "operations": "Gestión Operativa"
+    "operations": "Gestión Operativa",
+    "calendar": "Calendario",
+    "reports": "Reportes",
+    "brand": "Marca",
+    "roles": "Roles",
+    "system_active": "Sistema Activo"
   },
   "dashboard": {
     "title": "Resumen",
@@ -629,5 +657,32 @@
   },
   "landing": {
     "plus_n_more": "+2 más"
+  },
+  "footer": {
+    "all_rights_reserved": "Todos los derechos reservados."
+  },
+  "admin_layout": {
+    "no_matches_for": "No encontramos coincidencias para",
+    "notify_new_sessions": "Te avisaremos cuando lleguen sesiones nuevas o tareas pendientes.",
+    "my_profile": "Mi Perfil",
+    "meetings_aria": "Reuniones — listado completo de sesiones",
+    "ask_aria": "Pregúntale a la IA sobre tus actas (RAG)",
+    "tasks_aria": "Trazabilidad de tareas",
+    "companies_aria": "Gestión de empresas — sólo super-admin",
+    "go_home": "Ir al inicio",
+    "dashboard_title": "Resumen — métricas y vista ejecutiva",
+    "calendar_title": "Conectar Google/Microsoft Calendar",
+    "reports_title": "Reportes semanales y mensuales",
+    "landing_cms_title": "Editar el landing público de acten.app",
+    "landing_messages_title": "Mensajes del formulario público del landing",
+    "brand_title": "Personaliza la marca: logo, colores, datos de tu empresa",
+    "search_placeholder": "Buscar reuniones, proyectos, tareas, personas...",
+    "searching": "Buscando…",
+    "mark_all_read": "Marcar todas como leídas"
+  },
+  "help_center": {
+    "lead": "Guías rápidas, preguntas frecuentes y contacto con soporte humano. Si no encuentras lo que buscas, escríbenos.",
+    "back_to_login": "Volver al inicio de sesión",
+    "search_placeholder": "Buscar artículos, guías y atajos…"
   }
 }

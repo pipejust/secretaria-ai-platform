@@ -56,7 +56,7 @@
           class="al-header__burger"
           (click)="toggleMobileMenu()"
           [attr.aria-expanded]="mobileMenuOpen"
-          aria-label="Abrir menú">
+          [attr.aria-label]="'common.open_menu' | translate">
           <span></span><span></span><span></span>
         </button>
       </div>
@@ -175,7 +175,7 @@
                 <div class="al-mock__top-actions">
                   <span class="al-mock__chip al-mock__chip--success">Completada</span>
                   <button class="al-mock__btn" type="button" disabled>Compartir</button>
-                  <button class="al-mock__btn-ico" type="button" disabled aria-label="Más">
+                  <button class="al-mock__btn-ico" type="button" disabled [attr.aria-label]="'common.more' | translate">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
                     </svg>
@@ -825,7 +825,7 @@
           </ul>
         </div>
 
-        <nav class="al-footer__cols" aria-label="Enlaces de pie de página">
+        <nav class="al-footer__cols" [attr.aria-label]="'common.footer_links' | translate">
           <ng-container *ngFor="let col of c.footer.columns">
             <!-- Solo renderiza la columna si tiene al menos un link válido. -->
             <div class="al-footer__col" *ngIf="hasValidLinks(col)">

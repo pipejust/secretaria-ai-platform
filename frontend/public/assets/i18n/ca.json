@@ -152,7 +152,18 @@
     "task_assigned_notif": "T'hem assignat una nova tasca en l'acta del projecte",
     "review_architecture_doc": "Revisar el document d'arquitectura",
     "view_minutes": "Veure acta →",
-    "back_to_login": "Torna a l'inici de sessió"
+    "back_to_login": "Torna a l'inici de sessió",
+    "secure_private_enterprise": "Segur. Privat. Llest per a empreses.",
+    "sending": "Enviant…",
+    "show": "Mostrar",
+    "hide": "Amagar",
+    "company": "Empresa",
+    "workspace": "workspace",
+    "help_center": "Centre d'ajuda",
+    "privacy": "Privadesa",
+    "open_menu": "Obrir menú",
+    "footer_links": "Enllaços de peu de pàgina",
+    "close_notification": "Tancar notificació"
   },
   "lang": {
     "es": "Español",
@@ -197,7 +208,9 @@
     "aside_sub_platform": "L'assistent d'IA per a reunions que transforma les converses en decisions, responsabilitats i lliuraments professionals.",
     "aside_sub_client": "Intel·ligència artificial per a les teves reunions — operat amb",
     "entering_as_company": "Entrant com a empresa",
-    "signing_in": "Iniciant sessió…"
+    "signing_in": "Iniciant sessió…",
+    "code_expires_10min": "Caduca en 10 minuts.",
+    "verify_and_enter": "Verificar i entrar"
   },
   "forgot_password": {
     "title": "Recupera la teva contrasenya",
@@ -219,7 +232,9 @@
     "well_send_link": "i t'enviarem un enllaç per crear una nova contrasenya.",
     "indicate_workspace": "Indica l'espai de treball al qual pertany el teu compte.",
     "send_link": "Envia enllaç",
-    "change_company": "Canvia d'empresa"
+    "change_company": "Canvia d'empresa",
+    "check_email": "Revisa el teu correu",
+    "no_email_received": "No t'ha arribat? Revisa la carpeta d'spam o torna-ho a provar en uns minuts."
   },
   "reset_password": {
     "title": "Restableix la teva contrasenya",
@@ -239,7 +254,15 @@
     "define_new": "Defineix una nova",
     "secure_password": "contrasenya segura.",
     "create_secure": "Crea una contrasenya segura per al teu compte de",
-    "you_will_be_logged_in": ". Tindràs sessió iniciada quan la confirmis."
+    "you_will_be_logged_in": ". Tindràs sessió iniciada quan la confirmis.",
+    "subtitle_long": "Tria una contrasenya que no estiguis fent servir en altres serveis. Una bona combinació de majúscules, números i símbols marca la diferència.",
+    "min_8_chars": "Mínim 8 caràcters",
+    "repeat_new_password": "Repeteix la teva nova contrasenya",
+    "done_title": "Fet!",
+    "redirect_login_soon": "Et portarem a l'inici de sessió en uns segons…",
+    "go_to_login_now": "Anar a l'inici de sessió",
+    "invalid_link": "Enllaç no vàlid",
+    "request_new_link": "Sol·licitar un enllaç nou"
   },
   "change_password": {
     "title": "Estableix la teva contrasenya",
@@ -284,7 +307,12 @@
     "no_notifications": "No tens notificacions",
     "see_all": "Veure'n totes",
     "powered_by": "Fet amb",
-    "operations": "Gestió Operativa"
+    "operations": "Gestió Operativa",
+    "calendar": "Calendari",
+    "reports": "Informes",
+    "brand": "Marca",
+    "roles": "Rols",
+    "system_active": "Sistema Actiu"
   },
   "dashboard": {
     "title": "Resum",
@@ -629,5 +657,32 @@
   },
   "landing": {
     "plus_n_more": "+2 més"
+  },
+  "footer": {
+    "all_rights_reserved": "Tots els drets reservats."
+  },
+  "admin_layout": {
+    "no_matches_for": "No hem trobat coincidències per a",
+    "notify_new_sessions": "T'avisarem quan arribin sessions noves o tasques pendents.",
+    "my_profile": "El meu perfil",
+    "meetings_aria": "Reunions — llistat complet de sessions",
+    "ask_aria": "Pregunta a la IA sobre les teves actes (RAG)",
+    "tasks_aria": "Traçabilitat de tasques",
+    "companies_aria": "Gestió d'empreses — només super-admin",
+    "go_home": "Anar a l'inici",
+    "dashboard_title": "Resum — mètriques i vista executiva",
+    "calendar_title": "Connectar Google/Microsoft Calendar",
+    "reports_title": "Informes setmanals i mensuals",
+    "landing_cms_title": "Editar el landing públic d'acten.app",
+    "landing_messages_title": "Missatges del formulari públic del landing",
+    "brand_title": "Personalitza la marca: logo, colors, dades de la teva empresa",
+    "search_placeholder": "Cercar reunions, projectes, tasques, persones...",
+    "searching": "Cercant…",
+    "mark_all_read": "Marcar-les totes com a llegides"
+  },
+  "help_center": {
+    "lead": "Guies ràpides, preguntes freqüents i contacte amb suport humà. Si no trobes el que busques, escriu-nos.",
+    "back_to_login": "Tornar a l'inici de sessió",
+    "search_placeholder": "Buscar articles, guies i dreceres…"
   }
 }

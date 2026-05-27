@@ -171,7 +171,7 @@
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                 <path d="M9 12l2 2 4-4"></path>
             </svg>
-            <span>Seguro. Privado. Listo para empresas.</span>
+            <span>{{ 'common.secure_private_enterprise' | translate }}</span>
         </div>
     </aside>
 
@@ -221,7 +221,7 @@
                                    [(ngModel)]="password" required placeholder="••••••••••••"
                                    autocomplete="current-password" />
                             <button type="button" class="password-toggle" (click)="togglePassword()">
-                                {{ showPassword ? 'Ocultar' : 'Mostrar' }}
+                                {{ (showPassword ? 'common.hide' : 'common.show') | translate }}
                             </button>
                         </div>
                     </div>
@@ -262,7 +262,7 @@
 
                     <p style="margin: 0 0 4px 0; font-size: 14px; color: #475569;">
                         {{ 'login.2fa_sent_to' | translate }} <strong>{{ emailMasked }}</strong>.
-                        Caduca en 10 minutos.
+                        {{ 'login.code_expires_10min' | translate }}
                     </p>
 
                     <div class="field">
@@ -276,7 +276,7 @@
                     <div class="error-banner" *ngIf="errorMessage" role="alert">{{ errorMessage }}</div>
 
                     <button type="submit" class="btn-signin" [disabled]="isVerifying2FA || !code2FA">
-                        <span class="btn-signin-label">{{ isVerifying2FA ? 'Verificando…' : 'Verificar y entrar' }}</span>
+                        <span class="btn-signin-label">{{ (isVerifying2FA ? 'login.verifying' : 'login.verify_and_enter') | translate }}</span>
                     </button>
 
                     <div class="row-between" style="margin-top: 8px;">
@@ -305,11 +305,11 @@
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                     </svg>
-                    Privacidad
+                    {{ 'common.privacy' | translate }}
                 </a>
             </div>
             <div class="footer-copy">
-                © {{ year }} {{ branding.platformName() }}, Inc. Todos los derechos reservados.
+                © {{ year }} {{ branding.platformName() }}, Inc. {{ 'footer.all_rights_reserved' | translate }}
             </div>
         </footer>
     </main>
