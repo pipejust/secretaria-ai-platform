@@ -212,13 +212,13 @@
                     </div>
 
                     <div class="field">
-                        <label for="email">Correo electrónico</label>
+                        <label for="email">{{ 'common.email' | translate }}</label>
                         <input id="email" type="email" [(ngModel)]="email" name="email" required
                                placeholder="tu@empresa.com" autocomplete="email" />
                     </div>
 
                     <div class="field">
-                        <label for="password">Contraseña</label>
+                        <label for="password">{{ 'common.password' | translate }}</label>
                         <div class="password-wrap">
                             <input [type]="showPassword ? 'text' : 'password'" id="password" name="password"
                                    [(ngModel)]="password" required placeholder="••••••••••••"
@@ -301,7 +301,7 @@
                         <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                     </svg>
-                    Centro de ayuda
+                    {{ 'help.title' | translate }}
                 </a>
                 <a routerLink="/privacy">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"

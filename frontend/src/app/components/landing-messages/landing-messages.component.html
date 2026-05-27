@@ -4,7 +4,7 @@
     <header class="lmsg-header">
         <div class="lmsg-header-left">
             <span class="lmsg-eyebrow">Landing público</span>
-            <h1 class="lmsg-title">Mensajes del landing</h1>
+            <h1 class="lmsg-title">{{ 'landing_messages.title' | translate }}</h1>
             <p class="lmsg-subtitle">
                 Bandeja de contactos recibidos desde el formulario público de acten.app.
                 Marca como leídos, respondidos o archivados a medida que los procesas.
@@ -207,7 +207,7 @@
                             <ng-container [ngSwitch]="selected.email_status">
                                 <span *ngSwitchCase="'sent'">Enviada</span>
                                 <span *ngSwitchCase="'failed'">Falló</span>
-                                <span *ngSwitchCase="'pending'">Pendiente</span>
+                                <span *ngSwitchCase="'pending'">{{ 'common.pending' | translate }}</span>
                                 <span *ngSwitchDefault>{{ selected.email_status }}</span>
                             </ng-container>
                         </span>
@@ -241,7 +241,7 @@
                 <button type="button" class="lmsg-btn lmsg-btn-ghost"
                         (click)="setStatus('archived')"
                         [disabled]="isUpdating || selected.status === 'archived'">
-                    Archivar
+                    {{ 'landing_messages.archive' | translate }}
                 </button>
                 <button type="button" class="lmsg-btn lmsg-btn-danger"
                         (click)="deleteSelected()"

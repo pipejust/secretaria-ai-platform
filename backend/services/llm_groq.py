@@ -93,10 +93,25 @@ class GroqLLMService:
     # Public API
     # ------------------------------------------------------------------
 
+    # Mapeo de código de idioma a nombre para el system prompt. La instrucción
+    # le dice al LLM en qué idioma debe ESCRIBIR el output (independiente del
+    # idioma de la transcripción). Si la reunión fue en inglés pero el tenant
+    # opera en catalán, el resumen/decisiones/etc salen en catalán.
+    _LANG_NAMES: Dict[str, str] = {
+        "es": "ESPAÑOL",
+        "ca": "CATALÁN",
+        "en": "INGLÉS",
+    }
+
+    @classmethod
+    def _resolve_output_lang_name(cls, lang: Optional[str]) -> str:
+        return cls._LANG_NAMES.get((lang or "es").lower(), "ESPAÑOL")
+
     async def process_fundamentals_and_insights(
         self,
         transcript: str,
         project_contacts: Optional[List[Dict[str, Any]]] = None,
+        output_language: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Extrae todo lo no-tareas: idioma, asistentes, temas, decisiones, riesgos, acuerdos.
 
@@ -123,10 +138,11 @@ class GroqLLMService:
             )
 
         current_date = datetime.now().strftime("%Y-%m-%d")
+        lang_name = self._resolve_output_lang_name(output_language)
         system_prompt = (
             "Eres un acta-redactor corporativo experto. La fecha actual es "
             f"{current_date}. "
-            "REGLA DE ORO: tu respuesta debe estar EXCLUSIVAMENTE EN ESPAÑOL, "
+            f"REGLA DE ORO: tu respuesta debe estar EXCLUSIVAMENTE EN {lang_name}, "
             "sin importar el idioma original de la reunión. Devuelves SIEMPRE "
             "un único objeto JSON válido siguiendo el esquema solicitado. "
             "PRIORIZA CLARIDAD Y CONCISIÓN sobre extensión: el lector tiene "

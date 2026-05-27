@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface Section { id: string; title: string; }
 
@@ -11,7 +12,7 @@ interface Section { id: string; title: string; }
 @Component({
     selector: 'app-terms',
     standalone: true,
-    imports: [CommonModule, RouterModule],
+    imports: [CommonModule, RouterModule, TranslateModule],
     templateUrl: './terms.component.html',
     // Reutiliza la hoja de estilos de privacy — la página legal es
     // visualmente idéntica, sólo cambia el contenido. Evita duplicar CSS.

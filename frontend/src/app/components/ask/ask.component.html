@@ -102,7 +102,7 @@
                 <label class="aa-filter-label">Filtrar por proyecto</label>
                 <div class="aa-filter-select">
                     <select [(ngModel)]="projectId" [disabled]="isAsking">
-                        <option [ngValue]="null">Todos</option>
+                        <option [ngValue]="null">{{ 'common.all' | translate }}</option>
                         <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
                     </select>
                 </div>
@@ -308,7 +308,7 @@
                                                     <th class="th-task">Tarea</th>
                                                     <th class="th-owner">Responsable</th>
                                                     <th class="th-due">Fecha límite</th>
-                                                    <th class="th-status">Estado</th>
+                                                    <th class="th-status">{{ 'common.status' | translate }}</th>
                                                     <th class="th-src">Fuente</th>
                                                 </tr>
                                             </thead>

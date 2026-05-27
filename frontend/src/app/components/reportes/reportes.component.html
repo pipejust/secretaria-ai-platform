@@ -171,7 +171,7 @@
                     </svg>
                 </div>
                 <div class="rp-kpi-body">
-                    <span class="rp-kpi-label">Decisiones</span>
+                    <span class="rp-kpi-label">{{ 'meetings.tabs.decisions' | translate }}</span>
                     <span class="rp-kpi-value">{{ metricDecisions }}</span>
                     <span class="rp-kpi-delta">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -227,7 +227,7 @@
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <a class="rp-card-link" routerLink="/admin/projects">
-                            Ver todos
+                            {{ 'common.show_all' | translate }}
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -378,7 +378,7 @@
 
                     <div class="rp-line-legend">
                         <span class="rp-legend-dot" style="background:#155EEF"></span>
-                        Decisiones
+                        {{ 'meetings.tabs.decisions' | translate }}
                     </div>
                 </div>
 
@@ -572,7 +572,7 @@
                                 <span class="rp-team-bar-num">{{ r.meetings }}</span>
                             </div>
                             <div class="rp-team-bar">
-                                <span class="rp-team-bar-label">Tareas</span>
+                                <span class="rp-team-bar-label">{{ 'meetings.tabs.tasks' | translate }}</span>
                                 <span class="rp-team-bar-track">
                                     <span class="rp-team-bar-fill rp-team-bar-fill--violet"
                                           [style.width.%]="teamActionsPct(r.actions)"></span>
@@ -611,7 +611,7 @@
                             <option *ngFor="let p of availableProjects" [ngValue]="p.id">{{ p.name }}</option>
                         </select>
                         <a class="rp-card-link" routerLink="/admin/projects">
-                            Ver todos
+                            {{ 'common.show_all' | translate }}
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -627,7 +627,7 @@
                             <span>Proyecto</span>
                             <span>Responsable</span>
                             <span>Progreso</span>
-                            <span>Estado</span>
+                            <span>{{ 'common.status' | translate }}</span>
                         </div>
                         <ng-container *ngIf="topProjectsPaged.length; else emptyProjects">
                             <div class="rp-tr" *ngFor="let r of topProjectsPaged">

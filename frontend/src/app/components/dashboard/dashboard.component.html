@@ -420,9 +420,9 @@
             <div class="acn-table">
                 <div class="acn-table-row acn-table-head">
                     <span>Reunión</span>
-                    <span>Fecha</span>
-                    <span>Participantes</span>
-                    <span>Duración</span>
+                    <span>{{ 'meetings.duration' | translate }}</span>
+                    <span>{{ 'meetings.participants' | translate }}</span>
+                    <span>{{ 'meetings.duration' | translate }}</span>
                     <span class="t-right">Confianza IA</span>
                 </div>
                 <div class="acn-table-row" *ngFor="let r of recentMeetingsRows" (click)="viewCuration(r.id)" role="button">
@@ -476,7 +476,7 @@
         <article class="acn-card acn-card-risks">
             <header class="acn-card-head">
                 <h2 class="acn-card-title">Riesgos Principales</h2>
-                <a class="acn-card-link" routerLink="/admin/pendientes">Ver todos</a>
+                <a class="acn-card-link" routerLink="/admin/pendientes">{{ 'common.show_all' | translate }}</a>
             </header>
 
             <ul class="acn-risk-list">

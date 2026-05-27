@@ -5,6 +5,7 @@ import {
     inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
@@ -64,7 +65,7 @@ interface SectionMeta {
 @Component({
     selector: 'app-landing-cms',
     standalone: true,
-    imports: [CommonModule, FormsModule, HttpClientModule, RouterModule],
+    imports: [CommonModule, FormsModule, HttpClientModule, RouterModule, TranslateModule],
     templateUrl: './landing-cms.component.html',
     styleUrls: ['./landing-cms.component.css'],
 })

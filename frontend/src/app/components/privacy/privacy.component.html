@@ -8,7 +8,7 @@
             </svg>
             Volver
         </a>
-        <p class="privacy-eyebrow">Política de privacidad</p>
+        <p class="privacy-eyebrow">{{ 'privacy.title' | translate }}</p>
         <h1 class="privacy-title">Tu información, bajo tu control.</h1>
         <p class="privacy-meta">Última actualización: {{ lastUpdated }}</p>
     </header>
@@ -180,6 +180,6 @@
 
     <footer class="privacy-footer">
         <span>© {{ year }} Acten, Inc. Todos los derechos reservados.</span>
-        <a routerLink="/help">Centro de ayuda</a>
+        <a routerLink="/help">{{ 'help.title' | translate }}</a>
     </footer>
 </div>

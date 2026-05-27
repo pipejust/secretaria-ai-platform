@@ -7,7 +7,7 @@
     <!-- ============= HEADER ============= -->
     <header class="tk-hero">
         <div class="tk-hero-text">
-            <h1 class="tk-title">Tareas</h1>
+            <h1 class="tk-title">{{ 'meetings.tabs.tasks' | translate }}</h1>
             <p class="tk-sub">Rastrea, administra y completa tareas de tus proyectos.</p>
         </div>
         <div class="tk-hero-actions">
@@ -131,9 +131,9 @@
                             <label>Prioridad</label>
                             <select [(ngModel)]="priorityFilter">
                                 <option value="">Todas</option>
-                                <option value="alta">Alta</option>
-                                <option value="media">Media</option>
-                                <option value="baja">Baja</option>
+                                <option value="alta">{{ 'common.high' | translate }}</option>
+                                <option value="media">{{ 'common.medium' | translate }}</option>
+                                <option value="baja">{{ 'common.low' | translate }}</option>
                             </select>
                         </div>
 
@@ -148,11 +148,11 @@
                         </div>
 
                         <div class="filter-group">
-                            <label>Estado</label>
+                            <label>{{ 'common.status' | translate }}</label>
                             <select [(ngModel)]="statusFilter">
-                                <option value="">Todos</option>
+                                <option value="">{{ 'common.all' | translate }}</option>
                                 <option value="abierta">Abierta</option>
-                                <option value="en progreso">En progreso</option>
+                                <option value="en progreso">{{ 'common.in_progress' | translate }}</option>
                                 <option value="vencida">Vencida</option>
                                 <option value="completada">Completada</option>
                                 <option value="bloqueada">Bloqueada</option>
@@ -160,7 +160,7 @@
                         </div>
 
                         <button type="button" class="filters-clear-link" (click)="clearFilters()">
-                            Limpiar filtros
+                            {{ 'common.clear_filters' | translate }}
                         </button>
                     </section>
                 </div>
@@ -181,7 +181,7 @@
                                         <polyline points="6 9 12 15 18 9"></polyline>
                                     </svg>
                                 </th>
-                                <th class="th-status">Estado</th>
+                                <th class="th-status">{{ 'common.status' | translate }}</th>
                                 <th class="th-progress">Progreso</th>
                                 <th class="th-actions">{{ 'common.actions' | translate }}</th>
                             </tr>
@@ -693,9 +693,9 @@
                         <div class="tk-form-row">
                             <label class="tk-form-label">Prioridad</label>
                             <select class="tk-input" [(ngModel)]="newTask.priority">
-                                <option value="alta">Alta</option>
-                                <option value="media">Media</option>
-                                <option value="baja">Baja</option>
+                                <option value="alta">{{ 'common.high' | translate }}</option>
+                                <option value="media">{{ 'common.medium' | translate }}</option>
+                                <option value="baja">{{ 'common.low' | translate }}</option>
                             </select>
                         </div>
                     </div>

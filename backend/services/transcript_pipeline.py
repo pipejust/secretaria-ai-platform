@@ -297,6 +297,19 @@ async def process_session_with_ai(
     groq = GroqLLMService()
     openai = OpenAIService()
 
+    # ---------- 0. Idioma de output del tenant ----------
+    # Toda la salida de IA (resumen, decisiones, riesgos, acuerdos, tareas)
+    # se genera en el idioma que el tenant configuró como default
+    # (Tenant.default_language: 'es' | 'ca' | 'en'). La transcripción
+    # original puede venir en cualquier idioma — el LLM traduce.
+    from models import Tenant as _Tenant
+    _tenant = db.get(_Tenant, session_obj.tenant_id)
+    tenant_lang = (_tenant.default_language if _tenant else "es") or "es"
+    logger.info(
+        "Pipeline AI sesión %s: output_language=%s (tenant_id=%s)",
+        session_id, tenant_lang, session_obj.tenant_id,
+    )
+
     # Dict de errores por paso. Si al final tiene algo, la sesión queda
     # marcada como incompleta.
     errors: dict[str, str] = {}
@@ -324,7 +337,7 @@ async def process_session_with_ai(
         insights = await _call_with_retry(
             f"groq.insights[session={session_id}]",
             lambda: groq.process_fundamentals_and_insights(
-                transcript, project_contacts
+                transcript, project_contacts, output_language=tenant_lang
             ),
         )
     except Exception as exc:  # noqa: BLE001
@@ -439,6 +452,7 @@ async def process_session_with_ai(
                 decisions=session_obj.processed_decisions or "",
                 agreements=session_obj.processed_agreements or "",
                 summary=session_obj.raw_summary or "",
+                output_language=tenant_lang,
             ),
         )
     except Exception as exc:  # noqa: BLE001

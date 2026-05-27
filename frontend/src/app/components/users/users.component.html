@@ -138,14 +138,14 @@
             <div class="filter-group">
                 <label>Rol</label>
                 <select [(ngModel)]="roleFilter" (change)="currentPage = 1">
-                    <option value="">Todos</option>
+                    <option value="">{{ 'common.all' | translate }}</option>
                     <option *ngFor="let r of roleOptions" [value]="r">{{ r }}</option>
                 </select>
             </div>
             <div class="filter-group">
-                <label>Estado</label>
+                <label>{{ 'common.status' | translate }}</label>
                 <select [(ngModel)]="statusFilter" (change)="currentPage = 1">
-                    <option value="">Todos</option>
+                    <option value="">{{ 'common.all' | translate }}</option>
                     <option value="active">Activo</option>
                     <option value="inactive">Inactivo</option>
                     <option value="invited">Invitado</option>
@@ -155,7 +155,7 @@
                 <label>Último acceso</label>
                 <select [(ngModel)]="lastAccessFilter" (change)="currentPage = 1">
                     <option value="">Cualquier fecha</option>
-                    <option value="today">Hoy</option>
+                    <option value="today">{{ 'common.today' | translate }}</option>
                     <option value="week">Última semana</option>
                     <option value="month">Último mes</option>
                 </select>
@@ -185,7 +185,7 @@
                     <span>Rol asignado</span>
                     <span>Estado / acceso</span>
                     <span>Último acceso</span>
-                    <span class="us-th-actions">Acciones</span>
+                    <span class="us-th-actions">{{ 'common.actions' | translate }}</span>
                 </div>
 
                 <div class="us-tr"
@@ -442,7 +442,7 @@
 
         <!-- Actividad reciente (datos reales) -->
         <article class="us-card">
-            <header class="us-card-head"><h3>Actividad reciente</h3></header>
+            <header class="us-card-head"><h3>{{ 'profile.activity' | translate }}</h3></header>
             <ul class="us-activity">
                 <li *ngFor="let a of activityEntries; trackBy: trackByActivity">
                     <span class="us-activity-dot us-activity-dot--{{ a.color }}"></span>
@@ -523,12 +523,12 @@
 
             <form (ngSubmit)="createUser()" #createForm="ngForm" class="us-form-grid">
                 <div class="us-field us-field--full">
-                    <label>Nombre completo <span class="us-req">*</span></label>
+                    <label>{{ 'profile.full_name' | translate }} <span class="us-req">*</span></label>
                     <input type="text" name="full_name" [(ngModel)]="newUser.full_name" required
                            autocomplete="name" placeholder="Nombre Apellido"/>
                 </div>
                 <div class="us-field us-field--full">
-                    <label>Correo electrónico <span class="us-req">*</span></label>
+                    <label>{{ 'common.email' | translate }} <span class="us-req">*</span></label>
                     <input type="email" name="email" [(ngModel)]="newUser.email" required
                            autocomplete="email"
                            pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
@@ -570,7 +570,7 @@
                 <!-- Password manual SOLO cuando must_change_password=false. -->
                 <ng-container *ngIf="!newUser.must_change_password">
                     <div class="us-field">
-                        <label>Contraseña <span class="us-req">*</span></label>
+                        <label>{{ 'common.password' | translate }} <span class="us-req">*</span></label>
                         <app-password-input name="password"
                                             [(ngModel)]="newUser.password"
                                             placeholder="Mínimo 8 caracteres"
@@ -596,7 +596,7 @@
                     </select>
                 </div>
                 <div class="us-field">
-                    <label>Teléfono</label>
+                    <label>{{ 'common.phone' | translate }}</label>
                     <input type="tel" name="phone" [(ngModel)]="newUser.phone"
                            autocomplete="tel"
                            placeholder="+57 300 000 0000"/>
@@ -658,12 +658,12 @@
 
             <form (ngSubmit)="saveEdit()" #editForm="ngForm" class="us-form-grid">
                 <div class="us-field us-field--full">
-                    <label>Nombre completo</label>
+                    <label>{{ 'profile.full_name' | translate }}</label>
                     <input type="text" name="e_full_name" [(ngModel)]="editUserData.full_name"
                            placeholder="Nombre Apellido"/>
                 </div>
                 <div class="us-field">
-                    <label>Correo electrónico</label>
+                    <label>{{ 'common.email' | translate }}</label>
                     <input type="email" name="e_email" [(ngModel)]="editUserData.email"
                            placeholder="ejemplo@empresa.com"/>
                 </div>
@@ -680,14 +680,14 @@
                     </select>
                 </div>
                 <div class="us-field">
-                    <label>Estado</label>
+                    <label>{{ 'common.status' | translate }}</label>
                     <select name="e_active" [(ngModel)]="editUserData.is_active">
                         <option [ngValue]="true">Activo</option>
                         <option [ngValue]="false">Inactivo</option>
                     </select>
                 </div>
                 <div class="us-field">
-                    <label>Teléfono</label>
+                    <label>{{ 'common.phone' | translate }}</label>
                     <input type="tel" name="e_phone" [(ngModel)]="editUserData.phone"
                            placeholder="+57 300 000 0000"/>
                 </div>
@@ -751,8 +751,8 @@
             <div class="us-detail-grid">
                 <div><dt>ID</dt><dd>#{{ u.id }}</dd></div>
                 <div><dt>Rol</dt><dd><span class="us-role us-role--{{ roleBadgeKey(u.role) }} us-role--inline">{{ u.role || '—' }}</span></dd></div>
-                <div><dt>Estado</dt><dd><span class="us-status us-status--{{ u.status }} us-status--inline"><span class="us-status-dot"></span>{{ statusLabel(u.status) }}</span></dd></div>
-                <div><dt>Teléfono</dt><dd>{{ u.phone || '—' }}</dd></div>
+                <div><dt>{{ 'common.status' | translate }}</dt><dd><span class="us-status us-status--{{ u.status }} us-status--inline"><span class="us-status-dot"></span>{{ statusLabel(u.status) }}</span></dd></div>
+                <div><dt>{{ 'common.phone' | translate }}</dt><dd>{{ u.phone || '—' }}</dd></div>
                 <div><dt>Departamento</dt><dd>{{ u.department || '—' }}</dd></div>
                 <div><dt>Cargo</dt><dd>{{ u.position || '—' }}</dd></div>
                 <div><dt>Último acceso</dt><dd>{{ formatLastAccess(u.last_login_at).line1 }} <span class="us-dd-sub">{{ formatLastAccess(u.last_login_at).line2 }}</span></dd></div>
@@ -770,7 +770,7 @@
             </div>
 
             <div class="us-detail-section">
-                <h4>Actividad reciente</h4>
+                <h4>{{ 'profile.activity' | translate }}</h4>
                 <ul class="us-activity">
                     <li *ngFor="let a of activityEntries; trackBy: trackByActivity">
                         <span class="us-activity-dot us-activity-dot--{{ a.color }}"></span>

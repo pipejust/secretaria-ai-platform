@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -85,7 +86,7 @@ interface ActivityEntry {
 @Component({
     selector: 'app-users',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, PasswordInputComponent],
+    imports: [CommonModule, FormsModule, RouterModule, PasswordInputComponent, TranslateModule],
     templateUrl: './users.component.html',
     styleUrls: ['./users.component.css'],
 })

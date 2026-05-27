@@ -185,11 +185,11 @@
 
               <!-- tabs -->
               <div class="al-mock__tabs">
-                <span class="al-mock__tab al-mock__tab--active">Resumen</span>
-                <span class="al-mock__tab">Decisiones</span>
-                <span class="al-mock__tab">Tareas</span>
-                <span class="al-mock__tab">Riesgos</span>
-                <span class="al-mock__tab">Documentos</span>
+                <span class="al-mock__tab al-mock__tab--active">{{ 'meetings.tabs.summary' | translate }}</span>
+                <span class="al-mock__tab">{{ 'meetings.tabs.decisions' | translate }}</span>
+                <span class="al-mock__tab">{{ 'meetings.tabs.tasks' | translate }}</span>
+                <span class="al-mock__tab">{{ 'meetings.tabs.risks' | translate }}</span>
+                <span class="al-mock__tab">{{ 'meetings.tabs.documents' | translate }}</span>
                 <span class="al-mock__tab">Integraciones</span>
               </div>
 
@@ -207,14 +207,14 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
                   </span>
                   <div class="al-mock__metric-num">6</div>
-                  <div class="al-mock__metric-lbl">Decisiones</div>
+                  <div class="al-mock__metric-lbl">{{ 'meetings.tabs.decisions' | translate }}</div>
                 </div>
                 <div class="al-mock__metric">
                   <span class="al-mock__metric-ico al-mock__metric-ico--amber">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                   </span>
                   <div class="al-mock__metric-num">3</div>
-                  <div class="al-mock__metric-lbl">Riesgos</div>
+                  <div class="al-mock__metric-lbl">{{ 'meetings.tabs.risks' | translate }}</div>
                 </div>
                 <div class="al-mock__metric">
                   <span class="al-mock__metric-ico al-mock__metric-ico--teal">
@@ -248,7 +248,7 @@
                   </div>
 
                   <div class="al-mock__section">
-                    <div class="al-mock__section-title">Tareas</div>
+                    <div class="al-mock__section-title">{{ 'meetings.tabs.tasks' | translate }}</div>
                     <div class="al-mock__task" *ngFor="let i of [1,2,3]">
                       <span class="al-mock__avatar al-mock__avatar--sm">{{ i }}</span>
                       <span class="al-mock__bar al-mock__bar--task"></span>
@@ -259,7 +259,7 @@
 
                 <div class="al-mock__col-side">
                   <div class="al-mock__section">
-                    <div class="al-mock__section-title">Participantes</div>
+                    <div class="al-mock__section-title">{{ 'meetings.participants' | translate }}</div>
                     <div class="al-mock__person" *ngFor="let p of [
                       {n:'Maya Patel',  i:'MP'},
                       {n:'Ariyan Mehta', i:'AM'},
@@ -713,7 +713,7 @@
               </ng-container>
               <ng-template #sendingTpl>
                 <span class="al-contact__spinner" aria-hidden="true"></span>
-                <span>Enviando…</span>
+                <span>{{ 'forgot_password.submitting' | translate }}</span>
               </ng-template>
             </button>
           </div>

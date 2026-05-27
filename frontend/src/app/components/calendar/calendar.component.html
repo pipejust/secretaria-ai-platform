@@ -15,7 +15,7 @@
         </button>
       </div>
       <h2 class="cal-period">{{ monthYearLabel }}</h2>
-      <button class="cal-btn cal-btn--ghost" (click)="goToday()">Hoy</button>
+      <button class="cal-btn cal-btn--ghost" (click)="goToday()">{{ 'common.today' | translate }}</button>
     </div>
 
     <div class="cal-toolbar-right">
@@ -161,7 +161,7 @@
         <label class="cal-toggle">
           <input type="checkbox" [(ngModel)]="showTasks"/>
           <span class="cal-toggle-dot cal-toggle-dot--amber"></span>
-          Tareas
+          {{ 'meetings.tabs.tasks' | translate }}
         </label>
         <label class="cal-toggle">
           <input type="checkbox" [(ngModel)]="showCompletedTasks"/>
@@ -422,7 +422,7 @@
       <!-- Tasks of selected day -->
       <div class="cal-panel-section">
         <header class="cal-section-head">
-          <h4>Tareas</h4>
+          <h4>{{ 'meetings.tabs.tasks' | translate }}</h4>
           <span class="cal-section-tag">{{ selectedDayTasks.length }}</span>
         </header>
         <p class="cal-panel-empty" *ngIf="!selectedDayTasks.length">
@@ -586,16 +586,16 @@
           <div class="cal-form-row">
             <label class="cal-form-label">Prioridad</label>
             <select class="cal-input" [(ngModel)]="newTask.priority">
-              <option value="alta">Alta</option>
-              <option value="media">Media</option>
-              <option value="baja">Baja</option>
+              <option value="alta">{{ 'common.high' | translate }}</option>
+              <option value="media">{{ 'common.medium' | translate }}</option>
+              <option value="baja">{{ 'common.low' | translate }}</option>
             </select>
           </div>
         </div>
 
         <div class="cal-form-grid">
           <div class="cal-form-row">
-            <label class="cal-form-label">Fecha</label>
+            <label class="cal-form-label">{{ 'meetings.duration' | translate }}</label>
             <input type="date" class="cal-input" [(ngModel)]="newTask.due_date" />
           </div>
           <div class="cal-form-row">

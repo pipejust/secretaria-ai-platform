@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface Section { id: string; title: string; }
 
 @Component({
   selector: 'app-privacy',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   templateUrl: './privacy.component.html',
   styleUrls: ['./privacy.component.css'],
 })

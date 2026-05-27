@@ -17,7 +17,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Nueva plantilla
+                {{ 'templates.create_template' | translate }}
             </button>
         </div>
     </header>
@@ -111,7 +111,7 @@
             <!-- Panel de filtros expandible -->
             <section class="tpl-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
                 <div class="tpl-filter-group">
-                    <label>Estado</label>
+                    <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus">
                         <option value="all">Todos los estados</option>
                         <option value="active">Activas</option>
@@ -127,7 +127,7 @@
                     <span>Plantilla</span>
                     <span>Tipo</span>
                     <span>Versión</span>
-                    <span>Estado</span>
+                    <span>{{ 'common.status' | translate }}</span>
                     <span>Actualizado</span>
                     <span class="t-right">{{ 'common.actions' | translate }}</span>
                 </div>
@@ -318,7 +318,7 @@
             </header>
 
             <nav class="tpl-detail-tabs">
-                <button [class.active]="detailTab === 'preview'" (click)="setDetailTab('preview')">Vista previa</button>
+                <button [class.active]="detailTab === 'preview'" (click)="setDetailTab('preview')">{{ 'branding.preview' | translate }}</button>
                 <button [class.active]="detailTab === 'details'" (click)="setDetailTab('details')">Detalles</button>
                 <button [class.active]="detailTab === 'history'" (click)="setDetailTab('history')">Historial</button>
             </nav>
@@ -388,7 +388,7 @@
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
-                            Vista previa
+                            {{ 'branding.preview' | translate }}
                         </button>
                         <!-- Duplicar = abrir upload prellenado -->
                         <button class="tpl-btn tpl-btn-outline tpl-btn-block"
@@ -432,7 +432,7 @@
                                 <rect x="1" y="3" width="22" height="5"></rect>
                                 <line x1="10" y1="12" x2="14" y2="12"></line>
                             </svg>
-                            Archivar
+                            {{ 'landing_messages.archive' | translate }}
                         </button>
                     </div>
                 </section>
@@ -445,7 +445,7 @@
                         <dt>ID</dt><dd>#{{ selectedTemplate.id }}</dd>
                         <dt>Tipo</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>
                         <dt>Versión</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
-                        <dt>Estado</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
+                        <dt>{{ 'common.status' | translate }}</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
                         <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small *ngIf="updatedAgo(selectedTemplate)">({{ updatedAgo(selectedTemplate) }})</small></dd>
                         <dt>Proyecto</dt><dd>{{ selectedTemplate.project_id || '—' }}</dd>
                         <dt>Archivo</dt>

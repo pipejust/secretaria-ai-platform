@@ -83,7 +83,7 @@
       </article>
       <article class="metric-card metric-card--neutral">
         <span class="metric-num">{{ d.metrics.contacts_count }}</span>
-        <span class="metric-label">Participantes</span>
+        <span class="metric-label">{{ 'meetings.participants' | translate }}</span>
       </article>
       <article class="metric-card metric-card--neutral">
         <span class="metric-num">{{ d.metrics.routings_active }}</span>
@@ -129,7 +129,7 @@
             <th>Tarea</th>
             <th>Responsable</th>
             <th>Vence</th>
-            <th>Estado</th>
+            <th>{{ 'common.status' | translate }}</th>
             <th>Sesión</th>
           </tr>
         </thead>
@@ -148,7 +148,7 @@
     </section>
 
     <section class="panel" *ngIf="d.contacts.length">
-      <h2>Participantes</h2>
+      <h2>{{ 'meetings.participants' | translate }}</h2>
       <ul class="contact-list">
         <li *ngFor="let c of d.contacts; trackBy: trackById">
           <app-user-chip [email]="c.email" [fallbackName]="c.name" size="sm" [showEmail]="false"></app-user-chip>

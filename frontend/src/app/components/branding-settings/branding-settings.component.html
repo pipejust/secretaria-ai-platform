@@ -5,7 +5,7 @@
          ============================================================ -->
     <header class="br-header">
         <div class="br-header-text">
-            <h1>Marca / Branding</h1>
+            <h1>{{ 'branding.title' | translate }}</h1>
             <p class="br-subtitle">
                 Personaliza la apariencia de la plataforma para tu empresa. La plataforma siempre se llama
                 <strong>{{ branding.platformName() }}</strong>, pero el nombre, logo, colores y datos de contacto
@@ -19,7 +19,7 @@
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
                 </svg>
-                Vista previa
+                {{ 'branding.preview' | translate }}
             </button>
             <button class="br-btn br-btn--primary" (click)="save()" [disabled]="isSaving">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
@@ -175,17 +175,17 @@
                     <label>Sección</label>
                     <select [(ngModel)]="filterSection">
                         <option value="all">Todas</option>
-                        <option value="identidad">Identidad</option>
+                        <option value="identidad">{{ 'branding.identity' | translate }}</option>
                         <option value="logo">Logo</option>
                         <option value="icono">Icono</option>
-                        <option value="tema">Tema visual</option>
+                        <option value="tema">{{ 'branding.theme' | translate }}</option>
                         <option value="previews">Vistas previas</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Estado</label>
+                    <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus">
-                        <option value="all">Todos</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="configured">Configurados</option>
                         <option value="pending">{{ 'sidebar.pending' | translate }}</option>
                     </select>
@@ -219,7 +219,7 @@
                             <input type="email" [(ngModel)]="form.company_email" placeholder="contacto@tuempresa.com"/>
                         </label>
                         <label class="br-field">
-                            <span>Sitio web <span class="br-required" aria-label="obligatorio">*</span></span>
+                            <span>{{ 'common.website' | translate }} <span class="br-required" aria-label="obligatorio">*</span></span>
                             <input #websiteInput type="url" required
                                    [(ngModel)]="form.company_website"
                                    placeholder="https://tuempresa.com"
@@ -232,11 +232,11 @@
                             </small>
                         </label>
                         <label class="br-field">
-                            <span>Teléfono</span>
+                            <span>{{ 'common.phone' | translate }}</span>
                             <input type="tel" [(ngModel)]="form.company_phone" placeholder="+57 300 123 4567"/>
                         </label>
                         <label class="br-field">
-                            <span>Dirección</span>
+                            <span>{{ 'common.address' | translate }}</span>
                             <input type="text" [(ngModel)]="form.company_address"
                                    placeholder="Calle 123 #45-67, Bogotá, Colombia"/>
                         </label>
@@ -256,7 +256,7 @@
                 <article class="br-card br-card--logo" *ngIf="showSection('logo')">
                     <header class="br-card-head">
                         <div>
-                            <h2>Logo claro</h2>
+                            <h2>{{ 'branding.logo_light' | translate }}</h2>
                             <p class="br-card-sub">Versión para fondos claros (admin, dashboards, emails). PNG/SVG/WEBP. Máx 2 MB.</p>
                         </div>
                     </header>
@@ -295,7 +295,7 @@
                 <article class="br-card br-card--logo" *ngIf="showSection('logo')">
                     <header class="br-card-head">
                         <div>
-                            <h2>Logo oscuro</h2>
+                            <h2>{{ 'branding.logo_dark' | translate }}</h2>
                             <p class="br-card-sub">Versión para fondos oscuros (hero de la landing, dark mode). Si no la subís, los fondos oscuros usan el logo claro. PNG/SVG/WEBP. Máx 2 MB.</p>
                         </div>
                     </header>
@@ -334,7 +334,7 @@
                 <article class="br-card br-card--icon" *ngIf="showSection('icono')">
                     <header class="br-card-head">
                         <div>
-                            <h2>Imagologo / icono</h2>
+                            <h2>{{ 'branding.icon' | translate }}</h2>
                             <p class="br-card-sub">Versión cuadrada para avatares y badges.</p>
                         </div>
                     </header>
@@ -369,7 +369,7 @@
                 <article class="br-card br-card--theme" *ngIf="showSection('tema')">
                     <header class="br-card-head">
                         <div>
-                            <h2>Tema visual</h2>
+                            <h2>{{ 'branding.theme' | translate }}</h2>
                             <p class="br-card-sub">Define los colores principales que usarán la plataforma y los correos.</p>
                         </div>
                     </header>
@@ -525,7 +525,7 @@
             <article class="br-card">
                 <header class="br-card-head">
                     <h3>Marca seleccionada</h3>
-                    <span class="br-badge br-badge--active">Activa</span>
+                    <span class="br-badge br-badge--active">{{ 'profile.two_factor_on' | translate }}</span>
                 </header>
 
                 <div class="br-side-hero">
@@ -570,7 +570,7 @@
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <line x1="2" y1="12" x2="22" y2="12"></line>
                             </svg>
-                            Sitio web
+                            {{ 'common.website' | translate }}
                         </dt>
                         <dd>{{ form.company_website || '—' }}</dd>
                     </div>
@@ -708,7 +708,7 @@
                     </p>
                     <div class="br-detail-tags">
                         <span class="br-badge br-badge--active">
-                            <span class="br-badge-dot"></span> Activa
+                            <span class="br-badge-dot"></span> {{ 'profile.two_factor_on' | translate }}
                         </span>
                         <span class="br-detail-pill">Slug · {{ tenantSlug }}</span>
                         <span class="br-detail-pill">{{ tenantDomain }}</span>
@@ -723,9 +723,9 @@
                     <div><dt>Nombre</dt><dd>{{ form.company_name || '—' }}</dd></div>
                     <div><dt>Tagline</dt><dd>{{ form.company_tagline || '—' }}</dd></div>
                     <div><dt>Email corporativo</dt><dd>{{ form.company_email || '—' }}</dd></div>
-                    <div><dt>Sitio web</dt><dd>{{ form.company_website || '—' }}</dd></div>
-                    <div><dt>Teléfono</dt><dd>{{ form.company_phone || '—' }}</dd></div>
-                    <div><dt>Dirección</dt><dd>{{ form.company_address || '—' }}</dd></div>
+                    <div><dt>{{ 'common.website' | translate }}</dt><dd>{{ form.company_website || '—' }}</dd></div>
+                    <div><dt>{{ 'common.phone' | translate }}</dt><dd>{{ form.company_phone || '—' }}</dd></div>
+                    <div><dt>{{ 'common.address' | translate }}</dt><dd>{{ form.company_address || '—' }}</dd></div>
                     <div><dt>Plataforma</dt><dd>{{ branding.platformName() }}</dd></div>
                     <div><dt>Última actualización</dt><dd>{{ lastUpdatedLabel }}</dd></div>
                 </dl>
@@ -744,7 +744,7 @@
                         </div>
                     </div>
                     <div class="br-detail-asset">
-                        <span class="br-detail-asset-label">Imagologo / icono</span>
+                        <span class="br-detail-asset-label">{{ 'branding.icon' | translate }}</span>
                         <div class="br-detail-asset-box br-detail-asset-box--square"
                              [style.background]="form.primary_color || '#031B34'">
                             <img *ngIf="form.icon_data_url" [src]="form.icon_data_url"/>

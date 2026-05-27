@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -26,7 +27,7 @@ import { effect } from '@angular/core';
 @Component({
     selector: 'app-landing',
     standalone: true,
-    imports: [CommonModule, FormsModule, HttpClientModule, LanguageSelectorComponent],
+    imports: [CommonModule, FormsModule, HttpClientModule, LanguageSelectorComponent, TranslateModule],
     templateUrl: './landing.component.html',
     styleUrls: ['./landing.component.css'],
 })

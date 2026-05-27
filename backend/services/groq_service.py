@@ -180,6 +180,13 @@ class OpenAIService:
             "required": ["thinking_process", "action_items"]
         }
 
+    # Mapeo i18n: código → nombre del idioma para el prompt del LLM.
+    _LANG_NAMES_TASKS = {"es": "ESPAÑOL", "ca": "CATALÁN", "en": "INGLÉS"}
+
+    @classmethod
+    def _resolve_lang_name(cls, lang):
+        return cls._LANG_NAMES_TASKS.get((lang or "es").lower(), "ESPAÑOL")
+
     async def process_transcript_for_tasks_only(
         self,
         transcript: str,
@@ -187,6 +194,7 @@ class OpenAIService:
         decisions: str = "",
         agreements: str = "",
         summary: str = "",
+        output_language: str = "es",
     ) -> dict:
         """
         Envía el transcript a Groq pidiendo EXCLUSIVAMENTE action_items.
@@ -235,11 +243,12 @@ class OpenAIService:
             else ""
         )
 
+        _lang_name = self._resolve_lang_name(output_language)
         prompt = f"""
         Eres un asistente experto que procesa transcripciones de reuniones internacionales.
         Tu ÚNICO OBJETIVO es extraer los compromisos y tareas con el MÁXIMO detalle posible.
 
-        ¡MUY IMPORTANTE - REGLA DE ORO!: SIN IMPORTAR EL IDIOMA DE LA TRANSCRIPCIÓN, LAS TAREAS DEBEN SER GENERADAS EXCLUSIVAMENTE Y ESTRICTAMENTE EN ESPAÑOL.
+        ¡MUY IMPORTANTE - REGLA DE ORO!: SIN IMPORTAR EL IDIOMA DE LA TRANSCRIPCIÓN, LAS TAREAS DEBEN SER GENERADAS EXCLUSIVAMENTE Y ESTRICTAMENTE EN {_lang_name}.
 
         DATO CLAVE DE CONTEXTO TEMPORAL:
         La fecha actual es {current_date}. Utiliza esta información para inferir correctamente los años y fechas relativas (ej. si dicen "el próximo martes" o "para el 15 de marzo", usa el año actual o el correspondiente). NUNCA asumas años pasados si no se dicen explícitamente.
@@ -477,11 +486,21 @@ class OpenAIService:
             logger.exception("Error procesando JSON de un agente LLM")
             return {}
 
-    async def process_transcript(self, transcript: str, project_contacts: list = None) -> dict:
+    async def process_transcript(
+        self,
+        transcript: str,
+        project_contacts: list = None,
+        output_language: str = "es",
+    ) -> dict:
         """
         Arquitectura Multi-Agente: Ejecuta 3 promps paralelos para evitar el Colapso de Contexto (Context Collapse)
         y garantizar extrema fidelidad y volumen en cada sección (Fundamentales, Insights, Tareas).
+
+        output_language ('es'|'ca'|'en') fuerza el idioma de salida de TODO
+        el contenido generado (summary, attendees roles, themes, decisions,
+        risks, agreements, tasks), independiente del idioma del transcript.
         """
+        _lang_name = self._resolve_lang_name(output_language)
         safe_transcript = transcript # REMOVED TRUNCATION, GPT-4o handles 128k context natively to catch all tasks
             
         contacts_info = ""
@@ -492,12 +511,12 @@ class OpenAIService:
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         # --- Base Prompts ---
-        system_base = f"""Eres un coordinador de proyecto experto analizando una reunión. REGLA DE ORO: TUS RESPUESTAS DEBEN SER EXCLUSIVAMENTE EN ESPAÑOL, INDEPENDIENTEMENTE DEL IDIOMA DE LA REUNIÓN. La fecha actual es {current_date} (año {current_date.split('-')[0]})."""
+        system_base = f"""Eres un coordinador de proyecto experto analizando una reunión. REGLA DE ORO: TUS RESPUESTAS DEBEN SER EXCLUSIVAMENTE EN {_lang_name}, INDEPENDIENTEMENTE DEL IDIOMA DE LA REUNIÓN. La fecha actual es {current_date} (año {current_date.split('-')[0]})."""
         
         # AGENT 1: Fundamentals (Language, Summary, Attendees, Themes)
         prompt_fundamentals = f"""
         Analiza el texto y extrae:
-        - Idioma original (language). Todo lo demás de tu JSON debe estar en ESPAÑOL.
+        - Idioma original (language). Todo lo demás de tu JSON debe estar en {_lang_name}.
         - Un resumen ('summary') muy extenso, denso y profundo de toda la reunión (mínimo 4 o 5 párrafos ricos en contexto).
         - Participantes ('attendees'). REGLA OBLIGATORIA: Extrae A TODOS LOS PARTICIPANTES mencionados en la reunión o transcripción, sin importar cuántos sean. Usa la 'lista de personas del proyecto' REGLA DE ORO SOLAMENTE COMO APOYO para enriquecer los datos (copiando su 'role' y 'entity' de la DB si los identificas ahí), pero SI NO ESTÁN EN LA LISTA, extraelos igual e infiere su rol y entidad por contexto. NUNCA limites la extracción a la lista.
         - Los temas discutidos ('themes') y sus elaborados puntos de conversación.

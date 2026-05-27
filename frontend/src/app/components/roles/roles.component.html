@@ -171,9 +171,9 @@
 
             <section class="rl-filters-panel" *ngIf="showFilters">
                 <div class="rl-select-group">
-                    <label>Estado</label>
+                    <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
-                        <option value="all">Todos</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="active">{{ 'common.active' | translate }}</option>
                         <option value="inactive">{{ 'common.inactive' | translate }}</option>
                     </select>
@@ -181,7 +181,7 @@
                 <div class="rl-select-group">
                     <label>Tipo de rol</label>
                     <select [(ngModel)]="filterType" (change)="onFilterChange()">
-                        <option value="all">Todos</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="system">Sistema</option>
                         <option value="custom">Personalizados</option>
                     </select>
@@ -189,7 +189,7 @@
                 <div class="rl-select-group">
                     <label>Usuarios asignados</label>
                     <select [(ngModel)]="filterUsers" (change)="onFilterChange()">
-                        <option value="all">Todos</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="with">Con usuarios</option>
                         <option value="without">Sin usuarios</option>
                     </select>
@@ -217,7 +217,7 @@
                     <span>Nombre del rol</span>
                     <span>Descripción</span>
                     <span>Usuarios asignados</span>
-                    <span>Estado</span>
+                    <span>{{ 'common.status' | translate }}</span>
                     <span class="rl-t-actions">{{ 'common.actions' | translate }}</span>
                 </div>
 
@@ -311,7 +311,7 @@
 
                 <div class="rl-empty" *ngIf="!pagedRoles.length">
                     <h4>No hay roles que coincidan con los filtros.</h4>
-                    <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">Limpiar filtros</button>
+                    <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">{{ 'common.clear_filters' | translate }}</button>
                 </div>
             </section>
 
@@ -545,7 +545,7 @@
                         <input type="text" [(ngModel)]="roleForm.name" placeholder="ej: supervisor" autofocus/>
                     </label>
                     <label class="rl-field rl-field--toggle">
-                        <span>Estado</span>
+                        <span>{{ 'common.status' | translate }}</span>
                         <div class="rl-toggle">
                             <input type="checkbox" [(ngModel)]="roleForm.is_active" id="rl-active-toggle"/>
                             <label for="rl-active-toggle"></label>

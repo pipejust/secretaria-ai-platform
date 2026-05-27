@@ -115,7 +115,7 @@
                 <button type="submit" class="ap-btn ap-btn-primary"
                         [disabled]="!projectForm.form.valid || isCreating || isUpdating">
                     <span *ngIf="!(isCreating || isUpdating)">{{ editingProject ? 'Guardar cambios' : 'Guardar proyecto' }}</span>
-                    <span *ngIf="isCreating || isUpdating">Procesando…</span>
+                    <span *ngIf="isCreating || isUpdating">{{ 'common.processing' | translate }}</span>
                 </button>
             </footer>
         </form>
@@ -538,9 +538,9 @@
                  botón "Filtros". Misma estructura que /admin/meetings. -->
             <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
                 <div class="filter-group">
-                    <label>Estado</label>
+                    <label>{{ 'common.status' | translate }}</label>
                     <select [(ngModel)]="filterStatus" (change)="onSearchInput()">
-                        <option value="all">Todos</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="active">{{ 'common.active' | translate }}</option>
                         <option value="archived">Archivados</option>
                     </select>
@@ -548,14 +548,14 @@
                 <div class="filter-group">
                     <label>Responsable</label>
                     <select [(ngModel)]="filterOwner">
-                        <option [ngValue]="'all'">Todos</option>
+                        <option [ngValue]="'all'">{{ 'common.all' | translate }}</option>
                         <option *ngFor="let u of users" [ngValue]="u.id">{{ u.full_name || u.email }}</option>
                     </select>
                 </div>
                 <div class="filter-group">
                     <label>Equipo</label>
                     <select [(ngModel)]="filterTeam">
-                        <option value="all">Todos</option>
+                        <option value="all">{{ 'common.all' | translate }}</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -571,7 +571,7 @@
                 <nav class="ap-tabs">
                     <button type="button"
                             [class.active]="activeTab === 'all'"
-                            (click)="setTab('all')">Todos</button>
+                            (click)="setTab('all')">{{ 'common.all' | translate }}</button>
                     <button type="button"
                             [class.active]="activeTab === 'active'"
                             (click)="setTab('active')">{{ 'common.active' | translate }}</button>
@@ -591,7 +591,7 @@
                             <tr>
                                 <th>Proyecto</th>
                                 <th>Responsable</th>
-                                <th>Estado</th>
+                                <th>{{ 'common.status' | translate }}</th>
                                 <th>Última sincronización</th>
                                 <th>Progreso</th>
                                 <th>Equipo</th>
@@ -719,7 +719,7 @@
                                                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                                                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                                                 </svg>
-                                                Participantes
+                                                {{ 'meetings.participants' | translate }}
                                             </li>
                                             <li (click)="manageRoutings(p); closeActions()">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -874,7 +874,7 @@
                                 <polyline points="12 6 12 12 16 14"></polyline>
                             </svg>
                         </span>
-                        <span class="ov-label">En progreso</span>
+                        <span class="ov-label">{{ 'common.in_progress' | translate }}</span>
                         <span class="ov-value">{{ overviewCounts.inProgress }}</span>
                     </li>
                 </ul>

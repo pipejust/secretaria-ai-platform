@@ -142,11 +142,11 @@
              Equipo/Fecha/Origen del mockup en una sola fila horizontal. -->
         <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
             <div class="filter-group">
-                <label>Estado</label>
+                <label>{{ 'common.status' | translate }}</label>
                 <select [(ngModel)]="statusFilter"
                         (change)="currentPage = 1; loadSessions()">
                     <option value="">Todos los estados</option>
-                    <option value="pending">Pendiente</option>
+                    <option value="pending">{{ 'common.pending' | translate }}</option>
                     <option value="processing">Procesando</option>
                     <option value="completed">Analizada</option>
                     <option value="archived">Archivada</option>
@@ -166,7 +166,7 @@
                 <label>Fecha (preset)</label>
                 <select [(ngModel)]="filterDate">
                     <option value="">Cualquier momento</option>
-                    <option value="today">Hoy</option>
+                    <option value="today">{{ 'common.today' | translate }}</option>
                     <option value="week">Última semana</option>
                     <option value="month">Último mes</option>
                 </select>
@@ -221,10 +221,10 @@
                 <div class="mt-tr mt-th">
                     <span>Título</span>
                     <span>Fecha y hora</span>
-                    <span>Participantes</span>
-                    <span>Duración</span>
+                    <span>{{ 'meetings.participants' | translate }}</span>
+                    <span>{{ 'meetings.duration' | translate }}</span>
                     <span>Origen</span>
-                    <span>Estado</span>
+                    <span>{{ 'common.status' | translate }}</span>
                     <span class="t-right">{{ 'common.actions' | translate }}</span>
                 </div>
                 <div class="mt-tr mt-skeleton" *ngFor="let i of [1,2,3,4,5]">
@@ -243,10 +243,10 @@
                 <div class="mt-tr mt-th">
                     <span (click)="sortBy('title')">Título</span>
                     <span (click)="sortBy('date')">Fecha y hora</span>
-                    <span>Participantes</span>
-                    <span>Duración</span>
+                    <span>{{ 'meetings.participants' | translate }}</span>
+                    <span>{{ 'meetings.duration' | translate }}</span>
                     <span>Origen</span>
-                    <span (click)="sortBy('status')">Estado</span>
+                    <span (click)="sortBy('status')">{{ 'common.status' | translate }}</span>
                     <span class="t-right">{{ 'common.actions' | translate }}</span>
                 </div>
 
@@ -333,7 +333,7 @@
                                   data-status="processing"
                                   title="Pipeline IA en ejecución…">
                                 <span class="retry-spinner" aria-hidden="true"></span>
-                                Procesando…
+                                {{ 'common.processing' | translate }}
                             </span>
                         </ng-container>
                         <ng-template #notRetrying>
@@ -442,7 +442,7 @@
                                     <rect x="1" y="3" width="22" height="5"></rect>
                                     <line x1="10" y1="12" x2="14" y2="12"></line>
                                 </svg>
-                                Archivar
+                                {{ 'landing_messages.archive' | translate }}
                             </button>
                             <button *ngIf="s.status === 'archived'"
                                     (click)="unarchiveSession(s, $event); closeRowMenu()">
@@ -619,7 +619,7 @@
         <!-- Tabs internos -->
         <nav class="dt-tabs" aria-label="Secciones del detalle">
             <button [class.active]="detailTab === 'summary'"    (click)="setDetailTab('summary')">{{ 'sidebar.dashboard' | translate }}</button>
-            <button [class.active]="detailTab === 'transcript'" (click)="setDetailTab('transcript')">Transcripción</button>
+            <button [class.active]="detailTab === 'transcript'" (click)="setDetailTab('transcript')">{{ 'meetings.tabs.transcript' | translate }}</button>
             <button [class.active]="detailTab === 'insights'"   (click)="setDetailTab('insights')">Hallazgos</button>
             <button [class.active]="detailTab === 'notes'"      (click)="setDetailTab('notes')">Notas</button>
             <button [class.active]="detailTab === 'files'"      (click)="setDetailTab('files')">Archivos</button>
@@ -683,7 +683,7 @@
                 <!-- Action items -->
                 <article class="dt-card">
                     <header class="dt-card-head">
-                        <h3>Tareas</h3>
+                        <h3>{{ 'meetings.tabs.tasks' | translate }}</h3>
                         <span class="dt-badge-count" *ngIf="selectedActionItems.length">
                             {{ selectedActionItems.length }}
                         </span>
@@ -751,7 +751,7 @@
             <ng-container *ngIf="detailTab !== 'summary'">
                 <article class="dt-card">
                     <header class="dt-card-head">
-                        <h3 *ngIf="detailTab === 'transcript'">Transcripción</h3>
+                        <h3 *ngIf="detailTab === 'transcript'">{{ 'meetings.tabs.transcript' | translate }}</h3>
                         <h3 *ngIf="detailTab === 'insights'">Hallazgos</h3>
                         <h3 *ngIf="detailTab === 'notes'">Notas</h3>
                         <h3 *ngIf="detailTab === 'files'">Archivos</h3>
@@ -948,7 +948,7 @@
     <div class="ap-modal ap-modal-md" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
             <div>
-                <h2 class="ap-modal-title">Participantes</h2>
+                <h2 class="ap-modal-title">{{ 'meetings.participants' | translate }}</h2>
                 <p class="ap-modal-subtitle">
                     {{ selectedSession?.title }} &nbsp;·&nbsp;
                     {{ selectedAttendees.length }} {{ selectedAttendees.length === 1 ? 'persona' : 'personas' }}

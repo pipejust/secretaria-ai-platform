@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { RouterModule } from '@angular/router';
 
 interface FaqEntry { q: string; a: string; }
@@ -8,7 +9,7 @@ interface Topic { title: string; description: string; icon: string; }
 @Component({
   selector: 'app-help-center',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   templateUrl: './help-center.component.html',
   styleUrls: ['./help-center.component.css'],
 })

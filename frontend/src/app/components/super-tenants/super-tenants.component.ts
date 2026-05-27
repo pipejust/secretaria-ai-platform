@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -65,7 +66,7 @@ const MAX_BRAND_FILE_BYTES = 2 * 1024 * 1024;
 @Component({
     selector: 'app-super-tenants',
     standalone: true,
-    imports: [CommonModule, FormsModule, PasswordInputComponent],
+    imports: [CommonModule, FormsModule, PasswordInputComponent, TranslateModule],
     templateUrl: './super-tenants.component.html',
     styleUrls: ['./super-tenants.component.css'],
 })

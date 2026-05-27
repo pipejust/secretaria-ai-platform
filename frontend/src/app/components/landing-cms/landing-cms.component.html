@@ -18,7 +18,7 @@
                  las traducciones del idioma elegido. Al guardar, solo ese
                  idioma se actualiza en el JSON; los demás se preservan. -->
             <div class="lcms-edit-lang" role="group" aria-label="Idioma de edición">
-                <span class="lcms-edit-lang-label">Editar en:</span>
+                <span class="lcms-edit-lang-label">{{ 'landing_cms.edit_in' | translate }}</span>
                 <button *ngFor="let l of availableEditLangs" type="button"
                         class="lcms-edit-lang-btn"
                         [class.is-active]="editLang === l.code"
@@ -35,7 +35,7 @@
                     <polyline points="15 3 21 3 21 9"></polyline>
                     <line x1="10" y1="14" x2="21" y2="3"></line>
                 </svg>
-                Ver landing
+                {{ 'landing_cms.view_landing' | translate }}
             </button>
             <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-danger"
                     (click)="resetToDefaults()" [disabled]="isResetting || isLoading">
@@ -581,7 +581,7 @@
                         <input type="email" [(ngModel)]="content.contact.email" placeholder="hola@acten.app" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Teléfono</span>
+                        <span class="lcms-field-label">{{ 'common.phone' | translate }}</span>
                         <input type="text" [(ngModel)]="content.contact.phone" />
                     </label>
                     <label class="lcms-field lcms-field-full">
@@ -768,7 +768,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                Sin cambios pendientes
+                {{ 'landing_cms.clean' | translate }}
             </span>
             <span *ngIf="isDirty" class="lcms-status lcms-status-dirty">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

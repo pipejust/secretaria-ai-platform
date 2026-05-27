@@ -40,7 +40,7 @@
                     </svg>
                 </div>
                 <div class="tn-kpi-body">
-                    <span class="tn-kpi-label">Empresas totales</span>
+                    <span class="tn-kpi-label">{{ 'tenants.total_companies' | translate }}</span>
                     <span class="tn-kpi-value">{{ totalTenants }}</span>
                     <span class="tn-kpi-delta tn-kpi-delta--{{ tenantsDelta.dir }}">
                         <svg *ngIf="tenantsDelta.dir === 'up'"   width="10" height="10" viewBox="0 0 10 10"><polygon points="5,0 10,8 0,8"/></svg>
@@ -60,7 +60,7 @@
                     </svg>
                 </div>
                 <div class="tn-kpi-body">
-                    <span class="tn-kpi-label">Empresas activas</span>
+                    <span class="tn-kpi-label">{{ 'tenants.active_companies' | translate }}</span>
                     <span class="tn-kpi-value">{{ activeTenants }}</span>
                     <span class="tn-kpi-delta tn-kpi-delta--{{ activeDelta.dir }}">
                         <svg *ngIf="activeDelta.dir === 'up'"   width="10" height="10" viewBox="0 0 10 10"><polygon points="5,0 10,8 0,8"/></svg>
@@ -82,7 +82,7 @@
                     </svg>
                 </div>
                 <div class="tn-kpi-body">
-                    <span class="tn-kpi-label">Usuarios distribuidos</span>
+                    <span class="tn-kpi-label">{{ 'tenants.total_users' | translate }}</span>
                     <span class="tn-kpi-value">{{ totalUsers }}</span>
                     <span class="tn-kpi-delta tn-kpi-delta--{{ usersDelta.dir }}">
                         <svg *ngIf="usersDelta.dir === 'up'"   width="10" height="10" viewBox="0 0 10 10"><polygon points="5,0 10,8 0,8"/></svg>
@@ -103,7 +103,7 @@
                     </svg>
                 </div>
                 <div class="tn-kpi-body">
-                    <span class="tn-kpi-label">Dominios configurados</span>
+                    <span class="tn-kpi-label">{{ 'tenants.configured_domains' | translate }}</span>
                     <span class="tn-kpi-value">{{ configuredDomains }}</span>
                     <span class="tn-kpi-delta tn-kpi-delta--{{ domainsDelta.dir }}">
                         <svg *ngIf="domainsDelta.dir === 'up'"   width="10" height="10" viewBox="0 0 10 10"><polygon points="5,0 10,8 0,8"/></svg>
@@ -124,7 +124,7 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input type="text"
-                       placeholder="Buscar empresa por nombre, slug o dominio…"
+                       [placeholder]="'tenants.search_placeholder' | translate"
                        [(ngModel)]="searchText"
                        (input)="currentPage = 1"/>
             </div>
@@ -175,17 +175,17 @@
 
         <section class="tn-filters" *ngIf="showFilters">
             <div class="filter-group">
-                <label>Estado</label>
+                <label>{{ 'common.status' | translate }}</label>
                 <select [(ngModel)]="statusFilter" (change)="currentPage = 1">
-                    <option value="">Todos</option>
-                    <option value="active">Activa</option>
-                    <option value="inactive">Inactiva</option>
+                    <option value="">{{ 'common.all' | translate }}</option>
+                    <option value="active">{{ 'profile.two_factor_on' | translate }}</option>
+                    <option value="inactive">{{ 'profile.two_factor_off' | translate }}</option>
                 </select>
             </div>
             <div class="filter-group">
                 <label>Dominio</label>
                 <select [(ngModel)]="domainFilter" (change)="currentPage = 1">
-                    <option value="">Todos</option>
+                    <option value="">{{ 'common.all' | translate }}</option>
                     <option value="with">Con dominio personalizado</option>
                     <option value="without">Sin dominio</option>
                 </select>
@@ -193,7 +193,7 @@
             <div class="filter-group">
                 <label>Usuarios</label>
                 <select [(ngModel)]="usersFilter" (change)="currentPage = 1">
-                    <option value="">Todos</option>
+                    <option value="">{{ 'common.all' | translate }}</option>
                     <option value="zero">Sin usuarios</option>
                     <option value="low">1 - 5</option>
                     <option value="medium">6 - 20</option>
@@ -234,9 +234,9 @@
                         <span>Empresa</span>
                         <span>Dominio</span>
                         <span>Usuarios</span>
-                        <span>Estado</span>
+                        <span>{{ 'common.status' | translate }}</span>
                         <span>Marca / Configuración</span>
-                        <span class="tn-th-actions">Acciones</span>
+                        <span class="tn-th-actions">{{ 'common.actions' | translate }}</span>
                     </div>
 
                     <div class="tn-tr"
@@ -313,7 +313,7 @@
                                         <line x1="2" y1="12" x2="22" y2="12"></line>
                                         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                                     </svg>
-                                    Editar dominio
+                                    {{ 'tenants.edit_domain' | translate }}
                                 </button>
                                 <button (click)="resendTenantInvitation(t, $event)">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -511,7 +511,7 @@
         </article>
 
         <article class="tn-card">
-            <header class="tn-card-head"><h3>Actividad reciente</h3></header>
+            <header class="tn-card-head"><h3>{{ 'profile.activity' | translate }}</h3></header>
             <ul class="tn-activity">
                 <li>
                     <span class="tn-activity-dot tn-activity-dot--green"></span>
@@ -557,7 +557,7 @@
     <div class="tn-modal" (click)="$event.stopPropagation()">
         <div class="tn-modal-head">
             <div>
-                <h3>Crear empresa</h3>
+                <h3>{{ 'tenants.create_tenant' | translate }}</h3>
                 <p class="tn-modal-sub">
                     El slug identifica la empresa en la URL (ej. /t/acme). El admin inicial podrá entrar
                     con email + password en esa empresa y de inmediato editar logo, colores, contacto y crear más usuarios.
@@ -648,7 +648,7 @@
                 </div>
 
                 <div class="tn-field">
-                    <label>Sitio web <span class="tn-req">*</span></label>
+                    <label>{{ 'common.website' | translate }} <span class="tn-req">*</span></label>
                     <input type="url" name="company_website" [(ngModel)]="form.company_website"
                            placeholder="https://tuempresa.com" required/>
                     <small class="tn-field-hint">
@@ -670,14 +670,14 @@
                                placeholder="contacto@tuempresa.com"/>
                     </div>
                     <div class="tn-field">
-                        <label>Teléfono <span class="tn-opt">(opcional)</span></label>
+                        <label>{{ 'common.phone' | translate }} <span class="tn-opt">(opcional)</span></label>
                         <input type="tel" name="company_phone" [(ngModel)]="form.company_phone"
                                placeholder="+57 300 123 4567"/>
                     </div>
                 </div>
 
                 <div class="tn-field">
-                    <label>Dirección <span class="tn-opt">(opcional)</span></label>
+                    <label>{{ 'common.address' | translate }} <span class="tn-opt">(opcional)</span></label>
                     <input type="text" name="company_address" [(ngModel)]="form.company_address"
                            placeholder="Cra 7 # 80-30, Bogotá, Colombia"/>
                 </div>
@@ -686,13 +686,13 @@
                      Tema visual — 3 colores (primario / secundario / acento)
                      ============================================================ -->
                 <div class="tn-section-divider">
-                    <span class="tn-section-title">Tema visual</span>
+                    <span class="tn-section-title">{{ 'branding.theme' | translate }}</span>
                     <span class="tn-section-tag">Defaults Acten — editables</span>
                 </div>
 
                 <div class="tn-grid-2">
                     <div class="tn-field">
-                        <label>Color primario</label>
+                        <label>{{ 'branding.primary_color' | translate }}</label>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <input type="color" name="primary_color" [(ngModel)]="form.primary_color"
                                    style="width:48px; height:38px; padding:2px; border-radius:8px; cursor:pointer;"/>
@@ -701,7 +701,7 @@
                         </div>
                     </div>
                     <div class="tn-field">
-                        <label>Color secundario</label>
+                        <label>{{ 'branding.secondary_color' | translate }}</label>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <input type="color" name="secondary_color" [(ngModel)]="form.secondary_color"
                                    style="width:48px; height:38px; padding:2px; border-radius:8px; cursor:pointer;"/>
@@ -711,7 +711,7 @@
                     </div>
                 </div>
                 <div class="tn-field">
-                    <label>Color acento</label>
+                    <label>{{ 'branding.accent_color' | translate }}</label>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="color" name="accent_color" [(ngModel)]="form.accent_color"
                                style="width:48px; height:38px; padding:2px; border-radius:8px; cursor:pointer;"/>
@@ -722,7 +722,7 @@
 
                 <div class="tn-section-divider">
                     <span class="tn-section-title">Marca de la empresa</span>
-                    <span class="tn-section-tag">Opcional</span>
+                    <span class="tn-section-tag">{{ 'common.optional' | translate }}</span>
                 </div>
                 <p class="tn-section-desc">
                     Sube ahora el logo y el imagologo de la empresa para que aparezcan desde el primer login.
@@ -732,7 +732,7 @@
                 <div class="tn-uploads">
                     <div class="tn-upload" (drop)="onLogoDrop($event)" (dragover)="onDragOver($event)">
                         <header class="tn-upload-head">
-                            <strong>Logo claro</strong>
+                            <strong>{{ 'branding.logo_light' | translate }}</strong>
                             <span class="tn-upload-desc">Para fondos claros · sidebar expandido, admin, emails</span>
                         </header>
                         <div class="tn-upload-drop">
@@ -752,7 +752,7 @@
 
                     <div class="tn-upload" (drop)="onLogoDarkDrop($event)" (dragover)="onDragOver($event)">
                         <header class="tn-upload-head">
-                            <strong>Logo oscuro</strong>
+                            <strong>{{ 'branding.logo_dark' | translate }}</strong>
                             <span class="tn-upload-desc">Para fondos oscuros · hero de la landing, dark mode</span>
                         </header>
                         <div class="tn-upload-drop" style="background:#031B34;">
@@ -772,7 +772,7 @@
 
                     <div class="tn-upload" (drop)="onIconDrop($event)" (dragover)="onDragOver($event)">
                         <header class="tn-upload-head">
-                            <strong>Imagologo / icono</strong>
+                            <strong>{{ 'branding.icon' | translate }}</strong>
                             <span class="tn-upload-desc">Cuadrado · usado en sidebar colapsado, avatares y badges compactos</span>
                         </header>
                         <div class="tn-upload-drop tn-upload-drop--square">
@@ -792,7 +792,7 @@
 
                     <div class="tn-upload">
                         <header class="tn-upload-head">
-                            <strong>Favicon</strong>
+                            <strong>{{ 'branding.favicon' | translate }}</strong>
                             <span class="tn-upload-desc">.ico/.png · pestaña del navegador</span>
                         </header>
                         <div class="tn-upload-drop tn-upload-drop--square">
@@ -866,7 +866,7 @@
                                placeholder="Ej. Acten S.A."/>
                     </div>
                     <div class="tn-field">
-                        <label>Color primario</label>
+                        <label>{{ 'branding.primary_color' | translate }}</label>
                         <div class="tn-color-row">
                             <input type="color" name="e_color" [(ngModel)]="editForm.primary_color"/>
                             <input type="text"  name="e_color_hex" [(ngModel)]="editForm.primary_color"
@@ -883,16 +883,16 @@
                 </div>
 
                 <div class="tn-field">
-                    <label>Estado</label>
+                    <label>{{ 'common.status' | translate }}</label>
                     <select name="e_active" [(ngModel)]="editForm.is_active">
-                        <option [ngValue]="true">Activa</option>
-                        <option [ngValue]="false">Inactiva</option>
+                        <option [ngValue]="true">{{ 'profile.two_factor_on' | translate }}</option>
+                        <option [ngValue]="false">{{ 'profile.two_factor_off' | translate }}</option>
                     </select>
                 </div>
 
                 <div class="tn-section-divider">
                     <span class="tn-section-title">Marca de la empresa</span>
-                    <span class="tn-section-tag">Opcional</span>
+                    <span class="tn-section-tag">{{ 'common.optional' | translate }}</span>
                 </div>
                 <p class="tn-section-desc">
                     Reemplaza el logo completo o el imagologo. Se aplican apenas guardes cambios.
@@ -901,7 +901,7 @@
                 <div class="tn-uploads">
                     <div class="tn-upload">
                         <header class="tn-upload-head">
-                            <strong>Logo claro</strong>
+                            <strong>{{ 'branding.logo_light' | translate }}</strong>
                             <span class="tn-upload-desc">Para fondos claros · sidebar expandido, admin, emails</span>
                         </header>
                         <div class="tn-upload-drop">
@@ -921,7 +921,7 @@
 
                     <div class="tn-upload">
                         <header class="tn-upload-head">
-                            <strong>Logo oscuro</strong>
+                            <strong>{{ 'branding.logo_dark' | translate }}</strong>
                             <span class="tn-upload-desc">Para fondos oscuros · hero de la landing, dark mode</span>
                         </header>
                         <div class="tn-upload-drop" style="background:#031B34;">
@@ -941,7 +941,7 @@
 
                     <div class="tn-upload">
                         <header class="tn-upload-head">
-                            <strong>Imagologo / icono</strong>
+                            <strong>{{ 'branding.icon' | translate }}</strong>
                             <span class="tn-upload-desc">Cuadrado · usado en sidebar colapsado y avatares</span>
                         </header>
                         <div class="tn-upload-drop tn-upload-drop--square">
@@ -982,7 +982,7 @@
     <div class="tn-modal tn-modal--narrow" (click)="$event.stopPropagation()">
         <div class="tn-modal-head">
             <div>
-                <h3>Editar dominio</h3>
+                <h3>{{ 'tenants.edit_domain' | translate }}</h3>
                 <p class="tn-modal-sub">Configura un dominio personalizado para "{{ domainTarget.name }}". Apunta el CNAME a esta plataforma.</p>
             </div>
             <button class="tn-modal-close" (click)="closeDomainModal()" aria-label="Cerrar">
@@ -1053,7 +1053,7 @@
                 <div><dt>Dominio</dt><dd>{{ s.domain || '—' }}</dd></div>
                 <div><dt>Usuarios</dt><dd>{{ s.user_count }}</dd></div>
                 <div><dt>Fecha de creación</dt><dd>{{ formatDate(s.created_at) }}</dd></div>
-                <div><dt>Color primario</dt><dd>
+                <div><dt>{{ 'branding.primary_color' | translate }}</dt><dd>
                     <span class="tn-color-swatch" *ngIf="s.primary_color"
                           [style.background]="s.primary_color"></span>
                     {{ s.primary_color || '—' }}
@@ -1071,7 +1071,7 @@
                         </div>
                     </div>
                     <div class="tn-detail-brand-block">
-                        <span class="tn-detail-brand-label">Imagologo / icono</span>
+                        <span class="tn-detail-brand-label">{{ 'branding.icon' | translate }}</span>
                         <div class="tn-detail-brand-preview tn-detail-brand-preview--square">
                             <img *ngIf="s.icon_data_url" [src]="s.icon_data_url" alt="Icon"/>
                             <span *ngIf="!s.icon_data_url" class="tn-upload-empty">Sin icono</span>

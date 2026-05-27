@@ -2,6 +2,7 @@ import {
     Component, OnDestroy, OnInit, ChangeDetectorRef, ViewChild, ElementRef, HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -91,7 +92,7 @@ interface ModelOption {
 @Component({
     selector: 'app-ask',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe],
+    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe, TranslateModule],
     templateUrl: './ask.component.html',
     styleUrls: ['./ask.component.css'],
 })
