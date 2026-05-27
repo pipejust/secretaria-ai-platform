@@ -397,19 +397,88 @@ def delete_session(
     tenant: Tenant = Depends(get_current_tenant),
     _admin: User = Depends(require_admin),
 ):
-    """Eliminar una sesión: SOLO admins."""
-    from sqlmodel import select
-    from models import ActionItem
+    """Eliminar una sesión: SOLO admins.
+
+    Cascade manual respetando las FKs hijas de `meetingsession`. Antes solo
+    limpiaba `ActionItem` y el commit final petaba con `ForeignKeyViolation`
+    en `embeddingchunk_session_id_fkey` (RAG embeddings de la sesión), entre
+    otras. El 500 cortaba la respuesta antes de que el CORS middleware
+    pudiera agregar headers, así que el browser mostraba "blocked by CORS
+    policy" en vez del error real — bug doblemente confuso.
+
+    Orden topológico (de hijos a padres):
+      1. EmbeddingChunk      → DELETE (RAG vectors específicos de la sesión)
+      2. ActionItem          → DELETE
+      3. SessionOutput       → DELETE (artefactos generados — PRD, Brief…)
+      4. MeetingSessionVersion → DELETE (snapshots/historia editable)
+      5. Comment             → DELETE (hilos de comentarios)
+      6. SessionPermission   → DELETE (permisos per-user)
+      7. CalendarEvent       → UPDATE SET session_id=NULL (el evento de
+         calendario sobrevive a la sesión; solo perdemos el link)
+      8. MeetingSession      → DELETE (la sesión misma)
+
+    Usamos `delete()` via SQLModel para borrados masivos en lugar de cargar
+    relaciones — más rápido y evita iterar listas que pueden ser largas
+    (un transcript de 90 min puede tener ~300 EmbeddingChunks).
+    """
+    from sqlmodel import select, delete
+    from sqlalchemy.exc import IntegrityError
+    from models import (
+        ActionItem,
+        EmbeddingChunk,
+        SessionOutput,
+        MeetingSessionVersion,
+        Comment,
+        SessionPermission,
+        CalendarEvent,
+    )
+
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj or session_obj.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Session not found")
-        
-    action_items = db.exec(select(ActionItem).where(ActionItem.session_id == session_id)).all()
-    for item in action_items:
-        db.delete(item)
-        
-    db.delete(session_obj)
-    db.commit()
+
+    try:
+        # 1) RAG embeddings — la causa más común del FK violation antes del fix.
+        db.exec(delete(EmbeddingChunk).where(EmbeddingChunk.session_id == session_id))
+        # 2) Tasks
+        db.exec(delete(ActionItem).where(ActionItem.session_id == session_id))
+        # 3) Artefactos generados por roles (PRD, deal brief, etc.)
+        db.exec(delete(SessionOutput).where(SessionOutput.session_id == session_id))
+        # 4) Snapshots/historia de la sesión
+        db.exec(delete(MeetingSessionVersion).where(MeetingSessionVersion.session_id == session_id))
+        # 5) Comentarios
+        db.exec(delete(Comment).where(Comment.session_id == session_id))
+        # 6) Permisos per-user
+        db.exec(delete(SessionPermission).where(SessionPermission.session_id == session_id))
+        # 7) Eventos de calendario — desligamos el FK pero NO los borramos:
+        # el evento existe en Google/Microsoft Calendar y debe seguir vivo
+        # aunque la sesión asociada ya no exista en Acten.
+        from sqlmodel import update as _update
+        db.exec(
+            _update(CalendarEvent)
+            .where(CalendarEvent.session_id == session_id)
+            .values(session_id=None)
+        )
+        # 8) La sesión misma
+        db.delete(session_obj)
+        db.commit()
+    except IntegrityError as exc:
+        # Algún FK que no contemplamos (modelo nuevo agregado sin actualizar
+        # esta cascada). Devolvemos 409 con el nombre de la constraint para
+        # que sea obvio qué tabla agregar al cascade.
+        db.rollback()
+        msg = str(getattr(exc, "orig", exc))
+        import logging as _logging
+        _logging.getLogger(__name__).exception(
+            "delete_session: cascade incompleto para sesión %s", session_id,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"No se pudo eliminar la sesión: una tabla hija aún la "
+                f"referencia. {msg}"
+            ),
+        )
     return {"status": "success", "message": "Sesión eliminada"}
 
 class SessionUpdate(BaseModel):
