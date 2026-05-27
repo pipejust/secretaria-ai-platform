@@ -107,7 +107,7 @@
                     <div class="st-card-body">
                         <div class="st-grid st-grid-2">
                             <label class="st-field">
-                                <span class="st-field-label">Formato de fecha</span>
+                                <span class="st-field-label">{{ 'common.date_format' | translate }}</span>
                                 <div class="st-field-input">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -284,7 +284,7 @@
                                         <input type="text" class="st-input"
                                                [(ngModel)]="googleCalendarSettings.redirect_uri"
                                                [placeholder]="defaultGoogleRedirect" />
-                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('google')">Usar por defecto</button>
+                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('google')">{{ 'common.use_default' | translate }}</button>
                                     </div>
                                 </label>
                             </div>
@@ -343,7 +343,7 @@
                                         <input type="text" class="st-input"
                                                [(ngModel)]="microsoftCalendarSettings.redirect_uri"
                                                [placeholder]="defaultMicrosoftRedirect" />
-                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('microsoft')">Usar por defecto</button>
+                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('microsoft')">{{ 'common.use_default' | translate }}</button>
                                     </div>
                                 </label>
                             </div>
@@ -625,7 +625,7 @@
 
                         <div class="st-grid st-grid-2 st-mt-16" *ngIf="autoCurationSettings.isEnabled">
                             <label class="st-field">
-                                <span class="st-field-label">Tiempo de espera antes del envío (minutos)</span>
+                                <span class="st-field-label">{{ 'settings.wait_before_send' | translate }}</span>
                                 <input type="number" min="1" max="10080" class="st-input"
                                        [(ngModel)]="autoCurationSettings.timeoutMinutes" />
                                 <small class="st-help">

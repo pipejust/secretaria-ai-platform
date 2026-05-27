@@ -94,7 +94,7 @@
                             <span>Activar envío automático de tareas y correos para este proyecto</span>
                         </label>
                         <div class="ap-field">
-                            <label class="ap-label">Tiempo de espera antes del envío (minutos)</label>
+                            <label class="ap-label">{{ 'settings.wait_before_send' | translate }}</label>
                             <input class="ap-input" type="number" min="1" max="10080" step="1" name="ad_timeout_min"
                                    [(ngModel)]="autoDispatchTimeoutMinutes"
                                    (ngModelChange)="onAutoDispatchTimeoutMinutesChange($event)"

@@ -175,7 +175,7 @@
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3"></circle>
               </svg>
-              Ubicación
+              {{ 'profile.location' | translate }}
             </dt>
             <dd>{{ profile.location || '—' }}</dd>
           </div>
@@ -226,7 +226,7 @@
               <input id="pr-department" type="text" [(ngModel)]="profile.department" name="department" placeholder="Operaciones, IT, Comercial…">
             </div>
             <div class="pr-field">
-              <label for="pr-location">Ubicación</label>
+              <label for="pr-location">{{ 'profile.location' | translate }}</label>
               <input id="pr-location" type="text" [(ngModel)]="profile.location" name="location" placeholder="Ciudad, país">
             </div>
             <div class="pr-field pr-field--full">
@@ -270,7 +270,7 @@
             </select>
           </div>
           <div class="pr-field">
-            <label for="pr-date">Formato de fecha</label>
+            <label for="pr-date">{{ 'common.date_format' | translate }}</label>
             <select id="pr-date"
                     [ngModel]="uiPrefs.dateFormat"
                     (ngModelChange)="onUiPrefChange('dateFormat', $event)"

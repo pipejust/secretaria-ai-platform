@@ -44,7 +44,7 @@
                 </svg>
             </div>
             <div class="br-kpi-body">
-                <span class="br-kpi-label">Activos de marca</span>
+                <span class="br-kpi-label">{{ 'branding.brand_assets' | translate }}</span>
                 <span class="br-kpi-value">{{ brandAssetsCount }}</span>
                 <span class="br-kpi-hint">Elementos configurados</span>
             </div>
@@ -202,7 +202,7 @@
                 <!-- Identidad de la empresa -->
                 <article class="br-card br-card--identity" *ngIf="showSection('identidad')">
                     <header class="br-card-head">
-                        <h2>Identidad de la empresa</h2>
+                        <h2>{{ 'branding.identity' | translate }}</h2>
                     </header>
                     <div class="br-form">
                         <label class="br-field">
@@ -498,7 +498,7 @@
                         <!-- Buttons and colors -->
                         <div class="br-ui-tile">
                             <div class="br-ui-buttons">
-                                <p class="br-ui-buttons-label">Botones y colores</p>
+                                <p class="br-ui-buttons-label">{{ 'branding.buttons_colors' | translate }}</p>
                                 <div class="br-ui-buttons-row">
                                     <span class="br-ui-btn" [style.background]="form.primary_color">Primario</span>
                                     <span class="br-ui-btn" [style.background]="form.secondary_color">Secundario</span>
@@ -510,7 +510,7 @@
                                     <span class="br-ui-dot-gray"></span>
                                 </div>
                             </div>
-                            <span class="br-ui-caption">Botones y colores</span>
+                            <span class="br-ui-caption">{{ 'branding.buttons_colors' | translate }}</span>
                         </div>
                     </div>
                 </article>
@@ -611,7 +611,7 @@
                                 <polyline points="21 15 16 10 5 21"></polyline>
                             </svg>
                         </span>
-                        Logos cargados
+                        {{ 'branding.logos_uploaded' | translate }}
                         <span class="br-summary-value">{{ logosUploaded }}</span>
                     </li>
                     <li>
@@ -736,7 +736,7 @@
                 <header><h4>Activos visuales</h4></header>
                 <div class="br-detail-assets">
                     <div class="br-detail-asset">
-                        <span class="br-detail-asset-label">Logo completo</span>
+                        <span class="br-detail-asset-label">{{ 'branding.logo_light' | translate }}</span>
                         <div class="br-detail-asset-box"
                              [style.background]="form.primary_color || '#031B34'">
                             <img *ngIf="form.logo_data_url" [src]="form.logo_data_url"/>
@@ -791,7 +791,7 @@
                 <div class="br-detail-stats">
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ brandAssetsCount }}</span>
-                        <span class="br-detail-stat-label">Activos de marca</span>
+                        <span class="br-detail-stat-label">{{ 'branding.brand_assets' | translate }}</span>
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ channelsCount }}</span>
@@ -803,7 +803,7 @@
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ logosUploaded }}</span>
-                        <span class="br-detail-stat-label">Logos cargados</span>
+                        <span class="br-detail-stat-label">{{ 'branding.logos_uploaded' | translate }}</span>
                     </div>
                     <div class="br-detail-stat">
                         <span class="br-detail-stat-value">{{ previewsCount }}</span>

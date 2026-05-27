@@ -119,7 +119,25 @@
     "just_now": "Just now",
     "moments_ago": "Moments ago",
     "upcoming": "Upcoming",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "readable_name": "Readable name",
+    "last_edit": "Last edit",
+    "success_message": "Success message",
+    "add": "+ Add",
+    "upcoming_7d": "Upcoming (≤7d)",
+    "use_default": "Use default",
+    "date_format": "Date format",
+    "about_to_delete_permanently": "You are about to permanently delete",
+    "home": "Home",
+    "back_to_home": "Back to home",
+    "more_info": "More info",
+    "configure": "Configure",
+    "info": "Info",
+    "warning": "Warning",
+    "notice": "Notice",
+    "attention": "Attention",
+    "detail": "Detail",
+    "quick_start": "Quick start"
   },
   "lang": {
     "es": "Español",
@@ -248,7 +266,8 @@
     "empty_projects": "No projects.",
     "empty_tasks": "No pending tasks.",
     "donut_legend": "Distribution by status",
-    "workload": "Workload"
+    "workload": "Workload",
+    "more_meetings": "More meetings"
   },
   "profile": {
     "title": "My profile",
@@ -319,7 +338,8 @@
     "inactive_users": "Inactive users",
     "admins": "Administrators",
     "assigned_users": "Assigned users",
-    "assigned_role": "Assigned role"
+    "assigned_role": "Assigned role",
+    "no_users": "No users"
   },
   "tenants": {
     "title": "Companies",
@@ -337,7 +357,8 @@
     "total_users": "Distributed users",
     "configured_domains": "Configured domains",
     "empty_title": "No companies registered",
-    "empty_hint": "Create the first company to get started."
+    "empty_hint": "Create the first company to get started.",
+    "custom_domain": "Custom domain"
   },
   "projects": {
     "title": "Projects",
@@ -390,7 +411,9 @@
     "share": "Share",
     "regenerate": "Regenerate",
     "approve": "Approve",
-    "dispatch": "Dispatch"
+    "dispatch": "Dispatch",
+    "curation": "Session curation",
+    "select_audio_file": "Select an audio file"
   },
   "pending": {
     "title": "Pending",
@@ -412,7 +435,8 @@
     "categories": "Categories",
     "all_templates": "All templates",
     "no_preview": "Preview not available for this format.",
-    "no_templates": "No templates created."
+    "no_templates": "No templates created.",
+    "default_template": "Default template"
   },
   "branding": {
     "title": "Brand customization",
@@ -440,7 +464,11 @@
     "accent_color": "Accent color",
     "no_logo": "No logo",
     "no_icon": "No icon",
-    "previews": "Previews"
+    "previews": "Previews",
+    "no_dark_logo": "No dark logo",
+    "brand_assets": "Brand assets",
+    "logos_uploaded": "Uploaded logos",
+    "buttons_colors": "Buttons and colors"
   },
   "integrations": {
     "title": "Integrations",
@@ -453,7 +481,9 @@
     "save_integration": "Save integration",
     "api_key": "API key",
     "api_token": "API token",
-    "secret": "Secret"
+    "secret": "Secret",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
   },
   "settings": {
     "title": "Settings",
@@ -464,7 +494,8 @@
     "fireflies": "Fireflies",
     "calendars": "Calendars",
     "tasks_routing": "Task routing",
-    "auto_curation": "Auto curation"
+    "auto_curation": "Auto curation",
+    "wait_before_send": "Wait time before sending (minutes)"
   },
   "landing_cms": {
     "title": "Landing CMS",
@@ -476,7 +507,8 @@
     "save": "Save changes",
     "discard": "Discard",
     "unsaved": "Unsaved changes",
-    "clean": "No pending changes"
+    "clean": "No pending changes",
+    "add_link": "+ Add link"
   },
   "landing_messages": {
     "title": "Landing messages",
@@ -500,5 +532,9 @@
   "terms": {
     "title": "Terms and conditions",
     "back": "Back"
+  },
+  "roles": {
+    "role_name": "Role name",
+    "edit_role": "Edit role"
   }
 }

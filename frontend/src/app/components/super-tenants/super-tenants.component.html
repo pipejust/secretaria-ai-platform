@@ -194,7 +194,7 @@
                 <label>{{ 'sidebar.users' | translate }}</label>
                 <select [(ngModel)]="usersFilter" (change)="currentPage = 1">
                     <option value="">{{ 'common.all' | translate }}</option>
-                    <option value="zero">Sin usuarios</option>
+                    <option value="zero">{{ 'users.no_users' | translate }}</option>
                     <option value="low">1 - 5</option>
                     <option value="medium">6 - 20</option>
                     <option value="high">Más de 20</option>
@@ -583,7 +583,7 @@
                                autocomplete="off" required/>
                     </div>
                     <div class="tn-field">
-                        <label>Nombre legible <span class="tn-req">*</span></label>
+                        <label>{{ 'common.readable_name' | translate }} <span class="tn-req">*</span></label>
                         <input type="text" name="name" [(ngModel)]="form.name"
                                placeholder="ACME S.A." maxlength="120" required/>
                     </div>
@@ -619,7 +619,7 @@
                                [(ngModel)]="form.admin_must_change_password"
                                style="margin-top:3px;"/>
                         <span style="flex:1;">
-                            <strong style="display:block; color:#0f172a; font-size:14px;">Forzar cambio de contraseña en el primer login</strong>
+                            <strong style="display:block; color:#0f172a; font-size:14px;">{{ 'users.force_password_change' | translate }}</strong>
                             <small style="display:block; color:#64748b; font-size:12.5px; margin-top:2px;">
                                 Recomendado. El sistema genera una contraseña temporal segura, la envía
                                 por correo al admin de la empresa y le exige cambiarla al primer login.
@@ -644,7 +644,7 @@
                      Identidad de la empresa — espejo del editor /admin/branding
                      ============================================================ -->
                 <div class="tn-section-divider">
-                    <span class="tn-section-title">Identidad de la empresa</span>
+                    <span class="tn-section-title">{{ 'branding.identity' | translate }}</span>
                 </div>
 
                 <div class="tn-field">
@@ -721,7 +721,7 @@
                 </div>
 
                 <div class="tn-section-divider">
-                    <span class="tn-section-title">Marca de la empresa</span>
+                    <span class="tn-section-title">{{ 'branding.title' | translate }}</span>
                     <span class="tn-section-tag">{{ 'common.optional' | translate }}</span>
                 </div>
                 <p class="tn-section-desc">
@@ -757,7 +757,7 @@
                         </header>
                         <div class="tn-upload-drop" style="background:#031B34;">
                             <img *ngIf="form.logo_dark_data_url" [src]="form.logo_dark_data_url" alt="Logo oscuro preview"/>
-                            <span *ngIf="!form.logo_dark_data_url" class="tn-upload-empty" style="color:#94A3B8;">Sin logo oscuro</span>
+                            <span *ngIf="!form.logo_dark_data_url" class="tn-upload-empty" style="color:#94A3B8;">{{ 'branding.no_dark_logo' | translate }}</span>
                         </div>
                         <div class="tn-upload-foot">
                             <label class="tn-btn tn-btn--ghost tn-upload-btn">
@@ -854,7 +854,7 @@
                         <small class="tn-field-hint">El slug es inmutable.</small>
                     </div>
                     <div class="tn-field">
-                        <label>Nombre legible <span class="tn-req">*</span></label>
+                        <label>{{ 'common.readable_name' | translate }} <span class="tn-req">*</span></label>
                         <input type="text" name="e_name" [(ngModel)]="editForm.name" required minlength="2" maxlength="120"/>
                     </div>
                 </div>
@@ -876,7 +876,7 @@
                 </div>
 
                 <div class="tn-field">
-                    <label>Dominio personalizado <span class="tn-opt">(opcional)</span></label>
+                    <label>{{ 'tenants.custom_domain' | translate }} <span class="tn-opt">(opcional)</span></label>
                     <input type="text" name="e_domain" [(ngModel)]="editForm.domain"
                            placeholder="app.empresa.com" autocomplete="off"/>
                     <small class="tn-field-hint">Deja vacío para usar el subpath /t/{{ editForm.slug }}.</small>
@@ -891,7 +891,7 @@
                 </div>
 
                 <div class="tn-section-divider">
-                    <span class="tn-section-title">Marca de la empresa</span>
+                    <span class="tn-section-title">{{ 'branding.title' | translate }}</span>
                     <span class="tn-section-tag">{{ 'common.optional' | translate }}</span>
                 </div>
                 <p class="tn-section-desc">
@@ -926,7 +926,7 @@
                         </header>
                         <div class="tn-upload-drop" style="background:#031B34;">
                             <img *ngIf="editForm.logo_dark_data_url" [src]="editForm.logo_dark_data_url" alt="Logo oscuro preview"/>
-                            <span *ngIf="!editForm.logo_dark_data_url" class="tn-upload-empty" style="color:#94A3B8;">Sin logo oscuro</span>
+                            <span *ngIf="!editForm.logo_dark_data_url" class="tn-upload-empty" style="color:#94A3B8;">{{ 'branding.no_dark_logo' | translate }}</span>
                         </div>
                         <div class="tn-upload-foot">
                             <label class="tn-btn tn-btn--ghost tn-upload-btn">
@@ -997,7 +997,7 @@
             <div class="tn-alert tn-alert--error" *ngIf="errorMsg">{{ errorMsg }}</div>
             <form (ngSubmit)="saveDomain()" class="tn-form">
                 <div class="tn-field">
-                    <label>Dominio personalizado</label>
+                    <label>{{ 'tenants.custom_domain' | translate }}</label>
                     <input type="text" name="d_domain" [(ngModel)]="domainValue"
                            placeholder="app.empresa.com" autocomplete="off"/>
                     <small class="tn-field-hint">Deja vacío para usar el subpath por defecto /t/{{ domainTarget.slug }}.</small>
@@ -1064,7 +1064,7 @@
                 <h4>Marca</h4>
                 <div class="tn-detail-brand">
                     <div class="tn-detail-brand-block">
-                        <span class="tn-detail-brand-label">Logo completo</span>
+                        <span class="tn-detail-brand-label">{{ 'branding.logo_light' | translate }}</span>
                         <div class="tn-detail-brand-preview tn-detail-brand-preview--wide">
                             <img *ngIf="s.logo_data_url" [src]="s.logo_data_url" alt="Logo"/>
                             <span *ngIf="!s.logo_data_url" class="tn-upload-empty">{{ 'branding.no_logo' | translate }}</span>

@@ -191,7 +191,7 @@
                     <select [(ngModel)]="filterUsers" (change)="onFilterChange()">
                         <option value="all">{{ 'common.all' | translate }}</option>
                         <option value="with">Con usuarios</option>
-                        <option value="without">Sin usuarios</option>
+                        <option value="without">{{ 'users.no_users' | translate }}</option>
                     </select>
                 </div>
                 <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">{{ 'common.clear_filters' | translate }}</button>
@@ -214,7 +214,7 @@
             <section class="rl-table" *ngIf="!isLoading && viewMode === 'list'">
                 <div class="rl-tr rl-th">
                     <span>ID</span>
-                    <span>Nombre del rol</span>
+                    <span>{{ 'roles.role_name' | translate }}</span>
                     <span>{{ 'projects.description' | translate }}</span>
                     <span>{{ 'users.assigned_users' | translate }}</span>
                     <span>{{ 'common.status' | translate }}</span>
@@ -421,7 +421,7 @@
                         <div><dt>{{ 'common.status' | translate }}</dt><dd>{{ roleTypeLabel(sel) }}</dd></div>
                         <div><dt>{{ 'users.assigned_users' | translate }}</dt><dd>{{ usersCountForRole(sel) }}</dd></div>
                         <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(sel.created_at) }}</dd></div>
-                        <div><dt>Última edición</dt><dd>{{ formatDate(sel.updated_at) }}</dd></div>
+                        <div><dt>{{ 'common.last_edit' | translate }}</dt><dd>{{ formatDate(sel.updated_at) }}</dd></div>
                     </dl>
 
                     <div class="rl-selected-actions">
@@ -439,7 +439,7 @@
                                 <path d="M12 20h9"></path>
                                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
                             </svg>
-                            Editar rol
+                            {{ 'roles.edit_role' | translate }}
                         </button>
                     </div>
                 </ng-container>
@@ -541,7 +541,7 @@
             <div class="rl-form">
                 <div class="rl-form-row">
                     <label class="rl-field">
-                        <span>Nombre del rol <em>*</em></span>
+                        <span>{{ 'roles.role_name' | translate }} <em>*</em></span>
                         <input type="text" [(ngModel)]="roleForm.name" placeholder="ej: supervisor" autofocus/>
                     </label>
                     <label class="rl-field rl-field--toggle">
@@ -646,7 +646,7 @@
                 <div><dt>{{ 'users.assigned_users' | translate }}</dt><dd>{{ usersCountForRole(detailRole) }}</dd></div>
                 <div><dt>Permisos activos</dt><dd>{{ selectedPermissions.length }}</dd></div>
                 <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(detailRole.created_at) }}</dd></div>
-                <div><dt>Última edición</dt><dd>{{ formatDate(detailRole.updated_at) }}</dd></div>
+                <div><dt>{{ 'common.last_edit' | translate }}</dt><dd>{{ formatDate(detailRole.updated_at) }}</dd></div>
             </dl>
 
             <section class="rl-detail-section" *ngIf="selectedUsers.length">
@@ -684,7 +684,7 @@
             <div class="rl-modal-actions">
                 <button class="rl-btn rl-btn--ghost" (click)="closeDetailModal()">{{ 'common.close' | translate }}</button>
                 <button class="rl-btn rl-btn--primary" (click)="closeDetailModal(); openEditModal(detailRole)">
-                    Editar rol
+                    {{ 'roles.edit_role' | translate }}
                 </button>
             </div>
         </div>

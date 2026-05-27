@@ -134,7 +134,7 @@
                     </div>
                 </div>
                 <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add" (click)="addNavItem()">
-                    + Añadir enlace
+                    {{ 'landing_cms.add_link' | translate }}
                 </button>
             </section>
 
@@ -620,7 +620,7 @@
 
                 <h3 class="lcms-subheading">Mensajes de feedback</h3>
                 <label class="lcms-field">
-                    <span class="lcms-field-label">Mensaje de éxito</span>
+                    <span class="lcms-field-label">{{ 'common.success_message' | translate }}</span>
                     <input type="text" [(ngModel)]="content.contact.form_success" maxlength="240" />
                 </label>
                 <label class="lcms-field">
@@ -700,7 +700,7 @@
                         <input type="text" [(ngModel)]="content.footer.newsletter_cta" maxlength="40" />
                     </label>
                     <label class="lcms-field">
-                        <span class="lcms-field-label">Mensaje de éxito</span>
+                        <span class="lcms-field-label">{{ 'common.success_message' | translate }}</span>
                         <input type="text" [(ngModel)]="content.footer.newsletter_success" maxlength="240" />
                     </label>
                 </div>
@@ -739,7 +739,7 @@
                             </div>
                         </div>
                         <button type="button" class="lcms-btn lcms-btn-ghost lcms-btn-add lcms-btn-sm" (click)="addFooterLink(i)">
-                            + Añadir enlace
+                            {{ 'landing_cms.add_link' | translate }}
                         </button>
                     </div>
                 </div>

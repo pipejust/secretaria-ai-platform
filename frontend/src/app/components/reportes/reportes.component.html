@@ -427,7 +427,7 @@
                         <select class="rp-mini-select" [(ngModel)]="workloadSortBy">
                             <option value="total">{{ 'common.more_tasks' | translate }}</option>
                             <option value="overdue">Más vencidas</option>
-                            <option value="meetings">Más reuniones</option>
+                            <option value="meetings">{{ 'dashboard.more_meetings' | translate }}</option>
                         </select>
                     </div>
                 </header>
@@ -545,7 +545,7 @@
                                 (change)="setTeamSort(teamActivitySort)">
                             <option value="combined">Más activos</option>
                             <option value="actions">{{ 'common.more_tasks' | translate }}</option>
-                            <option value="meetings">Más reuniones</option>
+                            <option value="meetings">{{ 'dashboard.more_meetings' | translate }}</option>
                         </select>
                     </div>
                 </header>

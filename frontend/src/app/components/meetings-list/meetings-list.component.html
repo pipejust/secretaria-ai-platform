@@ -869,7 +869,7 @@
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                <p class="ap-dropzone-title">Selecciona un archivo de audio</p>
+                <p class="ap-dropzone-title">{{ 'meetings.select_audio_file' | translate }}</p>
                 <p class="ap-dropzone-sub">Formatos aceptados: MP3, WAV, M4A o video MP4</p>
                 <button type="button" class="ap-btn ap-btn-secondary"
                         (click)="audioUpload.click()" [disabled]="isUploading">
@@ -925,7 +925,7 @@
                 </svg>
             </div>
             <p class="ap-confirm-text">
-                Estás a punto de eliminar permanentemente
+                {{ 'common.about_to_delete_permanently' | translate }}
                 <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>.
                 Esta acción es <strong>irreversible</strong>.
             </p>

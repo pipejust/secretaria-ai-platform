@@ -119,7 +119,25 @@
     "just_now": "Hace unos segundos",
     "moments_ago": "Hace un momento",
     "upcoming": "Próximas",
-    "overdue": "Atrasadas"
+    "overdue": "Atrasadas",
+    "readable_name": "Nombre legible",
+    "last_edit": "Última edición",
+    "success_message": "Mensaje de éxito",
+    "add": "+ Añadir",
+    "upcoming_7d": "Próximas (≤7d)",
+    "use_default": "Usar por defecto",
+    "date_format": "Formato de fecha",
+    "about_to_delete_permanently": "Estás a punto de eliminar permanentemente",
+    "home": "Inicio",
+    "back_to_home": "Volver al inicio",
+    "more_info": "Más información",
+    "configure": "Configurar",
+    "info": "Información",
+    "warning": "Advertencia",
+    "notice": "Aviso",
+    "attention": "Atención",
+    "detail": "Detalle",
+    "quick_start": "Inicio rápido"
   },
   "lang": {
     "es": "Español",
@@ -248,7 +266,8 @@
     "empty_projects": "Sin proyectos.",
     "empty_tasks": "Sin tareas pendientes.",
     "donut_legend": "Distribución por estado",
-    "workload": "Carga de trabajo"
+    "workload": "Carga de trabajo",
+    "more_meetings": "Más reuniones"
   },
   "profile": {
     "title": "Mi perfil",
@@ -319,7 +338,8 @@
     "inactive_users": "Usuarios inactivos",
     "admins": "Administradores",
     "assigned_users": "Usuarios asignados",
-    "assigned_role": "Rol asignado"
+    "assigned_role": "Rol asignado",
+    "no_users": "Sin usuarios"
   },
   "tenants": {
     "title": "Empresas",
@@ -337,7 +357,8 @@
     "total_users": "Usuarios distribuidos",
     "configured_domains": "Dominios configurados",
     "empty_title": "No hay empresas registradas",
-    "empty_hint": "Creá la primera empresa para empezar."
+    "empty_hint": "Creá la primera empresa para empezar.",
+    "custom_domain": "Dominio personalizado"
   },
   "projects": {
     "title": "Proyectos",
@@ -390,7 +411,9 @@
     "share": "Compartir",
     "regenerate": "Regenerar",
     "approve": "Aprobar",
-    "dispatch": "Distribuir"
+    "dispatch": "Distribuir",
+    "curation": "Curación de la sesión",
+    "select_audio_file": "Selecciona un archivo de audio"
   },
   "pending": {
     "title": "Pendientes",
@@ -412,7 +435,8 @@
     "categories": "Categorías",
     "all_templates": "Todas las plantillas",
     "no_preview": "Vista previa no disponible para este formato.",
-    "no_templates": "No hay plantillas creadas."
+    "no_templates": "No hay plantillas creadas.",
+    "default_template": "Plantilla por defecto"
   },
   "branding": {
     "title": "Personalización de marca",
@@ -440,7 +464,11 @@
     "accent_color": "Color acento",
     "no_logo": "Sin logo",
     "no_icon": "Sin icono",
-    "previews": "Vistas previas"
+    "previews": "Vistas previas",
+    "no_dark_logo": "Sin logo oscuro",
+    "brand_assets": "Activos de marca",
+    "logos_uploaded": "Logos cargados",
+    "buttons_colors": "Botones y colores"
   },
   "integrations": {
     "title": "Integraciones",
@@ -453,7 +481,9 @@
     "save_integration": "Guardar integración",
     "api_key": "API key",
     "api_token": "API token",
-    "secret": "Secret"
+    "secret": "Secret",
+    "connected": "Conectado",
+    "disconnected": "Desconectado"
   },
   "settings": {
     "title": "Configuración",
@@ -464,7 +494,8 @@
     "fireflies": "Fireflies",
     "calendars": "Calendarios",
     "tasks_routing": "Routing de tareas",
-    "auto_curation": "Curación automática"
+    "auto_curation": "Curación automática",
+    "wait_before_send": "Tiempo de espera antes del envío (minutos)"
   },
   "landing_cms": {
     "title": "Landing CMS",
@@ -476,7 +507,8 @@
     "save": "Guardar cambios",
     "discard": "Descartar",
     "unsaved": "Hay cambios sin guardar",
-    "clean": "Sin cambios pendientes"
+    "clean": "Sin cambios pendientes",
+    "add_link": "+ Añadir enlace"
   },
   "landing_messages": {
     "title": "Mensajes del landing",
@@ -500,5 +532,9 @@
   "terms": {
     "title": "Términos y condiciones",
     "back": "Volver"
+  },
+  "roles": {
+    "role_name": "Nombre del rol",
+    "edit_role": "Editar rol"
   }
 }

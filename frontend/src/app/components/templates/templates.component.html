@@ -440,7 +440,7 @@
 
             <div *ngIf="detailTab === 'details'" class="tpl-detail-body">
                 <section class="tpl-detail-section">
-                    <h4>Información</h4>
+                    <h4>{{ 'common.info' | translate }}</h4>
                     <dl class="tpl-detail-info">
                         <dt>ID</dt><dd>#{{ selectedTemplate.id }}</dd>
                         <dt>{{ 'common.status' | translate }}</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>

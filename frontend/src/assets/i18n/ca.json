@@ -119,7 +119,25 @@
     "just_now": "Fa uns segons",
     "moments_ago": "Fa un moment",
     "upcoming": "Pròximes",
-    "overdue": "Endarrerides"
+    "overdue": "Endarrerides",
+    "readable_name": "Nom llegible",
+    "last_edit": "Última edició",
+    "success_message": "Missatge d'èxit",
+    "add": "+ Afegeix",
+    "upcoming_7d": "Pròximes (≤7d)",
+    "use_default": "Usa per defecte",
+    "date_format": "Format de data",
+    "about_to_delete_permanently": "Estàs a punt d'eliminar permanentment",
+    "home": "Inici",
+    "back_to_home": "Torna a l'inici",
+    "more_info": "Més informació",
+    "configure": "Configura",
+    "info": "Informació",
+    "warning": "Advertència",
+    "notice": "Avís",
+    "attention": "Atenció",
+    "detail": "Detall",
+    "quick_start": "Inici ràpid"
   },
   "lang": {
     "es": "Español",
@@ -248,7 +266,8 @@
     "empty_projects": "Sense projectes.",
     "empty_tasks": "Sense tasques pendents.",
     "donut_legend": "Distribució per estat",
-    "workload": "Càrrega de treball"
+    "workload": "Càrrega de treball",
+    "more_meetings": "Més reunions"
   },
   "profile": {
     "title": "El meu perfil",
@@ -319,7 +338,8 @@
     "inactive_users": "Usuaris inactius",
     "admins": "Administradors",
     "assigned_users": "Usuaris assignats",
-    "assigned_role": "Rol assignat"
+    "assigned_role": "Rol assignat",
+    "no_users": "Sense usuaris"
   },
   "tenants": {
     "title": "Empreses",
@@ -337,7 +357,8 @@
     "total_users": "Usuaris distribuïts",
     "configured_domains": "Dominis configurats",
     "empty_title": "No hi ha empreses registrades",
-    "empty_hint": "Crea la primera empresa per començar."
+    "empty_hint": "Crea la primera empresa per començar.",
+    "custom_domain": "Domini personalitzat"
   },
   "projects": {
     "title": "Projectes",
@@ -390,7 +411,9 @@
     "share": "Comparteix",
     "regenerate": "Regenera",
     "approve": "Aprova",
-    "dispatch": "Distribueix"
+    "dispatch": "Distribueix",
+    "curation": "Curació de la sessió",
+    "select_audio_file": "Selecciona un arxiu d'àudio"
   },
   "pending": {
     "title": "Pendents",
@@ -412,7 +435,8 @@
     "categories": "Categories",
     "all_templates": "Totes les plantilles",
     "no_preview": "Vista prèvia no disponible per a aquest format.",
-    "no_templates": "No hi ha plantilles creades."
+    "no_templates": "No hi ha plantilles creades.",
+    "default_template": "Plantilla per defecte"
   },
   "branding": {
     "title": "Personalització de marca",
@@ -440,7 +464,11 @@
     "accent_color": "Color accent",
     "no_logo": "Sense logo",
     "no_icon": "Sense icona",
-    "previews": "Vistes prèvies"
+    "previews": "Vistes prèvies",
+    "no_dark_logo": "Sense logo fosc",
+    "brand_assets": "Actius de marca",
+    "logos_uploaded": "Logos pujats",
+    "buttons_colors": "Botons i colors"
   },
   "integrations": {
     "title": "Integracions",
@@ -453,7 +481,9 @@
     "save_integration": "Desa integració",
     "api_key": "API key",
     "api_token": "API token",
-    "secret": "Secret"
+    "secret": "Secret",
+    "connected": "Connectat",
+    "disconnected": "Desconnectat"
   },
   "settings": {
     "title": "Configuració",
@@ -464,7 +494,8 @@
     "fireflies": "Fireflies",
     "calendars": "Calendaris",
     "tasks_routing": "Routing de tasques",
-    "auto_curation": "Curació automàtica"
+    "auto_curation": "Curació automàtica",
+    "wait_before_send": "Temps d'espera abans de l'enviament (minuts)"
   },
   "landing_cms": {
     "title": "Landing CMS",
@@ -476,7 +507,8 @@
     "save": "Desa canvis",
     "discard": "Descarta",
     "unsaved": "Hi ha canvis sense desar",
-    "clean": "Sense canvis pendents"
+    "clean": "Sense canvis pendents",
+    "add_link": "+ Afegeix enllaç"
   },
   "landing_messages": {
     "title": "Missatges del landing",
@@ -500,5 +532,9 @@
   "terms": {
     "title": "Termes i condicions",
     "back": "Torna"
+  },
+  "roles": {
+    "role_name": "Nom del rol",
+    "edit_role": "Edita rol"
   }
 }

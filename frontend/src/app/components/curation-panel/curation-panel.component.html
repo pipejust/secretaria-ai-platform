@@ -150,13 +150,13 @@
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
-            <span class="cp-breadcrumb-current">Curación de la sesión</span>
+            <span class="cp-breadcrumb-current">{{ 'meetings.curation' | translate }}</span>
         </nav>
 
         <!-- Header de la página -->
         <header class="cp-header">
             <div class="cp-header-text">
-                <h1 class="cp-title">Curación de la sesión</h1>
+                <h1 class="cp-title">{{ 'meetings.curation' | translate }}</h1>
 
                 <div class="cp-subtitle-wrap">
                     <h2 class="cp-subtitle" *ngIf="!isEditingTitle">{{ meetingData.title }}</h2>
