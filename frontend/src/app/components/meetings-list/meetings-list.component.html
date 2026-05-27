@@ -25,7 +25,7 @@
         </header>
 
         <!-- 4 KPI cards -->
-        <section class="mt-metrics" aria-label="Métricas de reuniones">
+        <section class="mt-metrics" [attr.aria-label]="'meetings.metrics_aria' | translate">
             <!-- Total -->
             <article class="mt-metric">
                 <div class="metric-icon metric-icon-blue">
@@ -38,14 +38,14 @@
                     </svg>
                 </div>
                 <div class="metric-body">
-                    <span class="metric-label">Reuniones totales</span>
+                    <span class="metric-label">{{ 'meetings.total_meetings' | translate }}</span>
                     <span class="metric-value">{{ totalMeetings }}</span>
                     <span class="metric-foot metric-foot-up">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="18 15 12 9 6 15"></polyline>
                         </svg>
-                        Aisladas por empresa
+                        {{ 'meetings.isolated_by_company' | translate }}
                     </span>
                 </div>
             </article>
@@ -60,9 +60,9 @@
                     </svg>
                 </div>
                 <div class="metric-body">
-                    <span class="metric-label">Analizadas</span>
+                    <span class="metric-label">{{ 'meetings.analyzed' | translate }}</span>
                     <span class="metric-value">{{ analyzedCount }}</span>
-                    <span class="metric-foot">{{ pctOfTotal(analyzedCount) }}% del total</span>
+                    <span class="metric-foot">{{ pctOfTotal(analyzedCount) }}{{ 'meetings.pct_of_total' | translate }}</span>
                 </div>
             </article>
 
@@ -78,7 +78,7 @@
                 <div class="metric-body">
                     <span class="metric-label">{{ 'meetings.pending_review' | translate }}</span>
                     <span class="metric-value">{{ pendingCount }}</span>
-                    <span class="metric-foot">{{ pctOfTotal(pendingCount) }}% del total</span>
+                    <span class="metric-foot">{{ pctOfTotal(pendingCount) }}{{ 'meetings.pct_of_total' | translate }}</span>
                 </div>
             </article>
 
@@ -102,7 +102,7 @@
         <!-- Búsqueda principal + botón toggle de filtros. El input ocupa
              todo el ancho disponible; el botón "Filtros" abre/cierra el
              panel de selectores avanzados. -->
-        <section class="mt-search-row" aria-label="Buscar reuniones">
+        <section class="mt-search-row" [attr.aria-label]="'meetings.search_aria' | translate">
             <div class="filter-search">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -110,7 +110,7 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input type="text"
-                       placeholder="Buscar por título, participantes o palabras clave…"
+                       [placeholder]="'meetings.search_main_placeholder' | translate"
                        [(ngModel)]="searchText" (input)="onSearchInput()"
                        (keyup.enter)="currentPage = 1; loadSessions()" />
             </div>
@@ -125,7 +125,7 @@
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                 </svg>
-                Filtros
+                {{ 'common.filters' | translate }}
                 <span class="filters-btn-count" *ngIf="activeFiltersCount > 0">
                     {{ activeFiltersCount }}
                 </span>
@@ -140,32 +140,32 @@
         <!-- Panel de filtros expandible. Sólo se renderiza cuando el user
              abre el toggle "Filtros". Conserva los selectores Estado/
              Equipo/Fecha/Origen del mockup en una sola fila horizontal. -->
-        <section class="mt-filters" *ngIf="showFilters" aria-label="Filtros avanzados">
+        <section class="mt-filters" *ngIf="showFilters" [attr.aria-label]="'meetings.advanced_filters' | translate">
             <div class="filter-group">
                 <label>{{ 'common.status' | translate }}</label>
                 <select [(ngModel)]="statusFilter"
                         (change)="currentPage = 1; loadSessions()">
                     <option value="">{{ 'common.all_statuses' | translate }}</option>
                     <option value="pending">{{ 'common.pending' | translate }}</option>
-                    <option value="processing">Procesando</option>
-                    <option value="completed">Analizada</option>
-                    <option value="archived">Archivada</option>
+                    <option value="processing">{{ 'meetings.status_processing' | translate }}</option>
+                    <option value="completed">{{ 'meetings.status_analyzed' | translate }}</option>
+                    <option value="archived">{{ 'meetings.status_archived' | translate }}</option>
                 </select>
             </div>
 
             <div class="filter-group">
-                <label>Equipo</label>
+                <label>{{ 'projects.team' | translate }}</label>
                 <select [(ngModel)]="filterProjectId"
                         (change)="currentPage = 1; loadSessions()">
-                    <option value="">Todos los equipos</option>
+                    <option value="">{{ 'meetings.all_teams' | translate }}</option>
                     <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                 </select>
             </div>
 
             <div class="filter-group">
-                <label>Fecha (preset)</label>
+                <label>{{ 'meetings.date_preset' | translate }}</label>
                 <select [(ngModel)]="filterDate">
-                    <option value="">Cualquier momento</option>
+                    <option value="">{{ 'meetings.any_time' | translate }}</option>
                     <option value="today">{{ 'common.today' | translate }}</option>
                     <option value="week">{{ 'common.last_week' | translate }}</option>
                     <option value="month">{{ 'common.this_month' | translate }}</option>
@@ -176,45 +176,45 @@
                  Botón "Restablecer" los limpia. El input nativo type="date"
                  ya muestra el calendario al click. -->
             <div class="filter-group filter-date-range">
-                <label>Rango de fechas</label>
+                <label>{{ 'meetings.date_range' | translate }}</label>
                 <div class="filter-date-inputs">
                     <input type="date"
                            [(ngModel)]="filterDateFrom"
                            [max]="filterDateTo || null"
-                           aria-label="Desde" />
+                           [attr.aria-label]="'dashboard.range_from' | translate" />
                     <span class="filter-date-sep" aria-hidden="true">→</span>
                     <input type="date"
                            [(ngModel)]="filterDateTo"
                            [min]="filterDateFrom || null"
-                           aria-label="Hasta" />
+                           [attr.aria-label]="'dashboard.range_to' | translate" />
                     <button type="button"
                             class="filter-date-clear"
                             *ngIf="filterDateFrom || filterDateTo"
                             (click)="clearDateRange()"
-                            title="Limpiar rango de fechas">×</button>
+                            [attr.title]="'meetings.clear_date_range' | translate">×</button>
                 </div>
             </div>
 
             <div class="filter-group">
-                <label>Origen</label>
+                <label>{{ 'meetings.source' | translate }}</label>
                 <select [(ngModel)]="filterSource">
                     <option value="">{{ 'meetings.all_sources' | translate }}</option>
-                    <option value="manual">Subida manual</option>
-                    <option value="web">Web</option>
+                    <option value="manual">{{ 'meetings.source_manual' | translate }}</option>
+                    <option value="web">{{ 'meetings.source_web' | translate }}</option>
                 </select>
             </div>
         </section>
 
         <!-- Tabs sobre la tabla -->
-        <nav class="mt-tabs" aria-label="Filtro rápido por estado">
-            <button [class.active]="statusTab === 'all'"      (click)="setStatusTab('all')">Todas</button>
-            <button [class.active]="statusTab === 'analyzed'" (click)="setStatusTab('analyzed')">Analizadas</button>
+        <nav class="mt-tabs" [attr.aria-label]="'meetings.quick_status_filter' | translate">
+            <button [class.active]="statusTab === 'all'"      (click)="setStatusTab('all')">{{ 'common.all' | translate }}</button>
+            <button [class.active]="statusTab === 'analyzed'" (click)="setStatusTab('analyzed')">{{ 'meetings.analyzed_plural' | translate }}</button>
             <button [class.active]="statusTab === 'drafts'"   (click)="setStatusTab('drafts')">{{ 'sidebar.pending' | translate }}</button>
-            <button [class.active]="statusTab === 'archived'" (click)="setStatusTab('archived')">Archivadas</button>
+            <button [class.active]="statusTab === 'archived'" (click)="setStatusTab('archived')">{{ 'meetings.archived_plural' | translate }}</button>
         </nav>
 
         <!-- Tabla -->
-        <section class="mt-table-wrap" aria-label="Listado de reuniones">
+        <section class="mt-table-wrap" [attr.aria-label]="'meetings.list_aria' | translate">
 
             <!-- Loading skeleton -->
             <div class="mt-table" *ngIf="isLoading">
@@ -223,7 +223,7 @@
                     <span>{{ 'common.datetime' | translate }}</span>
                     <span>{{ 'meetings.participants' | translate }}</span>
                     <span>{{ 'meetings.duration' | translate }}</span>
-                    <span>Origen</span>
+                    <span>{{ 'meetings.source' | translate }}</span>
                     <span>{{ 'common.status' | translate }}</span>
                     <span class="t-right">{{ 'common.actions' | translate }}</span>
                 </div>
@@ -245,7 +245,7 @@
                     <span (click)="sortBy('date')">{{ 'common.datetime' | translate }}</span>
                     <span>{{ 'meetings.participants' | translate }}</span>
                     <span>{{ 'meetings.duration' | translate }}</span>
-                    <span>Origen</span>
+                    <span>{{ 'meetings.source' | translate }}</span>
                     <span (click)="sortBy('status')">{{ 'common.status' | translate }}</span>
                     <span class="t-right">{{ 'common.actions' | translate }}</span>
                 </div>
@@ -276,7 +276,7 @@
                             </svg>
                         </div>
                         <div class="cell-title-text">
-                            <span class="row-title">{{ s.title || 'Sin título' }}</span>
+                            <span class="row-title">{{ s.title || ('meetings.no_title' | translate) }}</span>
                             <span class="row-subtitle">{{ getProjectName(s.project_id) }}</span>
                         </div>
                     </div>
@@ -331,7 +331,7 @@
                         <ng-container *ngIf="retryingIds.has(s.id); else notRetrying">
                             <span class="status-badge status-processing-retry"
                                   data-status="processing"
-                                  title="Pipeline IA en ejecución…">
+                                  [attr.title]="'meetings.ai_pipeline_running' | translate">
                                 <span class="retry-spinner" aria-hidden="true"></span>
                                 {{ 'common.processing' | translate }}
                             </span>
@@ -347,19 +347,19 @@
                                         <line x1="12" y1="9" x2="12" y2="13"></line>
                                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                     </svg>
-                                    Fallando
+                                    {{ 'meetings.failing' | translate }}
                                 </span>
                                 <button type="button"
                                         class="retry-inline-btn"
                                         (mousedown)="$event.stopPropagation()"
                                         (click)="retrySessionPipeline(s, !!s.fireflies_id, $event)"
-                                        [title]="s.fireflies_id ? 'Re-traer de Fireflies + reanalizar con IA' : 'Reintentar análisis IA con la data ya guardada'">
+                                        [title]="(s.fireflies_id ? 'meetings.refetch_fireflies_ai' : 'meetings.retry_ai_saved') | translate">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="23 4 23 10 17 10"></polyline>
                                         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                                     </svg>
-                                    Reintentar
+                                    {{ 'common.retry' | translate }}
                                 </button>
                             </ng-container>
                             <ng-template #okStatus>
@@ -373,7 +373,7 @@
 
                     <!-- Acciones (kebab) -->
                     <div class="cell-actions t-right">
-                        <button class="kebab" (click)="toggleRowMenu(s.id, $event)" title="Más opciones">
+                        <button class="kebab" (click)="toggleRowMenu(s.id, $event)" [attr.title]="'meetings.more_options' | translate">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="1"></circle>
@@ -396,7 +396,7 @@
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                     <polyline points="14 2 14 8 20 8"></polyline>
                                 </svg>
-                                Descargar Word
+                                {{ 'meetings.download_word' | translate }}
                             </button>
                             <button (click)="generateActa(s, 'pdf', $event); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -405,7 +405,7 @@
                                     <polyline points="7 10 12 15 17 10"></polyline>
                                     <line x1="12" y1="15" x2="12" y2="3"></line>
                                 </svg>
-                                Descargar PDF
+                                {{ 'meetings.download_pdf' | translate }}
                             </button>
                             <div class="kebab-divider"></div>
                             <!-- Reintentar pipeline IA — visible si la sesión está
@@ -417,7 +417,7 @@
                                     <polyline points="23 4 23 10 17 10"></polyline>
                                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                                 </svg>
-                                Reintentar análisis IA
+                                {{ 'meetings.retry_ai_analysis' | translate }}
                             </button>
                             <button *ngIf="isSessionFailing(s) && s.fireflies_id"
                                     (click)="retrySessionPipeline(s, true, $event); closeRowMenu()">
@@ -428,7 +428,7 @@
                                     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
                                     <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
                                 </svg>
-                                Re-traer de Fireflies + IA
+                                {{ 'meetings.refetch_fireflies_short' | translate }}
                             </button>
                             <div class="kebab-divider" *ngIf="isSessionFailing(s)"></div>
                             <!-- Archivar / Desarchivar según el estado actual.
@@ -452,7 +452,7 @@
                                     <polyline points="21 8 21 21 3 21 3 8"></polyline>
                                     <rect x="1" y="3" width="22" height="5"></rect>
                                 </svg>
-                                Restaurar a Pendientes
+                                {{ 'meetings.restore_to_pending' | translate }}
                             </button>
                             <button class="kebab-danger" (click)="deleteSession(s, $event); closeRowMenu()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -461,7 +461,7 @@
                                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                                     <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
                                 </svg>
-                                Eliminar
+                                {{ 'common.delete' | translate }}
                             </button>
                         </div>
                     </div>
@@ -474,7 +474,7 @@
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                     </svg>
-                    <h4>No hay reuniones registradas</h4>
+                    <h4>{{ 'meetings.no_meetings_registered' | translate }}</h4>
                     <p>{{ 'meetings.empty_state' | translate }}</p>
                 </div>
             </div>
@@ -483,15 +483,15 @@
         <!-- Paginación -->
         <section class="mt-pagination" *ngIf="!isLoading && totalItems > 0">
             <div class="pg-left">
-                Mostrando
-                {{ (currentPage - 1) * limit + 1 }}
-                a
-                {{ (currentPage - 1) * limit + filteredSessions.length }}
-                de {{ totalItems }} reuniones
+                {{ 'meetings.showing_pagination' | translate:{
+                    start: (currentPage - 1) * limit + 1,
+                    end: (currentPage - 1) * limit + filteredSessions.length,
+                    total: totalItems
+                } }}
             </div>
             <div class="pg-center">
                 <button class="pg-arrow" [disabled]="currentPage === 1"
-                        (click)="changePage(currentPage - 1)" title="Anterior">
+                        (click)="changePage(currentPage - 1)" [attr.title]="'common.previous' | translate">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="15 18 9 12 15 6"></polyline>
@@ -504,7 +504,7 @@
                     <span *ngIf="p === '…'" class="pg-ellipsis">…</span>
                 </ng-container>
                 <button class="pg-arrow" [disabled]="currentPage === totalPages"
-                        (click)="changePage(currentPage + 1)" title="Siguiente">
+                        (click)="changePage(currentPage + 1)" [attr.title]="'common.next' | translate">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="9 18 15 12 9 6"></polyline>
@@ -525,7 +525,7 @@
     <aside class="meetings-detail" *ngIf="selectedSession">
         <header class="dt-head">
             <div class="dt-head-text">
-                <h2 class="dt-title">{{ selectedSession.title || 'Sin título' }}</h2>
+                <h2 class="dt-title">{{ selectedSession.title || ('meetings.no_title' | translate) }}</h2>
                 <div class="dt-meta">
                     <span class="dt-meta-item">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -557,7 +557,7 @@
             <div class="dt-head-actions">
                 <button class="dt-cta-open" type="button"
                         (click)="viewCuration(selectedSession.id)"
-                        title="Abrir el detalle completo de la reunión">
+                        [attr.title]="'meetings.open_full_detail' | translate">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 3h7v7"></path>
@@ -603,8 +603,8 @@
             </div>
             <button class="dt-view-participants" type="button"
                     (click)="openParticipantsModal()"
-                    title="Ver lista completa de participantes">
-                Ver participantes
+                    [attr.title]="'meetings.see_full_participants_list' | translate">
+                {{ 'meetings.see_participants' | translate }}
                 <span class="dt-view-participants-count" *ngIf="selectedAttendees.length">
                     ({{ selectedAttendees.length }})
                 </span>
@@ -617,12 +617,12 @@
         <div class="dt-scroll">
 
         <!-- Tabs internos -->
-        <nav class="dt-tabs" aria-label="Secciones del detalle">
+        <nav class="dt-tabs" [attr.aria-label]="'meetings.detail_sections' | translate">
             <button [class.active]="detailTab === 'summary'"    (click)="setDetailTab('summary')">{{ 'sidebar.dashboard' | translate }}</button>
             <button [class.active]="detailTab === 'transcript'" (click)="setDetailTab('transcript')">{{ 'meetings.tabs.transcript' | translate }}</button>
-            <button [class.active]="detailTab === 'insights'"   (click)="setDetailTab('insights')">Hallazgos</button>
-            <button [class.active]="detailTab === 'notes'"      (click)="setDetailTab('notes')">Notas</button>
-            <button [class.active]="detailTab === 'files'"      (click)="setDetailTab('files')">Archivos</button>
+            <button [class.active]="detailTab === 'insights'"   (click)="setDetailTab('insights')">{{ 'meetings.tab_findings' | translate }}</button>
+            <button [class.active]="detailTab === 'notes'"      (click)="setDetailTab('notes')">{{ 'meetings.tab_notes' | translate }}</button>
+            <button [class.active]="detailTab === 'files'"      (click)="setDetailTab('files')">{{ 'meetings.tab_files' | translate }}</button>
         </nav>
 
         <!-- Cuerpo del panel — sólo Summary muestra cards estructuradas;
@@ -644,7 +644,7 @@
                          *ngIf="selectedExecutiveSummary"
                          [innerHTML]="selectedExecutiveSummary | mdRender"></div>
                     <p class="dt-card-empty" *ngIf="!selectedExecutiveSummary && !isLoadingDetail">
-                        Esta sesión aún no tiene resumen ejecutivo generado.
+                        {{ 'meetings.no_executive_summary' | translate }}
                     </p>
                     <div class="dt-card-skeleton" *ngIf="isLoadingDetail">
                         <span class="skeleton skeleton-line is-full"></span>
@@ -674,10 +674,10 @@
                         </li>
                     </ul>
                     <p class="dt-card-empty" *ngIf="!selectedKeyDecisions.length && !isLoadingDetail">
-                        Aún no se identificaron decisiones en esta sesión.
+                        {{ 'meetings.no_decisions_identified' | translate }}
                     </p>
                     <a class="dt-card-link" *ngIf="selectedKeyDecisions.length > 3"
-                       (click)="viewCuration(selectedSession.id)" role="button">Ver todas las decisiones</a>
+                       (click)="viewCuration(selectedSession.id)" role="button">{{ 'meetings.see_all_decisions' | translate }}</a>
                 </article>
 
                 <!-- Action items -->
@@ -735,7 +735,7 @@
                     </div>
                     <div class="dt-file-text">
                         <span class="dt-file-name">{{ 'meetings.meeting_minutes' | translate }}</span>
-                        <span class="dt-file-sub">Word · descarga generada por IA</span>
+                        <span class="dt-file-sub">{{ 'meetings.word_ai_generated' | translate }}</span>
                     </div>
                     <span class="dt-file-action">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -752,9 +752,9 @@
                 <article class="dt-card">
                     <header class="dt-card-head">
                         <h3 *ngIf="detailTab === 'transcript'">{{ 'meetings.tabs.transcript' | translate }}</h3>
-                        <h3 *ngIf="detailTab === 'insights'">Hallazgos</h3>
-                        <h3 *ngIf="detailTab === 'notes'">Notas</h3>
-                        <h3 *ngIf="detailTab === 'files'">Archivos</h3>
+                        <h3 *ngIf="detailTab === 'insights'">{{ 'meetings.tab_findings' | translate }}</h3>
+                        <h3 *ngIf="detailTab === 'notes'">{{ 'meetings.tab_notes' | translate }}</h3>
+                        <h3 *ngIf="detailTab === 'files'">{{ 'meetings.tab_files' | translate }}</h3>
                     </header>
                     <!-- Transcripción truncada, preservando saltos de línea
                          (no es markdown, pero los \n son significativos para
@@ -763,7 +763,7 @@
                          *ngIf="detailTab === 'transcript' && selectedSession.raw_transcript"
                          [innerHTML]="((selectedSession.raw_transcript || '') | slice:0:480) + ((selectedSession.raw_transcript || '').length > 480 ? '…' : '') | mdRender"></div>
                     <p class="dt-card-empty" *ngIf="detailTab === 'transcript' && !selectedSession.raw_transcript">
-                        Esta sesión no tiene transcripción cargada.
+                        {{ 'meetings.no_transcript_loaded' | translate }}
                     </p>
                     <p class="dt-card-empty" *ngIf="detailTab !== 'transcript'">
                         {{ 'common.coming_soon' | translate }}
@@ -806,7 +806,7 @@
                         <line x1="12" y1="19" x2="12" y2="23"></line>
                         <line x1="8" y1="23" x2="16" y2="23"></line>
                     </svg>
-                    Procesar audio
+                    {{ 'dashboard.process_audio' | translate }}
                 </button>
                 <button type="button" class="ap-tab" role="tab"
                         [class.is-active]="uploadTab === 'text'"
@@ -819,14 +819,14 @@
                         <line x1="16" y1="13" x2="8" y2="13"></line>
                         <line x1="16" y1="17" x2="8" y2="17"></line>
                     </svg>
-                    Pegar texto libre
+                    {{ 'dashboard.paste_free_text' | translate }}
                 </button>
             </div>
 
             <div class="ap-field">
                 <label class="ap-label">{{ 'meetings.title_or_reason' | translate }} <span class="ap-required">*</span></label>
                 <input class="ap-input" type="text" [(ngModel)]="uploadForm.title"
-                       placeholder="Ej: Comité estratégico mensual" />
+                       [placeholder]="'dashboard.title_example' | translate" />
             </div>
 
             <div class="ap-grid-2">
@@ -835,27 +835,31 @@
                     <input class="ap-input" type="datetime-local" [(ngModel)]="uploadForm.date" />
                 </div>
                 <div class="ap-field">
-                    <label class="ap-label">Idioma principal</label>
+                    <label class="ap-label">{{ 'dashboard.main_language' | translate }}</label>
                     <div class="ap-select-wrap">
                         <select class="ap-select" [(ngModel)]="uploadForm.language">
+                            <!-- Solo los 3 idiomas soportados end-to-end por la
+                                 plataforma (pipeline IA + UI + emails). El valor
+                                 enviado al backend es el nombre humano en español
+                                 — la API y los servicios LLM lo normalizan a su
+                                 código de 2 letras internamente. -->
                             <option value="Español">{{ 'lang.es' | translate }}</option>
+                            <option value="Català">{{ 'common.catalan' | translate }}</option>
                             <option value="Inglés">{{ 'common.english' | translate }}</option>
-                            <option value="Portugués">{{ 'common.portuguese' | translate }}</option>
-                            <option value="Multilingüe">{{ 'meetings.multiple_languages' | translate }}</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             <div class="ap-field">
-                <label class="ap-label">Proyecto (opcional)</label>
+                <label class="ap-label">{{ 'dashboard.project_optional' | translate }}</label>
                 <div class="ap-select-wrap">
                     <svg class="ap-select-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                     </svg>
                     <select class="ap-select" [(ngModel)]="uploadForm.projectId">
-                        <option value="">— Sin proyecto (General) —</option>
+                        <option value="">{{ 'dashboard.no_project_general' | translate }}</option>
                         <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                     </select>
                 </div>
@@ -870,13 +874,13 @@
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
                 <p class="ap-dropzone-title">{{ 'meetings.select_audio_file' | translate }}</p>
-                <p class="ap-dropzone-sub">Formatos aceptados: MP3, WAV, M4A o video MP4</p>
+                <p class="ap-dropzone-sub">{{ 'dashboard.accepted_formats' | translate }}</p>
                 <button type="button" class="ap-btn ap-btn-secondary"
                         (click)="audioUpload.click()" [disabled]="isUploading">
                     {{ 'common.select_file' | translate }}
                 </button>
                 <p class="ap-dropzone-file" *ngIf="uploadForm.file">
-                    Archivo seleccionado: <strong>{{ uploadForm.file.name }}</strong>
+                    {{ 'dashboard.file_selected' | translate }} <strong>{{ uploadForm.file.name }}</strong>
                 </p>
             </div>
 
@@ -884,14 +888,14 @@
                 <label class="ap-label">{{ 'meetings.raw_transcript' | translate }} <span class="ap-required">*</span></label>
                 <textarea class="ap-textarea" rows="8"
                           [(ngModel)]="uploadForm.textContent"
-                          placeholder="Pega aquí todo el texto discutido en la sesión..."
+                          [placeholder]="'dashboard.paste_transcript_placeholder' | translate"
                           [disabled]="isUploading"></textarea>
             </div>
         </div>
 
         <footer class="ap-modal-foot">
             <button type="button" class="ap-btn ap-btn-secondary" (click)="closeUploadModal()" [disabled]="isUploading">
-                Cancelar
+                {{ 'common.cancel' | translate }}
             </button>
             <button type="button" class="ap-btn ap-btn-primary" (click)="submitUpload()" [disabled]="isUploading">
                 <span *ngIf="!isUploading">{{ 'common.process_session' | translate }}</span>
@@ -927,17 +931,17 @@
             <p class="ap-confirm-text">
                 {{ 'common.about_to_delete_permanently' | translate }}
                 <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>.
-                Esta acción es <strong>irreversible</strong>.
+                {{ 'dashboard.this_action_irreversible_prefix' | translate }} <strong>{{ 'dashboard.irreversible' | translate }}</strong>.
             </p>
         </div>
 
         <footer class="ap-modal-foot">
             <button type="button" class="ap-btn ap-btn-secondary" (click)="cancelDeleteSession()" [disabled]="isDeleting">
-                Cancelar
+                {{ 'common.cancel' | translate }}
             </button>
             <button type="button" class="ap-btn ap-btn-danger" (click)="confirmDeleteSession()" [disabled]="isDeleting">
                 <span *ngIf="!isDeleting">{{ 'common.yes_delete' | translate }}</span>
-                <span *ngIf="isDeleting">Borrando…</span>
+                <span *ngIf="isDeleting">{{ 'dashboard.deleting' | translate }}</span>
             </button>
         </footer>
     </div>
@@ -951,7 +955,7 @@
                 <h2 class="ap-modal-title">{{ 'meetings.participants' | translate }}</h2>
                 <p class="ap-modal-subtitle">
                     {{ selectedSession?.title }} &nbsp;·&nbsp;
-                    {{ selectedAttendees.length }} {{ selectedAttendees.length === 1 ? 'persona' : 'personas' }}
+                    {{ selectedAttendees.length }} {{ (selectedAttendees.length === 1 ? 'meetings.person' : 'meetings.people') | translate }}
                 </p>
             </div>
             <button type="button" class="ap-modal-close" (click)="closeParticipantsModal()" [attr.title]="'common.close' | translate">

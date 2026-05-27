@@ -12,6 +12,7 @@ import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { UserChipComponent } from '../shared/user-chip/user-chip.component';
 import { UserDirectoryService } from '../../services/user-directory.service';
+import { BrandingService } from '../../services/branding.service';
 
 /** Sub-tab de la card del header (filtro rápido por status). */
 type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
@@ -127,6 +128,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         private router: Router,
         private toast: ToastService,
         private userDirectory: UserDirectoryService,
+        private branding: BrandingService,
     ) {
         // Cuando el directorio resuelve nuevos emails (porque otra vista los
         // pidió o porque preload llegó), forzamos re-render para que los
@@ -793,7 +795,15 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         this.uploadForm.date = now.toISOString().slice(0, 16);
         this.uploadForm.title = '';
-        this.uploadForm.language = 'Español';
+        // Pre-cargamos con el idioma por defecto del workspace para que el
+        // pipeline IA y el form arranquen alineados sin que el admin tenga
+        // que tocar el select. Mapeo del código corto a nombre humano que
+        // el backend espera.
+        const _langMap: Record<string, string> = {
+            es: 'Español', ca: 'Català', en: 'Inglés',
+        };
+        const _tenantLang = (this.branding.brand().default_language || 'es').toLowerCase();
+        this.uploadForm.language = _langMap[_tenantLang] || 'Español';
         this.uploadForm.projectId = '';
         this.uploadForm.textContent = '';
         this.uploadForm.file = null;

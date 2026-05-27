@@ -17,7 +17,7 @@
         <h1 class="acn-greeting">
             {{ greeting }}<ng-container *ngIf="userFirstName">, {{ userFirstName }}</ng-container>
         </h1>
-        <p class="acn-greeting-sub">Esto es lo que está pasando en tus reuniones y proyectos.</p>
+        <p class="acn-greeting-sub">{{ 'dashboard.subtitle' | translate }}</p>
     </header>
 
     <!-- ============= SKELETON OVERLAY (carga inicial del overview) =============
@@ -25,7 +25,7 @@
          grids analíticas + insights con bloques shimmer para que la vista
          no quede "vacía con ceros" en la primera carga. -->
     <ng-container *ngIf="isLoadingOverview">
-        <section class="acn-kpis" aria-label="Cargando métricas">
+        <section class="acn-kpis" [attr.aria-label]="'dashboard.loading_metrics' | translate">
             <article class="acn-kpi" *ngFor="let _ of [1,2,3,4]">
                 <div class="acn-kpi-head">
                     <span class="skeleton skeleton-circle is-sm"></span>
@@ -37,7 +37,7 @@
             </article>
         </section>
 
-        <section class="acn-analytics-grid" aria-label="Cargando análisis">
+        <section class="acn-analytics-grid" [attr.aria-label]="'dashboard.loading_analytics' | translate">
             <article class="acn-card">
                 <span class="skeleton skeleton-line is-lg"></span>
                 <span class="skeleton" style="display:block; height: 220px; margin-top: 20px; border-radius: 10px"></span>
@@ -59,7 +59,7 @@
             </article>
         </section>
 
-        <section class="acn-insights-grid" aria-label="Cargando insights">
+        <section class="acn-insights-grid" [attr.aria-label]="'dashboard.loading_insights' | translate">
             <article class="acn-card" *ngFor="let _ of [1,2,3]">
                 <span class="skeleton skeleton-line is-lg"></span>
                 <div style="display:flex; flex-direction:column; gap:14px; margin-top: 16px">
@@ -76,7 +76,7 @@
     </ng-container>
 
     <!-- ============= KPI TILES ============= -->
-    <section class="acn-kpis" aria-label="Métricas principales" *ngIf="!isLoadingOverview">
+    <section class="acn-kpis" [attr.aria-label]="'dashboard.main_metrics' | translate" *ngIf="!isLoadingOverview">
         <article class="acn-kpi" *ngFor="let k of kpiTiles" [attr.data-tone]="k.tone">
             <div class="acn-kpi-head">
                 <div class="acn-kpi-icon" [attr.data-tone]="k.tone" [ngSwitch]="k.icon">
@@ -117,7 +117,7 @@
                         </svg>
                         <span *ngIf="k.trend !== 0">{{ k.trend > 0 ? '' : '' }}{{ k.trend | number:'1.0-0' }}%</span>
                         <span *ngIf="k.trend === 0">0%</span>
-                        <span class="trend-suffix">vs últimos 7 días</span>
+                        <span class="trend-suffix">{{ 'dashboard.vs_last_7_days' | translate }}</span>
                     </span>
                 </div>
                 <svg class="acn-kpi-spark" viewBox="0 0 80 28" preserveAspectRatio="none" aria-hidden="true">
@@ -137,18 +137,18 @@
                  aplastar al título cuando el contenedor se estrecha. -->
             <header class="acn-card-head">
                 <h2 class="acn-card-title">
-                    Actividad de Reuniones
-                    <span class="acn-card-sub" *ngIf="!hasCustomRange">(Últimos {{ overviewPeriod === '7d' ? 7 : overviewPeriod === '30d' ? 30 : 14 }} días)</span>
-                    <span class="acn-card-sub" *ngIf="hasCustomRange">(rango personalizado)</span>
+                    {{ 'dashboard.meetings_activity' | translate }}
+                    <span class="acn-card-sub" *ngIf="!hasCustomRange">({{ 'dashboard.last_n_days' | translate:{ n: (overviewPeriod === '7d' ? 7 : overviewPeriod === '30d' ? 30 : 14) } }})</span>
+                    <span class="acn-card-sub" *ngIf="hasCustomRange">({{ 'dashboard.custom_range' | translate }})</span>
                 </h2>
                 <div class="acn-card-head-right">
                     <!-- Leyenda interactiva: click oculta/muestra cada serie. -->
-                    <div class="acn-chart-legend" role="group" aria-label="Series visibles">
+                    <div class="acn-chart-legend" role="group" [attr.aria-label]="'dashboard.visible_series' | translate">
                         <button type="button" class="legend-toggle"
                                 [class.is-off]="!seriesVisible.meetings"
                                 (click)="toggleSeries('meetings')"
                                 [attr.aria-pressed]="seriesVisible.meetings"
-                                title="Mostrar / ocultar Sesiones">
+                                [attr.title]="'dashboard.toggle_sessions' | translate">
                             <span class="legend-dot legend-meetings"></span>
                             {{ 'project_detail.sessions' | translate }}
                         </button>
@@ -156,9 +156,9 @@
                                 [class.is-off]="!seriesVisible.analyzed"
                                 (click)="toggleSeries('analyzed')"
                                 [attr.aria-pressed]="seriesVisible.analyzed"
-                                title="Mostrar / ocultar Procesadas">
+                                [attr.title]="'dashboard.toggle_processed' | translate">
                             <span class="legend-dot legend-analyzed"></span>
-                            Procesadas
+                            {{ 'dashboard.processed' | translate }}
                         </button>
                     </div>
 
@@ -168,11 +168,11 @@
                             [(ngModel)]="overviewPeriod"
                             (change)="setOverviewPeriod(overviewPeriod)"
                             [disabled]="hasCustomRange"
-                            [title]="hasCustomRange ? 'Restablece el rango para volver al preset' : 'Período preset'"
-                            aria-label="Período preset">
-                        <option value="7d">Diario</option>
-                        <option value="14d">Semanal</option>
-                        <option value="30d">Mensual</option>
+                            [title]="(hasCustomRange ? 'dashboard.reset_range_to_preset' : 'dashboard.period_preset') | translate"
+                            [attr.aria-label]="'dashboard.period_preset' | translate">
+                        <option value="7d">{{ 'dashboard.period_daily' | translate }}</option>
+                        <option value="14d">{{ 'dashboard.period_weekly' | translate }}</option>
+                        <option value="30d">{{ 'dashboard.period_monthly' | translate }}</option>
                     </select>
                 </div>
             </header>
@@ -182,27 +182,27 @@
                  preset (Diario/Semanal/Mensual). Al setear las dos, el
                  chart usa el rango custom. -->
             <div class="acn-range-toolbar">
-                <div class="acn-range" role="group" aria-label="Rango de fechas">
+                <div class="acn-range" role="group" [attr.aria-label]="'dashboard.date_range' | translate">
                     <label class="acn-range-input">
-                        <span class="acn-range-label">Desde</span>
+                        <span class="acn-range-label">{{ 'dashboard.range_from' | translate }}</span>
                         <input type="date"
                                [(ngModel)]="customFromDate"
                                [max]="customToDate || todayIso"
-                               aria-label="Fecha de inicio" />
+                               [attr.aria-label]="'dashboard.start_date' | translate" />
                     </label>
                     <span class="acn-range-sep" aria-hidden="true">→</span>
                     <label class="acn-range-input">
-                        <span class="acn-range-label">Hasta</span>
+                        <span class="acn-range-label">{{ 'dashboard.range_to' | translate }}</span>
                         <input type="date"
                                [(ngModel)]="customToDate"
                                [min]="customFromDate"
                                [max]="todayIso"
-                               aria-label="Fecha de fin" />
+                               [attr.aria-label]="'dashboard.end_date' | translate" />
                     </label>
                     <button type="button" class="acn-range-clear"
                             *ngIf="hasCustomRange"
                             (click)="clearCustomRange()"
-                            title="Restablecer rango">
+                            [attr.title]="'dashboard.reset_range' | translate">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -294,7 +294,7 @@
                     </p>
                     <p class="tt-row" *ngIf="seriesVisible.analyzed">
                         <span class="tt-dot tt-dot-secondary"></span>
-                        <span class="tt-label">Procesadas</span>
+                        <span class="tt-label">{{ 'dashboard.processed' | translate }}</span>
                         <span class="tt-value">{{ chartHover.analyzed }}</span>
                     </p>
                 </div>
@@ -304,19 +304,19 @@
             <div class="acn-activity-stats">
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.totalMeetings }}</span>
-                    <span class="acn-stat-label">Reuniones Totales</span>
+                    <span class="acn-stat-label">{{ 'dashboard.total_meetings' | translate }}</span>
                 </div>
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.totalDuration }}</span>
-                    <span class="acn-stat-label">Duración Total</span>
+                    <span class="acn-stat-label">{{ 'dashboard.total_duration' | translate }}</span>
                 </div>
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.avgParticipants }}</span>
-                    <span class="acn-stat-label">Participantes Promedio</span>
+                    <span class="acn-stat-label">{{ 'dashboard.avg_participants' | translate }}</span>
                 </div>
                 <div class="acn-stat">
                     <span class="acn-stat-value">{{ activitySummary.avgConfidence }}</span>
-                    <span class="acn-stat-label">Confianza IA Promedio</span>
+                    <span class="acn-stat-label">{{ 'dashboard.avg_ai_confidence' | translate }}</span>
                 </div>
             </div>
         </article>
@@ -324,7 +324,7 @@
         <!-- Follow-up Status -->
         <article class="acn-card acn-card-followup">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Estado de Seguimiento</h2>
+                <h2 class="acn-card-title">{{ 'dashboard.followup_status' | translate }}</h2>
             </header>
 
             <div class="acn-followup-body">
@@ -381,7 +381,7 @@
         <!-- Sync Health -->
         <article class="acn-card acn-card-sync">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Estado de Sincronización</h2>
+                <h2 class="acn-card-title">{{ 'dashboard.sync_status' | translate }}</h2>
                 <a class="acn-card-link" routerLink="/admin/settings">{{ 'common.show_all' | translate }}</a>
             </header>
 
@@ -396,14 +396,14 @@
                             <svg *ngIf="p.connected" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                            {{ p.connected ? 'Conectado' : 'Desconectado' }}
+                            {{ (p.connected ? 'integrations.connected' : 'integrations.disconnected') | translate }}
                         </span>
                         <span class="sync-ago" *ngIf="p.connected">{{ p.syncedAgo }}</span>
                     </div>
                 </li>
             </ul>
 
-            <a class="acn-sync-manage" routerLink="/admin/settings">Gestionar Integraciones</a>
+            <a class="acn-sync-manage" routerLink="/admin/settings">{{ 'dashboard.manage_integrations' | translate }}</a>
         </article>
     </section>
 
@@ -413,7 +413,7 @@
         <!-- Recently Analyzed Meetings -->
         <article class="acn-card acn-card-meetings">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Reuniones Analizadas Recientemente</h2>
+                <h2 class="acn-card-title">{{ 'dashboard.recently_analyzed_meetings' | translate }}</h2>
                 <a class="acn-card-link" routerLink="/admin/meetings">{{ 'sidebar.see_all' | translate }}</a>
             </header>
 
@@ -423,7 +423,7 @@
                     <span>{{ 'meetings.duration' | translate }}</span>
                     <span>{{ 'meetings.participants' | translate }}</span>
                     <span>{{ 'meetings.duration' | translate }}</span>
-                    <span class="t-right">Confianza IA</span>
+                    <span class="t-right">{{ 'dashboard.ai_confidence' | translate }}</span>
                 </div>
                 <div class="acn-table-row" *ngFor="let r of recentMeetingsRows" (click)="viewCuration(r.id)" role="button">
                     <span class="acn-table-title">{{ r.title }}</span>
@@ -459,23 +459,23 @@
                               [class.is-high]="r.confidence === 'High'"
                               [class.is-medium]="r.confidence === 'Medium'"
                               [class.is-low]="r.confidence === 'Low'">
-                            {{ r.confidence === 'High' ? 'Alta' : r.confidence === 'Medium' ? 'Media' : 'Baja' }}
+                            {{ (r.confidence === 'High' ? 'common.high' : r.confidence === 'Medium' ? 'common.medium' : 'common.low') | translate }}
                         </span>
                     </span>
                 </div>
                 <div *ngIf="!recentMeetingsRows.length" class="acn-empty">
-                    Aún no hay reuniones analizadas. Sube la primera con
-                    <button class="link-btn" (click)="openUploadModal()">+ Nueva Reunión</button>
+                    {{ 'dashboard.no_analyzed_meetings_prefix' | translate }}
+                    <button class="link-btn" (click)="openUploadModal()">{{ 'dashboard.new_meeting_plus' | translate }}</button>
                 </div>
             </div>
 
-            <a class="acn-card-foot-link" routerLink="/admin/meetings">Ver todas las reuniones</a>
+            <a class="acn-card-foot-link" routerLink="/admin/meetings">{{ 'dashboard.see_all_meetings' | translate }}</a>
         </article>
 
         <!-- Top Risks -->
         <article class="acn-card acn-card-risks">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Riesgos Principales</h2>
+                <h2 class="acn-card-title">{{ 'dashboard.top_risks' | translate }}</h2>
                 <a class="acn-card-link" routerLink="/admin/pendientes">{{ 'common.show_all' | translate }}</a>
             </header>
 
@@ -498,19 +498,19 @@
                           [class.is-high]="r.impact === 'High'"
                           [class.is-medium]="r.impact === 'Medium'"
                           [class.is-low]="r.impact === 'Low'">
-                        {{ r.impact === 'High' ? 'Alto' : r.impact === 'Medium' ? 'Medio' : 'Bajo' }}
+                        {{ (r.impact === 'High' ? 'dashboard.impact_high' : r.impact === 'Medium' ? 'dashboard.impact_medium' : 'dashboard.impact_low') | translate }}
                     </span>
                 </li>
-                <li *ngIf="!topRisksRich.length" class="acn-empty-li">Aún no hay riesgos identificados.</li>
+                <li *ngIf="!topRisksRich.length" class="acn-empty-li">{{ 'dashboard.no_risks_identified' | translate }}</li>
             </ul>
 
-            <a class="acn-card-foot-link" routerLink="/admin/pendientes">Ver todos los riesgos</a>
+            <a class="acn-card-foot-link" routerLink="/admin/pendientes">{{ 'dashboard.see_all_risks' | translate }}</a>
         </article>
 
         <!-- Top Action Items -->
         <article class="acn-card acn-card-actions">
             <header class="acn-card-head">
-                <h2 class="acn-card-title">Tareas Principales</h2>
+                <h2 class="acn-card-title">{{ 'dashboard.top_tasks' | translate }}</h2>
                 <a class="acn-card-link" routerLink="/admin/pendientes">{{ 'sidebar.see_all' | translate }}</a>
             </header>
 
@@ -543,7 +543,7 @@
                     </span>
                     <span class="task-due muted">{{ t.dueLabel }}</span>
                 </li>
-                <li *ngIf="!topActionItemsRich.length" class="acn-empty-li">No hay tareas abiertas.</li>
+                <li *ngIf="!topActionItemsRich.length" class="acn-empty-li">{{ 'dashboard.no_open_tasks' | translate }}</li>
             </ul>
 
             <a class="acn-card-foot-link" routerLink="/admin/pendientes">{{ 'common.see_all_tasks' | translate }}</a>
@@ -551,8 +551,8 @@
     </section>
 
     <!-- ============= QUICK ACTIONS ============= -->
-    <section class="acn-quick" aria-label="Acciones rápidas">
-        <h3 class="acn-quick-title">ACCIONES RÁPIDAS</h3>
+    <section class="acn-quick" [attr.aria-label]="'dashboard.quick_actions' | translate">
+        <h3 class="acn-quick-title">{{ 'dashboard.quick_actions_upper' | translate }}</h3>
         <div class="acn-quick-grid">
             <button class="acn-qa" *ngFor="let qa of quickActions" (click)="triggerQuickAction(qa)" type="button">
                 <span class="qa-icon" [ngSwitch]="qa.icon">
@@ -602,7 +602,7 @@
                         <line x1="12" y1="19" x2="12" y2="23"></line>
                         <line x1="8" y1="23" x2="16" y2="23"></line>
                     </svg>
-                    Procesar Audio
+                    {{ 'dashboard.process_audio' | translate }}
                 </button>
                 <button type="button" class="ap-tab" role="tab"
                         [class.is-active]="uploadTab === 'text'"
@@ -615,43 +615,47 @@
                         <line x1="16" y1="13" x2="8" y2="13"></line>
                         <line x1="16" y1="17" x2="8" y2="17"></line>
                     </svg>
-                    Pegar Texto Libre
+                    {{ 'dashboard.paste_free_text' | translate }}
                 </button>
             </div>
 
             <div class="ap-field">
-                <label class="ap-label">Título o Motivo de la Sesión <span class="ap-required">*</span></label>
+                <label class="ap-label">{{ 'meetings.title_or_reason' | translate }} <span class="ap-required">*</span></label>
                 <input class="ap-input" type="text" [(ngModel)]="uploadForm.title"
-                       placeholder="Ej: Comité Estratégico Mensual" />
+                       [placeholder]="'dashboard.title_example' | translate" />
             </div>
 
             <div class="ap-grid-2">
                 <div class="ap-field">
-                    <label class="ap-label">Fecha y Hora</label>
+                    <label class="ap-label">{{ 'common.datetime' | translate }}</label>
                     <input class="ap-input" type="datetime-local" [(ngModel)]="uploadForm.date" />
                 </div>
                 <div class="ap-field">
-                    <label class="ap-label">Idioma Principal</label>
+                    <label class="ap-label">{{ 'dashboard.main_language' | translate }}</label>
                     <div class="ap-select-wrap">
                         <select class="ap-select" [(ngModel)]="uploadForm.language">
+                            <!-- Solo los 3 idiomas soportados end-to-end por la
+                                 plataforma (pipeline IA + UI + emails). El valor
+                                 enviado al backend es el nombre humano en español
+                                 — la API y los servicios LLM lo normalizan a su
+                                 código de 2 letras internamente. -->
                             <option value="Español">{{ 'lang.es' | translate }}</option>
+                            <option value="Català">{{ 'common.catalan' | translate }}</option>
                             <option value="Inglés">{{ 'common.english' | translate }}</option>
-                            <option value="Portugués">{{ 'common.portuguese' | translate }}</option>
-                            <option value="Multilingüe">Múltiples Idiomas</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             <div class="ap-field">
-                <label class="ap-label">Proyecto (Opcional)</label>
+                <label class="ap-label">{{ 'dashboard.project_optional' | translate }}</label>
                 <div class="ap-select-wrap">
                     <svg class="ap-select-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                     </svg>
                     <select class="ap-select" [(ngModel)]="uploadForm.projectId">
-                        <option value="">— Sin proyecto (General) —</option>
+                        <option value="">{{ 'dashboard.no_project_general' | translate }}</option>
                         <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                     </select>
                 </div>
@@ -667,28 +671,28 @@
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
                 <p class="ap-dropzone-title">{{ 'meetings.select_audio_file' | translate }}</p>
-                <p class="ap-dropzone-sub">Formatos aceptados: MP3, WAV, M4A o video MP4</p>
+                <p class="ap-dropzone-sub">{{ 'dashboard.accepted_formats' | translate }}</p>
                 <button type="button" class="ap-btn ap-btn-secondary"
                         (click)="audioUpload.click()" [disabled]="isUploading">
                     {{ 'common.select_file' | translate }}
                 </button>
                 <p class="ap-dropzone-file" *ngIf="uploadForm.file">
-                    Archivo seleccionado: <strong>{{ uploadForm.file.name }}</strong>
+                    {{ 'dashboard.file_selected' | translate }} <strong>{{ uploadForm.file.name }}</strong>
                 </p>
             </div>
 
             <div *ngIf="uploadTab === 'text'" class="ap-field">
-                <label class="ap-label">Transcripción o Acta Cruda <span class="ap-required">*</span></label>
+                <label class="ap-label">{{ 'meetings.raw_transcript' | translate }} <span class="ap-required">*</span></label>
                 <textarea class="ap-textarea" rows="8"
                           [(ngModel)]="uploadForm.textContent"
-                          placeholder="Pega aquí todo el texto discutido en la sesión..."
+                          [placeholder]="'dashboard.paste_transcript_placeholder' | translate"
                           [disabled]="isUploading"></textarea>
             </div>
         </div>
 
         <footer class="ap-modal-foot">
             <button type="button" class="ap-btn ap-btn-secondary" (click)="closeUploadModal()" [disabled]="isUploading">
-                Cancelar
+                {{ 'common.cancel' | translate }}
             </button>
             <button type="button" class="ap-btn ap-btn-primary" (click)="submitUpload()" [disabled]="isUploading">
                 <span *ngIf="!isUploading">{{ 'common.process_session' | translate }}</span>
@@ -726,17 +730,17 @@
             <p class="ap-confirm-text">
                 {{ 'common.about_to_delete_permanently' | translate }}
                 <strong>"{{ sessionToDelete?.title || sessionToDelete?.id }}"</strong>.
-                Esta acción es <strong>irreversible</strong>.
+                {{ 'dashboard.this_action_irreversible_prefix' | translate }} <strong>{{ 'dashboard.irreversible' | translate }}</strong>.
             </p>
         </div>
 
         <footer class="ap-modal-foot">
             <button type="button" class="ap-btn ap-btn-secondary" (click)="cancelDeleteSession()" [disabled]="isDeleting">
-                Cancelar
+                {{ 'common.cancel' | translate }}
             </button>
             <button type="button" class="ap-btn ap-btn-danger" (click)="confirmDeleteSession()" [disabled]="isDeleting">
                 <span *ngIf="!isDeleting">{{ 'common.yes_delete' | translate }}</span>
-                <span *ngIf="isDeleting">Borrando…</span>
+                <span *ngIf="isDeleting">{{ 'dashboard.deleting' | translate }}</span>
             </button>
         </footer>
     </div>

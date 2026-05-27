@@ -11,6 +11,7 @@ import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { UserDirectoryService } from '../../services/user-directory.service';
+import { BrandingService } from '../../services/branding.service';
 
 interface ChartPoint { date: Date; label: string; value: number; }
 interface KpiTile {
@@ -115,6 +116,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         private route: ActivatedRoute,
         private toast: ToastService,
         private userDirectory: UserDirectoryService,
+        private branding: BrandingService,
     ) {
         // Re-render cuando el directorio resuelve nuevos emails (auto-refresh
         // de avatares en participantes y owners de tareas).
@@ -266,7 +268,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         this.uploadForm.date = now.toISOString().slice(0,16);
         this.uploadForm.title = '';
-        this.uploadForm.language = 'Español';
+        // Pre-cargamos con el idioma por defecto del workspace para que el
+        // pipeline IA y el form arranquen alineados. Mapeo del código corto
+        // a nombre humano que el backend espera en multipart.
+        const _langMap: Record<string, string> = {
+            es: 'Español', ca: 'Català', en: 'Inglés',
+        };
+        const _tenantLang = (this.branding.brand().default_language || 'es').toLowerCase();
+        this.uploadForm.language = _langMap[_tenantLang] || 'Español';
         this.uploadForm.projectId = '';
         this.uploadForm.textContent = '';
         this.uploadForm.file = null;
