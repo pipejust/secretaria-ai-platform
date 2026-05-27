@@ -125,7 +125,7 @@
             <div class="tpl-table">
                 <div class="tpl-tr tpl-th">
                     <span>Plantilla</span>
-                    <span>Tipo</span>
+                    <span>{{ 'common.status' | translate }}</span>
                     <span>Versión</span>
                     <span>{{ 'common.status' | translate }}</span>
                     <span>Actualizado</span>
@@ -308,7 +308,7 @@
                         </div>
                     </div>
                 </div>
-                <button class="tpl-detail-close" (click)="closeDetailPanel()" title="Cerrar">
+                <button class="tpl-detail-close" (click)="closeDetailPanel()" [attr.title]="'common.close' | translate">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -319,8 +319,8 @@
 
             <nav class="tpl-detail-tabs">
                 <button [class.active]="detailTab === 'preview'" (click)="setDetailTab('preview')">{{ 'branding.preview' | translate }}</button>
-                <button [class.active]="detailTab === 'details'" (click)="setDetailTab('details')">Detalles</button>
-                <button [class.active]="detailTab === 'history'" (click)="setDetailTab('history')">Historial</button>
+                <button [class.active]="detailTab === 'details'" (click)="setDetailTab('details')">{{ 'templates.details_tab' | translate }}</button>
+                <button [class.active]="detailTab === 'history'" (click)="setDetailTab('history')">{{ 'templates.history_tab' | translate }}</button>
             </nav>
 
             <div *ngIf="detailTab === 'preview'" class="tpl-detail-body">
@@ -361,7 +361,7 @@
                 </section>
 
                 <section class="tpl-detail-section">
-                    <h4>Descripción</h4>
+                    <h4>{{ 'projects.description' | translate }}</h4>
                     <p class="tpl-detail-text">{{ descriptionOf(selectedTemplate) }}</p>
                 </section>
 
@@ -443,7 +443,7 @@
                     <h4>Información</h4>
                     <dl class="tpl-detail-info">
                         <dt>ID</dt><dd>#{{ selectedTemplate.id }}</dd>
-                        <dt>Tipo</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>
+                        <dt>{{ 'common.status' | translate }}</dt><dd>{{ typeOf(selectedTemplate).label }}</dd>
                         <dt>Versión</dt><dd>{{ versionOf(selectedTemplate) }}</dd>
                         <dt>{{ 'common.status' | translate }}</dt><dd>{{ statusOf(selectedTemplate).label }}</dd>
                         <dt>Actualizada</dt><dd>{{ updatedOf(selectedTemplate) }} <small *ngIf="updatedAgo(selectedTemplate)">({{ updatedAgo(selectedTemplate) }})</small></dd>
@@ -871,7 +871,7 @@
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    Descargar
+                    {{ 'common.download' | translate }}
                 </button>
             </div>
         </footer>

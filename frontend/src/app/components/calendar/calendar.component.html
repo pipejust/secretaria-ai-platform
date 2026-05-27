@@ -156,7 +156,7 @@
         <label class="cal-toggle">
           <input type="checkbox" [(ngModel)]="showMeetings"/>
           <span class="cal-toggle-dot cal-toggle-dot--indigo"></span>
-          Reuniones
+          {{ 'sidebar.meetings' | translate }}
         </label>
         <label class="cal-toggle">
           <input type="checkbox" [(ngModel)]="showTasks"/>
@@ -550,7 +550,7 @@
             <ng-container *ngIf="newTask.due_date"> · {{ newTask.due_date }}</ng-container>
           </p>
         </div>
-        <button type="button" class="cal-icon-btn cal-icon-btn--soft" (click)="closeNewTaskModal()" title="Cerrar">
+        <button type="button" class="cal-icon-btn cal-icon-btn--soft" (click)="closeNewTaskModal()" [attr.title]="'common.close' | translate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -580,7 +580,7 @@
             <input type="text" class="cal-input" [(ngModel)]="newTask.owner_name" placeholder="Nombre" />
           </div>
           <div class="cal-form-row">
-            <label class="cal-form-label">Email</label>
+            <label class="cal-form-label">{{ 'common.email' | translate }}</label>
             <input type="email" class="cal-input" [(ngModel)]="newTask.owner_email" placeholder="correo@empresa.com" />
           </div>
           <div class="cal-form-row">
@@ -605,7 +605,7 @@
         </div>
 
         <div class="cal-form-row">
-          <label class="cal-form-label">Descripción <small>(opcional)</small></label>
+          <label class="cal-form-label">{{ 'projects.description' | translate }} <small>(opcional)</small></label>
           <textarea class="cal-input cal-textarea" rows="3" [(ngModel)]="newTask.description"
                     placeholder="Detalle, contexto, criterios de aceptación..."></textarea>
         </div>

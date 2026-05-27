@@ -44,7 +44,7 @@
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    Historial
+                    {{ 'templates.history_tab' | translate }}
                     <span class="aa-history-count" *ngIf="historyList.length">{{ historyList.length }}</span>
                 </button>
                 <div class="aa-history-pop" *ngIf="showHistory && historyList.length"
@@ -299,7 +299,7 @@
                                                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                                             </svg>
                                         </span>
-                                        Tareas pendientes
+                                        {{ 'pending.title' | translate }}
                                     </h3>
                                     <div class="aa-table-wrap">
                                         <table class="aa-task-table">
@@ -684,7 +684,7 @@
                     <h3 class="aa-modal-title">Enfocar la búsqueda en una reunión</h3>
                     <p class="aa-modal-sub">La próxima pregunta solo usará esa acta como contexto.</p>
                 </div>
-                <button type="button" class="aa-modal-close" (click)="closeSessionPicker()" title="Cerrar">
+                <button type="button" class="aa-modal-close" (click)="closeSessionPicker()" [attr.title]="'common.close' | translate">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>

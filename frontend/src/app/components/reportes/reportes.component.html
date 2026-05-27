@@ -701,7 +701,7 @@
     <div class="rp-modal" (click)="$event.stopPropagation()">
         <header class="rp-modal-head">
             <h3>Exportar reporte</h3>
-            <button class="rp-modal-close" (click)="closeExportModal()" aria-label="Cerrar">
+            <button class="rp-modal-close" (click)="closeExportModal()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>

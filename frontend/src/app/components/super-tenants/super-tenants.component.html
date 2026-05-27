@@ -191,7 +191,7 @@
                 </select>
             </div>
             <div class="filter-group">
-                <label>Usuarios</label>
+                <label>{{ 'sidebar.users' | translate }}</label>
                 <select [(ngModel)]="usersFilter" (change)="currentPage = 1">
                     <option value="">{{ 'common.all' | translate }}</option>
                     <option value="zero">Sin usuarios</option>
@@ -201,7 +201,7 @@
                 </select>
             </div>
             <div class="filter-group">
-                <label>Fecha de creación</label>
+                <label>{{ 'common.created_at' | translate }}</label>
                 <select [(ngModel)]="dateFilter" (change)="currentPage = 1">
                     <option value="">Todas las fechas</option>
                     <option value="last30">Últimos 30 días</option>
@@ -233,7 +233,7 @@
                         <span>ID / Slug</span>
                         <span>Empresa</span>
                         <span>Dominio</span>
-                        <span>Usuarios</span>
+                        <span>{{ 'sidebar.users' | translate }}</span>
                         <span>{{ 'common.status' | translate }}</span>
                         <span>Marca / Configuración</span>
                         <span class="tn-th-actions">{{ 'common.actions' | translate }}</span>
@@ -453,8 +453,8 @@
             <dl class="tn-card-dl">
                 <div><dt>Slug</dt><dd><span class="tn-slug-pill">{{ s.slug }}</span></dd></div>
                 <div><dt>Dominio</dt><dd>{{ s.domain || '—' }}</dd></div>
-                <div><dt>Usuarios</dt><dd>{{ s.user_count }}</dd></div>
-                <div><dt>Fecha de creación</dt><dd>{{ formatDate(s.created_at) }}</dd></div>
+                <div><dt>{{ 'sidebar.users' | translate }}</dt><dd>{{ s.user_count }}</dd></div>
+                <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(s.created_at) }}</dd></div>
                 <div *ngIf="adminPrincipal as a">
                     <dt>Admin principal</dt>
                     <dd class="tn-admin-cell">
@@ -489,17 +489,17 @@
             <ul class="tn-summary">
                 <li>
                     <span class="tn-summary-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></span>
-                    <span>Usuarios</span>
+                    <span>{{ 'sidebar.users' | translate }}</span>
                     <strong>{{ s.user_count }}</strong>
                 </li>
                 <li>
                     <span class="tn-summary-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
-                    <span>Proyectos</span>
+                    <span>{{ 'sidebar.projects' | translate }}</span>
                     <strong>{{ s.project_count ?? '—' }}</strong>
                 </li>
                 <li>
                     <span class="tn-summary-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg></span>
-                    <span>Sesiones</span>
+                    <span>{{ 'project_detail.sessions' | translate }}</span>
                     <strong>{{ s.session_count ?? '—' }}</strong>
                 </li>
                 <li>
@@ -563,7 +563,7 @@
                     con email + password en esa empresa y de inmediato editar logo, colores, contacto y crear más usuarios.
                 </p>
             </div>
-            <button class="tn-modal-close" (click)="closeCreateModal()" aria-label="Cerrar">
+            <button class="tn-modal-close" (click)="closeCreateModal()" [attr.aria-label]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -665,7 +665,7 @@
 
                 <div class="tn-grid-2">
                     <div class="tn-field">
-                        <label>Email corporativo <span class="tn-opt">(opcional)</span></label>
+                        <label>{{ 'branding.company_email' | translate }} <span class="tn-opt">(opcional)</span></label>
                         <input type="email" name="company_email" [(ngModel)]="form.company_email"
                                placeholder="contacto@tuempresa.com"/>
                     </div>
@@ -836,7 +836,7 @@
                 <h3>Editar empresa</h3>
                 <p class="tn-modal-sub">Actualiza datos, dominio, estado y marca de la empresa. El slug no se puede modificar.</p>
             </div>
-            <button class="tn-modal-close" (click)="closeEditModal()" aria-label="Cerrar">
+            <button class="tn-modal-close" (click)="closeEditModal()" [attr.aria-label]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -985,7 +985,7 @@
                 <h3>{{ 'tenants.edit_domain' | translate }}</h3>
                 <p class="tn-modal-sub">Configura un dominio personalizado para "{{ domainTarget.name }}". Apunta el CNAME a esta plataforma.</p>
             </div>
-            <button class="tn-modal-close" (click)="closeDomainModal()" aria-label="Cerrar">
+            <button class="tn-modal-close" (click)="closeDomainModal()" [attr.aria-label]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1038,7 +1038,7 @@
                     </p>
                 </div>
             </div>
-            <button class="tn-modal-close" (click)="closeDetail()" aria-label="Cerrar">
+            <button class="tn-modal-close" (click)="closeDetail()" [attr.aria-label]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1051,8 +1051,8 @@
                 <div><dt>ID</dt><dd>#{{ s.id }}</dd></div>
                 <div><dt>Slug</dt><dd>{{ s.slug }}</dd></div>
                 <div><dt>Dominio</dt><dd>{{ s.domain || '—' }}</dd></div>
-                <div><dt>Usuarios</dt><dd>{{ s.user_count }}</dd></div>
-                <div><dt>Fecha de creación</dt><dd>{{ formatDate(s.created_at) }}</dd></div>
+                <div><dt>{{ 'sidebar.users' | translate }}</dt><dd>{{ s.user_count }}</dd></div>
+                <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(s.created_at) }}</dd></div>
                 <div><dt>{{ 'branding.primary_color' | translate }}</dt><dd>
                     <span class="tn-color-swatch" *ngIf="s.primary_color"
                           [style.background]="s.primary_color"></span>

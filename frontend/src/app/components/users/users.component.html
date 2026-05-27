@@ -136,7 +136,7 @@
         <!-- Filtros expandibles -->
         <section class="us-filters" *ngIf="showFilters">
             <div class="filter-group">
-                <label>Rol</label>
+                <label>{{ 'profile.role' | translate }}</label>
                 <select [(ngModel)]="roleFilter" (change)="currentPage = 1">
                     <option value="">{{ 'common.all' | translate }}</option>
                     <option *ngFor="let r of roleOptions" [value]="r">{{ r }}</option>
@@ -152,7 +152,7 @@
                 </select>
             </div>
             <div class="filter-group">
-                <label>Último acceso</label>
+                <label>{{ 'users.last_login' | translate }}</label>
                 <select [(ngModel)]="lastAccessFilter" (change)="currentPage = 1">
                     <option value="">Cualquier fecha</option>
                     <option value="today">{{ 'common.today' | translate }}</option>
@@ -184,7 +184,7 @@
                     <span>Usuario</span>
                     <span>Rol asignado</span>
                     <span>Estado / acceso</span>
-                    <span>Último acceso</span>
+                    <span>{{ 'users.last_login' | translate }}</span>
                     <span class="us-th-actions">{{ 'common.actions' | translate }}</span>
                 </div>
 
@@ -360,13 +360,13 @@
                     <dd><span class="us-role us-role--{{ roleBadgeKey(u.role) }} us-role--inline">{{ u.role || '—' }}</span></dd>
                 </div>
                 <div>
-                    <dt>Último acceso</dt>
+                    <dt>{{ 'users.last_login' | translate }}</dt>
                     <dd>{{ formatLastAccess(u.last_login_at).line1 }}
                         <span class="us-dd-sub" *ngIf="formatLastAccess(u.last_login_at).line2">· {{ formatLastAccess(u.last_login_at).line2 }}</span>
                     </dd>
                 </div>
                 <div>
-                    <dt>Fecha de creación</dt>
+                    <dt>{{ 'common.created_at' | translate }}</dt>
                     <dd>{{ formatCreationDate(u.created_at) }}</dd>
                 </div>
                 <div>
@@ -483,7 +483,7 @@
                 <p class="us-modal-sub">Crea una cuenta con rol asignado y permisos automáticos.</p>
             </div>
             <button class="us-modal-close" (click)="showCreateModal = false; errorMsg = ''; successMsg = ''"
-                    aria-label="Cerrar">
+                    [attr.aria-label]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -517,7 +517,7 @@
                     </div>
                     <button type="button" (click)="lastCreatedTempPassword = null; lastCreatedEmail = null"
                             style="background:transparent; border:0; color:#92400e; cursor:pointer; font-size:18px; line-height:1;"
-                            aria-label="Cerrar">×</button>
+                            [attr.aria-label]="'common.close' | translate">×</button>
                 </div>
             </div>
 
@@ -644,7 +644,7 @@
                 <p class="us-modal-sub">Modifica datos del perfil, rol y acceso del usuario.</p>
             </div>
             <button class="us-modal-close" (click)="showEditModal = false; errorMsg = ''; successMsg = ''"
-                    aria-label="Cerrar">
+                    [attr.aria-label]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -739,7 +739,7 @@
                     <p class="us-modal-sub">{{ u.email }}</p>
                 </div>
             </div>
-            <button class="us-modal-close" (click)="closeDetailModal()" aria-label="Cerrar">
+            <button class="us-modal-close" (click)="closeDetailModal()" [attr.aria-label]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -750,13 +750,13 @@
         <div class="us-modal-body">
             <div class="us-detail-grid">
                 <div><dt>ID</dt><dd>#{{ u.id }}</dd></div>
-                <div><dt>Rol</dt><dd><span class="us-role us-role--{{ roleBadgeKey(u.role) }} us-role--inline">{{ u.role || '—' }}</span></dd></div>
+                <div><dt>{{ 'profile.role' | translate }}</dt><dd><span class="us-role us-role--{{ roleBadgeKey(u.role) }} us-role--inline">{{ u.role || '—' }}</span></dd></div>
                 <div><dt>{{ 'common.status' | translate }}</dt><dd><span class="us-status us-status--{{ u.status }} us-status--inline"><span class="us-status-dot"></span>{{ statusLabel(u.status) }}</span></dd></div>
                 <div><dt>{{ 'common.phone' | translate }}</dt><dd>{{ u.phone || '—' }}</dd></div>
                 <div><dt>Departamento</dt><dd>{{ u.department || '—' }}</dd></div>
                 <div><dt>Cargo</dt><dd>{{ u.position || '—' }}</dd></div>
-                <div><dt>Último acceso</dt><dd>{{ formatLastAccess(u.last_login_at).line1 }} <span class="us-dd-sub">{{ formatLastAccess(u.last_login_at).line2 }}</span></dd></div>
-                <div><dt>Fecha de creación</dt><dd>{{ formatCreationDate(u.created_at) }}</dd></div>
+                <div><dt>{{ 'users.last_login' | translate }}</dt><dd>{{ formatLastAccess(u.last_login_at).line1 }} <span class="us-dd-sub">{{ formatLastAccess(u.last_login_at).line2 }}</span></dd></div>
+                <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatCreationDate(u.created_at) }}</dd></div>
             </div>
 
             <div class="us-detail-section">

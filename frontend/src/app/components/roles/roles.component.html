@@ -194,7 +194,7 @@
                         <option value="without">Sin usuarios</option>
                     </select>
                 </div>
-                <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">Limpiar</button>
+                <button class="rl-btn rl-btn--ghost" (click)="clearFilters()">{{ 'common.clear_filters' | translate }}</button>
             </section>
 
             <!-- Loading skeleton -->
@@ -215,7 +215,7 @@
                 <div class="rl-tr rl-th">
                     <span>ID</span>
                     <span>Nombre del rol</span>
-                    <span>Descripción</span>
+                    <span>{{ 'projects.description' | translate }}</span>
                     <span>Usuarios asignados</span>
                     <span>{{ 'common.status' | translate }}</span>
                     <span class="rl-t-actions">{{ 'common.actions' | translate }}</span>
@@ -418,9 +418,9 @@
 
                     <dl class="rl-selected-meta">
                         <div><dt>ID de rol</dt><dd>#{{ sel.id }}</dd></div>
-                        <div><dt>Tipo</dt><dd>{{ roleTypeLabel(sel) }}</dd></div>
+                        <div><dt>{{ 'common.status' | translate }}</dt><dd>{{ roleTypeLabel(sel) }}</dd></div>
                         <div><dt>Usuarios asignados</dt><dd>{{ usersCountForRole(sel) }}</dd></div>
-                        <div><dt>Fecha de creación</dt><dd>{{ formatDate(sel.created_at) }}</dd></div>
+                        <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(sel.created_at) }}</dd></div>
                         <div><dt>Última edición</dt><dd>{{ formatDate(sel.updated_at) }}</dd></div>
                     </dl>
 
@@ -527,7 +527,7 @@
     <div class="rl-modal rl-modal--wide" (click)="$event.stopPropagation()">
         <header class="rl-modal-head">
             <h3>{{ roleModalMode === 'create' ? 'Crear nuevo rol' : 'Editar rol' }}</h3>
-            <button class="rl-icon-btn" (click)="closeRoleModal()" aria-label="Cerrar">
+            <button class="rl-icon-btn" (click)="closeRoleModal()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -555,7 +555,7 @@
                 </div>
 
                 <label class="rl-field">
-                    <span>Descripción</span>
+                    <span>{{ 'projects.description' | translate }}</span>
                     <textarea [(ngModel)]="roleForm.description" rows="2"
                               placeholder="Describe el alcance y propósito del rol…"></textarea>
                 </label>
@@ -614,7 +614,7 @@
     <div class="rl-modal" (click)="$event.stopPropagation()">
         <header class="rl-modal-head">
             <h3>Detalle del rol</h3>
-            <button class="rl-icon-btn" (click)="closeDetailModal()" aria-label="Cerrar">
+            <button class="rl-icon-btn" (click)="closeDetailModal()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -642,10 +642,10 @@
 
             <dl class="rl-selected-meta">
                 <div><dt>ID</dt><dd>#{{ detailRole.id }}</dd></div>
-                <div><dt>Tipo</dt><dd>{{ roleTypeLabel(detailRole) }}</dd></div>
+                <div><dt>{{ 'common.status' | translate }}</dt><dd>{{ roleTypeLabel(detailRole) }}</dd></div>
                 <div><dt>Usuarios asignados</dt><dd>{{ usersCountForRole(detailRole) }}</dd></div>
                 <div><dt>Permisos activos</dt><dd>{{ selectedPermissions.length }}</dd></div>
-                <div><dt>Fecha de creación</dt><dd>{{ formatDate(detailRole.created_at) }}</dd></div>
+                <div><dt>{{ 'common.created_at' | translate }}</dt><dd>{{ formatDate(detailRole.created_at) }}</dd></div>
                 <div><dt>Última edición</dt><dd>{{ formatDate(detailRole.updated_at) }}</dd></div>
             </dl>
 
@@ -699,7 +699,7 @@
     <div class="rl-modal rl-modal--sm" (click)="$event.stopPropagation()">
         <header class="rl-modal-head">
             <h3>Eliminar rol</h3>
-            <button class="rl-icon-btn" (click)="cancelDelete()" aria-label="Cerrar">
+            <button class="rl-icon-btn" (click)="cancelDelete()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>

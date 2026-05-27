@@ -150,7 +150,7 @@
                                 [attr.aria-pressed]="seriesVisible.meetings"
                                 title="Mostrar / ocultar Sesiones">
                             <span class="legend-dot legend-meetings"></span>
-                            Sesiones
+                            {{ 'project_detail.sessions' | translate }}
                         </button>
                         <button type="button" class="legend-toggle"
                                 [class.is-off]="!seriesVisible.analyzed"
@@ -289,7 +289,7 @@
                     <p class="tt-date">{{ chartHover.label }}</p>
                     <p class="tt-row" *ngIf="seriesVisible.meetings">
                         <span class="tt-dot tt-dot-primary"></span>
-                        <span class="tt-label">Sesiones</span>
+                        <span class="tt-label">{{ 'project_detail.sessions' | translate }}</span>
                         <span class="tt-value">{{ chartHover.meetings }}</span>
                     </p>
                     <p class="tt-row" *ngIf="seriesVisible.analyzed">
@@ -347,7 +347,7 @@
                     </svg>
                     <div class="acn-donut-center">
                         <span class="dn-value">{{ followupTotal }}</span>
-                        <span class="dn-label">Total</span>
+                        <span class="dn-label">{{ 'tenants.total_companies' | translate }}</span>
                     </div>
                 </div>
 
@@ -579,7 +579,7 @@
     <div class="ap-modal ap-modal-md" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
             <h2 class="ap-modal-title">{{ 'sidebar.new_meeting' | translate }}</h2>
-            <button type="button" class="ap-modal-close" (click)="closeUploadModal()" title="Cerrar">
+            <button type="button" class="ap-modal-close" (click)="closeUploadModal()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -705,7 +705,7 @@
     <div class="ap-modal ap-modal-sm" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
             <h2 class="ap-modal-title">¿Eliminar sesión?</h2>
-            <button type="button" class="ap-modal-close" (click)="cancelDeleteSession()" title="Cerrar">
+            <button type="button" class="ap-modal-close" (click)="cancelDeleteSession()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>

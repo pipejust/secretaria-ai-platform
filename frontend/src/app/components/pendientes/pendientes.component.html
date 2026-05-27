@@ -569,7 +569,7 @@
                         <ng-container *ngIf="createMode === 'meeting'">Crea una tarea asociada a una reunión existente.</ng-container>
                     </p>
                 </div>
-                <button type="button" class="tk-modal-close" (click)="closeCreateModal()" title="Cerrar">
+                <button type="button" class="tk-modal-close" (click)="closeCreateModal()" [attr.title]="'common.close' | translate">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -686,7 +686,7 @@
                                    placeholder="Nombre" />
                         </div>
                         <div class="tk-form-row">
-                            <label class="tk-form-label">Email</label>
+                            <label class="tk-form-label">{{ 'common.email' | translate }}</label>
                             <input type="email" class="tk-input" [(ngModel)]="newTask.owner_email"
                                    placeholder="correo@empresa.com" />
                         </div>
@@ -712,7 +712,7 @@
                     </div>
 
                     <div class="tk-form-row">
-                        <label class="tk-form-label">Descripción <small>(opcional)</small></label>
+                        <label class="tk-form-label">{{ 'projects.description' | translate }} <small>(opcional)</small></label>
                         <textarea class="tk-input tk-textarea" rows="3" [(ngModel)]="newTask.description"
                                   placeholder="Detalle, contexto, criterios de aceptación..."></textarea>
                     </div>

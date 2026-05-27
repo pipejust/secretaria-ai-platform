@@ -192,7 +192,7 @@
                 </div>
                 <div class="filter-group filter-group--actions">
                     <label>&nbsp;</label>
-                    <button class="br-btn br-btn--ghost" (click)="clearFilters()">Limpiar</button>
+                    <button class="br-btn br-btn--ghost" (click)="clearFilters()">{{ 'common.clear_filters' | translate }}</button>
                 </div>
             </section>
 
@@ -206,7 +206,7 @@
                     </header>
                     <div class="br-form">
                         <label class="br-field">
-                            <span>Nombre de la empresa</span>
+                            <span>{{ 'branding.company_name' | translate }}</span>
                             <input type="text" [(ngModel)]="form.company_name" placeholder="Acten" maxlength="120"/>
                         </label>
                         <label class="br-field">
@@ -215,7 +215,7 @@
                                    placeholder="Inteligencia para tus reuniones" maxlength="240"/>
                         </label>
                         <label class="br-field">
-                            <span>Email corporativo</span>
+                            <span>{{ 'branding.company_email' | translate }}</span>
                             <input type="email" [(ngModel)]="form.company_email" placeholder="contacto@tuempresa.com"/>
                         </label>
                         <label class="br-field">
@@ -559,7 +559,7 @@
                                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                                 <polyline points="22,6 12,13 2,6"></polyline>
                             </svg>
-                            Email corporativo
+                            {{ 'branding.company_email' | translate }}
                         </dt>
                         <dd>{{ form.company_email || '—' }}</dd>
                     </div>
@@ -581,7 +581,7 @@
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <polyline points="12 6 12 12 16 14"></polyline>
                             </svg>
-                            Última actualización
+                            {{ 'common.updated_at' | translate }}
                         </dt>
                         <dd>{{ lastUpdatedLabel }}</dd>
                     </div>
@@ -681,7 +681,7 @@
                     Vista consolidada de la marca: identidad, activos visuales, colores y previews.
                 </p>
             </div>
-            <button class="br-icon-btn" (click)="closePreview()" aria-label="Cerrar">
+            <button class="br-icon-btn" (click)="closePreview()" [attr.aria-label]="'common.close' | translate">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -720,14 +720,14 @@
             <section class="br-detail-section">
                 <header><h4>Identidad y contacto</h4></header>
                 <dl class="br-detail-list">
-                    <div><dt>Nombre</dt><dd>{{ form.company_name || '—' }}</dd></div>
+                    <div><dt>{{ 'common.name' | translate }}</dt><dd>{{ form.company_name || '—' }}</dd></div>
                     <div><dt>Tagline</dt><dd>{{ form.company_tagline || '—' }}</dd></div>
-                    <div><dt>Email corporativo</dt><dd>{{ form.company_email || '—' }}</dd></div>
+                    <div><dt>{{ 'branding.company_email' | translate }}</dt><dd>{{ form.company_email || '—' }}</dd></div>
                     <div><dt>{{ 'common.website' | translate }}</dt><dd>{{ form.company_website || '—' }}</dd></div>
                     <div><dt>{{ 'common.phone' | translate }}</dt><dd>{{ form.company_phone || '—' }}</dd></div>
                     <div><dt>{{ 'common.address' | translate }}</dt><dd>{{ form.company_address || '—' }}</dd></div>
                     <div><dt>Plataforma</dt><dd>{{ branding.platformName() }}</dd></div>
-                    <div><dt>Última actualización</dt><dd>{{ lastUpdatedLabel }}</dd></div>
+                    <div><dt>{{ 'common.updated_at' | translate }}</dt><dd>{{ lastUpdatedLabel }}</dd></div>
                 </dl>
             </section>
 

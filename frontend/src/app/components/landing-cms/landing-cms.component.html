@@ -210,11 +210,11 @@
                     <input type="text" [(ngModel)]="content.trust.eyebrow" maxlength="180" />
                 </label>
 
-                <h3 class="lcms-subheading">Empresas</h3>
+                <h3 class="lcms-subheading">{{ 'sidebar.tenants' | translate }}</h3>
                 <div class="lcms-list">
                     <div class="lcms-list-row" *ngFor="let name of content.trust.logos; let i = index; trackBy: trackByIndex">
                         <label class="lcms-field lcms-field-grow">
-                            <span class="lcms-field-label">Nombre de la empresa</span>
+                            <span class="lcms-field-label">{{ 'branding.company_name' | translate }}</span>
                             <input type="text" [ngModel]="name" (ngModelChange)="content.trust.logos[i] = $event" maxlength="60" />
                         </label>
                         <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTrustLogo(i)">
@@ -259,7 +259,7 @@
                     <div class="lcms-card" *ngFor="let item of content.features.items; let i = index; trackBy: trackByIndex">
                         <header class="lcms-card-header">
                             <span class="lcms-card-index">Capacidad {{ i + 1 }}</span>
-                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFeature(i)" title="Eliminar">
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeFeature(i)" [attr.title]="'common.delete' | translate">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
@@ -271,7 +271,7 @@
                             <input type="text" [(ngModel)]="item.title" maxlength="80" />
                         </label>
                         <label class="lcms-field">
-                            <span class="lcms-field-label">Descripción</span>
+                            <span class="lcms-field-label">{{ 'projects.description' | translate }}</span>
                             <textarea [(ngModel)]="item.description" rows="3" maxlength="280"></textarea>
                         </label>
                         <label class="lcms-field">
@@ -316,7 +316,7 @@
                     <div class="lcms-card" *ngFor="let step of content.flow.steps; let i = index; trackBy: trackByIndex">
                         <header class="lcms-card-header">
                             <span class="lcms-card-index">Paso {{ i + 1 }}</span>
-                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeStep(i)" title="Eliminar">
+                            <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeStep(i)" [attr.title]="'common.delete' | translate">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
@@ -328,7 +328,7 @@
                             <input type="text" [(ngModel)]="step.title" maxlength="60" />
                         </label>
                         <label class="lcms-field">
-                            <span class="lcms-field-label">Descripción</span>
+                            <span class="lcms-field-label">{{ 'projects.description' | translate }}</span>
                             <textarea [(ngModel)]="step.description" rows="3" maxlength="280"></textarea>
                         </label>
                         <label class="lcms-field">
@@ -372,7 +372,7 @@
                 <div class="lcms-list">
                     <div class="lcms-list-row" *ngFor="let name of content.integrations.items; let i = index; trackBy: trackByIndex">
                         <label class="lcms-field lcms-field-grow">
-                            <span class="lcms-field-label">Nombre</span>
+                            <span class="lcms-field-label">{{ 'common.name' | translate }}</span>
                             <input type="text" [ngModel]="name" (ngModelChange)="content.integrations.items[i] = $event" maxlength="60" />
                         </label>
                         <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeIntegration(i)">
@@ -440,7 +440,7 @@
                                       maxlength="320"
                                       placeholder="Una cita corta sobre el valor de Acten"></textarea>
                         </label>
-                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTestimonialQuote(i)" title="Eliminar">
+                        <button type="button" class="lcms-icon-btn lcms-icon-btn-danger" (click)="removeTestimonialQuote(i)" [attr.title]="'common.delete' | translate">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>

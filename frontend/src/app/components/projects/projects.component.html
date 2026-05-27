@@ -5,7 +5,7 @@
     <div class="ap-modal ap-modal-md" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
             <h2 class="ap-modal-title">{{ editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h2>
-            <button type="button" class="ap-modal-close" (click)="cancelEdit()" title="Cerrar">
+            <button type="button" class="ap-modal-close" (click)="cancelEdit()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -26,7 +26,7 @@
                 </div>
 
                 <div class="ap-field">
-                    <label class="ap-label">Descripción</label>
+                    <label class="ap-label">{{ 'projects.description' | translate }}</label>
                     <textarea class="ap-textarea" name="description" [(ngModel)]="newProject.description"
                               rows="4" placeholder="Contexto del proyecto..."></textarea>
                 </div>
@@ -129,7 +129,7 @@
     <div class="ap-modal ap-modal-lg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
             <h2 class="ap-modal-title">Participantes: {{ managingContactsForProject.name }}</h2>
-            <button type="button" class="ap-modal-close" (click)="closeContacts()" title="Cerrar">
+            <button type="button" class="ap-modal-close" (click)="closeContacts()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -223,11 +223,11 @@
             <form (ngSubmit)="submitContact()" #contactForm="ngForm" class="ap-contact-form">
                 <div class="ap-grid-2">
                     <div class="ap-field">
-                        <label class="ap-label">Nombre <span class="ap-required">*</span></label>
+                        <label class="ap-label">{{ 'common.name' | translate }} <span class="ap-required">*</span></label>
                         <input class="ap-input" type="text" name="contactName" [(ngModel)]="newContact.name" required placeholder="ej: Juan Pérez" />
                     </div>
                     <div class="ap-field">
-                        <label class="ap-label">Correo <span class="ap-required">*</span></label>
+                        <label class="ap-label">{{ 'common.email' | translate }} <span class="ap-required">*</span></label>
                         <input class="ap-input" type="email" name="contactEmail" [(ngModel)]="newContact.email" required placeholder="juan@empresa.com" />
                     </div>
                     <div class="ap-field">
@@ -270,7 +270,7 @@
     <div class="ap-modal ap-modal-lg" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <header class="ap-modal-head">
             <h2 class="ap-modal-title">Rutas de Integración: {{ managingRoutingsForProject.name }}</h2>
-            <button type="button" class="ap-modal-close" (click)="closeRoutings()" title="Cerrar">
+            <button type="button" class="ap-modal-close" (click)="closeRoutings()" [attr.title]="'common.close' | translate">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>

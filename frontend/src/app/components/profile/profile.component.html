@@ -79,7 +79,7 @@
           </svg>
         </span>
         <div class="pr-kpi-body">
-          <span class="pr-kpi-eyebrow">Último acceso</span>
+          <span class="pr-kpi-eyebrow">{{ 'users.last_login' | translate }}</span>
           <span class="pr-kpi-value">{{ lastLoginAgo }}</span>
           <span class="pr-kpi-hint">{{ lastLoginLabel }}</span>
         </div>
@@ -156,7 +156,7 @@
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                 <polyline points="22,6 12,13 2,6"></polyline>
               </svg>
-              Correo
+              {{ 'common.email' | translate }}
             </dt>
             <dd>{{ profile.email || '—' }}</dd>
           </div>
@@ -247,7 +247,7 @@
         </header>
         <div class="pr-form-grid">
           <div class="pr-field">
-            <label for="pr-language">Idioma de la interfaz</label>
+            <label for="pr-language">{{ 'profile.language' | translate }}</label>
             <app-language-selector variant="full"
                                    id="pr-language"></app-language-selector>
             <small style="display:block; margin-top:6px; color:#64748b; font-size:12px;">
@@ -256,7 +256,7 @@
             </small>
           </div>
           <div class="pr-field">
-            <label for="pr-timezone">Zona horaria</label>
+            <label for="pr-timezone">{{ 'profile.timezone' | translate }}</label>
             <select id="pr-timezone"
                     [ngModel]="uiPrefs.timeZone"
                     (ngModelChange)="onUiPrefChange('timeZone', $event)"
@@ -524,11 +524,11 @@
             <dd>{{ createdAtLabel }}</dd>
           </div>
           <div class="pr-summary-row">
-            <dt>Última actualización</dt>
+            <dt>{{ 'common.updated_at' | translate }}</dt>
             <dd>{{ updatedAtLabel }}</dd>
           </div>
           <div class="pr-summary-row">
-            <dt>Último acceso</dt>
+            <dt>{{ 'users.last_login' | translate }}</dt>
             <dd>{{ lastLoginLabel }}</dd>
           </div>
         </dl>
@@ -588,7 +588,7 @@
     <header class="pr-modal-head">
       <h3 *ngIf="twoFactorModalStep === 'enable-code'">Activar autenticación en dos pasos</h3>
       <h3 *ngIf="twoFactorModalStep === 'disable-password'">Desactivar autenticación en dos pasos</h3>
-      <button type="button" class="pr-modal-close" aria-label="Cerrar" (click)="closeTwoFactorModal()">×</button>
+      <button type="button" class="pr-modal-close" [attr.aria-label]="'common.close' | translate" (click)="closeTwoFactorModal()">×</button>
     </header>
 
     <!-- Activar -->
