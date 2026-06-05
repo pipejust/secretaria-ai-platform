@@ -35,6 +35,11 @@ interface Decision {
 
 interface StructuredAnswer {
     intro: string;
+    /** Sesiones cuyo contenido literal substancia el `intro`. El backend
+     *  las puebla; el frontend las usa para separar "fuentes con la
+     *  respuesta" (primarias) de "otras consultadas" (resto de citations).
+     *  Opcional por backward-compat con respuestas viejas. */
+    intro_source_sessions?: number[];
     /** El backend nuevo manda `Decision[]` con fuentes; toleramos string[]
      *  (formato viejo) por backward-compat con respuestas cacheadas. */
     decisions: Array<Decision | string>;
@@ -783,16 +788,60 @@ export class AskComponent implements OnInit, OnDestroy {
         return ids.size;
     }
 
-    /** Lista de fuentes únicas enriquecida con metadata de la sesión.
-     *  Una fuente por session_id (deduplicada) + agrupa los chunks. */
-    sourceList(turn: ChatTurn): {
+    /** IDs de sesiones que el LLM citó como soporte directo de la respuesta:
+     *  intro_source_sessions + decisions/action_items/risks/agreements
+     *  source_sessions. Estos son los chips visibles destacados. */
+    private primarySessionIds(turn: ChatTurn): Set<number> {
+        const ids = new Set<number>();
+        const s = turn?.structured;
+        if (!s) return ids;
+        for (const sid of (s.intro_source_sessions || [])) ids.add(sid);
+        const collect = (arr?: Array<Decision | string>) => {
+            for (const d of (arr || [])) {
+                if (typeof d === 'string') continue;
+                for (const sid of (d?.source_sessions || [])) ids.add(sid);
+            }
+        };
+        collect(s.decisions);
+        collect(s.risks);
+        collect(s.agreements);
+        for (const it of (s.action_items || [])) {
+            for (const sid of (it?.source_sessions || [])) ids.add(sid);
+        }
+        return ids;
+    }
+
+    /** Fuentes PRIMARIAS: las que el LLM cita como soporte de la respuesta. */
+    primarySourceList(turn: ChatTurn): {
         session_id: number;
         title: string;
         date: string;
         kinds: string[];
     }[] {
+        const primary = this.primarySessionIds(turn);
+        return this._buildSourceList(turn, sid => primary.has(sid));
+    }
+
+    /** Fuentes CONSULTADAS pero no citadas: estaban en el RAG pero el LLM
+     *  no las usó para construir la respuesta. Se muestran colapsadas. */
+    otherSourceList(turn: ChatTurn): {
+        session_id: number;
+        title: string;
+        date: string;
+        kinds: string[];
+    }[] {
+        const primary = this.primarySessionIds(turn);
+        return this._buildSourceList(turn, sid => !primary.has(sid));
+    }
+
+    /** Helper compartido: dedup por session_id, agrupa kinds, aplica filtro. */
+    private _buildSourceList(
+        turn: ChatTurn,
+        keep: (sid: number) => boolean,
+    ): { session_id: number; title: string; date: string; kinds: string[] }[] {
         const map = new Map<number, { kinds: Set<string> }>();
         for (const c of (turn?.citations || [])) {
+            if (!keep(c.session_id)) continue;
             const cur = map.get(c.session_id) || { kinds: new Set<string>() };
             cur.kinds.add(c.kind);
             map.set(c.session_id, cur);
@@ -806,6 +855,32 @@ export class AskComponent implements OnInit, OnDestroy {
                 kinds: Array.from(v.kinds),
             };
         });
+    }
+
+    /** Backward-compat: el template viejo usaba `sourceList(turn)` con todas
+     *  las fuentes. Lo mantenemos para no romper lo cacheado. */
+    sourceList(turn: ChatTurn): {
+        session_id: number;
+        title: string;
+        date: string;
+        kinds: string[];
+    }[] {
+        return this._buildSourceList(turn, () => true);
+    }
+
+    /** UI: si hay primarias, las mostramos arriba destacadas y el bloque
+     *  "Otras consultadas" se colapsa por default. Toggle por turn.id. */
+    private _otherSourcesExpanded = new Set<number>();
+    isOtherSourcesExpanded(turn: ChatTurn): boolean {
+        return this._otherSourcesExpanded.has(turn?.id || 0);
+    }
+    toggleOtherSources(turn: ChatTurn): void {
+        const id = turn?.id || 0;
+        if (this._otherSourcesExpanded.has(id)) {
+            this._otherSourcesExpanded.delete(id);
+        } else {
+            this._otherSourcesExpanded.add(id);
+        }
     }
 
     /** Copia el texto de la respuesta al portapapeles. */

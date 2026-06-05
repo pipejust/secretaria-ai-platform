@@ -445,8 +445,106 @@
                                 <div class="aa-a-body md-block" [innerHTML]="turn.answer | mdRender"></div>
                             </ng-template>
 
-                            <!-- Sección Fuentes -->
-                            <div class="aa-sources" *ngIf="sourceList(turn).length">
+                            <!-- ============ FUENTES PRIMARIAS ============
+                                 Las que el LLM CITÓ como soporte literal de
+                                 la respuesta (intro_source_sessions +
+                                 source_sessions de cada decision/task/risk).
+                                 Se destacan visualmente con borde verde
+                                 + check. -->
+                            <div class="aa-sources aa-sources--primary"
+                                 *ngIf="primarySourceList(turn).length">
+                                <h3 class="aa-section-title">
+                                    <span class="aa-section-icon aa-section-icon--green" aria-hidden="true">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </span>
+                                    {{ 'ask.primary_sources' | translate }}
+                                </h3>
+                                <ul class="aa-source-list">
+                                    <li class="aa-source aa-source--primary"
+                                        *ngFor="let s of primarySourceList(turn); trackBy: trackBySource">
+                                        <a [routerLink]="['/admin/curation', s.session_id]"
+                                           class="aa-source-link aa-source-link--primary"
+                                           style="border-left: 3px solid #10b981; background: rgba(16,185,129,0.06);">
+                                            <span class="aa-source-icon">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                                </svg>
+                                            </span>
+                                            <span class="aa-source-title"><strong>{{ s.title }}</strong></span>
+                                            <span class="aa-source-date" *ngIf="s.date">{{ s.date }}</span>
+                                            <span class="aa-source-kinds">
+                                                <span class="aa-source-kind" *ngFor="let k of s.kinds">{{ k }}</span>
+                                            </span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- ============ OTRAS CONSULTADAS ============
+                                 Las que el LLM REVISÓ (RAG las trajo al
+                                 contexto) pero NO citó en la respuesta.
+                                 Colapsadas por default para no contaminar
+                                 visualmente; el user puede expandir si
+                                 sospecha que faltó algo. -->
+                            <div class="aa-sources aa-sources--other"
+                                 *ngIf="otherSourceList(turn).length">
+                                <button type="button"
+                                        class="aa-section-title aa-other-toggle"
+                                        (click)="toggleOtherSources(turn)"
+                                        style="background:none; border:none; cursor:pointer; padding:0; display:flex; align-items:center; gap:8px; font-size:inherit; font-weight:inherit; color:inherit; width:100%; text-align:left;">
+                                    <span class="aa-section-icon aa-section-icon--gray" aria-hidden="true">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                    </span>
+                                    <span>{{ 'ask.other_consulted_sources' | translate:{ n: otherSourceList(turn).length } }}</span>
+                                    <svg [style.transform]="isOtherSourcesExpanded(turn) ? 'rotate(180deg)' : 'rotate(0deg)'"
+                                         style="margin-left:auto; transition: transform 0.2s;"
+                                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
+                                <ul class="aa-source-list" *ngIf="isOtherSourcesExpanded(turn)"
+                                    style="margin-top:8px;">
+                                    <li class="aa-source aa-source--muted"
+                                        *ngFor="let s of otherSourceList(turn); trackBy: trackBySource"
+                                        style="opacity: 0.7;">
+                                        <a [routerLink]="['/admin/curation', s.session_id]" class="aa-source-link">
+                                            <span class="aa-source-icon">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                                </svg>
+                                            </span>
+                                            <span class="aa-source-title">{{ s.title }}</span>
+                                            <span class="aa-source-date" *ngIf="s.date">{{ s.date }}</span>
+                                            <span class="aa-source-kinds">
+                                                <span class="aa-source-kind" *ngFor="let k of s.kinds">{{ k }}</span>
+                                            </span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Fallback: si NO hay primarias pero sí
+                                 citations (compat con respuestas viejas /
+                                 cuando el LLM no pobló intro_source_sessions),
+                                 mostramos las "otras" como genéricas. -->
+                            <div class="aa-sources"
+                                 *ngIf="!primarySourceList(turn).length && !otherSourceList(turn).length && sourceList(turn).length">
                                 <h3 class="aa-section-title">
                                     <span class="aa-section-icon aa-section-icon--gray" aria-hidden="true">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"

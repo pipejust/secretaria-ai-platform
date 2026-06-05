@@ -2242,7 +2242,9 @@
     "status_in_progress": "In progress",
     "status_pending": "Pending",
     "status_not_started": "Not started",
-    "status_done": "Completed"
+    "status_done": "Completed",
+    "primary_sources": "Sources with the answer",
+    "other_consulted_sources": "Other sessions consulted ({{n}})"
   },
   "reports": {
     "subtitle": "Track performance, progress, and outcomes across your projects and meetings.",

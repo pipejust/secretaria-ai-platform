@@ -161,6 +161,10 @@ class StructuredAnswer(BaseModel):
 
     Secciones:
       · `intro` — párrafo introductorio (1-2 frases).
+      · `intro_source_sessions` — sesión(es) que contienen literalmente la
+        evidencia del `intro` (subset de citations). Permite al frontend
+        marcar las fuentes PRIMARIAS de la respuesta vs las "otras
+        consultadas". Si el intro es meta/agregado, puede venir vacío.
       · `decisions` — decisiones clave con sus fuentes.
       · `action_items` — tareas pendientes con responsable / fecha límite.
       · `risks` — riesgos identificados con sus fuentes.
@@ -168,6 +172,7 @@ class StructuredAnswer(BaseModel):
     Si el modelo no encuentra alguna sección, devuelve [] o "".
     """
     intro: str = ""
+    intro_source_sessions: list[int] = []
     decisions: list[Decision] = []
     action_items: list[ActionItemDTO] = []
     risks: list[Decision] = []
@@ -837,6 +842,7 @@ async def ask(
         f"con esta estructura EXACTA:\n"
         "{\n"
         f'  "intro": "<resumen introductorio en {out_lang_name}, 1-2 frases>",\n'
+        '  "intro_source_sessions": [<id_int>, ...],\n'
         '  "decisions": [\n'
         '    {"text": "<decisión textual>", "source_sessions": [<id_int>, ...]}\n'
         "  ],\n"
@@ -911,7 +917,17 @@ async def ask(
         "más recientes (orden cronológico DESC). La \"última sesión\" es la "
         "de FECHA MÁS RECIENTE (mira el `Fecha:` del header) que pertenezca "
         "al proyecto/cliente mencionado en la pregunta. NO cites sesiones "
-        "más antiguas como fuentes para una pregunta sobre \"la última\"."
+        "más antiguas como fuentes para una pregunta sobre \"la última\".\n"
+        "16. `intro_source_sessions` es CRÍTICO para que el frontend distinga "
+        "las fuentes con la respuesta de las \"otras consultadas\". Pon AHÍ "
+        "exclusivamente los IDs de las sesiones cuyo CONTENIDO LITERAL "
+        "(transcript, decisiones, acuerdos, riesgos o tareas — NO solo el "
+        "título) substancia el `intro`. Si el `intro` dice \"Raúl no llegó "
+        "a la última sesión\", `intro_source_sessions` debe contener SOLO la "
+        "sesión cuyo transcript dice que no llegó, NO las otras sesiones del "
+        "mismo cliente. Si el `intro` es un agregado de varias sesiones (ej. "
+        "\"se discutieron 4 temas\"), incluye todas las sesiones implicadas. "
+        "Si el `intro` es genérico (\"no hay información\"), déjalo vacío []."
     )
     quality_note = ""
     if low_quality:
@@ -1027,8 +1043,16 @@ async def ask(
             # La DB es la fuente de verdad; sólo rellenamos campos vacíos.
             _enrich_action_items_from_db(db, tenant.id, action_items)
 
+            # Sanitiza intro_source_sessions del modelo: solo aceptamos IDs
+            # que estén en relevant_session_ids (el set que el LLM vio en el
+            # contexto). Esto previene que el LLM cite session_ids
+            # inventados o de otra empresa.
+            intro_sids = _coerce_int_list(parsed.get("intro_source_sessions"))
+            intro_sids = [s for s in intro_sids if s in relevant_session_ids]
+
             structured = StructuredAnswer(
                 intro=str(parsed.get("intro") or ""),
+                intro_source_sessions=intro_sids,
                 decisions=decisions,
                 action_items=action_items,
                 risks=risks,

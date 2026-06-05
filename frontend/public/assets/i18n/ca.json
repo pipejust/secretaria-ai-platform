@@ -2242,7 +2242,9 @@
     "status_in_progress": "En curs",
     "status_pending": "Pendent",
     "status_not_started": "No iniciat",
-    "status_done": "Completat"
+    "status_done": "Completat",
+    "primary_sources": "Fonts amb la resposta",
+    "other_consulted_sources": "Altres sessions consultades ({{n}})"
   },
   "reports": {
     "subtitle": "Fes seguiment al rendiment, progrés i resultats dels teus projectes i reunions.",
