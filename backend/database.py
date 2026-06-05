@@ -166,6 +166,10 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_code_expires_at VARCHAR(64)',
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_code_purpose VARCHAR(32)',
             'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS two_factor_attempts INTEGER NOT NULL DEFAULT 0',
+            # Soft delete — el admin "elimina" usuarios desde /admin/users.
+            # Conservamos la fila (para no romper FKs en ActionItem.owner_email,
+            # AuditLog.user_id, etc.) pero la excluimos de listas y logins.
+            'ALTER TABLE "user"             ADD COLUMN IF NOT EXISTS deleted_at VARCHAR(64)',
             # Role — columnas nuevas que SQLModel mapea pero la DB heredada no tiene.
             "ALTER TABLE role               ADD COLUMN IF NOT EXISTS is_system  BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE role               ADD COLUMN IF NOT EXISTS created_at VARCHAR(64)",

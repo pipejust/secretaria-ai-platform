@@ -272,6 +272,23 @@
                                 </svg>
                                 {{ (u.is_active ? 'users.deactivate' : 'users.activate') | translate }}
                             </button>
+                            <!-- Soft delete — separador visual antes para diferenciar
+                                 acción destructiva del toggle activate/deactivate.
+                                 No se ofrece para el propio user logueado (backend
+                                 también lo rechazaria con 400). -->
+                            <button *ngIf="u.id !== currentUserId"
+                                    class="us-kebab-danger"
+                                    (click)="deleteUser(u, $event); closeRowMenu()"
+                                    style="border-top:1px solid #e2e8f0; color:#b91c1c;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6l-1.5 14a2 2 0 0 1-2 2H8.5a2 2 0 0 1-2-2L5 6"></path>
+                                    <path d="M10 11v6"></path>
+                                    <path d="M14 11v6"></path>
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                                </svg>
+                                {{ 'users.delete' | translate }}
+                            </button>
                         </div>
                     </span>
                 </div>
@@ -550,11 +567,18 @@
                      (caso recomendado para invitaciones). Si ON: el backend
                      genera la password temporal y los inputs se ocultan.
                      Si OFF: el admin tipea la password manualmente. -->
+                <!-- Checkbox grande + accent-color para que el estado active/
+                     inactive sea VISIBLE. Antes el browser-default checkbox
+                     era casi invisible sobre el fondo gris-claro (#f8fafc)
+                     porque su color por defecto es system gray casi del mismo
+                     hue. Forzamos accent-color al primary del tenant y le
+                     damos 18x18 px + border explicito para que el "tick" sea
+                     claro independiente del browser/OS. -->
                 <div class="us-field us-field--full" style="background:#f8fafc; padding:14px 16px; border-radius:8px; border:1px solid #e2e8f0;">
                     <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
                         <input type="checkbox" name="must_change_password"
                                [(ngModel)]="newUser.must_change_password"
-                               style="margin-top:3px;"/>
+                               style="margin-top:3px; width:18px; height:18px; accent-color: var(--brand-primary, #1F2A52); cursor:pointer; flex-shrink:0;"/>
                         <span style="flex:1;">
                             <strong style="display:block; color:#0f172a; font-size:14px;">{{ 'users.force_password_change' | translate }}</strong>
                             <small style="display:block; color:#64748b; font-size:12.5px; margin-top:2px;">

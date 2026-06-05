@@ -145,6 +145,15 @@ class User(SQLModel, table=True):
     # respeta esta preferencia y la sincroniza con localStorage.
     language: str = Field(default="es", max_length=4, description="Idioma de la UI: es | ca | en")
 
+    # Soft delete — cuando el admin elimina un usuario desde /admin/users,
+    # NO borramos la fila (rompería FKs en AuditLog, ActionItem.owner_email,
+    # historial de sesiones, etc.). Marcamos `deleted_at` con un ISO
+    # timestamp; el listado, los logins y los lookups por email los excluyen.
+    deleted_at: Optional[str] = Field(
+        default=None, index=True,
+        description="ISO timestamp del soft delete. NULL = activo, valor = borrado.",
+    )
+
     # Autenticación en dos pasos (2FA) — método email-OTP.
     two_factor_enabled: bool = Field(default=False, description="Si True, el login exige verificación adicional por email.")
     two_factor_method: Optional[str] = Field(default="email", description="'email' por ahora; reservado para TOTP futuro.")

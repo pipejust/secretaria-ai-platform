@@ -728,7 +728,14 @@
     "msg_delta_this_month_neg": "{{diff}} este mes",
     "msg_no_users_label": "Sin usuarios",
     "msg_showing_users_range": "Mostrando {{start}}-{{end}} de {{total}} usuarios",
-    "msg_percent_of_total": "{{pct}}% del total"
+    "msg_percent_of_total": "{{pct}}% del total",
+    "delete": "Eliminar",
+    "msg_delete_title": "¿Eliminar usuario?",
+    "msg_delete_text": "Vas a eliminar a \"{{user}}\". Su cuenta dejará de funcionar y no podrá iniciar sesión. El historial (auditoría, tareas, reuniones) se conserva.",
+    "msg_delete_btn": "Sí, eliminar",
+    "msg_delete_self_blocked": "No puedes eliminar tu propia cuenta. Pídele a otro admin que lo haga.",
+    "msg_user_deleted": "Usuario \"{{user}}\" eliminado.",
+    "msg_delete_failed": "No pude eliminar el usuario. Inténtalo de nuevo en unos minutos."
   },
   "tenants": {
     "title": "Empresas",

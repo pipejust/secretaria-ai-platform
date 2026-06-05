@@ -728,7 +728,14 @@
     "msg_delta_this_month_neg": "{{diff}} this month",
     "msg_no_users_label": "No users",
     "msg_showing_users_range": "Showing {{start}}-{{end}} of {{total}} users",
-    "msg_percent_of_total": "{{pct}}% of total"
+    "msg_percent_of_total": "{{pct}}% of total",
+    "delete": "Delete",
+    "msg_delete_title": "Delete user?",
+    "msg_delete_text": "You're about to delete \"{{user}}\". Their account will stop working and they won't be able to sign in. History (audit, tasks, meetings) is preserved.",
+    "msg_delete_btn": "Yes, delete",
+    "msg_delete_self_blocked": "You can't delete your own account. Ask another admin to do it.",
+    "msg_user_deleted": "User \"{{user}}\" deleted.",
+    "msg_delete_failed": "Couldn't delete the user. Try again in a few minutes."
   },
   "tenants": {
     "title": "Companies",

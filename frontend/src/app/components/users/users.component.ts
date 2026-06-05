@@ -475,6 +475,53 @@ export class UsersComponent implements OnInit, OnDestroy {
     }
 
     // ============================================================
+    /** ID del usuario logueado — usado para ocultar acciones destructivas
+     *  sobre la propia cuenta (eliminar / desactivar). El backend también
+     *  rechaza con 400, pero hacerlo en UI evita el round-trip. */
+    get currentUserId(): number | null {
+        return this.authService.currentUserValue?.id ?? null;
+    }
+
+    /** Soft delete del usuario. Confirmación obligatoria — el backend
+     *  marca `deleted_at` y excluye al user del listado / login. Las filas
+     *  hijas (AuditLog, ActionItem, sesiones) NO se tocan. */
+    deleteUser(user: UserRow, evt?: Event): void {
+        if (evt) evt.stopPropagation();
+        this.closeRowMenu();
+        if (user.id === this.currentUserId) {
+            this.toast.error(this.translate.instant('users.msg_delete_self_blocked'));
+            return;
+        }
+        this.confirmAction({
+            title: this.translate.instant('users.msg_delete_title'),
+            message: this.translate.instant('users.msg_delete_text', { user: user.full_name || user.email }),
+            confirmLabel: this.translate.instant('users.msg_delete_btn'),
+            confirmVariant: 'danger',
+            action: () => this._performDelete(user),
+        });
+    }
+
+    private _performDelete(user: UserRow): void {
+        this.http.delete(
+            `${environment.apiUrl}/users/${user.id}`,
+            { headers: this.authService.getAuthHeaders() },
+        ).pipe(takeUntil(this.destroy$))
+        .subscribe({
+            next: () => {
+                // Quitar de listado local sin re-fetch — el backend ya marcó
+                // deleted_at y un GET /users no lo devolverá tampoco.
+                this.users = this.users.filter(u => u.id !== user.id);
+                this.cdr.detectChanges();
+                this.toast.success(
+                    this.translate.instant('users.msg_user_deleted', { user: user.full_name || user.email }),
+                );
+            },
+            error: (err) => {
+                this.toast.error(err?.error?.detail || this.translate.instant('users.msg_delete_failed'));
+            },
+        });
+    }
+
     // Toggle status — con confirm modal cuando se va a desactivar.
     // ============================================================
     private _performToggleStatus(user: UserRow): void {

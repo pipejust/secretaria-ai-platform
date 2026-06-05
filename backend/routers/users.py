@@ -71,9 +71,17 @@ def list_users(
     admin_user: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Listado de usuarios del tenant actual con todos los campos visibles."""
+    """Listado de usuarios del tenant actual con todos los campos visibles.
+
+    Excluye los soft-deleted (`deleted_at IS NOT NULL`) — el admin los borró
+    desde la UI. Para volver a verlos se restauran con PUT setting
+    `deleted_at=null` (no expuesto en la UI actual, accesible via SQL).
+    """
     users = db.exec(
-        select(User).where(User.tenant_id == tenant.id).order_by(User.id)
+        select(User)
+        .where(User.tenant_id == tenant.id)
+        .where(User.deleted_at.is_(None))  # noqa: E711 — soft-delete filter
+        .order_by(User.id)
     ).all()
     return [_serialize_user(u) for u in users]
 
@@ -178,6 +186,48 @@ def toggle_user_status(
         raise HTTPException(status_code=400, detail="No puedes desactivar tu propia cuenta")
     updated = crud.user.update(db, db_obj=user, obj_in={"is_active": is_active})
     return {"msg": "Status actualizado", "is_active": updated.is_active}
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_200_OK)
+def soft_delete_user(
+    user_id: int,
+    db: Session = Depends(get_session),
+    admin_user: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Soft delete del usuario.
+
+    NO se borra la fila: marcamos `deleted_at` con ISO timestamp y
+    `is_active=False`. Conservar la fila evita romper FKs hijos:
+    - AuditLog.user_id quedaría con un id huérfano
+    - ActionItem.owner_email + denormalizaciones de proyectos quedarían stale
+    - Historial de logins / sesiones lo seguimos pudiendo auditar
+
+    Guardas duras:
+    - Aislado por tenant (no cruza empresas)
+    - Un admin NO puede borrarse a sí mismo (UX-safety)
+    - Si el user ya está soft-deleted, devolvemos 200 idempotente
+      (operación segura de re-ejecutar)
+    """
+    user = db.get(User, user_id)
+    if not user or user.tenant_id != tenant.id:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if user.id == admin_user.id:
+        raise HTTPException(
+            status_code=400,
+            detail="No puedes eliminar tu propia cuenta. Pide a otro admin que lo haga.",
+        )
+    if user.deleted_at:
+        # Idempotente — ya estaba borrado, devolvemos OK sin tocar.
+        return {"msg": "Usuario ya eliminado", "user_id": user.id, "deleted_at": user.deleted_at}
+
+    now_iso = datetime.now().isoformat()
+    user.deleted_at = now_iso
+    user.is_active = False
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"msg": "Usuario eliminado", "user_id": user.id, "deleted_at": user.deleted_at}
 
 
 @router.get("/{user_id}/access-summary")
