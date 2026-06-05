@@ -316,12 +316,35 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
+/* Checkboxes y radios: REVERTIR el `appearance: none` del selector
+   genérico `input` de arriba. Sin esto, el browser no dibuja el tick
+   nativo (queda un círculo vacío sea cual sea su estado checked),
+   bug reportado: el toggle "Forzar cambio de contraseña" se veía
+   idéntico activo e inactivo en /admin/users y /admin/super/tenants.
+
+   accent-color colorea el tick nativo con el primario de la marca. */
 input[type="checkbox"],
 input[type="radio"] {
-  width: auto;
-  height: auto;
+  -webkit-appearance: auto;
+  appearance: auto;
+  width: 18px;
+  height: 18px;
   padding: 0;
-  accent-color: var(--color-accent);
+  accent-color: var(--brand-primary, var(--color-accent));
+  cursor: pointer;
+  /* Anulamos los `height: 44px` + `border-radius` heredados del
+     selector general que descuadraban el cuadro del checkbox. */
+  border: initial;
+  border-radius: initial;
+  background: initial;
+  box-shadow: none;
+}
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  /* Restauramos un focus ring discreto compatible con el resto del UI. */
+  outline: 2px solid var(--color-border-focus, #3b82f6);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 .form-group {
