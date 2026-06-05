@@ -257,6 +257,160 @@ def _enrich_chunks_with_session_text(
     return out
 
 
+# Palabras vacías comunes para no tomarlas como "nombre propio". Mantengo
+# corto y solo lo que confunde al heurístico — el filtro real es que tengan
+# longitud ≥3 y empiecen con mayúscula.
+_PROPER_NOUN_STOPWORDS = frozenset({
+    # ES — comienzo de frase típico
+    "Que", "Qué", "Cómo", "Como", "Dónde", "Donde", "Cuándo", "Cuando",
+    "Por", "Para", "Sobre", "Con", "Sin", "Quién", "Quien", "Cuáles",
+    "Cuales", "Hay", "Han", "Habrá", "Tienes", "Tienen", "Acten",
+    # CA
+    "Què", "Qui", "Com", "Quan", "On", "Per", "Sense", "Tens",
+    # EN
+    "What", "Who", "Where", "When", "Why", "How", "Did", "Does", "Has",
+    "Have", "Is", "Are", "Will", "Can", "Should",
+    # Conectores típicos al inicio
+    "Y", "O", "Si", "No", "El", "La", "Los", "Las", "Un", "Una", "Es",
+    "The", "A", "An", "Of", "In", "On", "To", "And", "Or",
+})
+
+
+def _extract_proper_nouns(q: str) -> list[str]:
+    """Extrae candidatos de nombre propio de la pregunta.
+
+    Heurística simple: palabras de ≥3 letras que arrancan con mayúscula
+    y NO son stopwords del set above. Aplica también a palabras como
+    "Camila" en mitad de la frase pero ignora "Cómo", "Quién", etc. que
+    son palabras-interrogativas que aparecen capitalizadas al inicio.
+
+    Devuelve hasta 6 candidatos para limitar el costo del SQL ILIKE.
+    """
+    import re as _re
+    if not q:
+        return []
+    candidates: list[str] = []
+    seen: set[str] = set()
+    # Tokeniza preservando acentos y la ñ.
+    for tok in _re.findall(r"[A-ZÁÉÍÓÚÑÀÈÌÒÙÄËÏÖÜ][a-záéíóúñàèìòùäëïöü]{2,}", q):
+        if tok in _PROPER_NOUN_STOPWORDS:
+            continue
+        low = tok.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        candidates.append(tok)
+        if len(candidates) >= 6:
+            break
+    return candidates
+
+
+def _load_keyword_matches(
+    db: "Session",
+    tenant_id: int,
+    project_id: Optional[int],
+    names: list[str],
+    limit_per_name: int = 4,
+) -> list[dict]:
+    """Búsqueda LITERAL (SQL ILIKE) por nombres propios en transcript y
+    secciones procesadas.
+
+    Razón de ser: la búsqueda vector (RAG) puede pasar por alto menciones
+    aisladas de nombres propios en transcripts largos — el embedding del
+    chunk se "diluye" por el resto del texto y la pregunta corta
+    "¿quién es Camila?" no compite contra texto temático extenso. El
+    keyword match garantiza que si una sesión menciona "Camila"
+    LITERALMENTE, esa sesión llega al contexto del LLM.
+
+    Para cada `name`, busca hasta `limit_per_name` sesiones distintas
+    (ordenadas por id DESC = más recientes primero). Devuelve chunks
+    estructurados igual que `_load_recent_session_context` para que el
+    merge con los chunks de RAG sea transparente.
+    """
+    if not names:
+        return []
+    from sqlmodel import select
+    from models import MeetingSession, Project
+
+    out: list[dict] = []
+    seen_sids: set[int] = set()
+    proj_cache: dict[int, str] = {}
+
+    for name in names:
+        # ILIKE con wildcards — buscamos `Camila`, `Camila,`, `con Camila`,
+        # etc. Postgres ILIKE es case-insensitive con índices opcionales
+        # (no críticos para datasets pequeños del MVP).
+        pattern = f"%{name}%"
+        q = (
+            select(MeetingSession)
+            .where(MeetingSession.tenant_id == tenant_id)
+            .where(
+                (MeetingSession.raw_transcript.ilike(pattern))
+                | (MeetingSession.raw_summary.ilike(pattern))
+                | (MeetingSession.processed_decisions.ilike(pattern))
+                | (MeetingSession.processed_agreements.ilike(pattern))
+                | (MeetingSession.processed_risks.ilike(pattern))
+            )
+        )
+        if project_id:
+            q = q.where(MeetingSession.project_id == project_id)
+        q = q.order_by(MeetingSession.id.desc()).limit(limit_per_name)
+        rows = db.exec(q).all()
+
+        for s in rows:
+            if not s.id or s.id in seen_sids:
+                continue
+            seen_sids.add(s.id)
+
+            # Snippet = el cacho del transcript que menciona el nombre.
+            # Cortamos ~600 chars alrededor de la primera ocurrencia para
+            # que el LLM vea el CONTEXTO de la mención sin malgastar tokens
+            # con el resto de la reunión.
+            snippet = _name_snippet(s.raw_transcript or "", name) \
+                   or _name_snippet(s.raw_summary or "", name) \
+                   or _name_snippet(s.processed_decisions or "", name) \
+                   or _name_snippet(s.processed_agreements or "", name) \
+                   or ""
+            if not snippet:
+                continue
+
+            proj_name = ""
+            if s.project_id:
+                if s.project_id not in proj_cache:
+                    p = db.get(Project, s.project_id)
+                    proj_cache[s.project_id] = (p.name if p else "") or ""
+                proj_name = proj_cache[s.project_id]
+
+            out.append({
+                "session_id": s.id,
+                "kind": f"keyword:{name.lower()}",
+                "content": f"[Mención literal de \"{name}\"]\n{snippet}",
+                # distance=0 → bypassea el filtro de relevance.
+                "distance": 0.0,
+                "session_title": s.title or "",
+                "session_date": s.date or "",
+                "project_name": proj_name,
+            })
+    return out
+
+
+def _name_snippet(text: str, name: str, window: int = 600) -> str:
+    """Devuelve una ventana de `window` chars centrada en la primera
+    ocurrencia (case-insensitive) de `name` dentro de `text`. None si no
+    aparece."""
+    if not text or not name:
+        return ""
+    low = text.lower()
+    idx = low.find(name.lower())
+    if idx == -1:
+        return ""
+    start = max(0, idx - window // 2)
+    end = min(len(text), idx + len(name) + window // 2)
+    prefix = "…" if start > 0 else ""
+    suffix = "…" if end < len(text) else ""
+    return prefix + text[start:end] + suffix
+
+
 def _is_recency_question(q: str) -> bool:
     """Detecta si la pregunta tiene intent de listar sesiones RECIENTES /
     GENERALES (sin un proyecto/cliente específico). Triggers comunes en
@@ -293,9 +447,13 @@ def _load_recent_session_context(
     q = q.where(MeetingSession.status.in_(("pending", "completed", "processed")))
     rows = db.exec(q).all()
 
-    # Ordenamos por id descendente (más recientes primero — created_at suele
-    # correlacionar con id en este sistema).
-    rows.sort(key=lambda s: s.id or 0, reverse=True)
+    # Ordenamos por DATE descendente (campo `date` = fecha real de la
+    # reunión); fallback a id si la fecha viene vacía. Antes solo usábamos
+    # id, que falla cuando se sube una sesión vieja (id alto, fecha vieja).
+    def _sort_key(s):
+        d = (s.date or "").strip()
+        return (d, s.id or 0)
+    rows.sort(key=_sort_key, reverse=True)
     rows = rows[:limit]
 
     # Cache de nombre de proyecto.
@@ -304,8 +462,11 @@ def _load_recent_session_context(
     for s in rows:
         if not s.id:
             continue
-        # Componemos un "snippet" con TODO lo curado de la sesión para que
-        # el LLM tenga material aunque la pregunta sea muy abierta.
+        # Componemos un "snippet" con TODO lo curado + porción del transcript
+        # para que el LLM pueda responder preguntas que SOLO se contestan
+        # leyendo el texto crudo (ej. "¿Raúl llegó a la reunión?" — la
+        # asistencia/excusa solo aparece en el transcript, nunca en el
+        # resumen estructurado).
         parts: list[str] = []
         if (s.raw_summary or "").strip():
             parts.append("Resumen: " + s.raw_summary.strip())
@@ -315,6 +476,12 @@ def _load_recent_session_context(
             parts.append("Acuerdos: " + s.processed_agreements.strip())
         if (s.processed_risks or "").strip():
             parts.append("Riesgos: " + s.processed_risks.strip())
+        if (s.raw_transcript or "").strip():
+            # Primeros ~1800 chars del transcript: cubre intro/asistencia
+            # ("hola Raúl... ah no llegó", "presentes: Camila, María...")
+            # sin inflar tokens.
+            t = s.raw_transcript.strip()
+            parts.append("Transcripción (inicio): " + (t[:1800] + ("…" if len(t) > 1800 else "")))
         snippet = "\n\n".join(parts)
         if not snippet.strip():
             continue
@@ -582,6 +749,28 @@ async def ask(
                 chunks.append(rc)
                 seen.add(rc["session_id"])
 
+    # KEYWORD MATCH para nombres propios — fix bug reportado donde el
+    # vector search no encontraba menciones aisladas en transcripts largos
+    # ("quién es Camila" devolvía 'no sé' aunque Camila estuviera en la
+    # transcripción de varias sesiones). El match literal garantiza
+    # que esos chunks lleguen al LLM.
+    proper_nouns = _extract_proper_nouns(q)
+    if proper_nouns:
+        kw_chunks = _load_keyword_matches(
+            db, tenant.id, payload.project_id, proper_nouns, limit_per_name=4,
+        )
+        seen = {(c["session_id"], c.get("kind")) for c in chunks}
+        for kc in kw_chunks:
+            key = (kc["session_id"], kc.get("kind"))
+            if key not in seen:
+                chunks.append(kc)
+                seen.add(key)
+        logger.info(
+            "ask: proper_nouns=%s → +%s keyword chunks (sessions únicos: %s)",
+            proper_nouns, len(kw_chunks),
+            len({c["session_id"] for c in kw_chunks}),
+        )
+
     # Métrica de calidad: distancia del mejor chunk (0 = perfecto).
     best_distance = raw_chunks[0]["distance"] if raw_chunks else None
     low_quality = best_distance is not None and best_distance > 0.55  # señal para el prompt
@@ -696,7 +885,33 @@ async def ask(
         "información\" si las sesiones existen en el contexto.\n"
         "12. Cuando el `intro` lista sitios/clientes/proyectos, hazlo concreto "
         "y enuméralos por nombre (ej. \"Las sesiones registradas corresponden "
-        "a visitas a Kilómetro Rosso (20 mar), Forma Italia (18 mar)…\")."
+        "a visitas a Kilómetro Rosso (20 mar), Forma Italia (18 mar)…\").\n"
+        "13. PREGUNTAS SOBRE PERSONAS (\"quién es X\", \"qué hace X\", "
+        "\"X estuvo en la reunión\"): RECORRE el contexto buscando el nombre "
+        "LITERAL. Si encuentras menciones (en transcripts, decisiones, "
+        "acuerdos, riesgos o tareas), responde en `intro` con lo que se "
+        "diga de esa persona Y cita en `source_sessions` SOLO la(s) "
+        "sesión(es) donde aparece literalmente. Si la pregunta menciona "
+        "un nombre y NINGÚN bloque del contexto lo contiene, responde "
+        "claramente que NO HAY MENCIÓN de esa persona en el histórico — "
+        "NO inventes información ni mezcles con otra persona de nombre "
+        "parecido. Los bloques de tipo `Sección: keyword:<nombre>` "
+        "garantizan que esas sesiones mencionan el nombre LITERALMENTE.\n"
+        "14. PREGUNTAS SOBRE ASISTENCIA / NEGACIONES (\"X llegó a la "
+        "reunión\", \"X estuvo presente\", \"X confirmó\"): la respuesta "
+        "vive en el TRANSCRIPT, no en el resumen. LEE el bloque de tipo "
+        "`Sección: transcript` o el bloque `Transcripción (inicio): ...` "
+        "del Resumen extendido. Si el transcript dice \"X no pudo asistir\" "
+        "o \"X canceló\" o \"hoy nos faltó X\" → la respuesta es NO ASISTIÓ. "
+        "Si dice \"hola X\", \"X dijo que…\", o X habla en el transcript → "
+        "SÍ ASISTIÓ. NUNCA respondas \"sí asistió\" sin haber visto evidencia "
+        "literal en el transcript de esa sesión específica. Cita SOLO la "
+        "sesión que contiene la evidencia, no otras del mismo cliente.\n"
+        "15. \"ÚLTIMA SESIÓN DE <X>\": en el contexto vienen las sesiones "
+        "más recientes (orden cronológico DESC). La \"última sesión\" es la "
+        "de FECHA MÁS RECIENTE (mira el `Fecha:` del header) que pertenezca "
+        "al proyecto/cliente mencionado en la pregunta. NO cites sesiones "
+        "más antiguas como fuentes para una pregunta sobre \"la última\"."
     )
     quality_note = ""
     if low_quality:
