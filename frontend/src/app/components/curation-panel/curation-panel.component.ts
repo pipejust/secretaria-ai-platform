@@ -295,6 +295,66 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     return bestScore >= 0.25 ? bestId : null;
   }
 
+  /** Parsea `processed_attendees` (JSON string) a array tipado con
+   *  {name, role, entity, email}. Backend persiste tres formatos: array
+   *  JSON, JSON string, o texto plano. Cubrimos los tres. */
+  get parsedAttendees(): { name: string; role?: string; entity?: string; email?: string }[] {
+    const raw = this.meetingData.processed_attendees;
+    if (!raw) return [];
+    let arr: any[] = [];
+    if (Array.isArray(raw)) {
+      arr = raw;
+    } else {
+      try {
+        const obj = JSON.parse(String(raw));
+        if (Array.isArray(obj)) {
+          arr = obj;
+        } else if (typeof obj === 'string') {
+          arr = obj.split(/\n|,|•/).map(s => s.trim()).filter(Boolean);
+        }
+      } catch {
+        // fallback texto plano: separamos por salto/coma/viñeta
+        arr = String(raw).split(/\n|,|•/).map(s => s.trim()).filter(Boolean);
+      }
+    }
+    return arr
+      .map((x: any) => {
+        if (!x) return null;
+        if (typeof x === 'string') {
+          const s = x.trim();
+          return s ? { name: s } : null;
+        }
+        const name = (x.name || x.full_name || x.email || '').toString().trim();
+        if (!name) return null;
+        return {
+          name,
+          role: (x.role || x.position || '').toString().trim() || undefined,
+          entity: (x.entity || x.company || x.organization || '').toString().trim() || undefined,
+          email: (x.email || x.mail || '').toString().trim().toLowerCase() || undefined,
+        };
+      })
+      .filter((x): x is { name: string; role?: string; entity?: string; email?: string } => !!x);
+  }
+
+  /** Iniciales 2-letter de un nombre — para el avatar placeholder. */
+  attendeeInitials(name: string): string {
+    if (!name) return '··';
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '··';
+  }
+
+  /** Color determinístico del avatar derivado del nombre — mismo nombre
+   *  → mismo color en cualquier vista. Paleta sobria, no acid. */
+  attendeeColor(name: string): string {
+    const palette = [
+      '#3D6B5E', '#1F2A52', '#C8993B', '#7B4F8C',
+      '#B5651D', '#2C6E91', '#8B4A6B', '#4A7C59',
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    return palette[Math.abs(hash) % palette.length];
+  }
+
   loadProjects() {
     const headers = this.authService.getAuthHeaders();
     this.http.get<any[]>(`${environment.apiUrl}/api/projects`, { headers })

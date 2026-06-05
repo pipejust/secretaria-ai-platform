@@ -327,8 +327,13 @@ async def process_session_with_ai(
         db_contacts = db.exec(
             select(ProjectContact).where(ProjectContact.project_id == matched_project_id)
         ).all()
+        # IMPORTANTE incluir `entity` (empresa) — Groq lo usa para que cada
+        # asistente quede con su organización y para que las tareas sepan
+        # a qué empresa pertenece el responsable. Sin esto, el merge de
+        # speakers contra contacts no podía propagar la empresa al UI.
         project_contacts = [
-            {"name": c.name, "email": c.email, "role": c.role} for c in db_contacts
+            {"name": c.name, "email": c.email, "role": c.role, "entity": c.entity}
+            for c in db_contacts
         ]
 
     # ---------- 2. Groq → fundamentals + insights (CRÍTICO, con retry) ----------
@@ -372,7 +377,7 @@ async def process_session_with_ai(
                 )
             ).all()
             project_contacts = [
-                {"name": c.name, "email": c.email, "role": c.role}
+                {"name": c.name, "email": c.email, "role": c.role, "entity": c.entity}
                 for c in db_contacts
             ]
 
@@ -482,6 +487,39 @@ async def process_session_with_ai(
                 session_id, len(prev_items),
             )
 
+    # Index para post-match de owner_email cuando el LLM no lo encuentra.
+    # Construimos una lookup por nombre canonical -> email a partir de:
+    #   1) project_contacts (fuente primaria — el admin las definió)
+    #   2) processed_attendees recién mergeados (speakers que hablaron)
+    # Así, si el LLM dice owner_name="Camila" y deja owner_email="", lo
+    # rellenamos automáticamente con el email de Camila del proyecto.
+    _email_by_canon: dict[str, str] = {}
+    for _c in (project_contacts or []):
+        _nm = _canonical_speaker_name(_c.get("name") or "")
+        _em = (_c.get("email") or "").strip().lower()
+        if _nm and _em:
+            _email_by_canon[_nm] = _em
+    for _att in (final_attendees or []):
+        _nm = _canonical_speaker_name(_att.get("name") or "")
+        _em = (_att.get("email") or "").strip().lower()
+        if _nm and _em and _nm not in _email_by_canon:
+            _email_by_canon[_nm] = _em
+
+    def _resolve_owner_email(name: str, current_email: str) -> str:
+        """Devuelve el email del owner: respeta el que vino del LLM si
+        parece válido (tiene '@'), si no, lookup por nombre. Conserva ''
+        si el nombre es 'Unknown' o 'Por asignar'."""
+        if current_email and "@" in current_email:
+            return current_email.strip().lower()
+        if not name:
+            return ""
+        # Skip placeholders del LLM cuando no hay responsable claro.
+        nl = name.strip().lower()
+        if nl in ("unknown", "por asignar", "sin asignar", "no asignado", "n/a", "-"):
+            return ""
+        canon = _canonical_speaker_name(name)
+        return _email_by_canon.get(canon, "")
+
     created_tasks = 0
     for item_data in tasks_payload.get("action_items", []) or []:
         if isinstance(item_data, str):
@@ -507,6 +545,13 @@ async def process_session_with_ai(
 
         if not title_v and not description:
             continue
+
+        # Post-match: si el LLM dejó owner_email vacío, intentamos llenarlo
+        # con el email del contacto del proyecto o del attendee que matchee
+        # por nombre canonical. Soluciona el bug reportado donde tareas
+        # asignadas a "Camila" llegaban sin correo aunque Camila estuviera
+        # en project_contacts.
+        owner_email = _resolve_owner_email(owner_name, owner_email)
 
         db.add(
             ActionItem(

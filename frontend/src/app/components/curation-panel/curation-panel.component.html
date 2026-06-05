@@ -371,6 +371,61 @@
                               rows="8"></textarea>
                 </article>
 
+                <!-- ============================================================
+                     Participantes — quién asistió + cargo + empresa + email.
+                     El backend persiste en meetingsession.processed_attendees
+                     como JSON [{name, role, entity, email}]. La data se
+                     enriquece via merge con project_contacts del proyecto
+                     del que la sesión pertenece. Esto evita el bug donde
+                     un attendee aparecía solo con nombre sin rol/empresa
+                     aunque la persona estuviera definida en el proyecto.
+                     ============================================================ -->
+                <article class="cp-card" id="cp-card-attendees" *ngIf="parsedAttendees.length"
+                         [class.cp-card-focused]="focusedCard === 'cp-card-attendees'">
+                    <header class="cp-card-head">
+                        <div class="cp-card-icon cp-card-icon-blue">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </div>
+                        <div class="cp-card-titles">
+                            <h3>{{ 'meetings.participants' | translate }}</h3>
+                            <p class="cp-card-sub">
+                                {{ parsedAttendees.length }}
+                                {{ (parsedAttendees.length === 1 ? 'meetings.person' : 'meetings.people') | translate }}
+                            </p>
+                        </div>
+                    </header>
+                    <ul class="cp-attendee-list"
+                        style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
+                        <li *ngFor="let a of parsedAttendees"
+                            class="cp-attendee-row"
+                            style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                            <span class="cp-attendee-avatar"
+                                  [style.background]="attendeeColor(a.name)"
+                                  style="flex-shrink:0; width:36px; height:36px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px;">
+                                {{ attendeeInitials(a.name) }}
+                            </span>
+                            <div class="cp-attendee-body" style="flex:1; min-width:0;">
+                                <strong style="display:block; color:#0f172a; font-size:14px; font-weight:600;">{{ a.name }}</strong>
+                                <div class="cp-attendee-meta"
+                                     style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:3px; color:#64748b; font-size:12.5px;">
+                                    <span *ngIf="a.role && a.role !== '—'">{{ a.role }}</span>
+                                    <span *ngIf="(a.role && a.role !== '—') && (a.entity && a.entity !== '—')" style="color:#cbd5e1;">·</span>
+                                    <span *ngIf="a.entity && a.entity !== '—'" style="font-weight:500;">{{ a.entity }}</span>
+                                    <span *ngIf="(a.role || a.entity) && a.email" style="color:#cbd5e1;">·</span>
+                                    <a *ngIf="a.email" [href]="'mailto:' + a.email"
+                                       style="color:#3b82f6; text-decoration:none;">{{ a.email }}</a>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </article>
+
                 <!-- Transcripción Original -->
                 <article class="cp-card">
                     <header class="cp-card-head">
