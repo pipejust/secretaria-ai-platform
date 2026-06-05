@@ -212,10 +212,18 @@ def get_session_details(
     resolved_by_name = user_resolver.resolve_names_unambiguous(db, tenant.id, candidate_names)
 
     def _resolved_for_attendee(att) -> dict:
-        # Normaliza attendee → {name, email, user}
+        # Normaliza attendee → {name, email, role, entity, user}.
+        # role + entity vienen del transcript_pipeline (merge speakers +
+        # project_contacts) y debemos preservarlos para que el frontend
+        # los muestre en la card "Participantes" de la curación.
+        role = ""
+        entity = ""
         if isinstance(att, dict):
             email = (att.get("email") or att.get("mail") or "").strip().lower()
             name = att.get("name") or att.get("displayName") or (email.split("@")[0] if email else "")
+            # Conservamos role/entity si vinieron en el blob persistido.
+            role = (att.get("role") or att.get("position") or "").strip()
+            entity = (att.get("entity") or att.get("company") or att.get("organization") or "").strip()
         else:
             text = str(att).strip()
             if "@" in text:
@@ -235,6 +243,11 @@ def get_session_details(
         return {
             "email": email or None,
             "name": (u or {}).get("full_name") or name,
+            # role/entity SÓLO se persisten cuando son significativos —
+            # filtramos el placeholder '—' que el pipeline usa para
+            # speakers sin match en project_contacts.
+            "role": role if role and role != "—" else None,
+            "entity": entity if entity and entity != "—" else None,
             "user": u,  # None si es contacto externo
         }
 

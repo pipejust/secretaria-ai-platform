@@ -391,6 +391,16 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
                 processed_decisions: data.session.processed_decisions || '',
                 processed_risks: data.session.processed_risks || '',
                 processed_agreements: data.session.processed_agreements || '',
+                // Sin esto la card de Participantes nunca renderizaba —
+                // parsedAttendees leía processed_attendees que llegaba
+                // como undefined porque NUNCA se mapeaba del response.
+                // Tomamos preferentemente attendees_resolved (ya enriquecido
+                // por backend con role/entity + match a Users del tenant),
+                // y caemos al string crudo si no viene.
+                processed_attendees:
+                  (data.attendees_resolved && data.attendees_resolved.length)
+                    ? JSON.stringify(data.attendees_resolved)
+                    : (data.session.processed_attendees || ''),
                 ai_fields_regenerated: !!data.session.ai_fields_regenerated,
                 ai_tasks_regenerated: !!data.session.ai_tasks_regenerated,
                 action_items: (data.action_items || []).map((item: any) => ({
