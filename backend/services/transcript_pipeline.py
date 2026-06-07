@@ -236,6 +236,28 @@ def _merge_speakers_with_groq_attendees(
         for a in (groq_attendees or []) if isinstance(a, dict) and a.get("name")
     }
 
+    # Index secundario por APELLIDO (último token canonical de ≥3 letras)
+    # — fallback cuando el match por nombre completo falla. Caso real:
+    # transcript dice "JDiego Toro" (Fireflies pegó iniciales + apellido)
+    # pero el contact registrado es "Juan Toro". Sin este fallback el
+    # speaker queda sin enriquecer aunque CLARAMENTE sea él. Solo
+    # usamos el fallback si:
+    #   1. La canonical del apellido tiene ≥3 chars (evita falsos
+    #      positivos con apellidos cortos tipo "Li", "Wu")
+    #   2. EXACTAMENTE 1 contact tiene ese apellido (evita ambigüedad
+    #      cuando hay dos "García" en el mismo proyecto)
+    def _last_token_canonical(full_name: str) -> str:
+        parts = (full_name or "").strip().split()
+        if not parts:
+            return ""
+        return _canonical_speaker_name(parts[-1])
+
+    contacts_by_lastname: dict[str, list[dict]] = {}
+    for c in (project_contacts or []):
+        ln = _last_token_canonical(c.get("name", ""))
+        if ln and len(ln) >= 3:
+            contacts_by_lastname.setdefault(ln, []).append(c)
+
     out: list[dict] = []
     for spk in real_speakers:
         canon = _canonical_speaker_name(spk)
@@ -250,12 +272,27 @@ def _merge_speakers_with_groq_attendees(
         # "Juan Diego Toro" — es el nombre real con el que se le va a
         # asignar tareas y enviar correos.
         display_name = spk
+        matched_contact = None
+
+        # 1) Match exacto por nombre canonical completo.
         if canon in contacts_idx:
-            c = contacts_idx[canon]
-            role = c.get("role") or ""
-            entity = c.get("entity") or c.get("organization") or ""
-            email = c.get("email") or ""
-            contact_name = (c.get("name") or "").strip()
+            matched_contact = contacts_idx[canon]
+        else:
+            # 2) Fallback: match por apellido (último token canonical).
+            #    Solo si EXACTAMENTE 1 contact tiene ese apellido — si hay
+            #    2+ es ambiguo y preferimos quedarnos sin enriquecer a
+            #    arriesgarnos a asignar el email de la persona equivocada.
+            spk_lastname = _last_token_canonical(spk)
+            if spk_lastname and len(spk_lastname) >= 3:
+                candidates = contacts_by_lastname.get(spk_lastname, [])
+                if len(candidates) == 1:
+                    matched_contact = candidates[0]
+
+        if matched_contact is not None:
+            role = matched_contact.get("role") or ""
+            entity = matched_contact.get("entity") or matched_contact.get("organization") or ""
+            email = matched_contact.get("email") or ""
+            contact_name = (matched_contact.get("name") or "").strip()
             if contact_name:
                 display_name = contact_name
         elif canon in groq_idx:
