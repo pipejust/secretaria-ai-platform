@@ -236,22 +236,24 @@ def _merge_speakers_with_groq_attendees(
         for a in (groq_attendees or []) if isinstance(a, dict) and a.get("name")
     }
 
-    # Index secundario por APELLIDO (último token canonical de ≥3 letras)
-    # — fallback cuando el match por nombre completo falla. Caso real:
-    # transcript dice "JDiego Toro" (Fireflies pegó iniciales + apellido)
-    # pero el contact registrado es "Juan Toro". Sin este fallback el
-    # speaker queda sin enriquecer aunque CLARAMENTE sea él. Solo
-    # usamos el fallback si:
-    #   1. La canonical del apellido tiene ≥3 chars (evita falsos
-    #      positivos con apellidos cortos tipo "Li", "Wu")
-    #   2. EXACTAMENTE 1 contact tiene ese apellido (evita ambigüedad
-    #      cuando hay dos "García" en el mismo proyecto)
-    def _last_token_canonical(full_name: str) -> str:
+    # Helpers de tokenización para los match levels:
+    # - tokens canonicalizados ≥3 chars (filtra iniciales sueltas "J")
+    # - apellido = último token de ≥3 chars
+    # - nombres = todos los tokens excepto el último
+    def _tokens_canonical(full_name: str) -> list[str]:
         parts = (full_name or "").strip().split()
-        if not parts:
-            return ""
-        return _canonical_speaker_name(parts[-1])
+        return [t for t in (_canonical_speaker_name(p) for p in parts) if len(t) >= 3]
 
+    def _last_token_canonical(full_name: str) -> str:
+        toks = _tokens_canonical(full_name)
+        return toks[-1] if toks else ""
+
+    def _first_tokens_canonical(full_name: str) -> list[str]:
+        toks = _tokens_canonical(full_name)
+        return toks[:-1] if len(toks) > 1 else []
+
+    # Index secundario por APELLIDO — usado tanto por el match de nivel 2
+    # (nombre+apellido) como por el de nivel 3 (apellido solo).
     contacts_by_lastname: dict[str, list[dict]] = {}
     for c in (project_contacts or []):
         ln = _last_token_canonical(c.get("name", ""))
@@ -271,6 +273,17 @@ def _merge_speakers_with_groq_attendees(
         # el transcript dice "[JDiego]", el final_attendees debe decir
         # "Juan Diego Toro" — es el nombre real con el que se le va a
         # asignar tareas y enviar correos.
+        #
+        # Jerarquía de match (pedido del usuario — de más preciso a
+        # menos preciso, paramos en el primero que matchee):
+        #   1. Nombre canonical COMPLETO (más preciso, sin ambigüedad)
+        #   2. Nombre + apellido: al menos un primer-nombre Y el apellido
+        #      del speaker existen en algún token canonical del contact.
+        #      Ej: speaker "Juan Toro" matchea contact "Juan Diego Toro"
+        #      porque "juan" ∈ {juan,diego} y "toro" == "toro".
+        #   3. Apellido solo (último token), pero EXACTAMENTE 1 contact con
+        #      ese apellido (si hay 2+ es ambiguo → mejor no enriquecer).
+        #   4. No hay match → se deja el nombre del transcript tal cual.
         display_name = spk
         matched_contact = None
 
@@ -278,15 +291,27 @@ def _merge_speakers_with_groq_attendees(
         if canon in contacts_idx:
             matched_contact = contacts_idx[canon]
         else:
-            # 2) Fallback: match por apellido (último token canonical).
-            #    Solo si EXACTAMENTE 1 contact tiene ese apellido — si hay
-            #    2+ es ambiguo y preferimos quedarnos sin enriquecer a
-            #    arriesgarnos a asignar el email de la persona equivocada.
             spk_lastname = _last_token_canonical(spk)
-            if spk_lastname and len(spk_lastname) >= 3:
-                candidates = contacts_by_lastname.get(spk_lastname, [])
-                if len(candidates) == 1:
-                    matched_contact = candidates[0]
+            spk_first_tokens = set(_first_tokens_canonical(spk))
+
+            # 2) Match por nombre + apellido — más preciso que solo
+            #    apellido porque exige overlap también en algún nombre.
+            #    Si hay 1 sólo contact que cumple ambas condiciones, gana.
+            if spk_lastname and len(spk_lastname) >= 3 and spk_first_tokens:
+                ln_candidates = contacts_by_lastname.get(spk_lastname, [])
+                strict_matches = []
+                for c in ln_candidates:
+                    c_all_tokens = set(_tokens_canonical(c.get("name", "")))
+                    if spk_first_tokens & c_all_tokens:
+                        strict_matches.append(c)
+                if len(strict_matches) == 1:
+                    matched_contact = strict_matches[0]
+
+            # 3) Fallback final: apellido solo, único contact.
+            if matched_contact is None and spk_lastname and len(spk_lastname) >= 3:
+                ln_candidates = contacts_by_lastname.get(spk_lastname, [])
+                if len(ln_candidates) == 1:
+                    matched_contact = ln_candidates[0]
 
         if matched_contact is not None:
             role = matched_contact.get("role") or ""
