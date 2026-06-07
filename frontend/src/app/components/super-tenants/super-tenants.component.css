@@ -501,7 +501,10 @@
     position: absolute;
     top: 38px;
     right: 0;
-    z-index: 50;
+    /* z-index: 1000 → consistente con el resto de listas (meetings,
+       templates, projects, users). Escapa stacking contexts de paneles
+       laterales sticky. */
+    z-index: 1000;
     min-width: 220px;
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);

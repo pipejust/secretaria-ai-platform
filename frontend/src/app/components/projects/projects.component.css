@@ -527,7 +527,10 @@
     list-style: none;
     padding: 6px;
     margin-block: 4px 0;
-    z-index: 50;
+    /* z-index: 1000 → escapa cualquier stacking context creado por
+       paneles laterales (position:sticky) o por filas con z propios.
+       Antes a 50 quedaba cubierto cuando el aside detalle estaba abierto. */
+    z-index: 1000;
 }
 .ap-actions-menu li {
     display: flex;

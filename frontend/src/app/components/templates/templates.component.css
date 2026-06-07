@@ -453,7 +453,10 @@
 }
 .tpl-kebab:hover { background: var(--brand-cream-100); color: var(--color-fg-default); border-color: var(--color-border); }
 .tpl-kebab-menu {
-    position: absolute; top: 32px; right: 0; z-index: 5;
+    /* z-index: 1000 → escapa el stacking context del aside .tpl-preview
+       (position:sticky crea contexto propio) que cubria el menu cuando
+       se abria en una fila con el panel detalle visible a la derecha. */
+    position: absolute; top: 32px; right: 0; z-index: 1000;
     min-width: 200px;
     background: var(--color-bg-panel);
     border: 1px solid var(--color-border);
