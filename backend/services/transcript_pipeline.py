@@ -99,19 +99,31 @@ def _match_project_by_text(projects: list[Project], *texts: str) -> Optional[int
 
 
 def _canonical_speaker_name(name: str) -> str:
-    """Normaliza un nombre para deduplicación.
+    """Normaliza un nombre para deduplicación / match cruzado.
 
     - Strip whitespace
     - Lowercase para comparar
     - Remueve sufijos numéricos que Fireflies a veces añade cuando el
       mismo speaker aparece en múltiples canales/sesiones ('Felipe1',
       'Tatiana Arango 2').
+    - Remueve TODOS los espacios internos y puntos para tolerar las
+      variantes que pone Fireflies. Caso real: transcript dice
+      "[JDiego]" (sin espacio), project_contact dice "J. Diego Toro".
+      Con canonical sin separadores → ambos colapsan a "jdiegotoro" /
+      "jdiego" y el match opera. Sin esto, el speaker quedaba sin
+      enriquecer y aparecía como "JDiego" con cargo y empresa vacíos.
+
+    Devolvemos también solo letras unicode + dígitos (sin puntuación)
+    para no romper con comas, ":", "-" etc. que a veces aparecen.
     """
     import re
     n = (name or "").strip()
-    # Quitar sufijos como "1", "2", "  2" al final
     n = re.sub(r"\s*\d+\s*$", "", n)
-    return n.strip().lower()
+    n = n.lower()
+    # Eliminar todo lo que no sea letra unicode (incluye acentos/ñ).
+    # Esto colapsa "j. diego toro", "j diego toro", "jdiegotoro" a la
+    # misma clave: "jdiegotoro".
+    return re.sub(r"[^\w]+", "", n, flags=re.UNICODE).replace("_", "")
 
 
 def _prettify_name(name: str) -> str:
@@ -230,17 +242,33 @@ def _merge_speakers_with_groq_attendees(
         role = ""
         entity = ""
         email = ""
+        # CRÍTICO: cuando el speaker matchea con un project_contact, el
+        # nombre "correcto" es el del CONTACTO, no el del transcript.
+        # Fireflies suele cortar acentos / pegar nombres / etc. Si el
+        # admin del proyecto registró "Juan Diego Toro" como contact y
+        # el transcript dice "[JDiego]", el final_attendees debe decir
+        # "Juan Diego Toro" — es el nombre real con el que se le va a
+        # asignar tareas y enviar correos.
+        display_name = spk
         if canon in contacts_idx:
             c = contacts_idx[canon]
             role = c.get("role") or ""
             entity = c.get("entity") or c.get("organization") or ""
             email = c.get("email") or ""
+            contact_name = (c.get("name") or "").strip()
+            if contact_name:
+                display_name = contact_name
         elif canon in groq_idx:
             g = groq_idx[canon]
             role = g.get("role") or ""
             entity = g.get("entity") or ""
+            # Solo usamos el nombre de Groq si parece más completo que
+            # el del speaker (Groq a veces infiere apellidos del contexto).
+            groq_name = (g.get("name") or "").strip()
+            if groq_name and len(groq_name) > len(spk):
+                display_name = groq_name
         out.append({
-            "name": spk,
+            "name": display_name,
             "role": role or "—",
             "entity": entity or "—",
             "email": email,
