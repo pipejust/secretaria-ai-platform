@@ -142,6 +142,41 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.loadSessions();
         this.loadProjects();
+        this.loadStats();
+    }
+
+    // ---------- KPIs globales (no paginados) ----------
+    /** Agregados del backend para alimentar las 4 tarjetas KPI del header.
+     *  Los conteos NO dependen de la página actual ni del status visual
+     *  seleccionado: son del UNIVERSO de sesiones del tenant (respetando
+     *  solo filterProjectId + include_archived). */
+    stats: {
+        total: number;
+        analyzed: number;
+        pending: number;
+        archived: number;
+        avg_duration_minutes: number;
+    } | null = null;
+
+    /** Llama GET /api/sessions/_stats. Idempotente: cualquier cambio de
+     *  filtro estructural (proyecto, archived) debe re-llamarlo; cambios
+     *  de paginación o sub-tab visual NO. */
+    loadStats(): void {
+        const headers = this.authService.getAuthHeaders();
+        let params = '';
+        if (this.filterProjectId) params += `?project_id=${this.filterProjectId}`;
+        if (this.statusTab === 'archived') {
+            params += (params ? '&' : '?') + 'include_archived=true';
+        }
+        this.http.get<any>(`${environment.apiUrl}/api/sessions/_stats${params}`, { headers })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (data) => {
+                    this.stats = data;
+                    this.cdr.detectChanges();
+                },
+                error: (err) => { console.error('Error fetching session stats:', err); },
+            });
     }
 
     ngOnDestroy(): void {
@@ -278,22 +313,32 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     // FILTROS / SUB-TABS / PAGINACIÓN
     // ============================================================
 
-    /** Devuelve el conteo client-side del status (sobre la página actual)
-     *  para alimentar los KPI tiles del header sin pedir otra API. */
+    /** Devuelve el conteo client-side del status (sobre la página actual).
+     *  Solo se usa como fallback cuando `stats` aún no llegó del backend. */
     countByStatus(status: string): number {
         return (this.sessions || []).filter((s) => s?.status === status).length;
     }
 
-    /** Total reportado por el backend (página) — para Total Meetings. */
-    get totalMeetings(): number { return this.totalItems || this.sessions.length; }
+    /** Total de sesiones del tenant — del endpoint /_stats (global, NO
+     *  paginado). Fallback al totalItems del listado cuando aún no llegó. */
+    get totalMeetings(): number {
+        return this.stats?.total ?? (this.totalItems || this.sessions.length);
+    }
 
-    /** Sesiones completadas en la página actual. */
-    get analyzedCount(): number { return this.countByStatus('completed'); }
-    /** Pendientes en la página actual. */
-    get pendingCount(): number { return this.countByStatus('pending'); }
-    /** Archivadas — visible si filtras por archivadas. Sin endpoint
-     *  dedicado todavía, devuelve lo que esté en el lote. */
-    get archivedCount(): number { return this.countByStatus('archived'); }
+    /** Sesiones completadas — agregado global. */
+    get analyzedCount(): number {
+        return this.stats?.analyzed ?? this.countByStatus('completed');
+    }
+    /** Pendientes — agregado global. */
+    get pendingCount(): number {
+        return this.stats?.pending ?? this.countByStatus('pending');
+    }
+    /** Archivadas — agregado global. Cero cuando include_archived=false en
+     *  el endpoint, lo cual es el comportamiento deseado (no la mostramos
+     *  como KPI hasta que el user entre a la tab Archived). */
+    get archivedCount(): number {
+        return this.stats?.archived ?? this.countByStatus('archived');
+    }
 
     /** Porcentaje del total para los KPI tiles ("66% of total"). */
     pctOfTotal(count: number): number {
@@ -302,28 +347,39 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         return Math.round((count / t) * 100);
     }
 
-    /** Duración media del lote en minutos. Como el modelo no tiene un
-     *  campo `duration_min`, mostramos guion hasta que exista. */
+    /** Duración media global en minutos — agregado del endpoint /_stats.
+     *  Mostramos `—` si no hay sesiones con transcripción. */
     get avgDurationLabel(): string {
-        // TODO(backend): exponer duration_min en MeetingSession.
-        // Por ahora derivamos algo razonable del raw_transcript si lo
-        // hubiera (~1 min por cada 150 palabras estimadas). Si la
-        // página actual no tiene transcripts cargados, devolvemos '—'.
-        const withTranscript = (this.sessions || []).filter((s) => s?.raw_transcript);
-        if (!withTranscript.length) return '—';
-        const avgWords = withTranscript.reduce((acc, s) => acc + ((s.raw_transcript || '').split(/\s+/).length), 0) / withTranscript.length;
-        const minutes = Math.max(1, Math.round(avgWords / 150));
-        return `${minutes}m`;
+        const m = this.stats?.avg_duration_minutes;
+        if (m == null) {
+            // Fallback client-side mientras llega stats.
+            const withTranscript = (this.sessions || []).filter((s) => s?.raw_transcript);
+            if (!withTranscript.length) return '—';
+            const avgWords = withTranscript.reduce(
+                (acc, s) => acc + ((s.raw_transcript || '').split(/\s+/).length),
+                0,
+            ) / withTranscript.length;
+            const minutes = Math.max(1, Math.round(avgWords / 150));
+            return `${minutes}m`;
+        }
+        if (m <= 0) return '—';
+        return `${m}m`;
     }
 
     setStatusTab(tab: StatusTab): void {
         if (this.statusTab === tab) return;
+        const prevWasArchived = this.statusTab === 'archived';
         this.statusTab = tab;
         this.currentPage = 1;
         // Cada tab corresponde a un filtro real en el backend (analyzed →
         // 'completed', drafts → 'pending', archived → 'archived', all → sin
         // filtro). Re-cargamos para no quedar mostrando un lote viejo.
         this.loadSessions();
+        // Los KPIs son globales pero include_archived solo se activa cuando
+        // estamos en la tab Archived. Si cruzamos esa frontera, refrescamos.
+        if (prevWasArchived || tab === 'archived') {
+            this.loadStats();
+        }
     }
 
     changePage(page: number) {

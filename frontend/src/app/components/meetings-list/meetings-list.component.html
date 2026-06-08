@@ -156,7 +156,7 @@
             <div class="filter-group">
                 <label>{{ 'projects.team' | translate }}</label>
                 <select [(ngModel)]="filterProjectId"
-                        (change)="currentPage = 1; loadSessions()">
+                        (change)="currentPage = 1; loadSessions(); loadStats()">
                     <option value="">{{ 'meetings.all_teams' | translate }}</option>
                     <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                 </select>

@@ -148,6 +148,76 @@ def get_sessions(
         "pages": math.ceil(total_items / limit) if limit > 0 else 1
     }
 
+@router.get("/_stats")
+def get_sessions_stats(
+    project_id: int = Query(None, description="Filter by project ID (opcional)"),
+    include_archived: bool = Query(False),
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """KPIs agregados sobre TODAS las sesiones del tenant — NO paginado.
+
+    Existe porque las tarjetas KPI del header (Reuniones totales,
+    Analizadas, Pendientes, Duración media) antes se computaban
+    client-side desde `this.sessions` que es solo la página actual.
+    Resultado: los números cambiaban al paginar — el bug reportado.
+
+    Filtros respetados:
+      - project_id (cuando viene)
+      - include_archived (default false: excluye status='archived')
+
+    NO acepta `status` ni `search` porque los KPIs son del UNIVERSO de
+    sesiones visibles, no del filtro activo en la UI.
+    """
+    from sqlmodel import select, func
+    base = select(MeetingSession).where(MeetingSession.tenant_id == tenant.id)
+    if not include_archived:
+        base = base.where(MeetingSession.status != "archived")
+    if project_id is not None:
+        base = base.where(MeetingSession.project_id == project_id)
+
+    # Total (con filtros above pero sin status).
+    total = db.exec(select(func.count()).select_from(base.subquery())).one() or 0
+
+    # Por status. Hacemos COUNT por status individualmente — más rápido
+    # que GROUP BY cuando solo necesitamos 3 buckets.
+    def _count_status(s: str) -> int:
+        q = base.where(MeetingSession.status == s)
+        return db.exec(select(func.count()).select_from(q.subquery())).one() or 0
+
+    analyzed = _count_status("completed")
+    pending = _count_status("pending")
+    archived = _count_status("archived") if include_archived else 0
+
+    # Duración media estimada por palabras del transcript (~150 wpm).
+    # NO cargamos todos los transcripts en memoria — solo un AVG via SQL
+    # del length del raw_transcript dividido por ~6 chars/word luego 150.
+    # Para Postgres usamos length() nativo.
+    from sqlalchemy import text as sa_text
+    try:
+        # length() en Postgres devuelve chars. ~6 chars/word → /150 = minutos.
+        row = db.exec(
+            sa_text(
+                "SELECT AVG(length(raw_transcript)::float / 900.0) "
+                "FROM meetingsession WHERE tenant_id = :t "
+                "AND raw_transcript IS NOT NULL AND length(raw_transcript) > 0 "
+                + ("" if include_archived else "AND status <> 'archived' ")
+                + (" AND project_id = :p" if project_id is not None else "")
+            ).bindparams(t=tenant.id, **({"p": project_id} if project_id is not None else {}))
+        ).scalar()
+        avg_minutes = int(round(row)) if row else 0
+    except Exception:
+        avg_minutes = 0
+
+    return {
+        "total": total,
+        "analyzed": analyzed,
+        "pending": pending,
+        "archived": archived,
+        "avg_duration_minutes": avg_minutes,
+    }
+
+
 @router.get("/{session_id}")
 def get_session_details(
     session_id: int,
