@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -779,11 +779,51 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         if (this.currentPage > 1) this.currentPage--;
     }
 
+    /** Posición computada del menú flotante (fixed) cuando se abre desde
+     *  un botón kebab. Necesario porque la cadena de padres tiene
+     *  overflow:hidden en responsive 13–14" (table-wrap, ap-main, ap-card,
+     *  td) que recortaba el menú aunque tuviera z-index alto. Solución:
+     *  el menú vive en el viewport (position:fixed) y calculamos su
+     *  esquina superior derecha desde el getBoundingClientRect del botón
+     *  que lo abrió. */
+    actionsMenuPos: { top: number; right: number } | null = null;
+
     toggleActions(projectId: number, ev: Event): void {
         ev.stopPropagation();
-        this.openActionsId = this.openActionsId === projectId ? null : projectId;
+        if (this.openActionsId === projectId) {
+            this.openActionsId = null;
+            this.actionsMenuPos = null;
+            return;
+        }
+        const btn = ev.currentTarget as HTMLElement | null;
+        if (btn) {
+            const r = btn.getBoundingClientRect();
+            // Anclamos al borde derecho del botón. `right` es la distancia
+            // desde el borde derecho del viewport al borde derecho del
+            // menú, así el menú alinea su lado derecho con el del botón
+            // (mismo efecto visual que el `right: 0` que tenía cuando era
+            // absolute respecto al wrap).
+            this.actionsMenuPos = {
+                top: r.bottom + 4,
+                right: Math.max(8, window.innerWidth - r.right),
+            };
+        } else {
+            this.actionsMenuPos = null;
+        }
+        this.openActionsId = projectId;
     }
-    closeActions(): void { this.openActionsId = null; }
+    closeActions(): void {
+        this.openActionsId = null;
+        this.actionsMenuPos = null;
+    }
+
+    /** Cierra el menú flotante si el user hace scroll o redimensiona —
+     *  evita que el menú quede "flotando" en una posición vieja. */
+    @HostListener('window:scroll')
+    @HostListener('window:resize')
+    onWindowChange(): void {
+        if (this.openActionsId !== null) this.closeActions();
+    }
 
     // ---- Derivados visuales por proyecto -----------------------------------
 

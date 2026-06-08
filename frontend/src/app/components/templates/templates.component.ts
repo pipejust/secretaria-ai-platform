@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -913,11 +913,40 @@ export class TemplatesComponent implements OnInit {
     // KEBAB MENU por fila
     // ============================================================
     openRowMenuId: number | null = null;
+    /** Posición fixed del menú flotante calculada del botón que lo abre.
+     *  Necesario porque la cadena de padres tiene overflow:hidden en
+     *  responsive que recortaba el menú. */
+    rowMenuPos: { top: number; right: number } | null = null;
+
     toggleRowMenu(id: number, evt: Event): void {
         evt.stopPropagation();
-        this.openRowMenuId = this.openRowMenuId === id ? null : id;
+        if (this.openRowMenuId === id) {
+            this.openRowMenuId = null;
+            this.rowMenuPos = null;
+            return;
+        }
+        const btn = evt.currentTarget as HTMLElement | null;
+        if (btn) {
+            const r = btn.getBoundingClientRect();
+            this.rowMenuPos = {
+                top: r.bottom + 4,
+                right: Math.max(8, window.innerWidth - r.right),
+            };
+        } else {
+            this.rowMenuPos = null;
+        }
+        this.openRowMenuId = id;
     }
-    closeRowMenu(): void { this.openRowMenuId = null; }
+    closeRowMenu(): void {
+        this.openRowMenuId = null;
+        this.rowMenuPos = null;
+    }
+
+    @HostListener('window:scroll')
+    @HostListener('window:resize')
+    onWindowChange(): void {
+        if (this.openRowMenuId !== null) this.closeRowMenu();
+    }
 
     /** trackBy para los *ngFor del configurador. Evita que el drag cree
      *  reflows del DOM completo en cada movimiento. */

@@ -537,11 +537,39 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
     // ============================================================
     // Acciones por fila
     // ============================================================
+    /** Posición fixed del menú flotante calculada del botón que lo abre.
+     *  Escapa overflow:hidden de la cadena de padres en responsive. */
+    rowMenuPos: { top: number; right: number } | null = null;
+
     toggleRowMenu(id: number, evt: Event): void {
         evt.stopPropagation();
-        this.openRowMenuId = this.openRowMenuId === id ? null : id;
+        if (this.openRowMenuId === id) {
+            this.openRowMenuId = null;
+            this.rowMenuPos = null;
+            return;
+        }
+        const btn = evt.currentTarget as HTMLElement | null;
+        if (btn) {
+            const r = btn.getBoundingClientRect();
+            this.rowMenuPos = {
+                top: r.bottom + 4,
+                right: Math.max(8, window.innerWidth - r.right),
+            };
+        } else {
+            this.rowMenuPos = null;
+        }
+        this.openRowMenuId = id;
     }
-    closeRowMenu(): void { this.openRowMenuId = null; }
+    closeRowMenu(): void {
+        this.openRowMenuId = null;
+        this.rowMenuPos = null;
+    }
+
+    @HostListener('window:scroll')
+    @HostListener('window:resize')
+    onWindowChange(): void {
+        if (this.openRowMenuId !== null) this.closeRowMenu();
+    }
 
     private async _performToggleActive(t: TenantOut): Promise<void> {
         const next = !t.is_active;

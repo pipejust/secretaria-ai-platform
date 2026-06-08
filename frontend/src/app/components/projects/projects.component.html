@@ -689,7 +689,11 @@
                                                 <circle cx="12" cy="19" r="1"></circle>
                                             </svg>
                                         </button>
-                                        <ul class="ap-actions-menu" *ngIf="openActionsId === p.id">
+                                        <ul class="ap-actions-menu" *ngIf="openActionsId === p.id"
+                                            [style.position]="actionsMenuPos ? 'fixed' : null"
+                                            [style.top.px]="actionsMenuPos?.top"
+                                            [style.right.px]="actionsMenuPos?.right"
+                                            [style.left]="actionsMenuPos ? 'auto' : null">
                                             <li (click)="manageContacts(p); closeActions()">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
