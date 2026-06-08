@@ -1121,5 +1121,37 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     @HostListener('window:resize')
     onWindowChange(): void {
         if (this.openRowMenuId !== null) this.closeRowMenu();
+        if (this.avatarTip) this.avatarTip = null;
+    }
+
+    // ============================================================
+    // AVATAR TOOLTIP FLOTANTE
+    //
+    // Los `.avatar-tip` inline (position:absolute) quedaban recortados
+    // por overflow:hidden del padre (table-wrap, content-area, td en
+    // responsive). Solución: un único overlay fixed al nivel root del
+    // componente que se reposiciona desde el rect del host hovered.
+    // ============================================================
+    avatarTip: {
+        top: number; left: number;
+        name: string; role?: string; company?: string; email?: string;
+    } | null = null;
+
+    showAttendeeTip(ev: Event, a: { name?: string; email?: string; role?: string; company?: string }): void {
+        const host = ev.currentTarget as HTMLElement | null;
+        if (!host) return;
+        const r = host.getBoundingClientRect();
+        const display = this.attendeeDisplayName(a.email || '', a.name || '');
+        this.avatarTip = {
+            top: r.top - 8,
+            left: r.left + r.width / 2,
+            name: display,
+            role: a.role || '',
+            company: a.company || '',
+            email: a.email || '',
+        };
+    }
+    hideAttendeeTip(): void {
+        this.avatarTip = null;
     }
 }

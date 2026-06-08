@@ -821,6 +821,33 @@ export class PendientesComponent implements OnInit, OnDestroy {
     @HostListener('window:resize')
     onWindowChange(): void {
         if (this.openActionsId !== null) this.closeActions();
+        if (this.ownerTip) this.ownerTip = null;
+    }
+
+    // ============================================================
+    // OWNER TOOLTIP FLOTANTE
+    //
+    // El tooltip CSS-only (data-tip ::before) quedaba recortado por
+    // overflow:hidden del td/table-wrap en responsive. Solución: overlay
+    // fixed renderizado al root del componente, posicionado desde el
+    // rect del cell hovered.
+    // ============================================================
+    ownerTip: { top: number; left: number; text: string } | null = null;
+
+    showOwnerTip(ev: Event, it: any): void {
+        const host = ev.currentTarget as HTMLElement | null;
+        if (!host) return;
+        const txt = this.ownerTooltip(it);
+        if (!txt) return;
+        const r = host.getBoundingClientRect();
+        this.ownerTip = {
+            top: r.bottom + 8,
+            left: r.left + r.width / 2,
+            text: txt,
+        };
+    }
+    hideOwnerTip(): void {
+        this.ownerTip = null;
     }
 
     /** Navega a la curación de la sesión origen de la tarea. */

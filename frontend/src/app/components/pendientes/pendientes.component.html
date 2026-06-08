@@ -202,7 +202,14 @@
                                     </span>
                                 </td>
                                 <td class="td-owner">
-                                    <div class="tk-owner-cell" [attr.data-tip]="ownerTooltip(it)">
+                                    <!-- Tooltip flotante en JS — el pseudo-element CSS
+                                         (.tk-owner-cell::before con data-tip) quedaba
+                                         recortado por overflow:hidden del td en
+                                         responsive. Ahora un único overlay fixed al
+                                         root del template lo muestra correctamente. -->
+                                    <div class="tk-owner-cell"
+                                         (mouseenter)="showOwnerTip($event, it)"
+                                         (mouseleave)="hideOwnerTip()">
                                         <app-user-chip
                                             [email]="it.owner_email"
                                             [fallbackName]="it.owner_name"
@@ -736,4 +743,29 @@
             </footer>
         </div>
     </div>
+</div>
+
+<!-- Overlay flotante para tooltip del owner (cell de responsable). Vive
+     al nivel root del componente con position:fixed para no ser
+     recortado por overflow:hidden del td/table-wrap en responsive.
+     `white-space: pre-line` respeta los \n del ownerTooltip(). -->
+<div *ngIf="ownerTip"
+     class="tk-floating-tip"
+     [style.position]="'fixed'"
+     [style.top.px]="ownerTip.top"
+     [style.left.px]="ownerTip.left"
+     [style.transform]="'translateX(-50%)'"
+     [style.z-index]="2000"
+     [style.padding]="'8px 12px'"
+     [style.background]="'#0f172a'"
+     [style.color]="'#ffffff'"
+     [style.border-radius.px]="8"
+     [style.font-size.px]="11.5"
+     [style.line-height]="'1.45'"
+     [style.max-width.px]="260"
+     [style.min-width.px]="160"
+     [style.white-space]="'pre-line'"
+     [style.box-shadow]="'0 8px 24px rgba(15, 23, 42, 0.20)'"
+     [style.pointer-events]="'none'">
+    {{ ownerTip.text }}
 </div>
