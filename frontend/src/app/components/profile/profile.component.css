@@ -150,8 +150,21 @@
    ============================================================ */
 .pr-kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* `minmax(0, 1fr)` evita que el contenido (texto largo del valor)
+     EXPANDA la columna mas alla del 1/4. Sin esto, "Excelente, tu
+     perfil esta completo..." crecia la columna y desbordaba el padre
+     horizontalmente — se veian las 4 cards salirse de la pantalla. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+}
+/* Responsive: 2 cards por fila en pantallas medianas, 1 en mobile.
+   Sin esto el padding interno + icon + texto no caben en columnas
+   muy estrechas y igual se cortan al borde. */
+@media (max-width: 1180px) {
+  .pr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .pr-kpis { grid-template-columns: minmax(0, 1fr); }
 }
 
 .pr-kpi {
@@ -169,6 +182,9 @@
   font: inherit;
   color: inherit;
   width: 100%;
+  /* `min-width: 0` propaga el constraint del grid al flex item — sin
+     esto el flex podia volver a sobreescribir el minmax y desbordar. */
+  min-width: 0;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -213,7 +229,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 240px;
+  /* `max-width: 100%` para que el ellipsis funcione respetando el ancho
+     real del padre (.pr-kpi-body con min-width:0). El `max-width: 240px`
+     anterior era FIJO y por eso el texto forzaba a la card a ser
+     >=240px aunque la columna fuera mas estrecha — desbordaba la grid. */
+  max-width: 100%;
 }
 
 .pr-kpi-hint {
@@ -223,7 +243,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 240px;
+  max-width: 100%;
 }
 
 .pr-kpi-chevron {
@@ -765,7 +785,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-bg-panel);
+  background: var(--brand-secondary-soft, rgba(27, 127, 103, 0.10));
+  color: var(--brand-secondary, #1B7F67);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -773,6 +794,17 @@
   flex-shrink: 0;
   border: 1px solid var(--color-border);
 }
+.pr-activity-icon svg { display: block; }
+/* Tonos por tipo de acción — ayudan a escanear visualmente el feed. */
+.pr-activity-icon[data-icon="log-in"]  { background: rgba(27, 127, 103, 0.10); color: #1B7F67; }
+.pr-activity-icon[data-icon="log-out"] { background: rgba(100, 116, 139, 0.10); color: #475569; }
+.pr-activity-icon[data-icon="edit"]    { background: rgba(217, 164, 65, 0.14); color: #B45309; }
+.pr-activity-icon[data-icon="lock"]    { background: rgba(220, 38, 38, 0.10); color: #B91C1C; }
+.pr-activity-icon[data-icon="download"]{ background: rgba(37, 99, 235, 0.10); color: #2563EB; }
+.pr-activity-icon[data-icon="trash"]   { background: rgba(220, 38, 38, 0.10); color: #B91C1C; }
+.pr-activity-icon[data-icon="settings"]{ background: rgba(100, 116, 139, 0.10); color: #475569; }
+.pr-activity-icon[data-icon="send"]    { background: rgba(37, 99, 235, 0.10); color: #2563EB; }
+.pr-activity-icon[data-icon="dot"]     { background: var(--color-bg-elevated, #f1f5f9); color: var(--color-fg-muted, #94a3b8); }
 .pr-activity-body {
   display: flex;
   flex-direction: column;
