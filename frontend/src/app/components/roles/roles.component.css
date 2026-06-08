@@ -364,6 +364,30 @@
     border-bottom: 1px solid var(--color-bg-muted);
     cursor: pointer;
     transition: background 150ms;
+    /* Box-sizing explícito para garantizar que header y rows ocupen
+       el MISMO ancho horizontal — sin esto, cualquier border/padding
+       inherit puede correr las columnas un par de pixeles y se ve
+       como "columna desalineada con su header". */
+    box-sizing: border-box;
+    /* min-height consistente para evitar que rows con contenido corto
+       (sin avatars, sin descripción) colapsen a una altura distinta
+       que las rows con avatars stacked → headers parecen movidos. */
+    min-height: 56px;
+}
+.rl-tr.rl-th {
+    /* Asegurar que el header también tenga la misma min-height + grid
+       template explícitos (defensivo — evita que un override más
+       específico cambie el layout solo para .rl-th). */
+    min-height: 48px;
+    grid-template-columns: 56px 130px 1.5fr 180px 110px 200px;
+    box-sizing: border-box;
+}
+/* Cada celda mantiene align-items center + ancho del 100% para no
+   alinearse contra la izquierda de su columna cuando el contenido
+   es breve (badges, avatars). */
+.rl-tr > * {
+    box-sizing: border-box;
+    min-width: 0;
 }
 .rl-tr:hover:not(.rl-th) { background: var(--color-bg-elevated); }
 /* Fila seleccionada → color ACENTO. */

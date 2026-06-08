@@ -942,6 +942,41 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         }
         return out;
     }
+    /** Estado del tooltip flotante de avatar/team. Se renderiza como
+     *  overlay fixed en el viewport — la versión inline tenía
+     *  position:absolute dentro del td que en responsive 13-14" tiene
+     *  overflow:hidden y recortaba el tooltip. Ahora abrimos al pasar
+     *  ratón y cerramos al salir. */
+    avatarTip: {
+        top: number; left: number;
+        name: string; role: string; company: string; email: string;
+        names?: string;  // para el badge "+N"
+    } | null = null;
+
+    /** Maneja mouseenter sobre un .avatar-tip-host. El parámetro `data`
+     *  trae los campos del avatar; el `ev` permite leer el rect del host
+     *  para anclar el tooltip arriba+centrado. */
+    showAvatarTip(ev: Event, data: { name: string; role?: string; company?: string; email?: string; names?: string }): void {
+        const host = ev.currentTarget as HTMLElement | null;
+        if (!host) return;
+        const r = host.getBoundingClientRect();
+        this.avatarTip = {
+            // 8px de gap entre top del host y bottom del tip.
+            // El tooltip se renderiza centrado horizontalmente sobre el host
+            // via translate(-50%, -100%) en CSS inline.
+            top: r.top - 8,
+            left: r.left + r.width / 2,
+            name: data.name || '',
+            role: data.role || '',
+            company: data.company || '',
+            email: data.email || '',
+            names: data.names || '',
+        };
+    }
+    hideAvatarTip(): void {
+        this.avatarTip = null;
+    }
+
     teamExtra(p: any): number {
         // Determinístico, mockup-like: +1, +2, +3, +4 según id.
         return ((p?.id ?? 0) % 4) + 1;

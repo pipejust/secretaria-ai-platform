@@ -650,28 +650,33 @@
                                 <!-- Equipo: avatares + extra (con tooltip rico) -->
                                 <td>
                                     <span class="ap-team-stack">
-                                        <span class="ap-team-av avatar-tip-host"
+                                        <!-- Tooltips ahora se renderizan como overlay
+                                             fixed (ver `<div class="ap-floating-tip">`
+                                             al final del template) para escapar
+                                             overflow:hidden de la cadena de padres.
+                                             Aquí solo enganchamos mouseenter/leave
+                                             pasando los datos del avatar al state. -->
+                                        <span class="ap-team-av"
                                               *ngFor="let a of teamAvatars(p)"
                                               [class.has-photo]="!!a.avatarUrl"
                                               [attr.data-tone]="a.tone"
-                                              tabindex="0">
+                                              tabindex="0"
+                                              (mouseenter)="showAvatarTip($event, a)"
+                                              (mouseleave)="hideAvatarTip()"
+                                              (focus)="showAvatarTip($event, a)"
+                                              (blur)="hideAvatarTip()">
                                             <img *ngIf="a.avatarUrl" class="avatar-img"
                                                  [src]="a.avatarUrl" [alt]="a.name">
                                             <span *ngIf="!a.avatarUrl">{{ a.initials }}</span>
-                                            <span class="avatar-tip" role="tooltip">
-                                                <strong class="avatar-tip-name">{{ a.name }}</strong>
-                                                <span class="avatar-tip-meta" *ngIf="a.role">{{ a.role }}</span>
-                                                <span class="avatar-tip-meta" *ngIf="a.company">{{ a.company }}</span>
-                                                <span class="avatar-tip-meta" *ngIf="a.email">{{ a.email }}</span>
-                                            </span>
                                         </span>
-                                        <span class="ap-team-extra avatar-tip-host"
+                                        <span class="ap-team-extra"
                                               *ngIf="teamExtra(p) > 0"
-                                              tabindex="0">
+                                              tabindex="0"
+                                              (mouseenter)="showAvatarTip($event, { name: '+' + teamExtra(p), names: teamExtraNames(p) })"
+                                              (mouseleave)="hideAvatarTip()"
+                                              (focus)="showAvatarTip($event, { name: '+' + teamExtra(p), names: teamExtraNames(p) })"
+                                              (blur)="hideAvatarTip()">
                                             +{{ teamExtra(p) }}
-                                            <span class="avatar-tip" role="tooltip" *ngIf="teamExtraNames(p)">
-                                                <span class="avatar-tip-meta">{{ teamExtraNames(p) }}</span>
-                                            </span>
                                         </span>
                                     </span>
                                 </td>
@@ -898,4 +903,33 @@
             </article>
         </aside>
     </div>
+</div>
+
+<!-- Overlay flotante para tooltip de avatar/team. Renderizado al nivel
+     raíz del componente con position:fixed para escapar el overflow:hidden
+     que la tabla aplica a sus td en responsive 13-14". Se posiciona via
+     [style.top]/[style.left] calculados en showAvatarTip() desde el
+     getBoundingClientRect del host. -->
+<div *ngIf="avatarTip"
+     class="ap-floating-tip"
+     [style.position]="'fixed'"
+     [style.top.px]="avatarTip.top"
+     [style.left.px]="avatarTip.left"
+     [style.transform]="'translate(-50%, -100%)'"
+     [style.z-index]="2000"
+     [style.padding.px]="10"
+     [style.background]="'#0f172a'"
+     [style.color]="'#ffffff'"
+     [style.border-radius.px]="6"
+     [style.font-size.px]="12"
+     [style.line-height]="'1.4'"
+     [style.max-width.px]="260"
+     [style.min-width.px]="160"
+     [style.box-shadow]="'0 8px 24px rgba(0, 0, 0, 0.18)'"
+     [style.pointer-events]="'none'">
+    <strong style="display:block; font-size:13px; color:#fff; font-weight:600;">{{ avatarTip.name }}</strong>
+    <span *ngIf="avatarTip.role" style="display:block; color:rgba(255,255,255,0.78); font-size:11px; margin-top:2px;">{{ avatarTip.role }}</span>
+    <span *ngIf="avatarTip.company" style="display:block; color:rgba(255,255,255,0.78); font-size:11px;">{{ avatarTip.company }}</span>
+    <span *ngIf="avatarTip.email" style="display:block; color:rgba(255,255,255,0.78); font-size:11px;">{{ avatarTip.email }}</span>
+    <span *ngIf="avatarTip.names" style="display:block; color:rgba(255,255,255,0.78); font-size:11px;">{{ avatarTip.names }}</span>
 </div>

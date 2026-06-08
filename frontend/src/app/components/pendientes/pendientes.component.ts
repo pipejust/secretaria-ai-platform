@@ -777,21 +777,50 @@ export class PendientesComponent implements OnInit, OnDestroy {
     // Menú de acciones por fila (3 puntos)
     // ============================================================
 
+    /** Posición fixed del menú flotante. Mismo patrón aplicado en
+     *  meetings/projects/templates: el menú se renderiza en el viewport
+     *  para escapar overflow:hidden de la cadena de padres (que recortaba
+     *  el menú dentro del td de la tabla). */
+    actionsMenuPos: { top: number; right: number } | null = null;
+
     toggleActions(id: number, ev: Event): void {
         ev.stopPropagation();
-        this.openActionsId = this.openActionsId === id ? null : id;
+        if (this.openActionsId === id) {
+            this.openActionsId = null;
+            this.actionsMenuPos = null;
+            this.cdr.detectChanges();
+            return;
+        }
+        const btn = ev.currentTarget as HTMLElement | null;
+        if (btn) {
+            const r = btn.getBoundingClientRect();
+            this.actionsMenuPos = {
+                top: r.bottom + 4,
+                right: Math.max(8, window.innerWidth - r.right),
+            };
+        } else {
+            this.actionsMenuPos = null;
+        }
+        this.openActionsId = id;
         this.cdr.detectChanges();
     }
 
     closeActions(): void {
         if (this.openActionsId !== null) {
             this.openActionsId = null;
+            this.actionsMenuPos = null;
             this.cdr.detectChanges();
         }
     }
 
     @HostListener('document:click') onDocClick(): void {
         this.closeActions();
+    }
+
+    @HostListener('window:scroll')
+    @HostListener('window:resize')
+    onWindowChange(): void {
+        if (this.openActionsId !== null) this.closeActions();
     }
 
     /** Navega a la curación de la sesión origen de la tarea. */
