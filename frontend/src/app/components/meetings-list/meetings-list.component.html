@@ -290,7 +290,12 @@
                     <!-- Participantes: si el email matchea un User del tenant
                          renderizamos su avatar real; si no, iniciales con
                          color hash. Tooltip rico al hover (nombre + rol + empresa). -->
-                    <div class="cell-participants">
+                    <!-- mouseleave en el contenedor padre es un fallback robusto:
+                         si mouseleave del avatar individual no se dispara
+                         (por z-index stacking, child elements, etc.), el
+                         contenedor SIEMPRE captura cuando el cursor sale del
+                         área de los avatares. -->
+                    <div class="cell-participants" (mouseleave)="hideAttendeeTip()">
                         <ng-container *ngIf="attendeesOf(s).length as attCount">
                             <span class="avatar"
                                   *ngFor="let a of attendeesOf(s).slice(0, 3); let i = index"
@@ -298,10 +303,7 @@
                                   [style.background]="attendeeAvatarUrl(a.email, a.name) ? 'transparent' : initialsColor(a.name)"
                                   [style.zIndex]="3 - i"
                                   (mouseenter)="showAttendeeTip($event, a)"
-                                  (mouseleave)="hideAttendeeTip()"
-                                  (focus)="showAttendeeTip($event, a)"
-                                  (blur)="hideAttendeeTip()"
-                                  tabindex="0">
+                                  (mouseleave)="hideAttendeeTip()">
                                 <img *ngIf="attendeeAvatarUrl(a.email, a.name)"
                                      class="avatar-img"
                                      [src]="attendeeAvatarUrl(a.email, a.name)"
@@ -582,17 +584,14 @@
         <!-- Participantes: mismo patrón de tooltip enriquecido del listado.
              Si el email matchea un User del tenant, muestra su avatar real. -->
         <div class="dt-participants" *ngIf="selectedAttendees.length">
-            <div class="participants-avatars">
+            <div class="participants-avatars" (mouseleave)="hideAttendeeTip()">
                 <span class="avatar avatar-lg"
                       *ngFor="let a of selectedAttendees.slice(0, 4); let i = index"
                       [class.has-photo]="!!attendeeAvatarUrl(a.email, a.name)"
                       [style.background]="attendeeAvatarUrl(a.email, a.name) ? 'transparent' : initialsColor(a.name)"
                       [style.zIndex]="4 - i"
                       (mouseenter)="showAttendeeTip($event, a)"
-                      (mouseleave)="hideAttendeeTip()"
-                      (focus)="showAttendeeTip($event, a)"
-                      (blur)="hideAttendeeTip()"
-                      tabindex="0">
+                      (mouseleave)="hideAttendeeTip()">
                     <img *ngIf="attendeeAvatarUrl(a.email, a.name)"
                          class="avatar-img"
                          [src]="attendeeAvatarUrl(a.email, a.name)"

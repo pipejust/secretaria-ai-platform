@@ -649,33 +649,27 @@
 
                                 <!-- Equipo: avatares + extra (con tooltip rico) -->
                                 <td>
-                                    <span class="ap-team-stack">
-                                        <!-- Tooltips ahora se renderizan como overlay
-                                             fixed (ver `<div class="ap-floating-tip">`
-                                             al final del template) para escapar
-                                             overflow:hidden de la cadena de padres.
-                                             Aquí solo enganchamos mouseenter/leave
-                                             pasando los datos del avatar al state. -->
+                                    <!-- mouseleave en el contenedor padre garantiza
+                                         que el tooltip se cierre cuando el cursor
+                                         salga del área de avatares. Sin esto,
+                                         mouseleave de los avatares individuales
+                                         a veces no se disparaba (z-index stacking,
+                                         child elements) y el tooltip quedaba pegado. -->
+                                    <span class="ap-team-stack" (mouseleave)="hideAvatarTip()">
                                         <span class="ap-team-av"
                                               *ngFor="let a of teamAvatars(p)"
                                               [class.has-photo]="!!a.avatarUrl"
                                               [attr.data-tone]="a.tone"
-                                              tabindex="0"
                                               (mouseenter)="showAvatarTip($event, a)"
-                                              (mouseleave)="hideAvatarTip()"
-                                              (focus)="showAvatarTip($event, a)"
-                                              (blur)="hideAvatarTip()">
+                                              (mouseleave)="hideAvatarTip()">
                                             <img *ngIf="a.avatarUrl" class="avatar-img"
                                                  [src]="a.avatarUrl" [alt]="a.name">
                                             <span *ngIf="!a.avatarUrl">{{ a.initials }}</span>
                                         </span>
                                         <span class="ap-team-extra"
                                               *ngIf="teamExtra(p) > 0"
-                                              tabindex="0"
                                               (mouseenter)="showAvatarTip($event, { name: '+' + teamExtra(p), names: teamExtraNames(p) })"
-                                              (mouseleave)="hideAvatarTip()"
-                                              (focus)="showAvatarTip($event, { name: '+' + teamExtra(p), names: teamExtraNames(p) })"
-                                              (blur)="hideAvatarTip()">
+                                              (mouseleave)="hideAvatarTip()">
                                             +{{ teamExtra(p) }}
                                         </span>
                                     </span>

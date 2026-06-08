@@ -1136,8 +1136,13 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         top: number; left: number;
         name: string; role?: string; company?: string; email?: string;
     } | null = null;
+    private _tipHideTimer: any = null;
 
     showAttendeeTip(ev: Event, a: { name?: string; email?: string; role?: string; company?: string }): void {
+        // Cancela un hide programado — caso típico: mouse se mueve de un
+        // avatar a otro adyacente, mouseleave del primero programa el hide
+        // y mouseenter del segundo lo debe cancelar antes de que dispare.
+        if (this._tipHideTimer) { clearTimeout(this._tipHideTimer); this._tipHideTimer = null; }
         const host = ev.currentTarget as HTMLElement | null;
         if (!host) return;
         const r = host.getBoundingClientRect();
@@ -1152,6 +1157,14 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         };
     }
     hideAttendeeTip(): void {
-        this.avatarTip = null;
+        // Pequeño delay para que el tooltip NO parpadee cuando el mouse se
+        // mueve entre dos avatares stackeados — el siguiente mouseenter va
+        // a cancelar este timer antes de que dispare.
+        if (this._tipHideTimer) clearTimeout(this._tipHideTimer);
+        this._tipHideTimer = setTimeout(() => {
+            this.avatarTip = null;
+            this._tipHideTimer = null;
+            this.cdr.detectChanges();
+        }, 80);
     }
 }

@@ -833,8 +833,10 @@ export class PendientesComponent implements OnInit, OnDestroy {
     // rect del cell hovered.
     // ============================================================
     ownerTip: { top: number; left: number; text: string } | null = null;
+    private _ownerTipHideTimer: any = null;
 
     showOwnerTip(ev: Event, it: any): void {
+        if (this._ownerTipHideTimer) { clearTimeout(this._ownerTipHideTimer); this._ownerTipHideTimer = null; }
         const host = ev.currentTarget as HTMLElement | null;
         if (!host) return;
         const txt = this.ownerTooltip(it);
@@ -847,7 +849,12 @@ export class PendientesComponent implements OnInit, OnDestroy {
         };
     }
     hideOwnerTip(): void {
-        this.ownerTip = null;
+        if (this._ownerTipHideTimer) clearTimeout(this._ownerTipHideTimer);
+        this._ownerTipHideTimer = setTimeout(() => {
+            this.ownerTip = null;
+            this._ownerTipHideTimer = null;
+            this.cdr.detectChanges();
+        }, 80);
     }
 
     /** Navega a la curación de la sesión origen de la tarea. */

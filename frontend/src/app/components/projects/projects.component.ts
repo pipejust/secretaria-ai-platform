@@ -952,11 +952,14 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         name: string; role: string; company: string; email: string;
         names?: string;  // para el badge "+N"
     } | null = null;
+    private _tipHideTimer: any = null;
 
     /** Maneja mouseenter sobre un .avatar-tip-host. El parámetro `data`
      *  trae los campos del avatar; el `ev` permite leer el rect del host
      *  para anclar el tooltip arriba+centrado. */
     showAvatarTip(ev: Event, data: { name: string; role?: string; company?: string; email?: string; names?: string }): void {
+        // Cancela hide programado si el cursor pasa de un avatar a otro.
+        if (this._tipHideTimer) { clearTimeout(this._tipHideTimer); this._tipHideTimer = null; }
         const host = ev.currentTarget as HTMLElement | null;
         if (!host) return;
         const r = host.getBoundingClientRect();
@@ -974,7 +977,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         };
     }
     hideAvatarTip(): void {
-        this.avatarTip = null;
+        // Pequeño debounce para evitar parpadeo entre avatares adyacentes.
+        if (this._tipHideTimer) clearTimeout(this._tipHideTimer);
+        this._tipHideTimer = setTimeout(() => {
+            this.avatarTip = null;
+            this._tipHideTimer = null;
+            this.cdr.detectChanges();
+        }, 80);
     }
 
     teamExtra(p: any): number {
