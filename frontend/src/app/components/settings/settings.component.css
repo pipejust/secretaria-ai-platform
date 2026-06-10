@@ -647,3 +647,65 @@ select.st-input::-ms-expand { display: none; }
     color: #94A3B8;
     cursor: not-allowed;
 }
+
+/* ============================================================================
+ *  Card "Quién administra integraciones" — switches del owner del tenant
+ *  + estado read-only de la card de Plataformas para usuarios no-owner.
+ * ============================================================================ */
+.st-share-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ap-border-soft, #E5E7EB);
+}
+.st-share-row:last-child { border-bottom: none; }
+.st-share-text { flex: 1; min-width: 0; }
+.st-share-text strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ap-text, #1F2937);
+    margin-bottom: 4px;
+}
+.st-share-text p {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ap-text-muted, #6B7280);
+}
+.st-toggle-pill.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Estado read-only de la card de Plataformas (visible para no-owners cuando
+   share_integrations=ON). Los inputs siguen renderizando los valores y se
+   pueden seleccionar para copiar, pero no se editan. */
+.st-card.is-readonly .st-input,
+.st-card.is-readonly select,
+.st-card.is-readonly textarea {
+    background: var(--ap-grey-soft, #F1F5F9);
+    color: var(--ap-text-muted, #475569);
+    pointer-events: none;
+    user-select: text;
+}
+.st-card.is-readonly .st-pw-toggle,
+.st-card.is-readonly .st-toggle-pill {
+    pointer-events: none;
+    opacity: 0.55;
+}
+.st-readonly-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--ap-blue-soft, #DBEAFE);
+    border: 1px solid var(--ap-blue, #2563EB);
+    border-radius: 12px;
+    color: var(--ap-text, #1E3A8A);
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+.st-readonly-notice svg { flex-shrink: 0; }

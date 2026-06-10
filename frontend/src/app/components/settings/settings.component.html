@@ -349,8 +349,54 @@
                     </div>
                 </article>
 
+                <!-- Quién administra integraciones — solo para el owner del tenant.
+                     Estos 2 switches son ortogonales: el primero controla si las
+                     credenciales (Trello/Jira/ClickUp/Azure) las pone solo el
+                     owner para el equipo o cada usuario las suyas; el segundo
+                     hace lo mismo para las rutas de integración por proyecto. -->
+                <article class="st-card" *ngIf="canManageShare">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">{{ 'settings.share_title' | translate }}</h2>
+                            <p class="st-card-sub">{{ 'settings.share_subtitle' | translate }}</p>
+                        </div>
+                    </header>
+                    <div class="st-card-body st-stack">
+                        <div class="st-share-row">
+                            <div class="st-share-text">
+                                <strong>{{ 'settings.share_integrations_title' | translate }}</strong>
+                                <p>{{ 'settings.share_integrations_desc' | translate }}</p>
+                            </div>
+                            <label class="st-toggle-pill"
+                                   [class.is-on]="shareSettings?.share_integrations"
+                                   [class.is-disabled]="isUpdatingShare"
+                                   (click)="$event.preventDefault(); toggleShareIntegrations()">
+                                <span class="st-switch" [class.is-on]="shareSettings?.share_integrations">
+                                    <span class="st-switch-thumb"></span>
+                                </span>
+                                <span>{{ (shareSettings?.share_integrations ? 'common.active' : 'common.inactive') | translate }}</span>
+                            </label>
+                        </div>
+                        <div class="st-share-row">
+                            <div class="st-share-text">
+                                <strong>{{ 'settings.share_routings_title' | translate }}</strong>
+                                <p>{{ 'settings.share_routings_desc' | translate }}</p>
+                            </div>
+                            <label class="st-toggle-pill"
+                                   [class.is-on]="shareSettings?.share_routings"
+                                   [class.is-disabled]="isUpdatingShare"
+                                   (click)="$event.preventDefault(); toggleShareRoutings()">
+                                <span class="st-switch" [class.is-on]="shareSettings?.share_routings">
+                                    <span class="st-switch-thumb"></span>
+                                </span>
+                                <span>{{ (shareSettings?.share_routings ? 'common.active' : 'common.inactive') | translate }}</span>
+                            </label>
+                        </div>
+                    </div>
+                </article>
+
                 <!-- Plataformas de gestión -->
-                <article class="st-card">
+                <article class="st-card" [class.is-readonly]="integrationsReadOnly">
                     <header class="st-card-head">
                         <div>
                             <h2 class="st-card-title">{{ 'integrations.platforms' | translate }}</h2>
@@ -358,6 +404,17 @@
                         </div>
                     </header>
                     <div class="st-card-body st-stack">
+                        <!-- Nota cuando estas son credenciales del dueño y solo
+                             vemos read-only (tokens redactados). -->
+                        <div class="st-readonly-notice" *ngIf="integrationsReadOnly">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <span>{{ 'settings.shared_integrations_notice' | translate }}</span>
+                        </div>
 
                         <!-- Trello -->
                         <div class="st-integration">

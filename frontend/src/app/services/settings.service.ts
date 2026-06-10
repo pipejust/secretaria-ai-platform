@@ -14,12 +14,22 @@ const PER_USER_PROVIDERS = new Set<string>([
     'google', 'microsoft',
 ]);
 
+/** Estado de los switches `share_*` del tenant. Espejo del payload
+ *  devuelto por GET/PUT /api/settings/share del backend. */
+export interface ShareSettings {
+    owner_user_id: number | null;
+    is_owner: boolean;
+    share_integrations: boolean;
+    share_routings: boolean;
+}
+
 @Injectable({
     providedIn: 'root'
 })
 export class SettingsService {
     private tenantUrl = `${environment.apiUrl}/api/settings`;
     private userUrl = `${environment.apiUrl}/api/settings/me`;
+    private shareUrl = `${environment.apiUrl}/api/settings/share`;
 
     constructor(private http: HttpClient, private authService: AuthService) { }
 
@@ -83,5 +93,21 @@ export class SettingsService {
         return forkJoin(calls).pipe(
             map(() => ({ status: 'success' })),
         );
+    }
+
+    /** Lee el estado de los 2 switches share_* + si el caller es owner.
+     *  Cualquier user autenticado puede leerlo — la UI lo usa para
+     *  decidir si renderiza modo editar o modo read-only. */
+    getShareSettings(): Observable<ShareSettings> {
+        const headers = this.authService.getAuthHeaders();
+        return this.http.get<ShareSettings>(this.shareUrl, { headers });
+    }
+
+    /** Modifica los switches. Solo el owner puede — si caller no es
+     *  owner el backend devuelve 403. El payload acepta campos
+     *  opcionales (PATCH parcial). */
+    updateShareSettings(payload: Partial<Pick<ShareSettings, 'share_integrations' | 'share_routings'>>): Observable<ShareSettings> {
+        const headers = this.authService.getAuthHeaders();
+        return this.http.put<ShareSettings>(this.shareUrl, payload, { headers });
     }
 }

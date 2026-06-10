@@ -9,7 +9,7 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { SettingsService } from '../../services/settings.service';
+import { SettingsService, ShareSettings } from '../../services/settings.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { PreferencesService, UiPrefs, DEFAULT_PREFS } from '../../services/preferences.service';
@@ -54,6 +54,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
   jiraSettings = { email: '', apiToken: '', domain: '', isActive: false };
   azureSettings = { organization: '', project: '', pat: '', isActive: false };
   clickupSettings = { apiToken: '', teamId: '', isActive: false };
+
+  /** Estado del modelo "compartido vs per-user".
+   *  null mientras carga; tras ngOnInit lo seteamos siempre — incluso
+   *  ante error de red, con defaults seguros (is_owner=false). */
+  shareSettings: ShareSettings | null = null;
+  isUpdatingShare = false;
   // El campo timeoutMinutes es el "nuevo" (granularidad real). Conservamos
   // timeoutHours para compatibilidad con datos viejos: si el backend trae
   // sólo timeoutHours, lo convertimos a minutos al cargar; y al guardar
@@ -210,6 +216,74 @@ export class SettingsComponent implements OnInit, OnDestroy {
       });
   }
 
+  // -----------------------------------------------------------------
+  // "Compartido vs per-user" — switches del owner del tenant
+  // -----------------------------------------------------------------
+
+  /** Carga el estado de los 2 switches al entrar a la vista. */
+  loadShareSettings(): void {
+    this.settingsService.getShareSettings().subscribe({
+      next: (s) => { this.shareSettings = s; this.cdr.detectChanges(); },
+      error: () => {
+        // En error nos quedamos con shareSettings=null que el template
+        // interpreta como "todavía cargando o sin datos" → la card de
+        // switches no se pinta, y los inputs no quedan read-only.
+        this.shareSettings = null;
+      }
+    });
+  }
+
+  /** True cuando el caller no es owner Y share_integrations=ON. La UI
+   *  pinta los inputs read-only y muestra una nota explicativa. */
+  get integrationsReadOnly(): boolean {
+    return !!this.shareSettings &&
+           this.shareSettings.share_integrations === true &&
+           this.shareSettings.is_owner === false;
+  }
+
+  /** True cuando el caller es owner del tenant — gate para mostrar la
+   *  card "Quién administra integraciones" con los 2 switches. */
+  get canManageShare(): boolean {
+    return !!this.shareSettings && this.shareSettings.is_owner === true;
+  }
+
+  /** Cambia un switch contra el backend con optimistic update +
+   *  rollback si falla. El backend devuelve el nuevo estado completo
+   *  que volvemos a aplicar para mantenernos sincronizados. */
+  private _updateShare(patch: Partial<Pick<ShareSettings, 'share_integrations' | 'share_routings'>>): void {
+    if (!this.shareSettings || !this.shareSettings.is_owner) return;
+    const previous = { ...this.shareSettings };
+    this.shareSettings = { ...this.shareSettings, ...patch };
+    this.isUpdatingShare = true;
+    this.cdr.detectChanges();
+    this.settingsService.updateShareSettings(patch).subscribe({
+      next: (s) => {
+        this.shareSettings = s;
+        this.isUpdatingShare = false;
+        this.toast.success(this.translate.instant('settings.share_updated'));
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        // Rollback al estado previo si el backend rechazó.
+        this.shareSettings = previous;
+        this.isUpdatingShare = false;
+        const msg = err?.error?.detail || this.translate.instant('settings.share_update_failed');
+        this.toast.error(msg);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  toggleShareIntegrations(): void {
+    if (!this.shareSettings) return;
+    this._updateShare({ share_integrations: !this.shareSettings.share_integrations });
+  }
+
+  toggleShareRoutings(): void {
+    if (!this.shareSettings) return;
+    this._updateShare({ share_routings: !this.shareSettings.share_routings });
+  }
+
   copyWebhookUrl(): void {
     const url = this.firefliesSettings.webhookUrl;
     if (!url) return;
@@ -274,6 +348,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     });
 
     this.loadOauthStatus();
+    this.loadShareSettings();
 
     this.settingsService.getSettings().subscribe({
       next: (data) => {

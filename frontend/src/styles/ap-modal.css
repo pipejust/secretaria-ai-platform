@@ -889,3 +889,9 @@
 /* Form de edición — usa los mismos .ap-field/.ap-label/.ap-input que el resto
    del proyecto, solo añadimos un poco de aire entre filas. */
 .ap-edit-form { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+
+/* Badge de estado de routing cuando es read-only (no-owner ve las del owner) */
+.ap-routing-state.is-readonly {
+    cursor: default;
+    opacity: 0.7;
+}

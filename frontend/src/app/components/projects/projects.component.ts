@@ -122,6 +122,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     isDeletingRoutingId: number | null = null;
     activeIntegrations: { id: string, name: string }[] = [];
 
+    /** Estado de los switches share_* del tenant. Lo cargamos una sola
+     *  vez al ngOnInit; cuando share_routings=true y el caller no es
+     *  owner, la UI de routings pasa a modo read-only (no muestra
+     *  formularios crear/editar/borrar, las cards no se abren para
+     *  editar). El owner ve siempre los controles completos. */
+    shareSettings: { is_owner: boolean; share_routings: boolean; share_integrations: boolean } | null = null;
+
     // Detalle / edición de una ruta puntual.
     // viewingRouting: la ruta abierta en el modal de detalle (null = modal cerrado).
     // editingRoutingMode: true cuando el modal está en modo edición; en read-only
@@ -206,6 +213,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         this.loadProjects();
         this.loadUsers();
         this.loadActiveIntegrations();
+        this.loadShareSettings();
         this.route.queryParams.subscribe(params => {
             if (params['openContacts']) {
                 const projectId = Number(params['openContacts']);
@@ -235,6 +243,34 @@ export class ProjectsComponent implements OnInit, OnDestroy {
             },
             error: (err) => console.error('Failed to load settings for active integrations', err)
         });
+    }
+
+    /** Carga los switches share_* del tenant para decidir si la UI de
+     *  routings va en modo edit o read-only. En error nos quedamos con
+     *  null → la UI cae a "asumir editable" (es el caso single-tenant
+     *  pre-feature) y como mucho el backend devolverá 403 que el user
+     *  verá como toast. */
+    loadShareSettings() {
+        this.settingsService.getShareSettings().subscribe({
+            next: (s) => {
+                this.shareSettings = {
+                    is_owner: !!s.is_owner,
+                    share_routings: !!s.share_routings,
+                    share_integrations: !!s.share_integrations,
+                };
+                this.cdr.detectChanges();
+            },
+            error: () => { this.shareSettings = null; },
+        });
+    }
+
+    /** True cuando el modal de Rutas debe pintarse sin botones de
+     *  Crear/Editar/Borrar/Toggle — el caller no es owner y el tenant
+     *  delegó el control de rutas al owner. */
+    get routingsReadOnly(): boolean {
+        return !!this.shareSettings &&
+               this.shareSettings.share_routings === true &&
+               this.shareSettings.is_owner === false;
     }
 
     loadProjects() {

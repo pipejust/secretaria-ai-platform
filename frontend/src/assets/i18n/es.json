@@ -417,7 +417,8 @@
     "view_routing_details": "Ver detalle",
     "routing_empty_config": "Esta ruta no tiene parámetros guardados.",
     "msg_routing_updated": "Ruta actualizada correctamente.",
-    "msg_routing_update_failed": "No se pudo actualizar la ruta."
+    "msg_routing_update_failed": "No se pudo actualizar la ruta.",
+    "shared_routings_notice": "Tu empresa administra estas rutas centralmente. Sólo el dueño puede modificarlas."
   },
   "project_detail": {
     "back_to_projects": "Volver a proyectos",
@@ -550,6 +551,15 @@
   "settings": {
     "title": "Configuración",
     "subtitle": "Parámetros generales del sistema y tu empresa.",
+    "share_title": "Quién administra las integraciones",
+    "share_subtitle": "Como dueño del tenant, decide qué configuran tus usuarios y qué administras tú para todo el equipo.",
+    "share_integrations_title": "Compartir credenciales de las plataformas",
+    "share_integrations_desc": "Si está activo, sólo tú configuras Trello, Jira, ClickUp y Azure y todo el equipo las usa. Si está inactivo, cada usuario conecta sus propias credenciales.",
+    "share_routings_title": "Compartir rutas de integración por proyecto",
+    "share_routings_desc": "Si está activo, las rutas que definas en cada proyecto se aplican a todo el equipo. Si está inactivo, cada usuario define las suyas.",
+    "share_updated": "Preferencia actualizada.",
+    "share_update_failed": "No se pudo guardar la preferencia.",
+    "shared_integrations_notice": "Tu empresa administra estas integraciones centralizadamente. Los identificadores se muestran para referencia; los tokens están ocultos por seguridad.",
     "general": "General",
     "save": "Guardar configuración",
     "smtp": "SMTP / Email",

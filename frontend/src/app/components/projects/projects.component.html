@@ -294,6 +294,11 @@
                     {{ 'projects.no_routes_configured' | translate }}
                 </div>
 
+                <!-- Nota cuando estas rutas son del owner y solo veo en read-only -->
+                <div class="ap-alert ap-alert-info" *ngIf="routingsReadOnly && !isLoadingRoutings && projectRoutings.length > 0">
+                    {{ 'projects.shared_routings_notice' | translate }}
+                </div>
+
                 <ul class="ap-routing-list" *ngIf="!isLoadingRoutings && projectRoutings.length > 0">
                     <li *ngFor="let routing of projectRoutings"
                         class="ap-routing-card ap-routing-card-clickable"
@@ -311,15 +316,17 @@
                             <strong class="ap-routing-name">{{ routingPlatformLabel(routing.destination_type) }}</strong>
                             <code class="ap-routing-config">{{ routing.destination_config }}</code>
                         </div>
+                        <!-- En read-only: badge no clickable. En edit: toggle interactivo. -->
                         <span class="ap-routing-state"
                               [class.is-on]="routing.is_active"
-                              (click)="$event.stopPropagation(); toggleRoutingStatus(routing)"
-                              role="button"
-                              [title]="(routing.is_active ? 'projects.click_to_deactivate' : 'projects.click_to_activate') | translate">
+                              [class.is-readonly]="routingsReadOnly"
+                              (click)="$event.stopPropagation(); routingsReadOnly ? null : toggleRoutingStatus(routing)"
+                              [attr.role]="routingsReadOnly ? null : 'button'"
+                              [attr.title]="routingsReadOnly ? null : ((routing.is_active ? 'projects.click_to_deactivate' : 'projects.click_to_activate') | translate)">
                             <span class="ap-routing-state-dot"></span>
                             {{ (routing.is_active ? 'integrations.active' : 'integrations.inactive') | translate }}
                         </span>
-                        <button type="button" class="ap-btn-delete"
+                        <button *ngIf="!routingsReadOnly" type="button" class="ap-btn-delete"
                                 (click)="$event.stopPropagation(); deleteRouting(routing.id)"
                                 [disabled]="isDeletingRoutingId === routing.id">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -333,8 +340,8 @@
                 </ul>
             </section>
 
-            <!-- Card "Agregar Nueva Ruta" -->
-            <section class="ap-inner-card ap-inner-card-form">
+            <!-- Card "Agregar Nueva Ruta" — oculta cuando share_routings=ON y no-owner -->
+            <section class="ap-inner-card ap-inner-card-form" *ngIf="!routingsReadOnly">
                 <h3 class="ap-modal-section-title">{{ 'projects.add_new_route' | translate }}</h3>
                 <form (ngSubmit)="addRouting()" #routingForm="ngForm">
                     <div class="ap-field">
@@ -441,8 +448,10 @@
         </div>
 
         <footer class="ap-modal-foot">
-            <button type="button" class="ap-btn ap-btn-secondary" (click)="closeRoutings()">{{ 'common.cancel' | translate }}</button>
-            <button type="button" class="ap-btn ap-btn-primary"
+            <button type="button" class="ap-btn ap-btn-secondary" (click)="closeRoutings()">
+                {{ (routingsReadOnly ? 'common.close' : 'common.cancel') | translate }}
+            </button>
+            <button *ngIf="!routingsReadOnly" type="button" class="ap-btn ap-btn-primary"
                     (click)="addRouting()"
                     [disabled]="isAddingRouting || activeIntegrations.length === 0 || !newRouting.destination_type">
                 <span *ngIf="!isAddingRouting">{{ 'projects.save_route' | translate }}</span>
@@ -565,7 +574,7 @@
                 <button type="button" class="ap-btn ap-btn-secondary" (click)="closeRoutingDetail()">
                     {{ 'common.close' | translate }}
                 </button>
-                <button type="button" class="ap-btn ap-btn-primary" (click)="startEditRouting()">
+                <button *ngIf="!routingsReadOnly" type="button" class="ap-btn ap-btn-primary" (click)="startEditRouting()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
