@@ -122,6 +122,17 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     isDeletingRoutingId: number | null = null;
     activeIntegrations: { id: string, name: string }[] = [];
 
+    // Detalle / edición de una ruta puntual.
+    // viewingRouting: la ruta abierta en el modal de detalle (null = modal cerrado).
+    // editingRoutingMode: true cuando el modal está en modo edición; en read-only
+    //   pintamos los campos como texto.
+    // editRoutingDraft: copia mutable del config parseado mientras el usuario edita;
+    //   recién al "Guardar" se serializa y se envía al backend con PUT.
+    viewingRouting: any = null;
+    editingRoutingMode = false;
+    editRoutingDraft: any = {};
+    isSavingRoutingEdit = false;
+
     private readonly destroy$ = new Subject<void>();
 
     constructor(
@@ -699,6 +710,132 @@ export class ProjectsComponent implements OnInit, OnDestroy {
                 this.cdr.detectChanges();
             }
         });
+    }
+
+    // -----------------------------------------------------------------
+    // Detalle / edición de una ruta de integración
+    // -----------------------------------------------------------------
+
+    /** Abre el modal de detalle de una ruta en modo lectura.
+     *  Parsea destination_config a objeto para mostrarlo formateado en
+     *  vez de como blob JSON pegado. */
+    viewRouting(routing: any) {
+        if (!routing) return;
+        this.viewingRouting = routing;
+        this.editingRoutingMode = false;
+        this.editRoutingDraft = this._parseRoutingConfig(routing);
+        this.errorMsg = '';
+        this.successMsg = '';
+        this.cdr.detectChanges();
+    }
+
+    /** Cierra el modal de detalle. */
+    closeRoutingDetail() {
+        this.viewingRouting = null;
+        this.editingRoutingMode = false;
+        this.editRoutingDraft = {};
+    }
+
+    /** Pasa el modal a modo edición. El draft ya está poblado por
+     *  viewRouting; aquí solo cambiamos el flag para que se rendericen
+     *  inputs en lugar de texto. */
+    startEditRouting() {
+        if (!this.viewingRouting) return;
+        // Re-poblamos por si entre abrir el detalle y editar cambió algo
+        // externamente — siempre arrancamos desde la verdad del backend.
+        this.editRoutingDraft = this._parseRoutingConfig(this.viewingRouting);
+        this.editingRoutingMode = true;
+        this.cdr.detectChanges();
+    }
+
+    /** Cancela la edición sin guardar. Vuelve al modo lectura. */
+    cancelEditRouting() {
+        this.editingRoutingMode = false;
+        // Restauramos el draft a lo persistido para que si vuelve a "Editar"
+        // no vea sus cambios descartados.
+        if (this.viewingRouting) {
+            this.editRoutingDraft = this._parseRoutingConfig(this.viewingRouting);
+        }
+    }
+
+    /** Persiste los cambios del draft contra el backend
+     *  (PUT /api/projects/{pid}/routings/{rid}). */
+    saveRoutingEdit() {
+        if (!this.viewingRouting || !this.managingRoutingsForProject) return;
+        this.isSavingRoutingEdit = true;
+        this.errorMsg = '';
+        this.successMsg = '';
+
+        const payload = {
+            destination_config: JSON.stringify(this.editRoutingDraft || {}),
+        };
+
+        const url = `${environment.apiUrl}/api/projects/${this.managingRoutingsForProject.id}/routings/${this.viewingRouting.id}`;
+        this.http.put<any>(url, payload).subscribe({
+            next: (updated) => {
+                // Refresca la lista in-place sin re-pedirla al backend para
+                // que el cambio sea instantáneo y no parpadee la lista.
+                const idx = this.projectRoutings.findIndex(r => r.id === updated.id);
+                if (idx >= 0) {
+                    this.projectRoutings[idx] = { ...this.projectRoutings[idx], ...updated };
+                }
+                this.viewingRouting = { ...this.viewingRouting, ...updated };
+                this.editingRoutingMode = false;
+                this.isSavingRoutingEdit = false;
+                this.successMsg = this.translate.instant('projects.msg_routing_updated');
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error('PUT routing failed', err);
+                this.errorMsg = err.error?.detail || this.translate.instant('projects.msg_routing_update_failed');
+                this.isSavingRoutingEdit = false;
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    /** Parsea destination_config (string JSON) a objeto. Devuelve `{}`
+     *  si falla — la UI muestra los campos en blanco y el usuario los
+     *  rellena, mejor que romper. */
+    private _parseRoutingConfig(routing: any): any {
+        try {
+            const raw = routing?.destination_config;
+            if (!raw) return {};
+            if (typeof raw === 'string') return JSON.parse(raw);
+            if (typeof raw === 'object') return { ...raw };
+        } catch {
+            // ignorado: se trata como vacío
+        }
+        return {};
+    }
+
+    /** Convierte el destination_config a un array de [campo, valor] para
+     *  la vista de detalle (read-only). Filtra entradas vacías para que
+     *  la UI no muestre filas en blanco confusas. */
+    routingConfigEntries(routing: any): Array<{ key: string; value: string }> {
+        const parsed = this._parseRoutingConfig(routing);
+        const out: Array<{ key: string; value: string }> = [];
+        for (const [k, v] of Object.entries(parsed || {})) {
+            if (v === '' || v === null || v === undefined) continue;
+            out.push({ key: k, value: String(v) });
+        }
+        return out;
+    }
+
+    /** Etiqueta legible para una key del destination_config (board_id →
+     *  "Board ID", etc.). Si no hay match, devuelve la key tal cual con
+     *  guiones bajos convertidos a espacios. */
+    routingConfigFieldLabel(key: string): string {
+        const k = (key || '').toLowerCase();
+        const labels: { [k: string]: string } = {
+            board_id: 'Board ID',
+            list_id: 'List ID',
+            project_key: 'Project Key',
+            area_path: 'Area Path',
+            organization: 'Organization',
+            project: 'Project',
+        };
+        return labels[k] || key.replace(/_/g, ' ');
     }
 
     // ========================================================================

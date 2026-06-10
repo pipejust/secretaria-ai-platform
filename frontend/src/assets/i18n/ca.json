@@ -413,7 +413,11 @@
     "description": "Descripció",
     "tasks_count": "Tasques",
     "sessions_count": "Sessions",
-    "contacts_count": "Contactes"
+    "contacts_count": "Contactes",
+    "view_routing_details": "Veure detall",
+    "routing_empty_config": "Aquesta ruta no té paràmetres desats.",
+    "msg_routing_updated": "Ruta actualitzada correctament.",
+    "msg_routing_update_failed": "No s'ha pogut actualitzar la ruta."
   },
   "project_detail": {
     "back_to_projects": "Torna a projectes",

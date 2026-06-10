@@ -413,7 +413,11 @@
     "description": "Descripción",
     "tasks_count": "Tareas",
     "sessions_count": "Sesiones",
-    "contacts_count": "Contactos"
+    "contacts_count": "Contactos",
+    "view_routing_details": "Ver detalle",
+    "routing_empty_config": "Esta ruta no tiene parámetros guardados.",
+    "msg_routing_updated": "Ruta actualizada correctamente.",
+    "msg_routing_update_failed": "No se pudo actualizar la ruta."
   },
   "project_detail": {
     "back_to_projects": "Volver a proyectos",

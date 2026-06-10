@@ -413,7 +413,11 @@
     "description": "Description",
     "tasks_count": "Tasks",
     "sessions_count": "Sessions",
-    "contacts_count": "Contacts"
+    "contacts_count": "Contacts",
+    "view_routing_details": "View details",
+    "routing_empty_config": "This route has no parameters saved.",
+    "msg_routing_updated": "Route updated successfully.",
+    "msg_routing_update_failed": "Could not update the route."
   },
   "project_detail": {
     "back_to_projects": "Back to projects",
