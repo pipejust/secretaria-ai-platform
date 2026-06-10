@@ -21,6 +21,42 @@ class RoutingUpdate(BaseModel):
     destination_config: Optional[str] = None
     is_active: Optional[bool] = None
 
+
+def _is_tenant_owner(tenant: Tenant, user: User) -> bool:
+    """True si `user` es el owner del `tenant`. Tolera owner_user_id NULL
+    (caso legacy pre-backfill: devuelve False, los switches share quedan
+    inertes hasta que la migración asigne owner)."""
+    return tenant.owner_user_id is not None and tenant.owner_user_id == user.id
+
+
+def _effective_routing_user_id(tenant: Tenant, current_user: User) -> int:
+    """User_id sobre el que se filtra/crea routings según los switches.
+
+    Si `share_routings=ON`, todas las operaciones de lectura usan
+    `owner_user_id` (los demás ven las rutas del owner). Las operaciones
+    de escritura se rechazan con 403 antes de llegar acá.
+
+    Si `share_routings=OFF`, cada user opera con sus propias rutas
+    (modelo per-user puro)."""
+    if tenant.share_routings and tenant.owner_user_id:
+        return tenant.owner_user_id
+    return current_user.id
+
+
+def _require_routing_write_permission(tenant: Tenant, current_user: User) -> None:
+    """Lanza 403 si `share_routings=ON` y el caller no es el owner.
+
+    Solo bloquea escritura — la lectura está permitida para todos (los
+    demás ven las rutas del owner en read-only)."""
+    if tenant.share_routings and not _is_tenant_owner(tenant, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "El dueño del tenant administra las rutas de integración. "
+                "Solo el owner puede modificarlas."
+            ),
+        )
+
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
@@ -120,16 +156,16 @@ def get_project_routings(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant)
 ):
-    """Lista los routings del proyecto que pertenecen al usuario actual.
+    """Lista los routings del proyecto.
 
-    Per-user: cada miembro define SUS propias rutas dentro del proyecto.
-    Filas legacy sin user_id quedan ocultas (las migra el script de
-    arranque al primer admin del tenant)."""
+    Si `share_routings=ON`, devuelve las del owner para TODO el equipo.
+    Si OFF, las del current_user (modelo per-user)."""
     _get_project_or_404(session, project_id, tenant)
+    target_user_id = _effective_routing_user_id(tenant, current_user)
     rows = session.exec(
         select(Routing)
         .where(Routing.project_id == project_id)
-        .where(Routing.user_id == current_user.id)
+        .where(Routing.user_id == target_user_id)
     ).all()
     return rows
 
@@ -142,9 +178,12 @@ def add_project_routing(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant)
 ):
-    """Crea un routing que pertenece al usuario actual. Forzamos
-    project_id y user_id server-side para que el cliente no pueda
-    falsificar el dueño del routing."""
+    """Crea un routing. Si `share_routings=ON` y caller no es owner → 403.
+
+    En cualquier caso se asigna a `current_user.id` server-side. Cuando
+    el owner crea con share_routings=ON, esa fila ES la compartida con
+    el resto del equipo."""
+    _require_routing_write_permission(tenant, current_user)
     _get_project_or_404(session, project_id, tenant)
     routing.project_id = project_id
     routing.user_id = current_user.id
@@ -160,14 +199,16 @@ def _get_routing_for_user_or_404(
 ) -> Routing:
     """Carga un Routing verificando dueño + tenant + proyecto.
 
-    Reglas de acceso (CRÍTICO):
+    Reglas de acceso:
       1. El routing debe existir.
-      2. Si la URL trae project_id, debe coincidir con routing.project_id.
+      2. Si la URL trae project_id, debe coincidir.
       3. El proyecto del routing debe ser del tenant del caller.
-      4. routing.user_id debe coincidir con current_user.id — un usuario
-         NUNCA puede tocar el routing de otro, ni siquiera del mismo
-         proyecto. (Los admins TAMPOCO; si quieren operar las rutas
-         personales, se hace por el panel del usuario.)
+      4. Si `share_routings=ON`: el routing debe pertenecer al OWNER
+         del tenant — sino 404 (no filtra existencia de rutas ajenas).
+         La autorización (solo owner edita) se valida en cada endpoint
+         de escritura ANTES de llegar acá.
+      5. Si `share_routings=OFF`: el routing debe pertenecer al
+         current_user — modelo per-user.
     """
     routing_obj = crud.routing.get(session, routing_id)
     if not routing_obj:
@@ -175,8 +216,8 @@ def _get_routing_for_user_or_404(
     if project_id is not None and routing_obj.project_id != project_id:
         raise HTTPException(status_code=404, detail="Routing config not found")
     _get_project_or_404(session, routing_obj.project_id, tenant)
-    if routing_obj.user_id != current_user.id:
-        # 404 (no 403) para no filtrar que existe un routing ajeno.
+    expected_owner = _effective_routing_user_id(tenant, current_user)
+    if routing_obj.user_id != expected_owner:
         raise HTTPException(status_code=404, detail="Routing config not found")
     return routing_obj
 
@@ -199,6 +240,7 @@ def update_project_routing(
 
     Si el body trae destination_config, validamos que sea JSON parseable
     para no almacenar basura que después rompa el dispatch."""
+    _require_routing_write_permission(tenant, current_user)
     routing_obj = _get_routing_for_user_or_404(
         session, routing_id, tenant, current_user, project_id=project_id,
     )
@@ -241,6 +283,7 @@ def update_routing(
     tenant: Tenant = Depends(get_current_tenant),
 ):
     """Alias flat del PUT — compat con clientes viejos."""
+    _require_routing_write_permission(tenant, current_user)
     routing_obj = _get_routing_for_user_or_404(
         session, routing_id, tenant, current_user,
     )
@@ -279,9 +322,8 @@ def delete_project_routing(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Elimina un routing del usuario actual. Ruta nested RESTful — la
-    que llama el frontend. Antes el backend solo tenía la versión flat,
-    por eso DELETE devolvía 404 silencioso."""
+    """Elimina un routing. Si `share_routings=ON` y caller no es owner → 403."""
+    _require_routing_write_permission(tenant, current_user)
     _get_routing_for_user_or_404(
         session, routing_id, tenant, current_user, project_id=project_id,
     )
@@ -296,6 +338,7 @@ def delete_routing(
     tenant: Tenant = Depends(get_current_tenant),
 ):
     """Alias flat — compatibilidad con clientes viejos."""
+    _require_routing_write_permission(tenant, current_user)
     _get_routing_for_user_or_404(session, routing_id, tenant, current_user)
     crud.routing.remove(session, id=routing_id)
 
@@ -308,7 +351,8 @@ def toggle_project_routing_status(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Toggle is_active sobre un routing del usuario actual."""
+    """Toggle is_active. Si `share_routings=ON` y caller no es owner → 403."""
+    _require_routing_write_permission(tenant, current_user)
     routing_obj = _get_routing_for_user_or_404(
         session, routing_id, tenant, current_user, project_id=project_id,
     )
@@ -327,6 +371,7 @@ def toggle_routing_status(
     tenant: Tenant = Depends(get_current_tenant),
 ):
     """Alias flat — compatibilidad con clientes viejos."""
+    _require_routing_write_permission(tenant, current_user)
     routing_obj = _get_routing_for_user_or_404(
         session, routing_id, tenant, current_user,
     )

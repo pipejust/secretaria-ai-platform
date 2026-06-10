@@ -1409,78 +1409,113 @@ async def dispatch_platforms(
     tenant: Tenant = Depends(get_current_tenant),
     _writer: User = Depends(require_session_writer),
 ):
-    """Dispatch tasks to integrations (admin/validator, tenant-scoped):
-    sólo lee `IntegrationSetting` y `Routing` del propio tenant.
+    """Dispatch manual de tasks a las integraciones del proyecto.
+
+    Respeta los switches per-tenant:
+      - `share_routings`: si ON, dispara solo las rutas del owner; si
+        OFF, dispara todas las rutas activas del proyecto (cada user a
+        las suyas).
+      - `share_integrations`: si ON, las credenciales son siempre las
+        del owner; si OFF, las del dueño de cada routing.
+
+    Aislamiento multi-tenant: lee `IntegrationSetting` y `Routing`
+    siempre con tenant_id del caller.
     """
-    from models import ActionItem, Routing, IntegrationSetting
+    from models import ActionItem, IntegrationSetting
     import json
     from sqlmodel import select
     from services.integrations.trello import TrelloIntegrationService
     from services.integrations.jira import JiraIntegrationService
     from services.integrations.clickup import ClickUpIntegrationService
     from services.integrations.azure_devops import AzureDevOpsIntegrationService
+    from routers.fireflies import _routings_for_project_dispatch
 
     session_obj = _get_session_or_404(db, session_id, tenant)
 
     if not session_obj.project_id:
         raise HTTPException(status_code=400, detail="Cannot dispatch: Meeting is not related to any project routing.")
 
-    routings = db.exec(select(Routing).where(Routing.project_id == session_obj.project_id, Routing.is_active == True)).all()
+    # Helper compartido — respeta share_routings (owner-only vs todos).
+    routings = _routings_for_project_dispatch(db, session_obj.project_id)
     if not routings:
         raise HTTPException(status_code=400, detail="Project has no configured routings.")
 
-    global_settings = db.exec(
-        select(IntegrationSetting).where(IntegrationSetting.tenant_id == tenant.id)
-    ).all()
-    settings_dict = {}
-    for s in global_settings:
-        try:
-            settings_dict[s.provider_name] = json.loads(s.config_json)
-        except (json.JSONDecodeError, TypeError):
-            settings_dict[s.provider_name] = {}
+    # Resolver credenciales POR ROUTING — un cache pequeño para no
+    # repetir queries cuando hay varios items y un mismo routing.
+    settings_cache: dict[tuple[str, int], dict] = {}
+
+    def _load_creds(provider: str, routing: Routing) -> dict:
+        """Carga credenciales del provider respetando share_integrations.
+
+        - share_integrations=ON → user_id = owner_user_id.
+        - share_integrations=OFF → user_id = routing.user_id.
+        Devuelve `{}` si no hay fila o si está inactiva."""
+        if tenant.share_integrations and tenant.owner_user_id:
+            creds_user = tenant.owner_user_id
+        else:
+            creds_user = routing.user_id
+        if creds_user is None:
+            return {}
+        cache_key = (provider, creds_user)
+        if cache_key in settings_cache:
+            return settings_cache[cache_key]
+        row = db.exec(
+            select(IntegrationSetting)
+            .where(IntegrationSetting.provider_name == provider)
+            .where(IntegrationSetting.tenant_id == tenant.id)
+            .where(IntegrationSetting.user_id == creds_user)
+        ).first()
+        cfg: dict = {}
+        if row and row.is_active:
+            try:
+                cfg = json.loads(row.config_json or "{}")
+            except (json.JSONDecodeError, TypeError):
+                cfg = {}
+        settings_cache[cache_key] = cfg
+        return cfg
 
     from datetime import datetime
-    
+
     results = []
     for item_id in request.action_item_ids:
         item = db.get(ActionItem, item_id)
         if not item or item.session_id != session_id:
             continue
-        
+
         item_success = False
-        
+
         eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
-        
+
         owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
         safe_description = f"{item.description}\n\n**Metadatos de Notiva**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
-        
+
         for routing in routings:
             config = json.loads(routing.destination_config or '{}')
             dest_type = routing.destination_type.lower()
-            
+
             try:
                 if "trello" in dest_type:
-                    t_config = settings_dict.get("trello", {})
-                    if t_config.get("isActive", False) and t_config.get("apiKey") and t_config.get("apiToken"):
+                    t_config = _load_creds("trello", routing)
+                    if t_config.get("apiKey") and t_config.get("apiToken"):
                         trello_service = TrelloIntegrationService(t_config["apiKey"], t_config["apiToken"])
                         await trello_service.create_card(config.get("board_id"), config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
                         item_success = True
                 elif "jira" in dest_type:
-                    j_config = settings_dict.get("jira", {})
-                    if j_config.get("isActive", False) and j_config.get("domain") and j_config.get("apiToken"):
+                    j_config = _load_creds("jira", routing)
+                    if j_config.get("domain") and j_config.get("apiToken"):
                         jira_email = j_config.get("email", "")
-                        jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"]) 
+                        jira_service = JiraIntegrationService(j_config["domain"], jira_email, j_config["apiToken"])
                         await jira_service.create_issue(config.get("project_key"), item.title, safe_description, due_date=eff_due_date, owner_email=item.owner_email)
                         item_success = True
                 elif "clickup" in dest_type:
-                    c_config = settings_dict.get("clickup", {})
-                    if c_config.get("isActive", False) and c_config.get("apiToken"):
-                        clickup_service = ClickUpIntegrationService(c_config["apiToken"]) 
+                    c_config = _load_creds("clickup", routing)
+                    if c_config.get("apiToken"):
+                        clickup_service = ClickUpIntegrationService(c_config["apiToken"])
                         await clickup_service.create_task(config.get("list_id"), item.title, safe_description, eff_due_date, item.owner_email)
                         item_success = True
                 elif "azure" in dest_type:
-                    a_config = settings_dict.get("azure", {})
-                    if a_config.get("isActive", False) and a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
+                    a_config = _load_creds("azure", routing)
+                    if a_config.get("organization") and a_config.get("project") and a_config.get("pat"):
                         azure_service = AzureDevOpsIntegrationService(a_config["organization"], a_config["project"], a_config["pat"])
                         desc = safe_description
                         if config.get("area_path"):
@@ -1490,7 +1525,7 @@ async def dispatch_platforms(
             except Exception as e:
                 print(f"Error dispatching to {dest_type}: {e}")
                 pass # Proceed to next routing iteration
-                
+
         if item_success:
             results.append({"id": item_id, "status": "success"})
         else:

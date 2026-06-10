@@ -51,6 +51,39 @@ class Tenant(SQLModel, table=True):
     # no tiene preferencia setteada. Valores soportados: es | ca | en.
     default_language: str = Field(default="es", max_length=4, description="Idioma fallback del tenant.")
 
+    # ============================================================
+    # Modelo "compartido vs per-user" para Integraciones y Routings
+    # ============================================================
+    # El owner del tenant (primer usuario que lo creó) decide si:
+    #   - share_integrations: las credenciales de Trello/Jira/ClickUp/
+    #     Azure son las suyas para TODO el equipo. Si OFF, cada usuario
+    #     configura las suyas (per-user puro).
+    #   - share_routings: las rutas de integración por proyecto son las
+    #     suyas para TODO el equipo. Si OFF, cada usuario crea las suyas.
+    # Las dos son ortogonales. Mientras está ON, los datos personales
+    # de los demás se PRESERVAN (no se borran de BD) pero quedan ocultos
+    # y sin uso; si el switch vuelve a OFF, reaparecen sin pérdida.
+    owner_user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="user.id",
+        index=True,
+        description="Dueño del tenant. Único usuario que ve los switches share_*.",
+    )
+    share_integrations: bool = Field(
+        default=True,
+        description=(
+            "ON: los demás usuarios heredan las credenciales del owner. "
+            "OFF: cada usuario configura las suyas (per-user)."
+        ),
+    )
+    share_routings: bool = Field(
+        default=False,
+        description=(
+            "ON: los demás usuarios usan las rutas del owner por proyecto. "
+            "OFF: cada usuario crea las suyas (per-user)."
+        ),
+    )
+
 
 class Role(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

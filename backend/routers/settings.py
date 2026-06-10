@@ -4,7 +4,8 @@ import os
 import secrets
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
@@ -12,6 +13,34 @@ from models import IntegrationSetting, PER_USER_INTEGRATION_PROVIDERS, Tenant, U
 from routers.auth import get_current_tenant, get_current_user, require_admin
 
 logger = logging.getLogger(__name__)
+
+
+# Campos del config_json de un IntegrationSetting que NUNCA viajan al cliente
+# cuando el caller no es el owner del tenant. Tokens API, secrets, etc.
+# Reemplazados por el sentinel `"***"` para que el frontend pueda mostrar
+# "configurado" sin filtrar el valor real.
+_SENSITIVE_KEYS = frozenset({
+    "apikey", "api_key", "apitoken", "api_token", "token",
+    "pat", "client_secret", "webhook_token", "refresh_token",
+    "access_token", "private_app_token", "integration_token",
+    "bot_token",
+})
+
+
+def _redact_sensitive(cfg: dict) -> dict:
+    """Devuelve una copia del config con campos sensibles reemplazados por
+    `"***"`. Útil cuando un user no-owner ve la config compartida del
+    owner: necesita los identificadores no sensibles (board_id, list_id,
+    domain, email...) pero NUNCA las credenciales."""
+    if not isinstance(cfg, dict):
+        return cfg
+    out = {}
+    for k, v in cfg.items():
+        if k.lower() in _SENSITIVE_KEYS and v not in (None, "", False):
+            out[k] = "***"
+        else:
+            out[k] = v
+    return out
 
 router = APIRouter(
     prefix="/api/settings",
@@ -241,22 +270,47 @@ def save_settings(
 # Integraciones per-user (Trello / Jira / ClickUp / Azure / Calendar)
 # ============================================================
 
+def _is_owner(tenant: Tenant, user: User) -> bool:
+    """True si el usuario es el dueño del tenant. Tolera owner_user_id
+    NULL en tenants legacy (cae a False — el switch share queda inerte
+    hasta que la migración backfilleea el owner)."""
+    return tenant.owner_user_id is not None and tenant.owner_user_id == user.id
+
+
 @router.get("/me")
 def get_my_settings(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Devuelve las integraciones personales del usuario actual.
+    """Devuelve las integraciones de Configuración → Integraciones.
 
-    Solo provider en `PER_USER_INTEGRATION_PROVIDERS`. El listado es
-    cerrado para evitar que un usuario pida providers per-tenant
-    (smtp/fireflies/branding) por este endpoint.
+    Comportamiento según `tenant.share_integrations`:
+
+    - **ON + soy owner**: devuelve mis integraciones (que son las
+      compartidas con el resto del equipo).
+    - **ON + NO soy owner**: devuelve las del owner pero con tokens
+      redactados (`"***"`). El frontend las pinta en read-only para
+      transparencia ("a dónde van mis tareas") sin filtrar credenciales.
+    - **OFF**: devuelve las mías (modelo per-user puro — comportamiento
+      anterior a este cambio).
+
+    Siempre filtra a `PER_USER_INTEGRATION_PROVIDERS` para no exponer
+    providers per-tenant (smtp/fireflies/branding) por este endpoint.
     """
+    target_user_id = current_user.id
+    redact = False
+    if tenant.share_integrations and not _is_owner(tenant, current_user):
+        if tenant.owner_user_id:
+            target_user_id = tenant.owner_user_id
+            redact = True
+        # Si owner_user_id es NULL (no debería pasar tras backfill) caemos
+        # al comportamiento per-user: target = current_user, sin redact.
+
     rows = session.exec(
         select(IntegrationSetting)
         .where(IntegrationSetting.tenant_id == tenant.id)
-        .where(IntegrationSetting.user_id == current_user.id)
+        .where(IntegrationSetting.user_id == target_user_id)
     ).all()
     result: Dict[str, Any] = {}
     for s in rows:
@@ -266,6 +320,8 @@ def get_my_settings(
             cfg = json.loads(s.config_json or "{}")
         except (json.JSONDecodeError, TypeError):
             cfg = {}
+        if redact:
+            cfg = _redact_sensitive(cfg)
         cfg["isActive"] = s.is_active
         result[s.provider_name] = cfg
     return result
@@ -280,9 +336,22 @@ def save_my_settings(
 ):
     """Guarda las integraciones personales del usuario actual.
 
-    Rechaza providers que no estén en la whitelist per-user. Mantiene
-    la unicidad (provider, tenant, user) — si ya existe, hace UPSERT.
+    Si `share_integrations=ON` y el caller NO es el owner → 403. Los
+    no-owner solo pueden ver (en read-only) la config del owner.
+
+    Si OFF → comportamiento per-user normal: guarda sobre mis filas.
+    Si soy owner Y share_integrations=ON, mis filas ARE las compartidas
+    con el equipo, así que se actualizan normalmente.
     """
+    if tenant.share_integrations and not _is_owner(tenant, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "El dueño del tenant administra estas integraciones "
+                "centralizadamente. Solo el owner puede modificarlas."
+            ),
+        )
+
     for provider_name, config_obj in payload.items():
         if provider_name not in PER_USER_INTEGRATION_PROVIDERS:
             logger.info(
@@ -306,7 +375,23 @@ def save_my_settings(
         # No persistimos el flag isActive dentro del config_json — lo
         # mantenemos solo en la columna is_active de la tabla.
         config_to_persist = {k: v for k, v in config_obj.items() if k != "isActive"}
-        config_json_str = json.dumps(config_to_persist)
+
+        # Si el cliente mandó tokens redactados ("***") en un campo
+        # sensible, NO los persistimos — eran placeholders del read-only
+        # render. Conservamos el valor previo si existía.
+        existing_cfg: dict = {}
+        if existing:
+            try:
+                existing_cfg = json.loads(existing.config_json or "{}")
+            except (json.JSONDecodeError, TypeError):
+                existing_cfg = {}
+        sanitized = {}
+        for k, v in config_to_persist.items():
+            if v == "***" and k.lower() in _SENSITIVE_KEYS and k in existing_cfg:
+                sanitized[k] = existing_cfg[k]
+            else:
+                sanitized[k] = v
+        config_json_str = json.dumps(sanitized)
 
         if existing:
             existing.config_json = config_json_str
@@ -336,9 +421,15 @@ def delete_my_setting(
 ):
     """Elimina la configuración personal del usuario para un provider.
 
-    Útil cuando el usuario quiere "desconectar" su Trello/Jira sin
-    borrarse a sí mismo. Si la fila no existe, 204 igual (idempotente).
+    Si `share_integrations=ON` y caller no es owner → 403 (no puede
+    desconectar la integración de la empresa). Si OFF, borra la fila
+    per-user del current_user.
     """
+    if tenant.share_integrations and not _is_owner(tenant, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El dueño del tenant administra estas integraciones.",
+        )
     if provider_name not in PER_USER_INTEGRATION_PROVIDERS:
         return {"status": "ignored", "reason": "not a per-user provider"}
     row = session.exec(
@@ -351,3 +442,69 @@ def delete_my_setting(
         session.delete(row)
         session.commit()
     return {"status": "success"}
+
+
+# ============================================================
+# Switches de "compartido vs per-user" — solo edita el owner.
+# ============================================================
+
+class ShareSettingsUpdate(BaseModel):
+    """Cuerpo de PUT /api/settings/share. Campos opcionales para
+    permitir patches parciales (solo `share_integrations` o solo
+    `share_routings`)."""
+    share_integrations: Optional[bool] = None
+    share_routings: Optional[bool] = None
+
+
+@router.get("/share")
+def get_share_settings(
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Estado de los switches `share_*` del tenant + indicación de si
+    el caller es el owner (para renderizar la UI condicional).
+
+    Cualquier user autenticado puede leerlo — necesita saber el modelo
+    para pintar la UI (read-only vs editable).
+    """
+    return {
+        "owner_user_id": tenant.owner_user_id,
+        "is_owner": _is_owner(tenant, current_user),
+        "share_integrations": bool(tenant.share_integrations),
+        "share_routings": bool(tenant.share_routings),
+    }
+
+
+@router.put("/share")
+def update_share_settings(
+    payload: ShareSettingsUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Modifica los switches `share_*`. Solo el owner del tenant puede.
+
+    Cambiar de OFF→ON oculta (pero NO elimina) los datos personales de
+    los demás usuarios — al volver a OFF reaparecen.
+    """
+    if not _is_owner(tenant, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el dueño del tenant puede modificar estos ajustes.",
+        )
+
+    if payload.share_integrations is not None:
+        tenant.share_integrations = bool(payload.share_integrations)
+    if payload.share_routings is not None:
+        tenant.share_routings = bool(payload.share_routings)
+
+    session.add(tenant)
+    session.commit()
+    session.refresh(tenant)
+
+    return {
+        "owner_user_id": tenant.owner_user_id,
+        "is_owner": True,
+        "share_integrations": bool(tenant.share_integrations),
+        "share_routings": bool(tenant.share_routings),
+    }

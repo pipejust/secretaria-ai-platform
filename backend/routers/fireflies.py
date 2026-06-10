@@ -444,6 +444,32 @@ def _extract_native_summary(summary_obj, lang: Optional[str] = None) -> str:
     return "\n\n".join(parts).strip()
 
 
+def _routings_for_project_dispatch(db: Session, project_id: int) -> list[Routing]:
+    """Devuelve las rutas activas que deben dispararse para un proyecto.
+
+    Respeta `tenant.share_routings`:
+      - ON: solo las rutas del owner. Es la promesa del switch — el
+        owner define el conjunto único de destinos para todo el equipo.
+      - OFF: TODAS las rutas activas, sin discriminar por user. Cada
+        miembro decide a dónde aterrizan SUS tareas en este proyecto;
+        el dispatch envía a todos los destinos configurados.
+
+    Helper compartido entre el auto-dispatch (fireflies webhook) y el
+    dispatch manual (sessions_upload) para que ambos respeten el
+    switch de forma idéntica."""
+    proj = db.get(Project, project_id)
+    if not proj:
+        return []
+    tenant_obj = db.get(Tenant, proj.tenant_id)
+    q = select(Routing).where(
+        Routing.project_id == project_id,
+        Routing.is_active == True,  # noqa: E712
+    )
+    if tenant_obj and tenant_obj.share_routings and tenant_obj.owner_user_id:
+        q = q.where(Routing.user_id == tenant_obj.owner_user_id)
+    return db.exec(q).all()
+
+
 async def _dispatch_routing(
     db: Session,
     routing: Routing,
@@ -458,29 +484,36 @@ async def _dispatch_routing(
         )
         return
 
-    # Las credenciales que usamos son las del DUEÑO del routing — cada
-    # usuario configura SUS Trello/Jira/ClickUp/Azure en /api/settings/me.
-    # Si el routing es legacy (sin user_id), `routing.user_id` será None y
-    # `get_service_for_destination` intentará una fila per-tenant (que ya no
-    # existe para esos providers) → fallo claro en lugar de "usar el primer
-    # token que aparezca".
+    # Determinar de QUIÉN se cargan las credenciales:
+    #   - Si tenant.share_integrations=ON: del owner del tenant. Esa es la
+    #     promesa del switch — el equipo entero usa el Trello/Jira del owner.
+    #   - Si OFF: del dueño del routing (modelo per-user puro). Cada
+    #     miembro autenticó SU cuenta de Trello, sus tareas van allí.
+    # Si el routing no tiene project_id (no debería pasar, FK NOT NULL),
+    # caemos a routing.user_id como fallback.
     routing_tenant_id: Optional[int] = None
+    creds_user_id: Optional[int] = routing.user_id
     if routing.project_id:
         proj = db.get(Project, routing.project_id)
-        routing_tenant_id = proj.tenant_id if proj else None
+        if proj:
+            routing_tenant_id = proj.tenant_id
+            tenant_obj = db.get(Tenant, proj.tenant_id)
+            if tenant_obj and tenant_obj.share_integrations and tenant_obj.owner_user_id:
+                creds_user_id = tenant_obj.owner_user_id
 
     try:
         service = get_service_for_destination(
             db,
             routing.destination_type,
             tenant_id=routing_tenant_id,
-            user_id=routing.user_id,
+            user_id=creds_user_id,
         )
     except IntegrationConfigError as exc:
         logger.error(
-            "No se pudo construir servicio para routing %s (%s, user=%s): %s",
+            "No se pudo construir servicio para routing %s (%s, creds_user=%s, routing_user=%s): %s",
             routing.id,
             routing.destination_type,
+            creds_user_id,
             routing.user_id,
             exc,
         )
@@ -921,9 +954,9 @@ async def process_transcript_background(
             else:
                 matched_project_id = new_session.project_id
                 if matched_project_id:
-                    routings = db.exec(
-                        select(Routing).where(Routing.project_id == matched_project_id)
-                    ).all()
+                    # _routings_for_project_dispatch ya filtra is_active +
+                    # respeta share_routings (owner-only vs todos).
+                    routings = _routings_for_project_dispatch(db, matched_project_id)
                     if routings:
                         items = db.exec(
                             select(ActionItem).where(
@@ -931,8 +964,6 @@ async def process_transcript_background(
                             )
                         ).all()
                         for routing in routings:
-                            if not routing.is_active:
-                                continue
                             await _dispatch_routing(db, routing, items)
         except Exception as exc:  # noqa: BLE001
             logger.exception(

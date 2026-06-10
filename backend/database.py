@@ -205,6 +205,13 @@ def _apply_lightweight_migrations() -> None:
             # Routing per-user dentro del proyecto.
             'ALTER TABLE routing ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
             "CREATE INDEX IF NOT EXISTS idx_routing_user ON routing(user_id)",
+            # Owner del tenant + switches share_* (modelo compartido vs per-user).
+            # Defaults: share_integrations=TRUE (el owner pone tokens una vez),
+            # share_routings=FALSE (cada uno decide dónde aterrizan SUS tareas).
+            'ALTER TABLE tenant ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES "user"(id)',
+            "CREATE INDEX IF NOT EXISTS idx_tenant_owner ON tenant(owner_user_id)",
+            "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS share_integrations BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS share_routings BOOLEAN NOT NULL DEFAULT FALSE",
         ]
 
     from sqlalchemy import text
@@ -435,6 +442,29 @@ def _ensure_default_tenant_and_backfill() -> None:
             "  WHERE r2.user_id IS NULL "
             ") AS sub "
             "WHERE r.id = sub.rid AND sub.uid IS NOT NULL"
+        ))
+
+        # 8) Backfill tenant.owner_user_id — el usuario más antiguo del
+        # tenant. NO discrimina superadmin (a diferencia del backfill de
+        # IntegrationSetting/Routing) — porque en producción Acten el
+        # primer user ES superadmin (fcortes) y debe seguir siendo el owner.
+        # Solo backfilleamos cuando el campo está NULL — un futuro UI para
+        # transferir ownership puede sobrescribirlo manualmente.
+        conn.execute(text(
+            "UPDATE tenant AS t "
+            "SET owner_user_id = sub.uid "
+            "FROM ( "
+            "  SELECT t2.id AS tid, ( "
+            "    SELECT u.id FROM \"user\" u "
+            "    WHERE u.tenant_id = t2.id "
+            "      AND u.deleted_at IS NULL "
+            "    ORDER BY u.id ASC "
+            "    LIMIT 1 "
+            "  ) AS uid "
+            "  FROM tenant t2 "
+            "  WHERE t2.owner_user_id IS NULL "
+            ") AS sub "
+            "WHERE t.id = sub.tid AND sub.uid IS NOT NULL"
         ))
 
 
