@@ -42,11 +42,37 @@ class IntegrationConfigError(RuntimeError):
     """Se lanza cuando faltan credenciales o están malformadas para un provider."""
 
 
-def _load_provider_config(db: Session, provider_name: str) -> Dict[str, Any]:
+def _load_provider_config(
+    db: Session,
+    provider_name: str,
+    *,
+    tenant_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Carga la config de un provider con el alcance correcto.
+
+    Per-user (trello/jira/clickup/azure/google/microsoft): busca
+    (provider, tenant, user). Sin esa fila → error claro: el usuario
+    debe configurar SUS credenciales en /api/settings/me.
+
+    Per-tenant (slack/notion/teams/gdocs/CRM): busca (provider, tenant,
+    user_id NULL). El user_id que viene es solo para auditar quién
+    disparó la llamada, no para filtrar el alcance."""
     setting = integration_setting_crud.get_by_provider(
-        session=db, provider_name=provider_name
+        session=db,
+        provider_name=provider_name,
+        tenant_id=tenant_id,
+        user_id=user_id,
     )
     if not setting or not setting.is_active:
+        # Mensaje específico para que el frontend pueda discriminar
+        # "el admin no la configuró" vs "tú no la configuraste".
+        from models import PER_USER_INTEGRATION_PROVIDERS as _PU
+        if provider_name in _PU and user_id is not None:
+            raise IntegrationConfigError(
+                f"Tu cuenta no tiene configurada la integración '{provider_name}'. "
+                f"Ve a Configuración → Integraciones para conectarla."
+            )
         raise IntegrationConfigError(
             f"Integración '{provider_name}' no configurada o desactivada en IntegrationSetting."
         )
@@ -72,32 +98,42 @@ def _require(config: Dict[str, Any], keys: list[str], provider: str) -> None:
         )
 
 
-def get_trello_service(db: Session) -> TrelloIntegrationService:
-    cfg = _load_provider_config(db, "trello")
+def get_trello_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> TrelloIntegrationService:
+    cfg = _load_provider_config(db, "trello", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["api_key", "token"], "trello")
     return TrelloIntegrationService(cfg["api_key"], cfg["token"])
 
 
-def get_jira_service(db: Session) -> JiraIntegrationService:
-    cfg = _load_provider_config(db, "jira")
+def get_jira_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> JiraIntegrationService:
+    cfg = _load_provider_config(db, "jira", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["domain", "email", "api_token"], "jira")
     return JiraIntegrationService(cfg["domain"], cfg["email"], cfg["api_token"])
 
 
-def get_clickup_service(db: Session) -> ClickUpIntegrationService:
-    cfg = _load_provider_config(db, "clickup")
+def get_clickup_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> ClickUpIntegrationService:
+    cfg = _load_provider_config(db, "clickup", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["api_token"], "clickup")
     return ClickUpIntegrationService(cfg["api_token"])
 
 
-def get_azure_devops_service(db: Session) -> AzureDevOpsIntegrationService:
-    cfg = _load_provider_config(db, "azure_devops")
-    _require(cfg, ["organization", "project", "pat"], "azure_devops")
+def get_azure_devops_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> AzureDevOpsIntegrationService:
+    cfg = _load_provider_config(db, "azure", tenant_id=tenant_id, user_id=user_id)
+    _require(cfg, ["organization", "project", "pat"], "azure")
     return AzureDevOpsIntegrationService(cfg["organization"], cfg["project"], cfg["pat"])
 
 
-def get_slack_service(db: Session) -> SlackIntegrationService:
-    cfg = _load_provider_config(db, "slack")
+def get_slack_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> SlackIntegrationService:
+    cfg = _load_provider_config(db, "slack", tenant_id=tenant_id, user_id=user_id)
     if not cfg.get("webhook_url") and not cfg.get("bot_token"):
         raise IntegrationConfigError("Slack: webhook_url o bot_token requerido.")
     return SlackIntegrationService(
@@ -106,62 +142,81 @@ def get_slack_service(db: Session) -> SlackIntegrationService:
     )
 
 
-def get_notion_service(db: Session) -> NotionIntegrationService:
-    cfg = _load_provider_config(db, "notion")
+def get_notion_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> NotionIntegrationService:
+    cfg = _load_provider_config(db, "notion", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["integration_token", "database_id"], "notion")
     return NotionIntegrationService(cfg["integration_token"], cfg["database_id"])
 
 
-def get_msteams_service(db: Session) -> MicrosoftTeamsIntegrationService:
-    cfg = _load_provider_config(db, "microsoft_teams")
+def get_msteams_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> MicrosoftTeamsIntegrationService:
+    cfg = _load_provider_config(db, "microsoft_teams", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["webhook_url"], "microsoft_teams")
     return MicrosoftTeamsIntegrationService(cfg["webhook_url"])
 
 
-def get_gdocs_service(db: Session) -> GoogleDocsIntegrationService:
-    cfg = _load_provider_config(db, "google_docs")
+def get_gdocs_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> GoogleDocsIntegrationService:
+    cfg = _load_provider_config(db, "google_docs", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["access_token"], "google_docs")
     return GoogleDocsIntegrationService(cfg["access_token"], cfg.get("refresh_token"))
 
 
-def get_hubspot_service(db: Session) -> HubspotIntegrationService:
-    cfg = _load_provider_config(db, "hubspot")
+def get_hubspot_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> HubspotIntegrationService:
+    cfg = _load_provider_config(db, "hubspot", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["private_app_token"], "hubspot")
     return HubspotIntegrationService(cfg["private_app_token"])
 
 
-def get_salesforce_service(db: Session) -> SalesforceIntegrationService:
-    cfg = _load_provider_config(db, "salesforce")
+def get_salesforce_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> SalesforceIntegrationService:
+    cfg = _load_provider_config(db, "salesforce", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["instance_url", "access_token"], "salesforce")
     return SalesforceIntegrationService(cfg["instance_url"], cfg["access_token"])
 
 
-def get_pipedrive_service(db: Session) -> PipedriveIntegrationService:
-    cfg = _load_provider_config(db, "pipedrive")
+def get_pipedrive_service(
+    db: Session, *, tenant_id: Optional[int] = None, user_id: Optional[int] = None,
+) -> PipedriveIntegrationService:
+    cfg = _load_provider_config(db, "pipedrive", tenant_id=tenant_id, user_id=user_id)
     _require(cfg, ["api_token", "company_domain"], "pipedrive")
     return PipedriveIntegrationService(cfg["api_token"], cfg["company_domain"])
 
 
 def get_service_for_destination(
-    db: Session, destination_type: str
+    db: Session,
+    destination_type: str,
+    *,
+    tenant_id: Optional[int] = None,
+    user_id: Optional[int] = None,
 ) -> Optional[object]:
-    """
-    Despacha por tipo (case-insensitive) y devuelve el servicio listo para usar.
-    Devuelve None si el tipo no se reconoce. Lanza IntegrationConfigError si
-    el tipo se reconoce pero no hay credenciales válidas.
+    """Devuelve el servicio listo para usar.
+
+    Para providers per-user pasar `user_id` es OBLIGATORIO. Si no
+    viene, se intentará cargar la fila per-tenant (que ya no existe para
+    Trello/Jira/ClickUp/Azure desde el rollout per-user) → fallará con
+    error claro. Para providers per-tenant `user_id` se ignora a la
+    hora de filtrar pero se acepta por simetría de la firma.
     """
     dt = (destination_type or "").lower()
-    if "trello" in dt: return get_trello_service(db)
-    if "jira" in dt: return get_jira_service(db)
-    if "clickup" in dt: return get_clickup_service(db)
-    if "azure" in dt or "devops" in dt: return get_azure_devops_service(db)
-    if "slack" in dt: return get_slack_service(db)
-    if "notion" in dt: return get_notion_service(db)
-    if "teams" in dt or "msteams" in dt: return get_msteams_service(db)
-    if "gdocs" in dt or "google_docs" in dt or "googledocs" in dt: return get_gdocs_service(db)
+    if "trello" in dt: return get_trello_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "jira" in dt: return get_jira_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "clickup" in dt: return get_clickup_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "azure" in dt or "devops" in dt: return get_azure_devops_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "slack" in dt: return get_slack_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "notion" in dt: return get_notion_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "teams" in dt or "msteams" in dt: return get_msteams_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "gdocs" in dt or "google_docs" in dt or "googledocs" in dt: return get_gdocs_service(db, tenant_id=tenant_id, user_id=user_id)
     # Sprint 06 — CRM
-    if "hubspot" in dt: return get_hubspot_service(db)
-    if "salesforce" in dt: return get_salesforce_service(db)
-    if "pipedrive" in dt: return get_pipedrive_service(db)
+    if "hubspot" in dt: return get_hubspot_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "salesforce" in dt: return get_salesforce_service(db, tenant_id=tenant_id, user_id=user_id)
+    if "pipedrive" in dt: return get_pipedrive_service(db, tenant_id=tenant_id, user_id=user_id)
     logger.warning("Destination_type no reconocido: %s", destination_type)
     return None

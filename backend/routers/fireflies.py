@@ -22,7 +22,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session, select
 
 from database import get_session
-from models import ActionItem, MeetingSession, Routing, Tenant, User
+from models import ActionItem, MeetingSession, Project, Routing, Tenant, User
 from routers.auth import get_current_tenant, require_admin
 from services.fireflies_service import FirefliesService
 from services.integrations import (
@@ -458,13 +458,30 @@ async def _dispatch_routing(
         )
         return
 
+    # Las credenciales que usamos son las del DUEÑO del routing — cada
+    # usuario configura SUS Trello/Jira/ClickUp/Azure en /api/settings/me.
+    # Si el routing es legacy (sin user_id), `routing.user_id` será None y
+    # `get_service_for_destination` intentará una fila per-tenant (que ya no
+    # existe para esos providers) → fallo claro en lugar de "usar el primer
+    # token que aparezca".
+    routing_tenant_id: Optional[int] = None
+    if routing.project_id:
+        proj = db.get(Project, routing.project_id)
+        routing_tenant_id = proj.tenant_id if proj else None
+
     try:
-        service = get_service_for_destination(db, routing.destination_type)
+        service = get_service_for_destination(
+            db,
+            routing.destination_type,
+            tenant_id=routing_tenant_id,
+            user_id=routing.user_id,
+        )
     except IntegrationConfigError as exc:
         logger.error(
-            "No se pudo construir servicio para routing %s (%s): %s",
+            "No se pudo construir servicio para routing %s (%s, user=%s): %s",
             routing.id,
             routing.destination_type,
+            routing.user_id,
             exc,
         )
         return

@@ -232,29 +232,68 @@ class Template(SQLModel, table=True):
     project: Optional[Project] = Relationship(back_populates="templates")
 
 class Routing(SQLModel, table=True):
-    """Configuración de a dónde enviar las tareas de un proyecto"""
+    """Configuración de a dónde enviar las tareas de un proyecto, por usuario.
+
+    Per-user dentro del proyecto: cada miembro define SUS propias rutas
+    (su Trello/Jira/etc.) y solo ve las suyas. `user_id` es opcional en
+    el esquema durante la migración — el backfill asigna los Routings
+    legacy al primer admin del tenant; nuevos creates siempre llevan
+    `user_id` del current_user.
+    """
     id: Optional[int] = Field(default=None, primary_key=True)
     project_id: int = Field(foreign_key="project.id")
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="user.id",
+        index=True,
+        description=(
+            "Dueño del routing. NULL solo en filas legacy antes del backfill — "
+            "los endpoints rechazan crear/usar routings sin user_id."
+        ),
+    )
     destination_type: str = Field(description="Ej. 'Trello', 'Azure DevOps', 'Jira'")
     destination_config: str = Field(description="Un JSON stringifiado de configuraciones (ej. ID del Board)")
     is_active: bool = Field(default=True)
-    
+
     project: Optional[Project] = Relationship(back_populates="routings")
 
+
+# Proveedores per-user vs per-tenant.
+# Per-user: cada usuario configura SUS credenciales (plataformas personales
+# de gestión + calendario OAuth). Per-tenant: globales de la empresa
+# (email saliente, webhooks únicos, branding).
+PER_USER_INTEGRATION_PROVIDERS: frozenset[str] = frozenset({
+    "trello", "jira", "clickup", "azure",
+    "google", "microsoft",
+})
+
+
 class IntegrationSetting(SQLModel, table=True):
-    """Configuración por tenant de Integraciones (SMTP, Fireflies, Trello…).
+    """Configuración de Integraciones — per-tenant o per-user.
 
-    Ahora es per-tenant: cada empresa tiene sus propias credenciales de
-    Resend/Trello/etc. La unicidad es `(provider_name, tenant_id)` — antes
-    era `provider_name` global, lo que filtraba credenciales entre clientes.
+    Hay dos clases de filas, distinguidas por `user_id`:
+
+    - `user_id IS NULL`: per-tenant. Una sola por (provider, tenant).
+      Provider típicos: fireflies, resend, smtp, branding, autoCuration.
+      Sólo admins las pueden tocar.
+    - `user_id IS NOT NULL`: per-user. Una por (provider, tenant, user).
+      Provider típicos: trello, jira, clickup, azure, google, microsoft.
+      Cada usuario edita SOLO la suya.
+
+    Los UNIQUE índices parciales se crean en _apply_lightweight_migrations
+    (Postgres) porque SQLModel/SQLAlchemy no expresan UNIQUE WHERE en
+    `__table_args__`. El `UniqueConstraint` legacy se DROPpea durante la
+    migración para no chocar con los nuevos índices.
     """
-
-    __table_args__ = (
-        UniqueConstraint("provider_name", "tenant_id", name="uq_integration_per_tenant"),
-    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
     tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="user.id",
+        index=True,
+        description="NULL = per-tenant; NOT NULL = per-user (dueño de las credenciales)",
+    )
     provider_name: str = Field(index=True, description="Ej: fireflies, resend, azure, trello, jira, clickup")
     config_json: str = Field(default="{}", description="Configuraciones en JSON incluyendo tokens")
     is_active: bool = Field(default=True)

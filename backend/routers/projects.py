@@ -106,9 +106,19 @@ def get_project_routings(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant)
 ):
-    db_project = _get_project_or_404(session, project_id, tenant)
-        
-    return db_project.routings
+    """Lista los routings del proyecto que pertenecen al usuario actual.
+
+    Per-user: cada miembro define SUS propias rutas dentro del proyecto.
+    Filas legacy sin user_id quedan ocultas (las migra el script de
+    arranque al primer admin del tenant)."""
+    _get_project_or_404(session, project_id, tenant)
+    rows = session.exec(
+        select(Routing)
+        .where(Routing.project_id == project_id)
+        .where(Routing.user_id == current_user.id)
+    ).all()
+    return rows
+
 
 @router.post("/{project_id}/routings", response_model=Routing)
 def add_project_routing(
@@ -118,31 +128,42 @@ def add_project_routing(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant)
 ):
-    db_project = _get_project_or_404(session, project_id, tenant)
-        
+    """Crea un routing que pertenece al usuario actual. Forzamos
+    project_id y user_id server-side para que el cliente no pueda
+    falsificar el dueño del routing."""
+    _get_project_or_404(session, project_id, tenant)
     routing.project_id = project_id
+    routing.user_id = current_user.id
     return crud.routing.create(session, obj_in=routing)
 
-def _get_routing_for_tenant_or_404(
+
+def _get_routing_for_user_or_404(
     session: Session,
     routing_id: int,
     tenant: Tenant,
+    current_user: User,
     project_id: Optional[int] = None,
 ) -> Routing:
-    """Carga un Routing verificando que pertenece a un proyecto del tenant.
+    """Carga un Routing verificando dueño + tenant + proyecto.
 
-    AISLAMIENTO multi-tenant CRÍTICO: sin este check, un usuario podía
-    borrar/togglear routings de OTRA empresa adivinando el id (no
-    teóricamente — el frontend manda el id directo). Hace 2 lookups
-    (routing → project), no es hot path; la consistencia compensa el coste.
+    Reglas de acceso (CRÍTICO):
+      1. El routing debe existir.
+      2. Si la URL trae project_id, debe coincidir con routing.project_id.
+      3. El proyecto del routing debe ser del tenant del caller.
+      4. routing.user_id debe coincidir con current_user.id — un usuario
+         NUNCA puede tocar el routing de otro, ni siquiera del mismo
+         proyecto. (Los admins TAMPOCO; si quieren operar las rutas
+         personales, se hace por el panel del usuario.)
     """
     routing_obj = crud.routing.get(session, routing_id)
     if not routing_obj:
         raise HTTPException(status_code=404, detail="Routing config not found")
     if project_id is not None and routing_obj.project_id != project_id:
         raise HTTPException(status_code=404, detail="Routing config not found")
-    # Verifica que el proyecto del routing es del tenant del caller.
     _get_project_or_404(session, routing_obj.project_id, tenant)
+    if routing_obj.user_id != current_user.id:
+        # 404 (no 403) para no filtrar que existe un routing ajeno.
+        raise HTTPException(status_code=404, detail="Routing config not found")
     return routing_obj
 
 
@@ -154,13 +175,12 @@ def delete_project_routing(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Elimina un routing — ruta RESTful nested. Es la que llama el
-    frontend (/api/projects/{project_id}/routings/{routing_id}).
-
-    Antes el backend solo tenía la versión flat (/routings/{id}) →
-    DELETE devolvía 404 silencioso aunque el id existiera, porque la URL
-    no matcheaba ningún path."""
-    _get_routing_for_tenant_or_404(session, routing_id, tenant, project_id=project_id)
+    """Elimina un routing del usuario actual. Ruta nested RESTful — la
+    que llama el frontend. Antes el backend solo tenía la versión flat,
+    por eso DELETE devolvía 404 silencioso."""
+    _get_routing_for_user_or_404(
+        session, routing_id, tenant, current_user, project_id=project_id,
+    )
     crud.routing.remove(session, id=routing_id)
 
 
@@ -171,9 +191,8 @@ def delete_routing(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Alias flat — mantiene compatibilidad con integraciones que aún
-    apuntan a la ruta vieja sin project_id en el path."""
-    _get_routing_for_tenant_or_404(session, routing_id, tenant)
+    """Alias flat — compatibilidad con clientes viejos."""
+    _get_routing_for_user_or_404(session, routing_id, tenant, current_user)
     crud.routing.remove(session, id=routing_id)
 
 
@@ -185,9 +204,9 @@ def toggle_project_routing_status(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Toggle is_active en nested — simetría con el DELETE nested."""
-    routing_obj = _get_routing_for_tenant_or_404(
-        session, routing_id, tenant, project_id=project_id,
+    """Toggle is_active sobre un routing del usuario actual."""
+    routing_obj = _get_routing_for_user_or_404(
+        session, routing_id, tenant, current_user, project_id=project_id,
     )
     routing_obj.is_active = not routing_obj.is_active
     session.add(routing_obj)
@@ -203,8 +222,10 @@ def toggle_routing_status(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Alias flat del toggle — mismo razonamiento que el DELETE flat."""
-    routing_obj = _get_routing_for_tenant_or_404(session, routing_id, tenant)
+    """Alias flat — compatibilidad con clientes viejos."""
+    routing_obj = _get_routing_for_user_or_404(
+        session, routing_id, tenant, current_user,
+    )
     routing_obj.is_active = not routing_obj.is_active
     session.add(routing_obj)
     session.commit()

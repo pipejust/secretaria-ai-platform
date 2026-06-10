@@ -192,6 +192,19 @@ def _apply_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS idx_auditlog_tenant        ON auditlog(tenant_id)",
             # Landing CMS — contenido editable de acten.app (solo tenant 'acten').
             "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS landing_content_json TEXT NOT NULL DEFAULT '{}'",
+            # ============================================================
+            # Integraciones per-user (Trello/Jira/ClickUp/Azure + Calendar).
+            # ============================================================
+            # Antes IntegrationSetting era per-tenant pura. Ahora coexisten:
+            #   - filas con user_id IS NULL → per-tenant (resend, fireflies, branding…)
+            #   - filas con user_id IS NOT NULL → per-user (trello, jira…)
+            # El cambio del UNIQUE se hace en _ensure_default_tenant_and_backfill
+            # porque depende de DROP + CREATE INDEX (no ALTER ADD COLUMN).
+            'ALTER TABLE integrationsetting ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
+            "CREATE INDEX IF NOT EXISTS idx_integrationsetting_user ON integrationsetting(user_id)",
+            # Routing per-user dentro del proyecto.
+            'ALTER TABLE routing ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
+            "CREATE INDEX IF NOT EXISTS idx_routing_user ON routing(user_id)",
         ]
 
     from sqlalchemy import text
@@ -335,6 +348,94 @@ def _ensure_default_tenant_and_backfill() -> None:
                 # Si quedan NULLs por una tabla derivada que no backfilleamos
                 # (caso raro), no abortamos el boot — solo lo registramos.
                 logger.warning("No pude SET NOT NULL %s.%s: %s", tbl, col, exc)
+
+        # 7) Migración a integraciones per-user.
+        # --------------------------------------------------------------
+        # IntegrationSetting: reemplazar el UNIQUE (provider_name, tenant_id)
+        # por DOS índices parciales — uno para per-tenant (user_id NULL) y
+        # otro para per-user. SQLAlchemy unique constraint no acepta WHERE,
+        # así que lo hacemos en SQL crudo.
+        #
+        # Idempotente: comprobamos existencia antes de crear.
+        # --------------------------------------------------------------
+        try:
+            conn.execute(text(
+                "ALTER TABLE integrationsetting DROP CONSTRAINT IF EXISTS uq_integration_per_tenant"
+            ))
+            conn.execute(text("DROP INDEX IF EXISTS uq_integration_per_tenant"))
+        except Exception as exc:
+            logger.warning("No pude dropear unique legacy de integrationsetting: %s", exc)
+
+        # Per-tenant: una sola fila por (provider, tenant) cuando user_id IS NULL.
+        partial_per_tenant = conn.execute(text(
+            "SELECT 1 FROM pg_indexes WHERE indexname = 'uq_integration_tenant_global'"
+        )).first()
+        if not partial_per_tenant:
+            try:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX uq_integration_tenant_global "
+                    "ON integrationsetting (provider_name, tenant_id) "
+                    "WHERE user_id IS NULL"
+                ))
+            except Exception as exc:
+                logger.warning("No pude crear uq_integration_tenant_global: %s", exc)
+
+        # Per-user: una sola fila por (provider, tenant, user) cuando user_id NOT NULL.
+        partial_per_user = conn.execute(text(
+            "SELECT 1 FROM pg_indexes WHERE indexname = 'uq_integration_per_user'"
+        )).first()
+        if not partial_per_user:
+            try:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX uq_integration_per_user "
+                    "ON integrationsetting (provider_name, tenant_id, user_id) "
+                    "WHERE user_id IS NOT NULL"
+                ))
+            except Exception as exc:
+                logger.warning("No pude crear uq_integration_per_user: %s", exc)
+
+        # Backfill: los IntegrationSetting legacy de proveedores per-user
+        # (trello/jira/clickup/azure) probablemente los puso un admin —
+        # asignamos esa config al admin más antiguo (no superadmin global)
+        # del mismo tenant. Si no hay admin no superadmin, usamos el primer
+        # user del tenant. Evita perder credenciales en la migración.
+        conn.execute(text(
+            "UPDATE integrationsetting AS i "
+            "SET user_id = sub.uid "
+            "FROM ( "
+            "  SELECT i2.id AS iid, ( "
+            "    SELECT u.id FROM \"user\" u "
+            "    WHERE u.tenant_id = i2.tenant_id "
+            "      AND u.deleted_at IS NULL "
+            "    ORDER BY (u.is_superadmin) ASC, u.id ASC "
+            "    LIMIT 1 "
+            "  ) AS uid "
+            "  FROM integrationsetting i2 "
+            "  WHERE i2.user_id IS NULL "
+            "    AND i2.provider_name IN ('trello','jira','clickup','azure') "
+            ") AS sub "
+            "WHERE i.id = sub.iid AND sub.uid IS NOT NULL"
+        ))
+
+        # Routing: backfill al primer user del tenant del proyecto. Mismo
+        # criterio que IntegrationSetting per-user.
+        conn.execute(text(
+            "UPDATE routing AS r "
+            "SET user_id = sub.uid "
+            "FROM ( "
+            "  SELECT r2.id AS rid, ( "
+            "    SELECT u.id FROM \"user\" u "
+            "    JOIN project p ON p.tenant_id = u.tenant_id "
+            "    WHERE p.id = r2.project_id "
+            "      AND u.deleted_at IS NULL "
+            "    ORDER BY (u.is_superadmin) ASC, u.id ASC "
+            "    LIMIT 1 "
+            "  ) AS uid "
+            "  FROM routing r2 "
+            "  WHERE r2.user_id IS NULL "
+            ") AS sub "
+            "WHERE r.id = sub.rid AND sub.uid IS NOT NULL"
+        ))
 
 
 def get_session():

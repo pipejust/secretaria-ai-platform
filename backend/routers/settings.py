@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select
 
 from database import get_session
-from models import IntegrationSetting, Tenant, User
-from routers.auth import get_current_tenant, require_admin
+from models import IntegrationSetting, PER_USER_INTEGRATION_PROVIDERS, Tenant, User
+from routers.auth import get_current_tenant, get_current_user, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -117,14 +117,27 @@ def get_all_settings(
     _admin: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Devuelve la configuración de todas las integraciones del tenant actual."""
+    """Devuelve las integraciones PER-TENANT del tenant actual.
+
+    Ya NO devuelve providers per-user (trello/jira/clickup/azure/google/
+    microsoft) — esos viven en /api/settings/me y los configura cada
+    usuario por su cuenta. Si por alguna razón el admin pidiese estos
+    providers via este endpoint, los filtramos para no exponer
+    credenciales de otros usuarios.
+    """
     settings_rows = session.exec(
-        select(IntegrationSetting).where(IntegrationSetting.tenant_id == tenant.id)
+        select(IntegrationSetting)
+        .where(IntegrationSetting.tenant_id == tenant.id)
+        .where(IntegrationSetting.user_id == None)  # noqa: E711 — per-tenant only
     ).all()
     result: Dict[str, Any] = {}
     fireflies_setting: Optional[IntegrationSetting] = None
 
     for s in settings_rows:
+        if s.provider_name in PER_USER_INTEGRATION_PROVIDERS:
+            # Defensa en profundidad: si quedaron filas legacy sin user_id
+            # de un provider per-user, NO las exponemos aquí.
+            continue
         try:
             result[s.provider_name] = json.loads(s.config_json)
         except (json.JSONDecodeError, TypeError):
@@ -154,12 +167,24 @@ def save_settings(
     _admin: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Crea o actualiza configuración de integraciones del tenant actual."""
+    """Guarda integraciones PER-TENANT del tenant actual.
+
+    Rechaza providers per-user — esos van por /api/settings/me con las
+    credenciales del usuario que llama. Si el cliente manda uno, lo
+    saltamos en silencio (sin romper el batch) y dejamos la nota en log.
+    """
     for provider_name, config_obj in payload.items():
+        if provider_name in PER_USER_INTEGRATION_PROVIDERS:
+            logger.info(
+                "save_settings(tenant=%s) ignoró provider per-user %r — usar /me",
+                tenant.id, provider_name,
+            )
+            continue
         existing = session.exec(
             select(IntegrationSetting)
             .where(IntegrationSetting.provider_name == provider_name)
             .where(IntegrationSetting.tenant_id == tenant.id)
+            .where(IntegrationSetting.user_id == None)  # noqa: E711
         ).first()
 
         is_active = (
@@ -201,6 +226,7 @@ def save_settings(
             session.add(
                 IntegrationSetting(
                     tenant_id=tenant.id,
+                    user_id=None,
                     provider_name=provider_name,
                     config_json=config_json_str,
                     is_active=is_active,
@@ -209,3 +235,119 @@ def save_settings(
 
     session.commit()
     return {"status": "success", "message": "Settings updated successfully"}
+
+
+# ============================================================
+# Integraciones per-user (Trello / Jira / ClickUp / Azure / Calendar)
+# ============================================================
+
+@router.get("/me")
+def get_my_settings(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Devuelve las integraciones personales del usuario actual.
+
+    Solo provider en `PER_USER_INTEGRATION_PROVIDERS`. El listado es
+    cerrado para evitar que un usuario pida providers per-tenant
+    (smtp/fireflies/branding) por este endpoint.
+    """
+    rows = session.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.tenant_id == tenant.id)
+        .where(IntegrationSetting.user_id == current_user.id)
+    ).all()
+    result: Dict[str, Any] = {}
+    for s in rows:
+        if s.provider_name not in PER_USER_INTEGRATION_PROVIDERS:
+            continue
+        try:
+            cfg = json.loads(s.config_json or "{}")
+        except (json.JSONDecodeError, TypeError):
+            cfg = {}
+        cfg["isActive"] = s.is_active
+        result[s.provider_name] = cfg
+    return result
+
+
+@router.post("/me")
+def save_my_settings(
+    payload: dict,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Guarda las integraciones personales del usuario actual.
+
+    Rechaza providers que no estén en la whitelist per-user. Mantiene
+    la unicidad (provider, tenant, user) — si ya existe, hace UPSERT.
+    """
+    for provider_name, config_obj in payload.items():
+        if provider_name not in PER_USER_INTEGRATION_PROVIDERS:
+            logger.info(
+                "save_my_settings(user=%s) ignoró provider non-per-user %r",
+                current_user.id, provider_name,
+            )
+            continue
+
+        existing = session.exec(
+            select(IntegrationSetting)
+            .where(IntegrationSetting.provider_name == provider_name)
+            .where(IntegrationSetting.tenant_id == tenant.id)
+            .where(IntegrationSetting.user_id == current_user.id)
+        ).first()
+
+        is_active = (
+            config_obj.get("isActive", True)
+            if existing is None
+            else config_obj.get("isActive", existing.is_active)
+        )
+        # No persistimos el flag isActive dentro del config_json — lo
+        # mantenemos solo en la columna is_active de la tabla.
+        config_to_persist = {k: v for k, v in config_obj.items() if k != "isActive"}
+        config_json_str = json.dumps(config_to_persist)
+
+        if existing:
+            existing.config_json = config_json_str
+            existing.is_active = is_active
+            session.add(existing)
+        else:
+            session.add(
+                IntegrationSetting(
+                    tenant_id=tenant.id,
+                    user_id=current_user.id,
+                    provider_name=provider_name,
+                    config_json=config_json_str,
+                    is_active=is_active,
+                )
+            )
+
+    session.commit()
+    return {"status": "success", "message": "User settings updated successfully"}
+
+
+@router.delete("/me/{provider_name}")
+def delete_my_setting(
+    provider_name: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Elimina la configuración personal del usuario para un provider.
+
+    Útil cuando el usuario quiere "desconectar" su Trello/Jira sin
+    borrarse a sí mismo. Si la fila no existe, 204 igual (idempotente).
+    """
+    if provider_name not in PER_USER_INTEGRATION_PROVIDERS:
+        return {"status": "ignored", "reason": "not a per-user provider"}
+    row = session.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.provider_name == provider_name)
+        .where(IntegrationSetting.tenant_id == tenant.id)
+        .where(IntegrationSetting.user_id == current_user.id)
+    ).first()
+    if row:
+        session.delete(row)
+        session.commit()
+    return {"status": "success"}
