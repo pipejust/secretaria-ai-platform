@@ -303,6 +303,12 @@ def _ensure_default_tenant_and_backfill() -> None:
         # SQLAlchemy genera el nombre como `ix_<table>_<col>` cuando el Field
         # tiene `index=True, unique=True`, y `<table>_<col>_key` cuando es
         # `unique=True` sin index. Probamos los dos por seguridad.
+        #
+        # NOTA: `integrationsetting` se administra aparte (paso 7) porque
+        # ahora hay 2 índices parciales — uno per-tenant + uno per-user.
+        # No usa este loop: la fila puede repetir (provider, tenant) con
+        # distintos user_id, así que crear el unique compuesto aquí
+        # rompe el boot.
         replace_uniques = [
             ("user", ["user_email_key", "ix_user_email"],
              "uq_user_email_per_tenant", "(email, tenant_id)"),
@@ -310,9 +316,6 @@ def _ensure_default_tenant_and_backfill() -> None:
              "uq_project_name_per_tenant", "(name, tenant_id)"),
             ("meetingsession", ["ix_meetingsession_fireflies_id"],
              "uq_meetingsession_ff_per_tenant", "(fireflies_id, tenant_id)"),
-            ("integrationsetting",
-             ["integrationsetting_provider_name_key", "ix_integrationsetting_provider_name"],
-             "uq_integration_per_tenant", "(provider_name, tenant_id)"),
             ("outputtemplate",
              ["outputtemplate_name_key", "ix_outputtemplate_name"],
              "uq_outputtemplate_name_per_tenant", "(name, tenant_id)"),
@@ -324,7 +327,7 @@ def _ensure_default_tenant_and_backfill() -> None:
             # Re-crear el `ix_*` (NO unique) sólo para los que necesitan índice
             # de búsqueda por la columna sola. user.email y project.name lo
             # necesitan para WHERE email = X AND tenant_id = Y.
-            if table in ("user", "project", "outputtemplate", "integrationsetting"):
+            if table in ("user", "project", "outputtemplate"):
                 col_name = cols.strip("()").split(",")[0].strip()
                 conn.execute(text(
                     f'CREATE INDEX IF NOT EXISTS "ix_{table}_{col_name}_nonunique" '
@@ -338,6 +341,20 @@ def _ensure_default_tenant_and_backfill() -> None:
                 conn.execute(text(
                     f'CREATE UNIQUE INDEX "{new_idx}" ON "{table}" {cols}'
                 ))
+
+        # Limpieza one-shot: el bloque viejo (commits anteriores a este fix)
+        # dropea las cláusulas legacy de integrationsetting; lo replicamos
+        # acá por idempotencia para garantizar que un boot fresh sobre una
+        # BD vieja también lo haga.
+        for legacy in ("integrationsetting_provider_name_key",
+                       "ix_integrationsetting_provider_name"):
+            conn.execute(text(f'ALTER TABLE integrationsetting DROP CONSTRAINT IF EXISTS "{legacy}"'))
+            conn.execute(text(f'DROP INDEX IF EXISTS "{legacy}"'))
+        # Índice no único de búsqueda por provider_name (sustituye al unique global).
+        conn.execute(text(
+            'CREATE INDEX IF NOT EXISTS "ix_integrationsetting_provider_name_nonunique" '
+            'ON integrationsetting (provider_name)'
+        ))
 
         # 6) Una vez backfilleado, podemos exigir NOT NULL en tenant_id.
         for tbl, col in [
