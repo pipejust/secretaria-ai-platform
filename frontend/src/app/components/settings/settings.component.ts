@@ -1,6 +1,7 @@
-// Build tag: 2026-05-13T20-redeploy (forza rebuild de Coolify cuando el
+// Build tag: 2026-06-10T05-share-i18n (forza rebuild de Coolify cuando el
 // webhook de commits empty no dispara). Cambiar este número garantiza
 // que el bundle de producción cambie su hash y se note el deploy.
+// Esta versión incluye las claves settings.share_* en los 3 idiomas.
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
