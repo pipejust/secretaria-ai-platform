@@ -1010,7 +1010,12 @@
     "msg_ago_minutes": "{{count}} min ago",
     "msg_ago_hours": "{{count}} h ago",
     "msg_ago_days": "{{count}} d ago",
-    "msg_routing_platform_default": "Platform"
+    "msg_routing_platform_default": "Platform",
+    "view_routing_details": "View details",
+    "routing_empty_config": "This route has no parameters saved.",
+    "msg_routing_updated": "Route updated successfully.",
+    "msg_routing_update_failed": "Could not update the route.",
+    "shared_routings_notice": "Your company manages these routes centrally. Only the owner can modify them."
   },
   "project_detail": {
     "back_to_projects": "Back to projects",
@@ -1591,7 +1596,16 @@
     "msg_config_save_failed": "There was an error saving the configuration.",
     "msg_test_email_simulated": "Email simulated to {{to}} (no real SMTP). Configure the API Key above for real delivery.",
     "msg_test_email_sent": "Test email sent to {{to}}.",
-    "msg_test_email_failed": "Could not send the test email."
+    "msg_test_email_failed": "Could not send the test email.",
+    "share_title": "Who manages integrations",
+    "share_subtitle": "As the tenant owner, you decide what your users configure and what you administer centrally for the whole team.",
+    "share_integrations_title": "Share platform credentials",
+    "share_integrations_desc": "When on, only you configure Trello, Jira, ClickUp and Azure and the whole team uses them. When off, each user connects their own credentials.",
+    "share_routings_title": "Share integration routes per project",
+    "share_routings_desc": "When on, the routes you define in each project apply to the whole team. When off, each user defines their own.",
+    "share_updated": "Preference saved.",
+    "share_update_failed": "Could not save the preference.",
+    "shared_integrations_notice": "Your company manages these integrations centrally. Identifiers are shown for reference; tokens are hidden for security."
   },
   "landing_cms": {
     "title": "Landing CMS",

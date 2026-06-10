@@ -1010,7 +1010,12 @@
     "msg_ago_minutes": "fa {{count}} min",
     "msg_ago_hours": "fa {{count}} h",
     "msg_ago_days": "fa {{count}} d",
-    "msg_routing_platform_default": "Plataforma"
+    "msg_routing_platform_default": "Plataforma",
+    "view_routing_details": "Veure detall",
+    "routing_empty_config": "Aquesta ruta no té paràmetres desats.",
+    "msg_routing_updated": "Ruta actualitzada correctament.",
+    "msg_routing_update_failed": "No s'ha pogut actualitzar la ruta.",
+    "shared_routings_notice": "La teva empresa administra aquestes rutes centralment. Només el propietari pot modificar-les."
   },
   "project_detail": {
     "back_to_projects": "Torna a projectes",
@@ -1591,7 +1596,16 @@
     "msg_config_save_failed": "Hi ha hagut un error en desar la configuració.",
     "msg_test_email_simulated": "Correu simulat a {{to}} (sense SMTP real). Configura la clau API a sobre per a un enviament real.",
     "msg_test_email_sent": "Correu de prova enviat a {{to}}.",
-    "msg_test_email_failed": "No he pogut enviar el correu de prova."
+    "msg_test_email_failed": "No he pogut enviar el correu de prova.",
+    "share_title": "Qui administra les integracions",
+    "share_subtitle": "Com a propietari del tenant, decideix què configuren els teus usuaris i què administres tu per a tot l'equip.",
+    "share_integrations_title": "Compartir credencials de les plataformes",
+    "share_integrations_desc": "Si està actiu, només tu configures Trello, Jira, ClickUp i Azure i tot l'equip les fa servir. Si està inactiu, cada usuari connecta les seves pròpies credencials.",
+    "share_routings_title": "Compartir rutes d'integració per projecte",
+    "share_routings_desc": "Si està actiu, les rutes que defineixis a cada projecte s'apliquen a tot l'equip. Si està inactiu, cada usuari defineix les seves.",
+    "share_updated": "Preferència actualitzada.",
+    "share_update_failed": "No s'ha pogut desar la preferència.",
+    "shared_integrations_notice": "La teva empresa administra aquestes integracions centralment. Els identificadors es mostren com a referència; els tokens estan ocults per seguretat."
   },
   "landing_cms": {
     "title": "Landing CMS",
