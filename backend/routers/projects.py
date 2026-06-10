@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlmodel import Session, select
 from typing import List, Optional
 
@@ -6,6 +7,19 @@ from database import get_session
 from models import Project, Routing, MeetingSession, Tenant, User, ProjectContact
 from routers.auth import get_current_user, get_current_tenant, require_admin
 import crud
+
+
+class RoutingUpdate(BaseModel):
+    """Body de PUT/PATCH para editar una ruta de integración del usuario.
+
+    Campos opcionales: el cliente solo manda los que quiere cambiar. NO
+    aceptamos `project_id` ni `user_id` — el dueño y el proyecto vienen
+    del path y de current_user, nunca del body. Esto cierra el vector
+    de un user falsificando el dueño con un PUT manual.
+    """
+    destination_type: Optional[str] = None
+    destination_config: Optional[str] = None
+    is_active: Optional[bool] = None
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -164,6 +178,96 @@ def _get_routing_for_user_or_404(
     if routing_obj.user_id != current_user.id:
         # 404 (no 403) para no filtrar que existe un routing ajeno.
         raise HTTPException(status_code=404, detail="Routing config not found")
+    return routing_obj
+
+
+@router.put("/{project_id}/routings/{routing_id}", response_model=Routing)
+def update_project_routing(
+    project_id: int,
+    routing_id: int,
+    payload: RoutingUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Edita una ruta de integración del usuario actual.
+
+    El cliente puede cambiar destination_type, destination_config y/o
+    is_active. project_id y user_id quedan fijos: si quisieras "mover"
+    una ruta a otro proyecto, lo correcto es borrarla y crear una nueva
+    en el proyecto destino (las credenciales pueden no aplicar).
+
+    Si el body trae destination_config, validamos que sea JSON parseable
+    para no almacenar basura que después rompa el dispatch."""
+    routing_obj = _get_routing_for_user_or_404(
+        session, routing_id, tenant, current_user, project_id=project_id,
+    )
+
+    if payload.destination_type is not None:
+        dt = payload.destination_type.strip()
+        if not dt:
+            raise HTTPException(status_code=422, detail="destination_type no puede ser vacío")
+        routing_obj.destination_type = dt
+
+    if payload.destination_config is not None:
+        cfg = payload.destination_config
+        # Aceptamos string ya JSON-encoded para mantener compat con el
+        # POST original que recibe Routing crudo (destination_config: str).
+        try:
+            import json as _json
+            _json.loads(cfg or "{}")
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=422,
+                detail="destination_config debe ser JSON válido",
+            )
+        routing_obj.destination_config = cfg
+
+    if payload.is_active is not None:
+        routing_obj.is_active = bool(payload.is_active)
+
+    session.add(routing_obj)
+    session.commit()
+    session.refresh(routing_obj)
+    return routing_obj
+
+
+@router.put("/routings/{routing_id}", response_model=Routing)
+def update_routing(
+    routing_id: int,
+    payload: RoutingUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Alias flat del PUT — compat con clientes viejos."""
+    routing_obj = _get_routing_for_user_or_404(
+        session, routing_id, tenant, current_user,
+    )
+
+    if payload.destination_type is not None:
+        dt = payload.destination_type.strip()
+        if not dt:
+            raise HTTPException(status_code=422, detail="destination_type no puede ser vacío")
+        routing_obj.destination_type = dt
+
+    if payload.destination_config is not None:
+        try:
+            import json as _json
+            _json.loads(payload.destination_config or "{}")
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=422,
+                detail="destination_config debe ser JSON válido",
+            )
+        routing_obj.destination_config = payload.destination_config
+
+    if payload.is_active is not None:
+        routing_obj.is_active = bool(payload.is_active)
+
+    session.add(routing_obj)
+    session.commit()
+    session.refresh(routing_obj)
     return routing_obj
 
 
