@@ -123,30 +123,88 @@ def add_project_routing(
     routing.project_id = project_id
     return crud.routing.create(session, obj_in=routing)
 
+def _get_routing_for_tenant_or_404(
+    session: Session,
+    routing_id: int,
+    tenant: Tenant,
+    project_id: Optional[int] = None,
+) -> Routing:
+    """Carga un Routing verificando que pertenece a un proyecto del tenant.
+
+    AISLAMIENTO multi-tenant CRÍTICO: sin este check, un usuario podía
+    borrar/togglear routings de OTRA empresa adivinando el id (no
+    teóricamente — el frontend manda el id directo). Hace 2 lookups
+    (routing → project), no es hot path; la consistencia compensa el coste.
+    """
+    routing_obj = crud.routing.get(session, routing_id)
+    if not routing_obj:
+        raise HTTPException(status_code=404, detail="Routing config not found")
+    if project_id is not None and routing_obj.project_id != project_id:
+        raise HTTPException(status_code=404, detail="Routing config not found")
+    # Verifica que el proyecto del routing es del tenant del caller.
+    _get_project_or_404(session, routing_obj.project_id, tenant)
+    return routing_obj
+
+
+@router.delete("/{project_id}/routings/{routing_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_routing(
+    project_id: int,
+    routing_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Elimina un routing — ruta RESTful nested. Es la que llama el
+    frontend (/api/projects/{project_id}/routings/{routing_id}).
+
+    Antes el backend solo tenía la versión flat (/routings/{id}) →
+    DELETE devolvía 404 silencioso aunque el id existiera, porque la URL
+    no matcheaba ningún path."""
+    _get_routing_for_tenant_or_404(session, routing_id, tenant, project_id=project_id)
+    crud.routing.remove(session, id=routing_id)
+
+
 @router.delete("/routings/{routing_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_routing(
     routing_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
-    tenant: Tenant = Depends(get_current_tenant)
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    routing_obj = crud.routing.get(session, routing_id)
-    if not routing_obj:
-        raise HTTPException(status_code=404, detail="Routing config not found")
-        
+    """Alias flat — mantiene compatibilidad con integraciones que aún
+    apuntan a la ruta vieja sin project_id en el path."""
+    _get_routing_for_tenant_or_404(session, routing_id, tenant)
     crud.routing.remove(session, id=routing_id)
+
+
+@router.patch("/{project_id}/routings/{routing_id}/toggle", response_model=Routing)
+def toggle_project_routing_status(
+    project_id: int,
+    routing_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Toggle is_active en nested — simetría con el DELETE nested."""
+    routing_obj = _get_routing_for_tenant_or_404(
+        session, routing_id, tenant, project_id=project_id,
+    )
+    routing_obj.is_active = not routing_obj.is_active
+    session.add(routing_obj)
+    session.commit()
+    session.refresh(routing_obj)
+    return routing_obj
+
 
 @router.patch("/routings/{routing_id}/toggle", response_model=Routing)
 def toggle_routing_status(
     routing_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
-    tenant: Tenant = Depends(get_current_tenant)
+    tenant: Tenant = Depends(get_current_tenant),
 ):
-    routing_obj = crud.routing.get(session, routing_id)
-    if not routing_obj:
-        raise HTTPException(status_code=404, detail="Routing config not found")
-        
+    """Alias flat del toggle — mismo razonamiento que el DELETE flat."""
+    routing_obj = _get_routing_for_tenant_or_404(session, routing_id, tenant)
     routing_obj.is_active = not routing_obj.is_active
     session.add(routing_obj)
     session.commit()
