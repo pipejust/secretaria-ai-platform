@@ -1081,35 +1081,34 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         return { date, time: `${h12}:${mm} ${ampm}` };
     }
 
-    /** Lista de avatares del equipo. Devuelve hasta 3 + extra count.
-     *  Incluye `email` y `avatarUrl` para que el template pueda pintar
-     *  la foto real del usuario cuando exista, y caer a las iniciales
-     *  con el tono asignado cuando no hay foto. */
+    /** Lista de avatares del equipo del proyecto.
+     *  Fuente: `p.contacts` (project_contacts reales) — el backend ahora
+     *  incluye este array en GET /api/projects/. Si el contacto tiene
+     *  email que matchea un User del tenant, usamos su avatar real;
+     *  sino caemos a las iniciales con tono determinístico. */
     teamAvatars(p: any): { initials: string; tone: number; name: string; role: string; company: string; email: string; avatarUrl: string | null }[] {
-        const seed = p?.id ?? 1;
-        const pool = (this.users || []).slice(0, 6);
-        if (!pool.length) return [];
-        const tenantName = (this.authService.currentUserValue?.tenant?.name) || '';
-        const roleMap: Record<string, string> = {
-            admin: this.translate.instant('projects.msg_role_admin'),
-            validator: this.translate.instant('projects.msg_role_validator'),
-            user: this.translate.instant('projects.msg_role_user'),
-        };
+        const contacts: any[] = Array.isArray(p?.contacts) ? p.contacts : [];
+        if (!contacts.length) return [];
         const out: { initials: string; tone: number; name: string; role: string; company: string; email: string; avatarUrl: string | null }[] = [];
-        for (let i = 0; i < Math.min(3, pool.length); i++) {
-            const u = pool[(seed + i) % pool.length];
-            const name = String(u.full_name || u.email || this.translate.instant('projects.msg_team_no_name')).trim();
-            const raw = u.avatar_url || null;
+        const max = Math.min(3, contacts.length);
+        for (let i = 0; i < max; i++) {
+            const c = contacts[i];
+            const name = String(c?.name || c?.email || '').trim();
+            const email = String(c?.email || '').trim();
+            const matched = email
+                ? this.users.find(u => (u.email || '').toLowerCase() === email.toLowerCase())
+                : null;
+            const raw = matched?.avatar_url || null;
             const avatarUrl = raw
                 ? (raw.startsWith('http') ? raw : `${environment.apiUrl}${raw}`)
                 : null;
             out.push({
-                initials: this._initialsFromName(name),
-                tone: (seed + i) % 5,
-                name,
-                role: roleMap[(u.role || '').toLowerCase()] || (u.role || ''),
-                company: tenantName,
-                email: u.email || '',
+                initials: this._initialsFromName(name || email),
+                tone: (((p?.id ?? 0) + i) % 5),
+                name: name || email,
+                role: String(c?.role || '').trim(),
+                company: String(c?.entity || '').trim(),
+                email,
                 avatarUrl,
             });
         }
@@ -1159,21 +1158,19 @@ export class ProjectsComponent implements OnInit, OnDestroy {
         }, 80);
     }
 
+    /** Conteo de contactos extra (> los 3 que ya pinta teamAvatars). */
     teamExtra(p: any): number {
-        // Determinístico, mockup-like: +1, +2, +3, +4 según id.
-        return ((p?.id ?? 0) % 4) + 1;
+        const total = Array.isArray(p?.contacts) ? p.contacts.length : 0;
+        return Math.max(0, total - 3);
     }
-    /** Nombres extra para el tooltip del badge "+N" (concatenados). */
+    /** Nombres extra reales para el tooltip del badge "+N". */
     teamExtraNames(p: any): string {
-        const seed = p?.id ?? 1;
-        const pool = (this.users || []);
-        if (pool.length <= 3) return '';
-        const start = (seed + 3) % pool.length;
-        const count = this.teamExtra(p);
+        const contacts: any[] = Array.isArray(p?.contacts) ? p.contacts : [];
+        if (contacts.length <= 3) return '';
+        const extras = contacts.slice(3);
         const out: string[] = [];
-        for (let i = 0; i < count && i < pool.length; i++) {
-            const u = pool[(start + i) % pool.length];
-            const name = String(u.full_name || u.email || '').trim();
+        for (const c of extras) {
+            const name = String(c?.name || c?.email || '').trim();
             if (name && !out.includes(name)) out.push(name);
         }
         return out.join(', ');

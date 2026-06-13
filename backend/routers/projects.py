@@ -72,20 +72,34 @@ def _get_project_or_404(session: Session, project_id: int, tenant: Tenant) -> Pr
 # Projects
 # -----------------
 
-@router.get("/", response_model=List[Project])
+@router.get("/")
 def get_projects(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    """Lista proyectos activos del tenant actual."""
+    """Lista proyectos activos del tenant + sus participantes.
+
+    Incluye `contacts` inline para que la card "Equipo" del listado pinte
+    avatares reales sin un round-trip por proyecto. Antes el frontend
+    rellenaba con datos falsos del pool de users del tenant + un badge
+    "+N" determinístico por id."""
     rows = session.exec(
         select(Project)
         .where(Project.tenant_id == tenant.id)
         .where(Project.is_active == True)  # noqa: E712
         .order_by(Project.id.asc())
     ).all()
-    return rows
+
+    def _serialize(p: Project) -> dict:
+        d = p.model_dump() if hasattr(p, "model_dump") else p.dict()
+        d["contacts"] = [
+            (c.model_dump() if hasattr(c, "model_dump") else c.dict())
+            for c in (p.contacts or [])
+        ]
+        return d
+
+    return [_serialize(p) for p in rows]
 
 
 @router.post("/", response_model=Project, status_code=status.HTTP_201_CREATED)
