@@ -202,11 +202,26 @@ def _resolve_auto_dispatch_policy(db, tenant_id: int, project_id: int | None) ->
     return auto_enabled, timeout_minutes
 
 
-def _resolve_admin_recipients(db, tenant_id: int) -> list[tuple[str, str]]:
-    """Lista de (email, name) de admins activos del tenant — destinatarios
-    del correo post-pipeline y del warning de auto-dispatch bloqueado.
+def _resolve_admin_recipients(
+    db, tenant_id: int, project_id: Optional[int] = None,
+) -> list[tuple[str, str]]:
+    """Lista de (email, name) destinatarios del correo post-pipeline.
+
+    Routing:
+      - `project_id` dado → users miembros del proyecto (owner +
+        contactos matcheados a Users del tenant). Si el proyecto no
+        tiene miembros resolvibles, FALLBACK a admins del tenant.
+      - `project_id` None → admins del tenant (sesión sin proyecto va al
+        admin del tenant siempre).
     """
     from models import User, Role
+    from services.notification_service import _resolve_project_member_users
+
+    if project_id is not None:
+        members = _resolve_project_member_users(db, tenant_id, project_id)
+        if members:
+            return [(u.email, u.full_name or "") for u in members if u.email]
+        # fallback a admins más abajo
 
     admins = db.exec(
         select(User)
@@ -219,7 +234,7 @@ def _resolve_admin_recipients(db, tenant_id: int) -> list[tuple[str, str]]:
         if u.role_id:
             r = db.get(Role, u.role_id)
             role_name = (r.name if r else "").lower()
-        if "admin" in role_name or getattr(u, "is_platform_admin", False):
+        if "admin" in role_name or getattr(u, "is_platform_admin", False) or getattr(u, "is_superadmin", False):
             if u.email:
                 out.append((u.email, u.full_name or ""))
     return out
@@ -339,10 +354,10 @@ async def _send_session_ready_email(
             pipeline_failed = bool((ms.processing_error or "").strip())
             pipeline_error_summary = (ms.processing_error or "").strip()[:400]
 
-            admin_recipients = _resolve_admin_recipients(db, tenant_id)
+            admin_recipients = _resolve_admin_recipients(db, tenant_id, ms.project_id)
             if not admin_recipients:
                 logger.info(
-                    "Sesión %s: no hay admins activos en tenant %s para correo post-pipeline.",
+                    "Sesión %s: no hay destinatarios activos en tenant %s para correo post-pipeline.",
                     session_id, tenant_id,
                 )
                 return False
@@ -394,6 +409,7 @@ async def _send_session_ready_email(
                     pipeline_failed=pipeline_failed,
                     missing_task_emails=missing_task_emails,
                     missing_participants=missing_participants,
+                    project_id=ms.project_id,
                 )
             except Exception:
                 logger.exception(
@@ -624,6 +640,10 @@ async def _dispatch_routing(
                 KIND_ROUTING_FAILED,
             )
             tenant_id_local = action_items[0].tenant_id
+            # Resolver project_id desde la session del primer action_item
+            # para scopear la notif a miembros del proyecto.
+            session_for_scope = db.get(MeetingSession, action_items[0].session_id)
+            project_id_local = session_for_scope.project_id if session_for_scope else None
             notify_admins(
                 db,
                 tenant_id=tenant_id_local,
@@ -636,6 +656,7 @@ async def _dispatch_routing(
                 link_to="/admin/settings",
                 entity_type="routing",
                 entity_id=routing.id,
+                project_id=project_id_local,
             )
         except Exception:
             logger.exception("No se pudo emitir notif routing_failed")
@@ -1126,6 +1147,7 @@ async def receive_fireflies_webhook(
             link_to=f"/admin/curation/{new_session.id}",
             entity_type="session",
             entity_id=new_session.id,
+            project_id=new_session.project_id,
         )
     except Exception:
         logger.exception("No se pudo emitir notif de session_received para %s", new_session.id)

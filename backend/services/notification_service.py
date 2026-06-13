@@ -161,6 +161,48 @@ def notify_user(
         return None
 
 
+def _resolve_project_member_users(
+    db: Session, tenant_id: int, project_id: int,
+) -> list[User]:
+    """Lista de Users del tenant que pertenecen al proyecto.
+
+    Fuentes:
+      - `project.owner_user_id` si existe.
+      - ProjectContact.email matcheando User.email del mismo tenant.
+
+    Si el proyecto no tiene contactos ni owner, devuelve lista vacía —
+    el caller decide el fallback (típicamente admins del tenant).
+    """
+    from models import Project, ProjectContact
+
+    p = db.get(Project, project_id)
+    if not p or p.tenant_id != tenant_id:
+        return []
+
+    out_by_id: dict[int, User] = {}
+
+    if getattr(p, "owner_user_id", None):
+        owner = db.get(User, p.owner_user_id)
+        if owner and owner.tenant_id == tenant_id and owner.is_active and not getattr(owner, "deleted_at", None):
+            out_by_id[owner.id] = owner
+
+    contacts = db.exec(
+        select(ProjectContact).where(ProjectContact.project_id == project_id)
+    ).all()
+    emails = {(c.email or "").strip().lower() for c in contacts if (c.email or "").strip()}
+    if emails:
+        rows = db.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.is_active == True)  # noqa: E712
+        ).all()
+        for u in rows:
+            if (u.email or "").strip().lower() in emails:
+                out_by_id[u.id] = u
+
+    return list(out_by_id.values())
+
+
 def notify_admins(
     db: Session,
     *,
@@ -171,31 +213,45 @@ def notify_admins(
     link_to: Optional[str] = None,
     entity_type: Optional[str] = None,
     entity_id: Optional[int] = None,
+    project_id: Optional[int] = None,
 ) -> int:
-    """Notifica a TODOS los admins activos del tenant. Devuelve la cantidad
-    de notificaciones realmente creadas (después de dedup)."""
-    admins = db.exec(
-        select(User)
-        .where(User.tenant_id == tenant_id)
-        .where(User.is_active == True)  # noqa: E712
-    ).all()
-    # Filtramos por rol admin a nivel Python para no acoplarnos al modelo Role.
-    # Si el User tiene `role` directo o vía `role_id`, ambos casos cuentan.
+    """Notifica a usuarios del tenant. Devuelve la cantidad de notifs
+    realmente creadas (después de dedup).
+
+    Routing:
+      - `project_id` dado → solo usuarios miembros del proyecto (owner +
+        contactos matcheados a Users). Si el proyecto no tiene miembros
+        resolvibles, FALLBACK a los admins del tenant (no dejamos al
+        admin sin enterarse).
+      - `project_id` None → admins del tenant (comportamiento legacy).
+    """
     targets: list[User] = []
-    for u in admins:
-        role_name = ""
-        try:
-            if hasattr(u, "role") and isinstance(getattr(u, "role"), str):
-                role_name = getattr(u, "role") or ""
-            elif u.role_id is not None:
-                # Resuelve role_id → name si la fila Role existe.
-                from models import Role
-                r = db.get(Role, u.role_id)
-                role_name = (r.name if r else "") or ""
-        except Exception:
+
+    if project_id is not None:
+        targets = _resolve_project_member_users(db, tenant_id, project_id)
+
+    if not targets:
+        admins = db.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.is_active == True)  # noqa: E712
+        ).all()
+        # Filtramos por rol admin a nivel Python para no acoplarnos al modelo Role.
+        # Si el User tiene `role` directo o vía `role_id`, ambos casos cuentan.
+        for u in admins:
             role_name = ""
-        if role_name.lower() == "admin" or u.is_superadmin:
-            targets.append(u)
+            try:
+                if hasattr(u, "role") and isinstance(getattr(u, "role"), str):
+                    role_name = getattr(u, "role") or ""
+                elif u.role_id is not None:
+                    # Resuelve role_id → name si la fila Role existe.
+                    from models import Role
+                    r = db.get(Role, u.role_id)
+                    role_name = (r.name if r else "") or ""
+            except Exception:
+                role_name = ""
+            if role_name.lower() == "admin" or u.is_superadmin:
+                targets.append(u)
 
     created = 0
     for u in targets:
@@ -224,6 +280,7 @@ def notify_admins_session_processed(
     pipeline_failed: bool,
     missing_task_emails: int,
     missing_participants: int,
+    project_id: Optional[int] = None,
 ) -> int:
     """Notif in-app a admins cuando termina el pipeline post-Fireflies.
 
@@ -264,6 +321,7 @@ def notify_admins_session_processed(
         link_to=f"/admin/curation/{session_id}",
         entity_type="session",
         entity_id=session_id,
+        project_id=project_id,
     )
 
 

@@ -756,6 +756,7 @@ async def process_session_with_ai(
                 link_to=f"/admin/curation/{session_id}",
                 entity_type="session",
                 entity_id=session_id,
+                project_id=session_obj.project_id,
             )
         else:
             notify_admins(
@@ -771,6 +772,7 @@ async def process_session_with_ai(
                 link_to=f"/admin/curation/{session_id}",
                 entity_type="session",
                 entity_id=session_id,
+                project_id=session_obj.project_id,
             )
     except Exception:
         logger.exception(
