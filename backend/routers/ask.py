@@ -331,6 +331,92 @@ def _is_whatis_question(q: str) -> bool:
     return any(_re.search(p, low) for p in _WHATIS_PATTERNS)
 
 
+_HOWTECH_PATTERNS = (
+    r"\bc[oó]mo\s+(?:se\s+)?(?:manej|implement|hace|organiz|estructur|gestion|"
+    r"funcion|construy|desarroll|integr|conect|configur|despleg|monta|"
+    r"orquest|moder|dise\w+|arm|escal|prueb|test|despleg|deploy)\w*\b",
+    r"\bc[oó]mo\s+est[aá]\b",
+    r"\bqu[eé]\s+estructura\b",
+    r"\bqu[eé]\s+arquitectur\w*\b",
+    r"\bqu[eé]\s+stack\b",
+    r"\bqu[eé]\s+m[oó]dulos?\b",
+    r"\bqu[eé]\s+componentes?\b",
+    r"\bqu[eé]\s+tecnolog[ií]as?\b",
+    r"\bde\s+qu[eé]\s+forma\b",
+    r"\bcu[aá]l\s+es\s+(?:la\s+)?(?:estructura|arquitectur|implementaci|stack)\w*\b",
+    r"\bflujo\s+de\b",
+    r"\bhow\s+(?:do\s+|does\s+|is\s+|are\s+)?(?:we\s+)?(?:handle|implement|"
+    r"build|design|organize|manage|structure|deploy|architect|work)\b",
+    r"\bwhat\s+(?:is\s+the\s+)?(?:architecture|structure|stack|implementation|"
+    r"design|approach|flow|module|component)\w*\b",
+)
+
+
+def _is_howtech_question(q: str) -> bool:
+    """True si la pregunta pide DETALLE TÉCNICO sobre el manejo de algo:
+    'cómo se manejan los eventos', 'qué arquitectura tiene', 'cómo está
+    organizado el módulo'. Diferente de whatis (que define un X); aquí
+    el user ya conoce X y quiere el HOW interno. Necesita snippets más
+    grandes Y traer también keywords del CONCEPTO técnico, no solo del
+    nombre propio del proyecto."""
+    import re as _re
+    if not q:
+        return False
+    low = q.lower()
+    return any(_re.search(p, low) for p in _HOWTECH_PATTERNS)
+
+
+# Conceptos técnicos comunes que el LLM debe poder rastrear en
+# transcripts cuando la pregunta es howtech. La lista NO es exhaustiva;
+# captura los que más aparecen en sesiones de producto/eng.
+_TECH_CONCEPTS = {
+    "evento": ["evento", "eventos", "event", "events", "webhook", "webhooks"],
+    "arquitectura": ["arquitectura", "architecture", "arquitectónic"],
+    "estructura": ["estructura", "structure", "organizaci"],
+    "módulo": ["módulo", "modulo", "module", "modules"],
+    "componente": ["componente", "component", "componentes"],
+    "código": ["código", "codigo", "code", "source"],
+    "frontend": ["frontend", "front-end", "front end", "angular", "ui"],
+    "backend": ["backend", "back-end", "back end", "fastapi", "api"],
+    "base de datos": ["base de datos", "database", "db", "postgres", "sql"],
+    "infraestructura": ["infraestructura", "infrastructure", "docker", "kubernetes", "coolify"],
+    "integración": ["integración", "integration", "integrac"],
+    "autenticación": ["autenticación", "autenticacion", "auth", "jwt", "oauth"],
+    "tiquetera": ["tiquetera", "ticket", "tickets", "ticketing"],
+    "idioma": ["idioma", "lenguaje", "language", "i18n"],
+    "seguridad": ["seguridad", "security", "encrypt"],
+    "flujo": ["flujo", "flow", "pipeline", "proceso"],
+    "evento de calendario": ["calendario", "calendar", "evento"],
+    "tarea": ["tarea", "task", "action item", "actionitem"],
+    "modelo": ["modelo", "model", "schema"],
+    "rol": ["rol", "role", "permiso", "permission"],
+    "tenant": ["tenant", "multi-tenant", "multi tenant", "empresa"],
+}
+
+
+def _extract_tech_concepts(q: str) -> list[str]:
+    """De la pregunta, identifica conceptos técnicos del catálogo. Sirve
+    para AMPLIAR la búsqueda literal en transcripts: además de buscar el
+    nombre propio del proyecto ("First Class"), buscamos los términos
+    técnicos asociados ("eventos", "webhook", "arquitectura") y traemos
+    snippets que mencionen AMBOS. Devuelve hasta 4 términos para no
+    inflar ILIKE queries."""
+    if not q:
+        return []
+    low = q.lower()
+    out: list[str] = []
+    seen: set[str] = set()
+    for concept, terms in _TECH_CONCEPTS.items():
+        for t in terms:
+            if t in low and concept not in seen:
+                out.append(concept)
+                seen.add(concept)
+                break
+        if len(out) >= 4:
+            break
+    return out
+
+
 def _name_snippets_all(text: str, name: str, window: int = 900, max_occ: int = 3) -> str:
     """Devuelve hasta `max_occ` ventanas de `window` chars cada una,
     centradas en distintas ocurrencias del nombre. Útil para preguntas
@@ -366,6 +452,7 @@ def _load_keyword_matches(
     names: list[str],
     limit_per_name: int = 4,
     whatis_mode: bool = False,
+    howtech_concepts: Optional[list[str]] = None,
 ) -> list[dict]:
     """Búsqueda LITERAL (SQL ILIKE) por nombres propios en transcript y
     secciones procesadas.
@@ -436,6 +523,23 @@ def _load_keyword_matches(
                        or ""
             if not snippet:
                 continue
+
+            # En modo howtech enriquecemos con ventanas sobre los conceptos
+            # técnicos detectados en la pregunta (eventos, arquitectura,
+            # módulos...). Estos fragmentos son los que el LLM necesita para
+            # NO responder genérico. Si el concepto no aparece en una
+            # sesión, simplemente no se añade — sin fallback.
+            if howtech_concepts:
+                extra_blocks: list[str] = []
+                for concept in howtech_concepts:
+                    for field in (s.raw_transcript, s.raw_summary,
+                                  s.processed_decisions, s.processed_agreements):
+                        block = _name_snippets_all(field or "", concept, window=900, max_occ=2)
+                        if block:
+                            extra_blocks.append(f"[Detalle técnico — {concept}]\n{block}")
+                            break  # un campo por concepto basta
+                if extra_blocks:
+                    snippet = snippet + "\n---\n" + "\n---\n".join(extra_blocks)
 
             proj_name = ""
             if s.project_id:
@@ -992,13 +1096,21 @@ async def ask(
     # que esos chunks lleguen al LLM.
     proper_nouns = _extract_proper_nouns(q)
     whatis_mode = _is_whatis_question(q)
+    howtech_mode = _is_howtech_question(q)
+    howtech_concepts = _extract_tech_concepts(q) if howtech_mode else []
     if proper_nouns:
         # Modo whatis ("qué es X") trae snippets más grandes y multiples
         # ocurrencias por sesión — necesario para extraer una definición
         # del transcript en lugar de solo enumerar topics.
+        # Modo howtech ("cómo se maneja X", "qué arquitectura tiene X")
+        # además rastrea conceptos técnicos del catálogo (eventos, módulos,
+        # arquitectura, …) en transcripts para que el LLM tenga material
+        # CONCRETO, no genérico.
         kw_chunks = _load_keyword_matches(
             db, tenant.id, payload.project_id, proper_nouns,
-            limit_per_name=4, whatis_mode=whatis_mode,
+            limit_per_name=4,
+            whatis_mode=whatis_mode or howtech_mode,
+            howtech_concepts=howtech_concepts,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
         for kc in kw_chunks:
@@ -1226,7 +1338,40 @@ async def ask(
         "tiquetera (mesa de ayuda) que Softnexus está integrando con su "
         "ecosistema. Permite administrar tickets de soporte, soporta "
         "múltiples idiomas y se conecta con los módulos de gestión vía "
-        "API. Actualmente está en fase de rediseño de la interfaz web.\""
+        "API. Actualmente está en fase de rediseño de la interfaz web.\"\n"
+        "20. PREGUNTAS HOWTECH (\"cómo se manejan los eventos\", \"qué "
+        "arquitectura tiene\", \"cómo está organizado el módulo\", \"qué "
+        "estructura usa\", \"cómo se implementa\", \"qué stack\"): el user "
+        "ya conoce X y quiere DETALLE TÉCNICO interno. Reglas:\n"
+        "  a) PROHIBIDO repetir la definición del proyecto. El user no la "
+        "pidió.\n"
+        "  b) Busca en el contexto los bloques `[Detalle técnico — <concepto>]` "
+        "(los inyectamos cuando detectamos conceptos como eventos, "
+        "arquitectura, módulos, etc). Estos snippets son el material "
+        "ESPECÍFICO de tu respuesta. Léelos completos.\n"
+        "  c) Si los snippets contienen nombres concretos (clases, "
+        "componentes, módulos, librerías, endpoints, tablas, eventos, "
+        "webhooks, colas, jobs, etc.), CÍTALOS por nombre. Una respuesta "
+        "técnica sin nombres concretos es genérica e inútil.\n"
+        "  d) Estructura la respuesta en `intro` así (cuando aplica): "
+        "(1) componentes/módulos involucrados, (2) flujo o secuencia de "
+        "pasos, (3) detalles de implementación mencionados. Si el "
+        "transcript no cubre alguna parte, dilo: \"sobre persistencia no "
+        "encuentro detalle en las sesiones\".\n"
+        "  e) Si los snippets técnicos NO existen o no contienen detalle "
+        "real, dilo abiertamente: \"En las sesiones no se discutió el "
+        "manejo interno de <concepto> con detalle técnico; solo se "
+        "mencionó <lo que aparezca>\". NO INVENTES estructura ni nombres.\n"
+        "Ejemplo malo: \"La gestión de eventos en First Class se maneja a "
+        "través de una plataforma de gestión de eventos y tiquetera "
+        "integrada.\" (tautológico, sin detalle)\n"
+        "Ejemplo bueno: \"Los eventos en First Class se manejan vía un "
+        "webhook entrante que dispara el endpoint `/events/intake` del "
+        "backend FastAPI. El handler valida la firma HMAC, persiste el "
+        "evento en la tabla `ticket_event` y encola un job en RQ para "
+        "procesarlo. El procesamiento aplica las reglas de routing "
+        "configuradas por tenant y notifica al frontend Angular vía "
+        "WebSocket. (Sesión #312)\""
     )
     quality_note = ""
     if low_quality:
@@ -1245,6 +1390,21 @@ async def ask(
             "META disponible."
         )
 
+    # Hint explícito al LLM cuando la pregunta es howtech, para forzar
+    # respuesta técnica concreta en lugar de tautología.
+    howtech_hint = ""
+    if howtech_mode:
+        concepts_str = ", ".join(howtech_concepts) if howtech_concepts else "el detalle técnico"
+        howtech_hint = (
+            f"\n\nNOTA TÉCNICA: el usuario pide HOW INTERNO sobre {concepts_str}. "
+            f"Busca en los bloques `[Detalle técnico — ...]` del contexto y "
+            f"responde con NOMBRES CONCRETOS (componentes, módulos, librerías, "
+            f"endpoints, eventos, tablas, jobs). PROHIBIDO repetir la "
+            f"definición del proyecto o decir genéricos como 'a través de la "
+            f"plataforma'. Si los snippets no tienen detalle real, dilo "
+            f"explícitamente — NO inventes estructura."
+        )
+
     user_msg = (
         f"{convo_hint}"
         f"Pregunta del usuario: {q}\n\n"
@@ -1253,7 +1413,8 @@ async def ask(
         + f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
           f"filtrados de {len(raw_chunks)} candidatos por umbral de relevancia):\n"
           f"{context}"
-          f"{quality_note}\n\n"
+          f"{quality_note}"
+          f"{howtech_hint}\n\n"
           f"Devuelve la respuesta como JSON estricto siguiendo el esquema y RESPETANDO "
           f"las reglas. Recuerda: cada decisión y tarea DEBE traer su `source_sessions`."
     )
