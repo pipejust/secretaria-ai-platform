@@ -392,27 +392,42 @@ def _resolve_tenant_sld(db: Session, tenant: Tenant) -> str:
     return extract_sld(raw)
 
 
-def _validate_email_matches_tenant_domain(db: Session, tenant: Tenant, email: str) -> None:
+def _validate_email_matches_tenant_domain(
+    db: Session,
+    tenant: Tenant,
+    email: str,
+    *,
+    skip_for_superadmin: Optional[User] = None,
+) -> None:
     """Aborta con 400 si el email no comparte SLD con la empresa.
 
     Sin importar el TLD: con `acten.app` configurado en company_website,
     se aceptan @acten.app, @acten.co, @acten.com, etc.; pero NO @gmail.com
-    ni @other-company.com. El check es opcional — si el tenant aún no tiene
-    `company_website` configurado, no rechazamos para no bloquear flujos
-    legacy (pero advertimos en logs)."""
+    ni @other-company.com.
+
+    Bypass: si `skip_for_superadmin` es un User con is_superadmin=True,
+    no se valida — el superadmin puede crear usuarios con cualquier
+    dominio en cualquier tenant (gestión multi-tenant).
+
+    Si el tenant aún no tiene `company_website` configurado, lanza 400
+    con detalle del tenant (slug) para que el admin sepa qué reconfigurar.
+    """
+    if skip_for_superadmin is not None and getattr(skip_for_superadmin, "is_superadmin", False):
+        return
+
     tenant_sld = _resolve_tenant_sld(db, tenant)
     if not tenant_sld:
         logger.warning(
-            "Tenant '%s' no tiene company_website ni domain configurado; "
+            "Tenant '%s' (id=%s) no tiene company_website ni domain configurado; "
             "no se puede validar dominio del email %s",
-            tenant.slug, email,
+            tenant.slug, tenant.id, email,
         )
         raise HTTPException(
             status_code=400,
             detail=(
-                "La empresa no tiene página web configurada. "
-                "Pedile al administrador que configure la URL en "
-                "Personalización de marca antes de crear usuarios."
+                f"La empresa '{tenant.slug}' no tiene página web configurada. "
+                f"Pedile al administrador del tenant que configure la URL en "
+                f"Personalización de marca antes de crear usuarios."
             ),
         )
     email_sld = extract_sld(email)
@@ -422,9 +437,9 @@ def _validate_email_matches_tenant_domain(db: Session, tenant: Tenant, email: st
         raise HTTPException(
             status_code=400,
             detail=(
-                f"El dominio del email no coincide con el de la empresa. "
-                f"Solo se aceptan correos del dominio '{tenant_sld}' "
-                f"(cualquier extensión: .com, .co, .net, .app, etc.)."
+                f"El dominio del email no coincide con el de la empresa "
+                f"'{tenant.slug}'. Solo se aceptan correos del dominio "
+                f"'{tenant_sld}' (cualquier extensión: .com, .co, .net, .app, etc.)."
             ),
         )
 
@@ -452,7 +467,9 @@ def register_user(
     admin_tenant = db.get(Tenant, admin_user.tenant_id)
     if admin_tenant is None:
         raise HTTPException(status_code=500, detail="Tenant del admin no existe.")
-    _validate_email_matches_tenant_domain(db, admin_tenant, user_in.email)
+    _validate_email_matches_tenant_domain(
+        db, admin_tenant, user_in.email, skip_for_superadmin=admin_user,
+    )
 
     existing_user = db.exec(
         select(User)

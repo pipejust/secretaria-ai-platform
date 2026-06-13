@@ -134,7 +134,9 @@ def update_user(
         # Validar dominio: solo emails del mismo SLD que company_website del tenant.
         # Importamos acá para evitar ciclo de imports a nivel módulo.
         from routers.auth import _validate_email_matches_tenant_domain
-        _validate_email_matches_tenant_domain(db, tenant, new_email)
+        _validate_email_matches_tenant_domain(
+            db, tenant, new_email, skip_for_superadmin=admin_user,
+        )
         # Unicidad por tenant.
         clash = db.exec(
             select(User)
