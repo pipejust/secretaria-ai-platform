@@ -394,6 +394,76 @@ _TECH_CONCEPTS = {
 }
 
 
+def _extract_known_entities(
+    db: "Session",
+    tenant_id: int,
+    q: str,
+    *,
+    max_results: int = 6,
+) -> list[str]:
+    """Extrae nombres de proyectos/contactos del tenant mencionados en la
+    pregunta — CASE-INSENSITIVE.
+
+    Razón: `_extract_proper_nouns` solo agarra palabras con mayúscula
+    inicial. Usuarios escriben "first class" o "firstclass" en
+    minúsculas — esos casos se perdían y el deep loader nunca corría.
+    Aquí cargamos los nombres reales de project.name + projectcontact
+    .name del tenant y buscamos si aparecen en la pregunta (ignorando
+    mayúsculas/minúsculas y espacios). Devuelve los nombres en su
+    casing original de BD para usarlos en ILIKE downstream.
+    """
+    if not q:
+        return []
+    from sqlmodel import select
+    from models import Project, ProjectContact
+
+    qlow = q.lower()
+    qnorm = "".join(ch for ch in qlow if ch.isalnum() or ch.isspace())
+    qnorm = " ".join(qnorm.split())  # espacios colapsados
+
+    candidates: list[str] = []
+    seen_lower: set[str] = set()
+
+    # Proyectos del tenant.
+    for p in db.exec(
+        select(Project).where(Project.tenant_id == tenant_id)
+    ).all():
+        name = (p.name or "").strip()
+        if not name or len(name) < 3:
+            continue
+        nlow = name.lower()
+        if nlow in seen_lower:
+            continue
+        # Match permisivo: el nombre tal cual O sin espacios
+        # (matches "FirstClass" + "first class" → "firstclass").
+        ncompact = "".join(ch for ch in nlow if ch.isalnum())
+        if nlow in qnorm or (len(ncompact) >= 4 and ncompact in qnorm.replace(" ", "")):
+            candidates.append(name)
+            seen_lower.add(nlow)
+            if len(candidates) >= max_results:
+                return candidates
+
+    # Contactos del tenant — match por nombre completo.
+    for c in db.exec(
+        select(ProjectContact)
+        .join(Project, Project.id == ProjectContact.project_id)
+        .where(Project.tenant_id == tenant_id)
+    ).all():
+        name = (c.name or "").strip()
+        if not name or len(name) < 3:
+            continue
+        nlow = name.lower()
+        if nlow in seen_lower:
+            continue
+        if nlow in qnorm:
+            candidates.append(name)
+            seen_lower.add(nlow)
+            if len(candidates) >= max_results:
+                return candidates
+
+    return candidates
+
+
 def _build_concept_index(
     chunks: list[dict],
     concepts: list[str],
@@ -1291,6 +1361,18 @@ async def ask(
     whatis_mode = _is_whatis_question(q)
     howtech_mode = _is_howtech_question(q)
     howtech_concepts = _extract_tech_concepts(q) if howtech_mode else []
+
+    # _extract_proper_nouns solo agarra palabras con mayúscula inicial.
+    # Si el user escribe "first class" en minúsculas se pierde y el
+    # deep loader nunca dispara. Como complemento case-insensitive
+    # buscamos nombres reales de project/contact del tenant DENTRO de
+    # la pregunta y los añadimos como nombres propios.
+    known_entities = _extract_known_entities(db, tenant.id, q)
+    for entity in known_entities:
+        if entity not in proper_nouns:
+            proper_nouns.append(entity)
+    if known_entities:
+        logger.info("ask: known_entities (case-insensitive) → %s", known_entities)
     if proper_nouns:
         # Modo whatis ("qué es X") trae snippets más grandes y multiples
         # ocurrencias por sesión — necesario para extraer una definición
@@ -1412,11 +1494,17 @@ async def ask(
     out_lang_code = (getattr(user, "language", None) or tenant.default_language or "es").lower()[:2]
     out_lang_name = lang_label(out_lang_code)
 
+    intro_length_hint = (
+        "respuesta DETALLADA en 4-10 frases con párrafos, secciones y "
+        "nombres concretos (endpoints, tablas, módulos)"
+        if (howtech_mode or whatis_mode)
+        else "resumen introductorio, 1-3 frases"
+    )
     system = (
         f"Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
         f"con esta estructura EXACTA:\n"
         "{\n"
-        f'  "intro": "<resumen introductorio en {out_lang_name}, 1-2 frases>",\n'
+        f'  "intro": "<{intro_length_hint} en {out_lang_name}>",\n'
         '  "intro_source_sessions": [<id_int>, ...],\n'
         '  "decisions": [\n'
         '    {"text": "<decisión textual>", "source_sessions": [<id_int>, ...]}\n'
