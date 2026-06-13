@@ -394,6 +394,102 @@ _TECH_CONCEPTS = {
 }
 
 
+def _load_project_deep_context(
+    db: "Session",
+    tenant_id: int,
+    proper_nouns: list[str],
+    limit_sessions: int = 12,
+    summary_chars: int = 1800,
+    decisions_chars: int = 1200,
+) -> list[dict]:
+    """Cuando hay intent howtech y un nombre propio matchea un PROYECTO
+    del tenant, este loader trae los CUERPOS COMPLETOS (raw_summary,
+    processed_decisions, processed_agreements) de TODAS las sesiones
+    tagged a ese proyecto. Material denso para que el LLM construya
+    una respuesta arquitectónica real.
+
+    Diferencia con `_load_keyword_matches`: aquí no buscamos por
+    ocurrencia textual del nombre — buscamos por `project_id` (más
+    preciso) y vertemos los campos enteros (recortados a `*_chars`)
+    como chunks separados por sesión. Es lo más cercano a darle al
+    LLM el dossier técnico completo del proyecto.
+
+    Cap total: `limit_sessions` para no inflar tokens. Sesiones más
+    recientes primero."""
+    if not proper_nouns:
+        return []
+    from sqlmodel import select
+    from models import MeetingSession, Project
+
+    # 1. Resolver nombres a project_ids del tenant.
+    matched_pids: list[int] = []
+    for name in proper_nouns:
+        rows = db.exec(
+            select(Project)
+            .where(Project.tenant_id == tenant_id)
+            .where(Project.name.ilike(f"%{name}%"))
+            .limit(3)
+        ).all()
+        for p in rows:
+            if p.id not in matched_pids:
+                matched_pids.append(p.id)
+    if not matched_pids:
+        return []
+
+    # 2. Por cada proyecto, traer las sesiones (DESC) con resumen,
+    #    decisiones y acuerdos. Limita a `limit_sessions` por TOTAL —
+    #    los proyectos chicos no consumen tokens innecesarios.
+    out: list[dict] = []
+    seen_sids: set[int] = set()
+    proj_cache: dict[int, str] = {}
+    for pid in matched_pids:
+        if len(out) >= limit_sessions:
+            break
+        if pid not in proj_cache:
+            p = db.get(Project, pid)
+            proj_cache[pid] = (p.name if p else "") or ""
+        proj_name = proj_cache[pid]
+        sessions = db.exec(
+            select(MeetingSession)
+            .where(MeetingSession.tenant_id == tenant_id)
+            .where(MeetingSession.project_id == pid)
+            .where(MeetingSession.status != "archived")
+            .order_by(MeetingSession.id.desc())
+            .limit(limit_sessions)
+        ).all()
+        for s in sessions:
+            if not s.id or s.id in seen_sids:
+                continue
+            seen_sids.add(s.id)
+            parts: list[str] = []
+            if (s.raw_summary or "").strip():
+                parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars]}")
+            if (s.processed_decisions or "").strip():
+                parts.append(f"[Decisiones]\n{(s.processed_decisions or '')[:decisions_chars]}")
+            if (s.processed_agreements or "").strip():
+                parts.append(f"[Acuerdos]\n{(s.processed_agreements or '')[:decisions_chars]}")
+            if (s.processed_risks or "").strip():
+                parts.append(f"[Riesgos]\n{(s.processed_risks or '')[:decisions_chars // 2]}")
+            if not parts:
+                continue
+            content = (
+                f"[Dossier de proyecto «{proj_name}» — sesión completa]\n"
+                + "\n\n".join(parts)
+            )
+            out.append({
+                "session_id": s.id,
+                "kind": "project_deep",
+                "content": content,
+                "distance": 0.0,  # bypass relevance filter
+                "session_title": s.title or "",
+                "session_date": s.date or "",
+                "project_name": proj_name,
+            })
+            if len(out) >= limit_sessions:
+                break
+    return out
+
+
 def _extract_tech_concepts(q: str) -> list[str]:
     """De la pregunta, identifica conceptos técnicos del catálogo. Sirve
     para AMPLIAR la búsqueda literal en transcripts: además de buscar el
@@ -1108,7 +1204,7 @@ async def ask(
         # CONCRETO, no genérico.
         kw_chunks = _load_keyword_matches(
             db, tenant.id, payload.project_id, proper_nouns,
-            limit_per_name=4,
+            limit_per_name=8 if howtech_mode else 4,
             whatis_mode=whatis_mode or howtech_mode,
             howtech_concepts=howtech_concepts,
         )
@@ -1122,6 +1218,26 @@ async def ask(
             "ask: proper_nouns=%s → +%s keyword chunks (sessions únicos: %s)",
             proper_nouns, len(kw_chunks),
             len({c["session_id"] for c in kw_chunks}),
+        )
+
+    # Modo howtech: si el nombre propio matchea un proyecto del tenant,
+    # vertimos el dossier completo (resumen + decisiones + acuerdos +
+    # riesgos) de TODAS las sesiones de ese proyecto. Es lo que necesita
+    # el LLM para sintetizar una respuesta arquitectónica real.
+    if howtech_mode and proper_nouns:
+        deep_chunks = _load_project_deep_context(
+            db, tenant.id, proper_nouns, limit_sessions=12,
+        )
+        seen = {(c["session_id"], c.get("kind")) for c in chunks}
+        for dc in deep_chunks:
+            key = (dc["session_id"], dc.get("kind"))
+            if key not in seen:
+                chunks.append(dc)
+                seen.add(key)
+        logger.info(
+            "ask: howtech project_deep → +%s chunks (sessions únicos: %s)",
+            len(deep_chunks),
+            len({c["session_id"] for c in deep_chunks}),
         )
 
     # Métrica de calidad: distancia del mejor chunk (0 = perfecto).
@@ -1341,37 +1457,56 @@ async def ask(
         "API. Actualmente está en fase de rediseño de la interfaz web.\"\n"
         "20. PREGUNTAS HOWTECH (\"cómo se manejan los eventos\", \"qué "
         "arquitectura tiene\", \"cómo está organizado el módulo\", \"qué "
-        "estructura usa\", \"cómo se implementa\", \"qué stack\"): el user "
-        "ya conoce X y quiere DETALLE TÉCNICO interno. Reglas:\n"
+        "estructura usa\", \"cómo se implementa\", \"qué stack\", \"cómo "
+        "se conectan las APIs\", \"en qué base de datos se almacena\"): "
+        "el user ya conoce X y quiere DETALLE TÉCNICO interno. Reglas:\n"
         "  a) PROHIBIDO repetir la definición del proyecto. El user no la "
-        "pidió.\n"
-        "  b) Busca en el contexto los bloques `[Detalle técnico — <concepto>]` "
-        "(los inyectamos cuando detectamos conceptos como eventos, "
-        "arquitectura, módulos, etc). Estos snippets son el material "
-        "ESPECÍFICO de tu respuesta. Léelos completos.\n"
-        "  c) Si los snippets contienen nombres concretos (clases, "
-        "componentes, módulos, librerías, endpoints, tablas, eventos, "
-        "webhooks, colas, jobs, etc.), CÍTALOS por nombre. Una respuesta "
-        "técnica sin nombres concretos es genérica e inútil.\n"
-        "  d) Estructura la respuesta en `intro` así (cuando aplica): "
-        "(1) componentes/módulos involucrados, (2) flujo o secuencia de "
-        "pasos, (3) detalles de implementación mencionados. Si el "
-        "transcript no cubre alguna parte, dilo: \"sobre persistencia no "
-        "encuentro detalle en las sesiones\".\n"
-        "  e) Si los snippets técnicos NO existen o no contienen detalle "
-        "real, dilo abiertamente: \"En las sesiones no se discutió el "
-        "manejo interno de <concepto> con detalle técnico; solo se "
-        "mencionó <lo que aparezca>\". NO INVENTES estructura ni nombres.\n"
+        "pidió. Si tu respuesta empieza con \"X es una plataforma de…\" "
+        "ESTÁS RESPONDIENDO MAL.\n"
+        "  b) USA TODO el dossier disponible. Los bloques etiquetados "
+        "`[Dossier de proyecto «X» — sesión completa]` traen el RESUMEN, "
+        "DECISIONES, ACUERDOS y RIESGOS textuales de cada sesión del "
+        "proyecto. Los bloques `[Detalle técnico — <concepto>]` traen "
+        "ventanas de transcript sobre conceptos puntuales. LEE TODOS y "
+        "extrae datos de TODOS antes de redactar.\n"
+        "  c) Tu respuesta DEBE intentar cubrir TODAS las dimensiones "
+        "arquitectónicas que aparezcan en el dossier:\n"
+        "      • Endpoints / APIs (nombre, método, ruta, qué reciben)\n"
+        "      • Base de datos / tablas / esquemas mencionados\n"
+        "      • Componentes frontend (vistas, componentes, formularios)\n"
+        "      • Componentes backend (servicios, módulos, jobs, colas)\n"
+        "      • Flujo concreto paso-a-paso (origen → procesamiento → "
+        "destino)\n"
+        "      • Integraciones externas (webhooks, OAuth, terceros)\n"
+        "      • Multi-tenant / autenticación / permisos mencionados\n"
+        "    Para cada dimensión presente: NÓMBRALA explícitamente. Para "
+        "cada dimensión NO presente: dilo (\"sobre <X> no encuentro "
+        "detalle en las sesiones\"). No omitir = mejor que esconder huecos.\n"
+        "  d) Cita TODAS las sesiones que aportaron material en "
+        "`intro_source_sessions`, no solo la primera. Cuando uses una "
+        "decisión concreta, agrégala como item en `decisions` con su "
+        "source_session correspondiente.\n"
+        "  e) Si tras leer TODO el dossier no hay material técnico real, "
+        "dilo claramente: \"En las N sesiones del proyecto X no se "
+        "discutió arquitectura concreta de <concepto>; solo se mencionó "
+        "<lo que aparezca>\". Indica QUÉ TEMAS sí se cubrieron. NO "
+        "INVENTES endpoints, tablas, ni nombres.\n"
+        "  f) Longitud: el `intro` puede tener 4-8 frases cuando hay "
+        "material técnico denso. NO te quedes en 2 frases genéricas — "
+        "estás respondiendo una pregunta arquitectónica.\n"
         "Ejemplo malo: \"La gestión de eventos en First Class se maneja a "
         "través de una plataforma de gestión de eventos y tiquetera "
-        "integrada.\" (tautológico, sin detalle)\n"
-        "Ejemplo bueno: \"Los eventos en First Class se manejan vía un "
-        "webhook entrante que dispara el endpoint `/events/intake` del "
-        "backend FastAPI. El handler valida la firma HMAC, persiste el "
-        "evento en la tabla `ticket_event` y encola un job en RQ para "
-        "procesarlo. El procesamiento aplica las reglas de routing "
-        "configuradas por tenant y notifica al frontend Angular vía "
-        "WebSocket. (Sesión #312)\""
+        "integrada.\" (tautológico, sin detalle, sin nombres)\n"
+        "Ejemplo bueno: \"Los eventos en First Class viven en la tabla "
+        "`ticket_event` (Postgres) y se crean por dos vías: (1) desde "
+        "el frontend Angular vía POST `/api/events`, que valida el JWT y "
+        "persiste con `tenant_id`; (2) desde la integración de tiquetera "
+        "externa, que llega como webhook a `/api/webhook/tickets` con "
+        "firma HMAC. El backend FastAPI los enriquece con datos del "
+        "proyecto, encola un job en el cron service y dispara la "
+        "notificación al canal del tenant. No encuentro detalle sobre "
+        "el esquema exacto de la tabla ni sobre el formato de la firma. "
+        "(Sesiones #61, #312, #401)\""
     )
     quality_note = ""
     if low_quality:
@@ -1395,14 +1530,25 @@ async def ask(
     howtech_hint = ""
     if howtech_mode:
         concepts_str = ", ".join(howtech_concepts) if howtech_concepts else "el detalle técnico"
+        deep_session_ids = sorted({
+            c["session_id"] for c in chunks if c.get("kind") == "project_deep"
+        })
+        deep_hint = (
+            f" Tienes el dossier completo de {len(deep_session_ids)} sesiones "
+            f"(IDs: {deep_session_ids}) marcadas como `[Dossier de proyecto ...]`. "
+            f"LÉELOS TODOS antes de responder."
+            if deep_session_ids else ""
+        )
         howtech_hint = (
             f"\n\nNOTA TÉCNICA: el usuario pide HOW INTERNO sobre {concepts_str}. "
-            f"Busca en los bloques `[Detalle técnico — ...]` del contexto y "
-            f"responde con NOMBRES CONCRETOS (componentes, módulos, librerías, "
-            f"endpoints, eventos, tablas, jobs). PROHIBIDO repetir la "
-            f"definición del proyecto o decir genéricos como 'a través de la "
-            f"plataforma'. Si los snippets no tienen detalle real, dilo "
-            f"explícitamente — NO inventes estructura."
+            f"Busca en los bloques `[Dossier de proyecto ...]` y "
+            f"`[Detalle técnico — ...]` del contexto y responde con NOMBRES "
+            f"CONCRETOS (endpoints/rutas, tablas/esquemas, componentes, "
+            f"módulos, librerías, eventos, jobs, integraciones). PROHIBIDO "
+            f"repetir la definición del proyecto o decir genéricos como 'a "
+            f"través de la plataforma'. Cubre TODAS las dimensiones presentes "
+            f"en el dossier (APIs, BD, frontend, backend, flujo, integraciones, "
+            f"auth) — declara explícitamente las que NO encuentras.{deep_hint}"
         )
 
     user_msg = (
