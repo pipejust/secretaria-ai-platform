@@ -264,7 +264,7 @@
                     </footer>
                 </article>
 
-                <!-- Logo completo (versión clara, para fondos claros) -->
+                <!-- Logo claro (light-colored) — preview sobre fondo oscuro -->
                 <article class="br-card br-card--logo" *ngIf="showSection('logo')">
                     <header class="br-card-head">
                         <div>
@@ -273,11 +273,11 @@
                         </div>
                     </header>
                     <div class="br-logo-preview"
-                         [style.background]="'#FFFFFF'">
+                         [style.background]="form.primary_color || '#031B34'">
                         <img *ngIf="form.logo_data_url" [src]="form.logo_data_url"
                              [alt]="form.company_name || 'Acten'"/>
-                        <span *ngIf="!form.logo_data_url" class="br-logo-placeholder" style="color: #0F172A;">
-                            <svg viewBox="0 0 24 24" fill="#0F172A" stroke="none" class="br-logo-mark">
+                        <span *ngIf="!form.logo_data_url" class="br-logo-placeholder" style="color: #FFFFFF;">
+                            <svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="none" class="br-logo-mark">
                                 <path d="M12 2L2 22h20L12 2zm0 5l6.5 13H5.5L12 7z"/>
                             </svg>
                             {{ form.company_name || 'Acten' }}
@@ -303,7 +303,7 @@
                     </div>
                 </article>
 
-                <!-- Logo oscuro (para fondos oscuros — landing hero, dark mode) -->
+                <!-- Logo oscuro (dark-colored) — preview sobre fondo claro -->
                 <article class="br-card br-card--logo" *ngIf="showSection('logo')">
                     <header class="br-card-head">
                         <div>
@@ -312,11 +312,11 @@
                         </div>
                     </header>
                     <div class="br-logo-preview"
-                         [style.background]="form.primary_color || '#031B34'">
+                         [style.background]="'#FFFFFF'">
                         <img *ngIf="form.logo_dark_data_url" [src]="form.logo_dark_data_url"
                              [alt]="(form.company_name || 'Acten') + ' (oscuro)'"/>
-                        <span *ngIf="!form.logo_dark_data_url" class="br-logo-placeholder">
-                            <svg viewBox="0 0 24 24" fill="#FFFFFF" stroke="none" class="br-logo-mark">
+                        <span *ngIf="!form.logo_dark_data_url" class="br-logo-placeholder" style="color: #0F172A;">
+                            <svg viewBox="0 0 24 24" fill="#0F172A" stroke="none" class="br-logo-mark">
                                 <path d="M12 2L2 22h20L12 2zm0 5l6.5 13H5.5L12 7z"/>
                             </svg>
                             {{ form.company_name || 'Acten' }}
