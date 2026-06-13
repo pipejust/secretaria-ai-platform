@@ -399,6 +399,179 @@ def _load_keyword_matches(
     return out
 
 
+def _load_entity_facts(
+    db: "Session",
+    tenant_id: int,
+    project_id: Optional[int],
+    names: list[str],
+) -> dict:
+    """Busca hechos estructurados (no-RAG) sobre personas y proyectos.
+
+    Razón de ser: el RAG saca info SOLO de transcripts/decisiones de
+    sesiones. Pero cuando alguien pregunta "¿quién es Felipe Cortés?"
+    o "¿qué es First Class?", la base ya tiene info canónica en
+    `projectcontact` (rol, empresa, email) y en `project` (nombre,
+    descripción, owner). Inyectamos esa info como contexto adicional
+    para que el LLM responda con la verdad estructurada, no con
+    inferencias del transcript.
+
+    Para cada nombre propio:
+      - Personas: contactos de proyectos del tenant cuyo `name` contiene
+        el término. Devuelve role/entity/email + lista de proyectos en
+        los que aparece.
+      - Proyectos: proyectos del tenant cuyo `name` contiene el término.
+        Devuelve description + count contactos + número de sesiones.
+
+    Filtra por tenant_id estrictamente. Limita resultados para no
+    inflar tokens.
+    """
+    if not names:
+        return {"persons": [], "projects": []}
+
+    from sqlmodel import select
+    from models import MeetingSession, Project, ProjectContact
+
+    persons: list[dict] = []
+    seen_contact_keys: set[tuple[str, str, int]] = set()  # (name_lower, email, project_id)
+
+    for name in names:
+        pattern = f"%{name}%"
+        q = (
+            select(ProjectContact, Project)
+            .join(Project, Project.id == ProjectContact.project_id)
+            .where(Project.tenant_id == tenant_id)
+            .where(ProjectContact.name.ilike(pattern))
+        )
+        if project_id:
+            q = q.where(Project.id == project_id)
+        q = q.limit(20)
+        for c, p in db.exec(q).all():
+            key = (
+                (c.name or "").strip().lower(),
+                (c.email or "").strip().lower(),
+                p.id,
+            )
+            if key in seen_contact_keys:
+                continue
+            seen_contact_keys.add(key)
+            persons.append({
+                "name": c.name or "",
+                "role": (c.role or "").strip(),
+                "entity": (c.entity or "").strip(),
+                "email": (c.email or "").strip(),
+                "project_id": p.id,
+                "project_name": p.name or "",
+            })
+
+    projects_out: list[dict] = []
+    seen_project_ids: set[int] = set()
+    for name in names:
+        pattern = f"%{name}%"
+        rows = db.exec(
+            select(Project)
+            .where(Project.tenant_id == tenant_id)
+            .where(Project.name.ilike(pattern))
+            .limit(5)
+        ).all()
+        for p in rows:
+            if p.id in seen_project_ids:
+                continue
+            seen_project_ids.add(p.id)
+            contacts = db.exec(
+                select(ProjectContact).where(ProjectContact.project_id == p.id)
+            ).all()
+            sess_count = db.exec(
+                sa_text(
+                    "SELECT COUNT(*) FROM meetingsession "
+                    "WHERE project_id = :p AND tenant_id = :t"
+                ).bindparams(p=p.id, t=tenant_id)
+            ).first()
+            projects_out.append({
+                "id": p.id,
+                "name": p.name or "",
+                "description": (p.description or "").strip(),
+                "contacts": [
+                    {
+                        "name": c.name or "",
+                        "role": (c.role or "").strip(),
+                        "entity": (c.entity or "").strip(),
+                        "email": (c.email or "").strip(),
+                    }
+                    for c in contacts[:12]
+                ],
+                "session_count": int(sess_count[0]) if sess_count else 0,
+            })
+
+    return {"persons": persons, "projects": projects_out}
+
+
+def _format_entity_facts_block(facts: dict) -> str:
+    """Formatea el dict de _load_entity_facts a un bloque legible para
+    el LLM. Devuelve "" si no hay datos."""
+    persons = facts.get("persons") or []
+    projects = facts.get("projects") or []
+    if not persons and not projects:
+        return ""
+
+    lines: list[str] = ["=== DATOS ESTRUCTURADOS DEL DIRECTORIO ==="]
+    lines.append(
+        "Información canónica proveniente de la base de proyectos y "
+        "contactos del tenant (NO de transcripciones). Úsala como fuente "
+        "autoritativa para describir personas (rol, empresa, email) y "
+        "proyectos (descripción, equipo). Es información REAL — no la "
+        "ignores aunque no aparezca en las sesiones."
+    )
+
+    if persons:
+        # Agrupar por nombre canonical para que un mismo contacto en
+        # múltiples proyectos aparezca una sola vez.
+        by_name: dict[str, dict] = {}
+        for pr in persons:
+            key = (pr.get("name") or "").strip().lower()
+            if not key:
+                continue
+            slot = by_name.setdefault(key, {
+                "name": pr["name"], "roles": set(), "entities": set(),
+                "emails": set(), "projects": [],
+            })
+            if pr.get("role"): slot["roles"].add(pr["role"])
+            if pr.get("entity"): slot["entities"].add(pr["entity"])
+            if pr.get("email"): slot["emails"].add(pr["email"])
+            slot["projects"].append(pr.get("project_name") or f"#{pr.get('project_id')}")
+
+        lines.append("\nPERSONAS:")
+        for slot in by_name.values():
+            roles = ", ".join(sorted(slot["roles"])) or "—"
+            entities = ", ".join(sorted(slot["entities"])) or "—"
+            emails = ", ".join(sorted(slot["emails"])) or "—"
+            projs = ", ".join(sorted(set(slot["projects"]))) or "—"
+            lines.append(
+                f"- {slot['name']}: rol={roles}; empresa={entities}; "
+                f"email={emails}; proyectos={projs}"
+            )
+
+    if projects:
+        lines.append("\nPROYECTOS:")
+        for p in projects:
+            desc = p["description"] or "(sin descripción)"
+            if len(desc) > 600:
+                desc = desc[:600] + "…"
+            lines.append(
+                f"- {p['name']} (id={p['id']}, {p['session_count']} sesiones)"
+            )
+            lines.append(f"  descripción: {desc}")
+            if p["contacts"]:
+                team = "; ".join(
+                    f"{c['name']}"
+                    + (f" ({c['role']})" if c['role'] else "")
+                    + (f" — {c['entity']}" if c['entity'] else "")
+                    for c in p["contacts"]
+                )
+                lines.append(f"  equipo: {team}")
+
+    return "\n".join(lines)
+
+
 def _name_snippet(text: str, name: str, window: int = 600) -> str:
     """Devuelve una ventana de `window` chars centrada en la primera
     ocurrencia (case-insensitive) de `name` dentro de `text`. None si no
@@ -808,6 +981,16 @@ async def ask(
 
     context = _build_context(chunks)
     sessions_inventory = _build_sessions_inventory(chunks)
+
+    # Datos estructurados del directorio (no-RAG): si la pregunta
+    # menciona nombres propios, traemos personas (project_contacts) y
+    # proyectos cuyos `name` matcheen. Esto da al LLM la verdad
+    # canónica (rol, empresa, descripción del proyecto) en lugar de
+    # forzarlo a inferir todo del transcript.
+    entity_facts = _load_entity_facts(
+        db, tenant.id, payload.project_id, proper_nouns,
+    )
+    entity_block = _format_entity_facts_block(entity_facts)
     # Pedimos JSON estructurado para que el frontend pueda renderizar
     # secciones (Decisiones / Tareas pendientes / Fuentes) tal como el
     # mockup. Cada decisión y tarea DEBE indicar la(s) sesión(es) origen
@@ -927,7 +1110,32 @@ async def ask(
         "sesión cuyo transcript dice que no llegó, NO las otras sesiones del "
         "mismo cliente. Si el `intro` es un agregado de varias sesiones (ej. "
         "\"se discutieron 4 temas\"), incluye todas las sesiones implicadas. "
-        "Si el `intro` es genérico (\"no hay información\"), déjalo vacío []."
+        "Si el `intro` es genérico (\"no hay información\"), déjalo vacío [].\n"
+        "17. DATOS ESTRUCTURADOS DEL DIRECTORIO: si la pregunta menciona una "
+        "PERSONA y aparece en el bloque `DATOS ESTRUCTURADOS DEL DIRECTORIO`, "
+        "usa esa info canónica (rol, empresa, email, proyectos en los que "
+        "participa) como base para la respuesta en `intro`. NO te limites a "
+        "decir \"aparece en las sesiones X, Y\" — describe quién ES la "
+        "persona según el directorio Y complementa con lo que dijo o hizo "
+        "en las sesiones. Igual para PROYECTOS: si la pregunta menciona un "
+        "proyecto y aparece en ese bloque, usa su descripción + equipo como "
+        "respuesta principal en `intro`, y luego añade qué se ha avanzado "
+        "según las sesiones. El directorio es VERDAD CANÓNICA — sobreescribe "
+        "cualquier inferencia que el transcript pudiera sugerir en contra "
+        "(ej. rol o empresa de un participante).\n"
+        "18. ROUTING DE INTENCIÓN: analiza la pregunta antes de responder.\n"
+        "  - \"quién es X\" / \"qué hace X\" → respuesta DESCRIPTIVA sobre "
+        "la persona. Empieza por su rol+empresa (del directorio si está), "
+        "luego añade su actividad en las sesiones.\n"
+        "  - \"qué es X\" / \"de qué trata X\" → respuesta DESCRIPTIVA "
+        "sobre el proyecto/tema. Empieza por su propósito (description del "
+        "directorio si está), luego añade sesiones donde se ha tratado.\n"
+        "  - \"cuándo\" → respuesta TEMPORAL con la(s) fecha(s) concretas.\n"
+        "  - \"dónde\" → respuesta de UBICACIÓN.\n"
+        "  - meta (\"qué clientes\", \"qué proyectos\") → enumeración.\n"
+        "  - analítica (\"cómo va\", \"qué se ha avanzado\") → síntesis "
+        "con datos cuantitativos cuando se pueda (nº sesiones, nº "
+        "decisiones, etc.)."
     )
     quality_note = ""
     if low_quality:
@@ -949,13 +1157,14 @@ async def ask(
     user_msg = (
         f"{convo_hint}"
         f"Pregunta del usuario: {q}\n\n"
+        + (f"{entity_block}\n\n" if entity_block else "")
         + (f"{sessions_inventory}\n\n" if sessions_inventory else "")
         + f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
           f"filtrados de {len(raw_chunks)} candidatos por umbral de relevancia):\n"
           f"{context}"
           f"{quality_note}\n\n"
           f"Devuelve la respuesta como JSON estricto siguiendo el esquema y RESPETANDO "
-          f"las 12 reglas. Recuerda: cada decisión y tarea DEBE traer su `source_sessions`."
+          f"las reglas. Recuerda: cada decisión y tarea DEBE traer su `source_sessions`."
     )
 
     # Inyectamos los turnos previos del MISMO hilo (si vienen) para que el
