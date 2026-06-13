@@ -464,6 +464,100 @@ def _extract_known_entities(
     return candidates
 
 
+# Stopwords para filtrar frases candidatas que no son entidades
+# (preguntas + nexos + verbos genéricos).
+_PHRASE_STOPWORDS = frozenset({
+    "que", "qué", "como", "cómo", "cuando", "cuándo", "donde", "dónde",
+    "quien", "quién", "cual", "cuál", "por", "para", "con", "sin",
+    "los", "las", "del", "una", "uno", "una", "unas", "unos",
+    "este", "esta", "esto", "ese", "esa", "eso", "estos", "estas",
+    "esos", "esas", "del", "al", "en", "es", "ser", "son", "fue",
+    "han", "han", "y", "o", "de", "se", "la", "el", "lo", "le", "les",
+    "tu", "tú", "su", "sus", "mi", "mis", "yo", "tu", "él", "ella",
+    "ellos", "ellas", "muy", "mas", "más", "menos", "siempre",
+    "nunca", "ya", "aún", "aun", "hay", "puede", "pueden", "debe",
+    "deben", "tiene", "tienen", "hace", "hacen", "está", "están",
+    "the", "and", "or", "of", "for", "with", "without", "this",
+    "that", "these", "those", "is", "are", "was", "were", "be",
+    "you", "your", "i", "we", "they", "it", "in", "on", "to", "from",
+    "evento", "eventos", "estructura", "arquitectura", "código", "codigo",
+    "módulo", "modulo", "componente", "frontend", "backend", "base",
+    "datos", "manejan", "manejar", "implementa", "implementan",
+    "organiza", "organizan", "funciona", "funcionan", "estructur",
+})
+
+
+def _extract_session_title_phrases(
+    db: "Session",
+    tenant_id: int,
+    q: str,
+    *,
+    max_phrases: int = 5,
+) -> list[str]:
+    """Extrae frases de 2-4 palabras de la pregunta cuyo match aparezca
+    como SUBSTRING en algún session.title del tenant.
+
+    Razón: el caso real "First Class" no es nombre de proyecto en BD —
+    es un cliente discutido en sesiones del proyecto Softnexus. Sus
+    sesiones llevan títulos como "First Class - Evento - api- tiquetera".
+    `_extract_known_entities` (que busca project.name + projectcontact)
+    falla. Aquí complementamos: si una frase de la pregunta aparece en
+    títulos de sesiones, la tratamos como entidad y el deep loader
+    captura esas sesiones vía title ILIKE.
+    """
+    if not q:
+        return []
+    import re as _re
+    from sqlmodel import select, func
+    from models import MeetingSession
+
+    # Tokenizar palabras alfa de longitud ≥3, en minúsculas.
+    tokens = [
+        t.lower()
+        for t in _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñÀÈÌÒÙäëïöü]{3,}", q)
+    ]
+    if not tokens:
+        return []
+
+    # Generar bigramas + trigramas + quadrigramas (preserva orden).
+    phrases: list[str] = []
+    seen: set[str] = set()
+    for n in (4, 3, 2):
+        for i in range(len(tokens) - n + 1):
+            window = tokens[i:i + n]
+            # Skip si TODOS son stopwords (poco específico).
+            if all(t in _PHRASE_STOPWORDS for t in window):
+                continue
+            # Skip si arranca/termina con stopword sola (frase ruidosa).
+            if window[0] in _PHRASE_STOPWORDS or window[-1] in _PHRASE_STOPWORDS:
+                continue
+            phrase = " ".join(window)
+            if phrase in seen:
+                continue
+            seen.add(phrase)
+            phrases.append(phrase)
+
+    # Cada frase: contar matches en session.title del tenant. Si ≥1, la
+    # phrase es una entidad. Cap total para no abusar SQL.
+    found: list[tuple[str, int]] = []
+    for phrase in phrases[:30]:  # cap candidates checked
+        cnt = db.exec(
+            select(func.count())
+            .select_from(MeetingSession)
+            .where(MeetingSession.tenant_id == tenant_id)
+            .where(MeetingSession.title.ilike(f"%{phrase}%"))
+        ).first()
+        n = int(cnt[0] if isinstance(cnt, tuple) else cnt or 0)
+        if n > 0:
+            found.append((phrase, n))
+
+    if not found:
+        return []
+    # Priorizar frases con MÁS sesiones (más representativas).
+    found.sort(key=lambda kv: (-kv[1], -len(kv[0])))
+    return [phrase for phrase, _ in found[:max_phrases]]
+
+
 def _build_concept_index(
     chunks: list[dict],
     concepts: list[str],
@@ -1373,6 +1467,17 @@ async def ask(
             proper_nouns.append(entity)
     if known_entities:
         logger.info("ask: known_entities (case-insensitive) → %s", known_entities)
+
+    # Fallback adicional: frases del query que matchean session.title.
+    # Cubre el caso CLIENTE no-proyecto: "first class" no es project.name
+    # pero está en títulos de 13 sesiones del tenant. Sin esto el deep
+    # loader queda vacío y la respuesta cae a genérico.
+    title_phrases = _extract_session_title_phrases(db, tenant.id, q)
+    for phrase in title_phrases:
+        if phrase not in proper_nouns and phrase.title() not in proper_nouns:
+            proper_nouns.append(phrase)
+    if title_phrases:
+        logger.info("ask: session_title_phrases → %s", title_phrases)
     if proper_nouns:
         # Modo whatis ("qué es X") trae snippets más grandes y multiples
         # ocurrencias por sesión — necesario para extraer una definición
