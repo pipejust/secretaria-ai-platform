@@ -398,27 +398,38 @@ def _load_project_deep_context(
     db: "Session",
     tenant_id: int,
     proper_nouns: list[str],
-    limit_sessions: int = 12,
-    summary_chars: int = 1800,
-    decisions_chars: int = 1200,
+    limit_sessions: int = 14,
+    summary_chars: int = 2200,
+    decisions_chars: int = 1500,
+    howtech_concepts: Optional[list[str]] = None,
+    transcript_snippet_window: int = 1200,
+    transcript_max_occ: int = 4,
 ) -> list[dict]:
     """Cuando hay intent howtech y un nombre propio matchea un PROYECTO
     del tenant, este loader trae los CUERPOS COMPLETOS (raw_summary,
-    processed_decisions, processed_agreements) de TODAS las sesiones
-    tagged a ese proyecto. Material denso para que el LLM construya
-    una respuesta arquitectónica real.
+    processed_decisions, processed_agreements, processed_risks) MÁS
+    snippets del raw_transcript alrededor de los conceptos técnicos
+    detectados. Material denso para que el LLM construya una respuesta
+    arquitectónica real con nombres concretos.
 
-    Diferencia con `_load_keyword_matches`: aquí no buscamos por
-    ocurrencia textual del nombre — buscamos por `project_id` (más
-    preciso) y vertemos los campos enteros (recortados a `*_chars`)
-    como chunks separados por sesión. Es lo más cercano a darle al
-    LLM el dossier técnico completo del proyecto.
+    Fuentes de sesiones (UNION):
+      1) sessions WHERE project_id == matched Project.
+      2) sessions WHERE title ILIKE %name% (cubre sesiones SIN
+         project_id pero con el nombre en el título — caso común
+         cuando el auto-match falla).
+
+    Transcript: cuando `howtech_concepts` viene, además del resumen
+    estructurado se inyectan hasta `transcript_max_occ` ventanas de
+    `transcript_snippet_window` chars centradas en cada concepto.
+    El transcript es donde vive el DETALLE real (endpoints, tablas,
+    flujos paso-a-paso). Sin esto el LLM solo ve resúmenes y responde
+    genérico.
 
     Cap total: `limit_sessions` para no inflar tokens. Sesiones más
     recientes primero."""
     if not proper_nouns:
         return []
-    from sqlmodel import select
+    from sqlmodel import select, or_
     from models import MeetingSession, Project
 
     # 1. Resolver nombres a project_ids del tenant.
@@ -433,60 +444,97 @@ def _load_project_deep_context(
         for p in rows:
             if p.id not in matched_pids:
                 matched_pids.append(p.id)
-    if not matched_pids:
-        return []
 
-    # 2. Por cada proyecto, traer las sesiones (DESC) con resumen,
-    #    decisiones y acuerdos. Limita a `limit_sessions` por TOTAL —
-    #    los proyectos chicos no consumen tokens innecesarios.
+    # 2. Sesiones candidatas: UNION de las taggeadas al proyecto y las
+    #    cuyo TÍTULO contiene el nombre propio (caso untagged).
+    title_filters = [MeetingSession.title.ilike(f"%{n}%") for n in proper_nouns]
+    q = (
+        select(MeetingSession)
+        .where(MeetingSession.tenant_id == tenant_id)
+        .where(MeetingSession.status != "archived")
+    )
+    if matched_pids:
+        q = q.where(
+            or_(
+                MeetingSession.project_id.in_(matched_pids),
+                *title_filters,
+            )
+        )
+    else:
+        # Sin matched_pids igual buscamos por título — útil para sesiones
+        # del proyecto que nunca quedaron taggeadas.
+        if not title_filters:
+            return []
+        q = q.where(or_(*title_filters))
+    sessions = db.exec(
+        q.order_by(MeetingSession.id.desc()).limit(limit_sessions * 2)
+    ).all()
+
+    # 3. Para cada sesión, ensamblar el bloque.
     out: list[dict] = []
     seen_sids: set[int] = set()
     proj_cache: dict[int, str] = {}
-    for pid in matched_pids:
+    for s in sessions:
         if len(out) >= limit_sessions:
             break
-        if pid not in proj_cache:
-            p = db.get(Project, pid)
-            proj_cache[pid] = (p.name if p else "") or ""
-        proj_name = proj_cache[pid]
-        sessions = db.exec(
-            select(MeetingSession)
-            .where(MeetingSession.tenant_id == tenant_id)
-            .where(MeetingSession.project_id == pid)
-            .where(MeetingSession.status != "archived")
-            .order_by(MeetingSession.id.desc())
-            .limit(limit_sessions)
-        ).all()
-        for s in sessions:
-            if not s.id or s.id in seen_sids:
-                continue
-            seen_sids.add(s.id)
-            parts: list[str] = []
-            if (s.raw_summary or "").strip():
-                parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars]}")
-            if (s.processed_decisions or "").strip():
-                parts.append(f"[Decisiones]\n{(s.processed_decisions or '')[:decisions_chars]}")
-            if (s.processed_agreements or "").strip():
-                parts.append(f"[Acuerdos]\n{(s.processed_agreements or '')[:decisions_chars]}")
-            if (s.processed_risks or "").strip():
-                parts.append(f"[Riesgos]\n{(s.processed_risks or '')[:decisions_chars // 2]}")
-            if not parts:
-                continue
-            content = (
-                f"[Dossier de proyecto «{proj_name}» — sesión completa]\n"
-                + "\n\n".join(parts)
-            )
-            out.append({
-                "session_id": s.id,
-                "kind": "project_deep",
-                "content": content,
-                "distance": 0.0,  # bypass relevance filter
-                "session_title": s.title or "",
-                "session_date": s.date or "",
-                "project_name": proj_name,
-            })
-            if len(out) >= limit_sessions:
-                break
+        if not s.id or s.id in seen_sids:
+            continue
+        seen_sids.add(s.id)
+
+        proj_name = ""
+        if s.project_id:
+            if s.project_id not in proj_cache:
+                p = db.get(Project, s.project_id)
+                proj_cache[s.project_id] = (p.name if p else "") or ""
+            proj_name = proj_cache[s.project_id]
+
+        parts: list[str] = []
+        if (s.raw_summary or "").strip():
+            parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars]}")
+        if (s.processed_decisions or "").strip():
+            parts.append(f"[Decisiones]\n{(s.processed_decisions or '')[:decisions_chars]}")
+        if (s.processed_agreements or "").strip():
+            parts.append(f"[Acuerdos]\n{(s.processed_agreements or '')[:decisions_chars]}")
+        if (s.processed_risks or "").strip():
+            parts.append(f"[Riesgos]\n{(s.processed_risks or '')[:decisions_chars // 2]}")
+
+        # Snippets del transcript alrededor de cada concepto técnico.
+        # Esto es lo que cambia la calidad de la respuesta: nombres
+        # concretos viven en el transcript, NO en el resumen.
+        if howtech_concepts and (s.raw_transcript or "").strip():
+            transcript = s.raw_transcript or ""
+            for concept in howtech_concepts:
+                block = _name_snippets_all(
+                    transcript, concept,
+                    window=transcript_snippet_window,
+                    max_occ=transcript_max_occ,
+                )
+                if block:
+                    # Recorte adicional para no inflar tokens.
+                    if len(block) > transcript_snippet_window * transcript_max_occ:
+                        block = block[: transcript_snippet_window * transcript_max_occ] + " …"
+                    parts.append(
+                        f"[Transcripción — fragmentos sobre «{concept}»]\n{block}"
+                    )
+
+        if not parts:
+            continue
+
+        proj_header = f"«{proj_name}»" if proj_name else "(sin proyecto)"
+        title_header = s.title or "(sin título)"
+        content = (
+            f"[Dossier de proyecto {proj_header} — sesión «{title_header}»]\n"
+            + "\n\n".join(parts)
+        )
+        out.append({
+            "session_id": s.id,
+            "kind": "project_deep",
+            "content": content,
+            "distance": 0.0,  # bypass relevance filter
+            "session_title": s.title or "",
+            "session_date": s.date or "",
+            "project_name": proj_name,
+        })
     return out
 
 
@@ -1222,11 +1270,15 @@ async def ask(
 
     # Modo howtech: si el nombre propio matchea un proyecto del tenant,
     # vertimos el dossier completo (resumen + decisiones + acuerdos +
-    # riesgos) de TODAS las sesiones de ese proyecto. Es lo que necesita
-    # el LLM para sintetizar una respuesta arquitectónica real.
+    # riesgos + snippets de transcript sobre conceptos técnicos) de
+    # TODAS las sesiones de ese proyecto + las que tengan el nombre
+    # en el título. Es lo que necesita el LLM para sintetizar una
+    # respuesta arquitectónica real.
     if howtech_mode and proper_nouns:
         deep_chunks = _load_project_deep_context(
-            db, tenant.id, proper_nouns, limit_sessions=12,
+            db, tenant.id, proper_nouns,
+            limit_sessions=14,
+            howtech_concepts=howtech_concepts,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
         for dc in deep_chunks:
