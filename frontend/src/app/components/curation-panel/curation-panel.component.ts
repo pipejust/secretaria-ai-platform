@@ -81,6 +81,27 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   saveStatusMessage = '';
   projects: any[] = [];
 
+  /** Estado del modal "¿Desea actualizar todos los componentes?". Se abre
+   *  cuando el user cambia el select de proyecto y hay un valor nuevo
+   *  resoluble. Snapshot del previo + del nuevo para poder revertir si
+   *  cancela.
+   *  Si el user confirma "Sí", llamamos al PUT con el nuevo project_id
+   *  y luego disparamos retry del pipeline IA. La pipeline IA re-procesa
+   *  attendees, tareas (con owner_email por project_contacts) y
+   *  decisiones/resumen scopeados al proyecto. */
+  reprocessModal: {
+    open: boolean;
+    previousProjectId: number | null;
+    newProjectId: number | null;
+    projectName: string;
+    running: boolean;
+  } = { open: false, previousProjectId: null, newProjectId: null, projectName: '', running: false };
+
+  /** Último project_id sincronizado con backend — usado por
+   *  onProjectChange para detectar deltas reales (evita modal en bind
+   *  inicial cuando meetingData se setea desde GET). */
+  private _lastSyncedProjectId: number | null = null;
+
   private readonly destroy$ = new Subject<void>();
   
   showManualTaskForm = false;
@@ -379,6 +400,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
                   parsedDate = Number(parsedDate);
               }
 
+              this._lastSyncedProjectId = data.session.project_id || null;
               this.meetingData = {
                 id: data.session.id,
                 title: data.session.title || this.translate.instant('curation.session_untitled'),
@@ -798,6 +820,105 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  /** Disparado por ngModelChange del select de proyecto. Si el delta es
+   *  real respecto al ultimo sync, abre modal de confirmación. */
+  onProjectChange(newId: number | null): void {
+    const prev = this._lastSyncedProjectId;
+    if (newId === prev) return;
+    if (newId == null) {
+      // Si pone "Sin proyecto", solo guarda sin modal — no hay re-pipeline
+      // contra qué scopear.
+      this._persistProjectId(null);
+      return;
+    }
+    const proj = (this.projects || []).find(p => p.id === newId);
+    this.reprocessModal = {
+      open: true,
+      previousProjectId: prev,
+      newProjectId: newId,
+      projectName: proj?.name || '',
+      running: false,
+    };
+    this.cdr.detectChanges();
+  }
+
+  /** "No, solo asignar" — guarda project_id sin disparar pipeline. */
+  reprocessModalDecline(): void {
+    const newId = this.reprocessModal.newProjectId;
+    this.reprocessModal.open = false;
+    this._persistProjectId(newId);
+    this.cdr.detectChanges();
+  }
+
+  /** "Sí, actualizar todo" — guarda project_id y dispara retry pipeline
+   *  IA que re-procesa attendees + tareas + decisiones scopeados al
+   *  proyecto. */
+  reprocessModalConfirm(): void {
+    const newId = this.reprocessModal.newProjectId;
+    if (newId == null) { this.reprocessModal.open = false; return; }
+    this.reprocessModal.running = true;
+    this.cdr.detectChanges();
+    const headers = this.authService.getAuthHeaders();
+    this.http.put(`${environment.apiUrl}/api/sessions/${this.sessionId}`,
+      { project_id: newId }, { headers }
+    ).subscribe({
+      next: () => {
+        this._lastSyncedProjectId = newId;
+        // Disparar re-pipeline IA. El endpoint existe: POST
+        // /api/webhook/fireflies/sessions/{id}/retry — modo ai_only por
+        // default.
+        this.http.post<any>(
+          `${environment.apiUrl}/api/webhook/fireflies/sessions/${this.sessionId}/retry`,
+          {}, { headers }
+        ).subscribe({
+          next: () => {
+            this.reprocessModal.open = false;
+            this.reprocessModal.running = false;
+            this.showSaveMessage(this.translate.instant('curation.toast_reprocess_queued'));
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.reprocessModal.open = false;
+            this.reprocessModal.running = false;
+            this.showSaveMessage(this.translate.instant('curation.toast_reprocess_failed'), true);
+            this.cdr.detectChanges();
+          }
+        });
+      },
+      error: () => {
+        this.reprocessModal.running = false;
+        this.showSaveMessage(this.translate.instant('curation.toast_save_error'), true);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /** Cierra sin cambios — revierte el select al previo. */
+  reprocessModalCancel(): void {
+    const prev = this.reprocessModal.previousProjectId;
+    this.meetingData.project_id = prev;
+    this.reprocessModal.open = false;
+    this.cdr.detectChanges();
+  }
+
+  /** PUT minimal — solo project_id. */
+  private _persistProjectId(newId: number | null): void {
+    const headers = this.authService.getAuthHeaders();
+    this.http.put(`${environment.apiUrl}/api/sessions/${this.sessionId}`,
+      { project_id: newId }, { headers }
+    ).subscribe({
+      next: () => {
+        this._lastSyncedProjectId = newId;
+        this.showSaveMessage(this.translate.instant('curation.toast_changes_saved'));
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.showSaveMessage(this.translate.instant('curation.toast_save_error'), true);
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   saveManualEdits() {

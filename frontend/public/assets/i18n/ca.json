@@ -2510,7 +2510,16 @@
     "toast_task_removed_local": "Tasca treta de la vista. Desa per persistir.",
     "toast_generating_doc": "Generant document en {{format}}...",
     "toast_doc_downloaded": "Document {{format}} descarregat correctament",
-    "toast_doc_download_error": "Error descarregant el document {{format}}"
+    "toast_doc_download_error": "Error descarregant el document {{format}}",
+    "reprocess_modal_title": "Vols actualitzar tots els components?",
+    "reprocess_modal_body": "Has assignat aquesta sessió al projecte «{{project}}». La IA pot reprocessar el contingut amb els participants i el context d'aquest projecte.",
+    "reprocess_bullet_attendees": "Els participants s'enriqueixen amb els contactes reals del projecte.",
+    "reprocess_bullet_tasks": "Les tasques s'assignen als correus i noms d'aquests participants.",
+    "reprocess_bullet_summary": "El resum, decisions i acords es revaliden amb l'enfocament del projecte.",
+    "reprocess_decline": "No, només assignar",
+    "reprocess_confirm": "Sí, actualitzar-ho tot",
+    "toast_reprocess_queued": "Reprocessament iniciat. Recarrega en uns segons per veure els canvis.",
+    "toast_reprocess_failed": "No s'ha pogut iniciar el reprocessament."
   },
   "meetings_list": {
     "toast_title_required": "El títol/motiu és obligatori.",

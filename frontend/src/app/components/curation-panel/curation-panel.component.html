@@ -205,6 +205,7 @@
                         <span class="cp-meta-label">{{ 'curation.project_label' | translate }}</span>
                         <span class="cp-badge-select">
                             <select [(ngModel)]="meetingData.project_id"
+                                    (ngModelChange)="onProjectChange($event)"
                                     [attr.aria-label]="'curation.change_project' | translate">
                                 <option [ngValue]="null">{{ 'curation.no_project' | translate }}</option>
                                 <option *ngFor="let p of projects" [ngValue]="p.id">{{ p.name }}</option>
@@ -803,4 +804,36 @@
             </section>
         </div>
     </ng-container>
+</div>
+
+<!-- Modal: ¿Actualizar componentes al cambiar proyecto? -->
+<div class="ap-modal-overlay" *ngIf="reprocessModal.open" (click)="reprocessModalCancel()">
+    <div class="ap-modal ap-modal-sm" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="ap-modal-head">
+            <h2 class="ap-modal-title">{{ 'curation.reprocess_modal_title' | translate }}</h2>
+        </header>
+        <div class="ap-modal-body">
+            <p>{{ 'curation.reprocess_modal_body' | translate: { project: reprocessModal.projectName } }}</p>
+            <ul style="margin-top:12px; padding-left:18px; line-height:1.6; color: var(--ap-text-muted, #6B7280); font-size: 13.5px;">
+                <li>{{ 'curation.reprocess_bullet_attendees' | translate }}</li>
+                <li>{{ 'curation.reprocess_bullet_tasks' | translate }}</li>
+                <li>{{ 'curation.reprocess_bullet_summary' | translate }}</li>
+            </ul>
+        </div>
+        <footer class="ap-modal-foot">
+            <button type="button" class="ap-btn ap-btn-secondary"
+                    (click)="reprocessModalCancel()" [disabled]="reprocessModal.running">
+                {{ 'common.cancel' | translate }}
+            </button>
+            <button type="button" class="ap-btn ap-btn-secondary"
+                    (click)="reprocessModalDecline()" [disabled]="reprocessModal.running">
+                {{ 'curation.reprocess_decline' | translate }}
+            </button>
+            <button type="button" class="ap-btn ap-btn-primary"
+                    (click)="reprocessModalConfirm()" [disabled]="reprocessModal.running">
+                <span *ngIf="!reprocessModal.running">{{ 'curation.reprocess_confirm' | translate }}</span>
+                <span *ngIf="reprocessModal.running">{{ 'common.saving' | translate }}</span>
+            </button>
+        </footer>
+    </div>
 </div>

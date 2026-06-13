@@ -2510,7 +2510,16 @@
     "toast_task_removed_local": "Task removed from view. Save to persist.",
     "toast_generating_doc": "Generating {{format}} document...",
     "toast_doc_downloaded": "{{format}} document downloaded successfully",
-    "toast_doc_download_error": "Error downloading the {{format}} document"
+    "toast_doc_download_error": "Error downloading the {{format}} document",
+    "reprocess_modal_title": "Update all components?",
+    "reprocess_modal_body": "You assigned this session to project \"{{project}}\". The AI can reprocess the content using that project's participants and context.",
+    "reprocess_bullet_attendees": "Attendees are enriched with the project's real contacts.",
+    "reprocess_bullet_tasks": "Tasks are mapped to those participants' emails and names.",
+    "reprocess_bullet_summary": "Summary, decisions and agreements are re-validated against the project focus.",
+    "reprocess_decline": "No, only assign",
+    "reprocess_confirm": "Yes, update everything",
+    "toast_reprocess_queued": "Reprocessing queued. Reload in a few seconds to see the changes.",
+    "toast_reprocess_failed": "Could not start reprocessing."
   },
   "meetings_list": {
     "toast_title_required": "Title/subject is required.",

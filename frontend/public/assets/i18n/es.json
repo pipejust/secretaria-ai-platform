@@ -2510,7 +2510,16 @@
     "toast_task_removed_local": "Tarea quitada de la vista. Guarda para persistir.",
     "toast_generating_doc": "Generando Documento en {{format}}...",
     "toast_doc_downloaded": "Documento {{format}} descargado con éxito",
-    "toast_doc_download_error": "Error descargando el Documento {{format}}"
+    "toast_doc_download_error": "Error descargando el Documento {{format}}",
+    "reprocess_modal_title": "¿Desea actualizar todos los componentes?",
+    "reprocess_modal_body": "Asignaste esta sesión al proyecto «{{project}}». Si lo deseas, la IA puede reprocesar el contenido usando los participantes y el contexto de ese proyecto.",
+    "reprocess_bullet_attendees": "Los participantes se enriquecen con los contactos reales del proyecto.",
+    "reprocess_bullet_tasks": "Las tareas se asignan a los correos y nombres de esos participantes.",
+    "reprocess_bullet_summary": "El resumen, decisiones y acuerdos se re-validan con el enfoque del proyecto.",
+    "reprocess_decline": "No, solo asignar",
+    "reprocess_confirm": "Sí, actualizar todo",
+    "toast_reprocess_queued": "Reprocesamiento iniciado. Recargá en unos segundos para ver los cambios.",
+    "toast_reprocess_failed": "No se pudo iniciar el reprocesamiento."
   },
   "meetings_list": {
     "toast_title_required": "El título/motivo es obligatorio.",
