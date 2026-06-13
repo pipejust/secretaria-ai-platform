@@ -221,6 +221,7 @@
                 <div class="mt-tr mt-th">
                     <span>{{ 'common.title' | translate }}</span>
                     <span>{{ 'common.datetime' | translate }}</span>
+                    <span>{{ 'meetings.project' | translate }}</span>
                     <span>{{ 'meetings.participants' | translate }}</span>
                     <span>{{ 'meetings.duration' | translate }}</span>
                     <span>{{ 'meetings.source' | translate }}</span>
@@ -229,6 +230,7 @@
                 </div>
                 <div class="mt-tr mt-skeleton" *ngFor="let i of [1,2,3,4,5]">
                     <span><div class="sk sk-md"></div></span>
+                    <span><div class="sk sk-sm"></div></span>
                     <span><div class="sk sk-sm"></div></span>
                     <span><div class="sk sk-xs"></div></span>
                     <span><div class="sk sk-xs"></div></span>
@@ -243,6 +245,7 @@
                 <div class="mt-tr mt-th">
                     <span (click)="sortBy('title')">{{ 'common.title' | translate }}</span>
                     <span (click)="sortBy('date')">{{ 'common.datetime' | translate }}</span>
+                    <span>{{ 'meetings.project' | translate }}</span>
                     <span>{{ 'meetings.participants' | translate }}</span>
                     <span>{{ 'meetings.duration' | translate }}</span>
                     <span>{{ 'meetings.source' | translate }}</span>
@@ -277,7 +280,6 @@
                         </div>
                         <div class="cell-title-text">
                             <span class="row-title">{{ s.title || ('meetings.no_title' | translate) }}</span>
-                            <span class="row-subtitle">{{ getProjectName(s.project_id) }}</span>
                         </div>
                     </div>
 
@@ -285,6 +287,12 @@
                     <div class="cell-date">
                         <span class="cell-date-main">{{ formatDateLine(s) }}</span>
                         <span class="cell-date-time">{{ formatTimeLine(s) }}</span>
+                    </div>
+
+                    <!-- Proyecto -->
+                    <div class="cell-project">
+                        <span class="cell-project-name" *ngIf="s.project_id">{{ getProjectName(s.project_id) }}</span>
+                        <span class="cell-empty" *ngIf="!s.project_id">—</span>
                     </div>
 
                     <!-- Participantes: si el email matchea un User del tenant
@@ -556,6 +564,16 @@
                           [attr.data-source]="sessionSource(selectedSession).key">
                         <span class="source-dot"></span>
                         {{ sessionSource(selectedSession).name }}
+                    </span>
+                    <span class="dt-meta-dot">·</span>
+                    <span class="dt-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        {{ 'meetings.project' | translate }}:
+                        <strong *ngIf="selectedSession.project_id">{{ getProjectName(selectedSession.project_id) }}</strong>
+                        <span *ngIf="!selectedSession.project_id">—</span>
                     </span>
                 </div>
             </div>

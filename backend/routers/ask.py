@@ -310,12 +310,62 @@ def _extract_proper_nouns(q: str) -> list[str]:
     return candidates
 
 
+_WHATIS_PATTERNS = (
+    r"\bqu[eé]\s+es\b", r"\bqu[eé]\s+era\b", r"\bqu[eé]\s+significa\b",
+    r"\bde\s+qu[eé]\s+trata\b", r"\bpara\s+qu[eé]\s+sirve\b",
+    r"\ben\s+qu[eé]\s+consiste\b", r"\bd[ií]me\s+sobre\b",
+    r"\bcu[eé]ntame\s+(?:de|sobre)\b", r"\bdescribe\b", r"\bexplica\b",
+    r"\bwhat\s+is\b", r"\bwhat'?s\b", r"\bwhat\s+does\b",
+    r"\btell\s+me\s+about\b", r"\bdescribe\b", r"\bexplain\b",
+)
+
+
+def _is_whatis_question(q: str) -> bool:
+    """True si la pregunta tiene intent definicional ('qué es X', 'what
+    is X', 'cuéntame sobre Y'). Usado para AMPLIAR la ventana de snippet
+    y agregar instrucción de síntesis al LLM en lugar de enumeración."""
+    import re as _re
+    if not q:
+        return False
+    low = q.lower()
+    return any(_re.search(p, low) for p in _WHATIS_PATTERNS)
+
+
+def _name_snippets_all(text: str, name: str, window: int = 900, max_occ: int = 3) -> str:
+    """Devuelve hasta `max_occ` ventanas de `window` chars cada una,
+    centradas en distintas ocurrencias del nombre. Útil para preguntas
+    definicionales: las menciones tipo 'X es ...', 'X funciona como ...'
+    suelen estar dispersas a lo largo del transcript y un solo snippet
+    se pierde el contexto. Concatena con separador para que el LLM las
+    lea como bloques relacionados de la misma sesión."""
+    if not text or not name:
+        return ""
+    import re as _re
+    pat = _re.compile(_re.escape(name), _re.IGNORECASE)
+    spans: list[tuple[int, int]] = []
+    for m in pat.finditer(text):
+        start = max(0, m.start() - window // 2)
+        end = min(len(text), m.end() + window // 2)
+        if spans and start <= spans[-1][1]:
+            # Merge ventana solapada con la anterior.
+            spans[-1] = (spans[-1][0], max(spans[-1][1], end))
+        else:
+            spans.append((start, end))
+        if len(spans) >= max_occ:
+            break
+    if not spans:
+        return ""
+    parts = [text[s:e].strip() for s, e in spans]
+    return "\n…\n".join(parts)
+
+
 def _load_keyword_matches(
     db: "Session",
     tenant_id: int,
     project_id: Optional[int],
     names: list[str],
     limit_per_name: int = 4,
+    whatis_mode: bool = False,
 ) -> list[dict]:
     """Búsqueda LITERAL (SQL ILIKE) por nombres propios en transcript y
     secciones procesadas.
@@ -367,15 +417,23 @@ def _load_keyword_matches(
                 continue
             seen_sids.add(s.id)
 
-            # Snippet = el cacho del transcript que menciona el nombre.
-            # Cortamos ~600 chars alrededor de la primera ocurrencia para
-            # que el LLM vea el CONTEXTO de la mención sin malgastar tokens
-            # con el resto de la reunión.
-            snippet = _name_snippet(s.raw_transcript or "", name) \
-                   or _name_snippet(s.raw_summary or "", name) \
-                   or _name_snippet(s.processed_decisions or "", name) \
-                   or _name_snippet(s.processed_agreements or "", name) \
-                   or ""
+            # Snippet del transcript / resumen / decisiones donde el
+            # nombre aparece. En modo whatis (pregunta definicional)
+            # tomamos VENTANAS MÁS GRANDES y hasta 3 ocurrencias por
+            # campo — las menciones "X es ...", "X funciona como ..."
+            # suelen estar dispersas y una sola ventana se las pierde.
+            if whatis_mode:
+                snippet = _name_snippets_all(s.raw_transcript or "", name, window=1000, max_occ=3) \
+                       or _name_snippets_all(s.raw_summary or "", name, window=900, max_occ=2) \
+                       or _name_snippets_all(s.processed_decisions or "", name, window=600, max_occ=2) \
+                       or _name_snippets_all(s.processed_agreements or "", name, window=600, max_occ=2) \
+                       or ""
+            else:
+                snippet = _name_snippet(s.raw_transcript or "", name) \
+                       or _name_snippet(s.raw_summary or "", name) \
+                       or _name_snippet(s.processed_decisions or "", name) \
+                       or _name_snippet(s.processed_agreements or "", name) \
+                       or ""
             if not snippet:
                 continue
 
@@ -933,9 +991,14 @@ async def ask(
     # transcripción de varias sesiones). El match literal garantiza
     # que esos chunks lleguen al LLM.
     proper_nouns = _extract_proper_nouns(q)
+    whatis_mode = _is_whatis_question(q)
     if proper_nouns:
+        # Modo whatis ("qué es X") trae snippets más grandes y multiples
+        # ocurrencias por sesión — necesario para extraer una definición
+        # del transcript en lugar de solo enumerar topics.
         kw_chunks = _load_keyword_matches(
-            db, tenant.id, payload.project_id, proper_nouns, limit_per_name=4,
+            db, tenant.id, payload.project_id, proper_nouns,
+            limit_per_name=4, whatis_mode=whatis_mode,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
         for kc in kw_chunks:
@@ -1127,15 +1190,43 @@ async def ask(
         "  - \"quién es X\" / \"qué hace X\" → respuesta DESCRIPTIVA sobre "
         "la persona. Empieza por su rol+empresa (del directorio si está), "
         "luego añade su actividad en las sesiones.\n"
-        "  - \"qué es X\" / \"de qué trata X\" → respuesta DESCRIPTIVA "
-        "sobre el proyecto/tema. Empieza por su propósito (description del "
-        "directorio si está), luego añade sesiones donde se ha tratado.\n"
+        "  - \"qué es X\" / \"de qué trata X\" / \"para qué sirve X\" / "
+        "\"explica X\" → respuesta DESCRIPTIVA sobre el proyecto/tema. "
+        "Empieza por su propósito (description del directorio si está), "
+        "luego añade sesiones donde se ha tratado.\n"
         "  - \"cuándo\" → respuesta TEMPORAL con la(s) fecha(s) concretas.\n"
         "  - \"dónde\" → respuesta de UBICACIÓN.\n"
         "  - meta (\"qué clientes\", \"qué proyectos\") → enumeración.\n"
         "  - analítica (\"cómo va\", \"qué se ha avanzado\") → síntesis "
         "con datos cuantitativos cuando se pueda (nº sesiones, nº "
-        "decisiones, etc.)."
+        "decisiones, etc.).\n"
+        "19. PREGUNTAS DEFINICIONALES (\"qué es X\", \"de qué trata X\", "
+        "\"para qué sirve X\", \"en qué consiste X\"): PROHIBIDO responder "
+        "enumerando topics tratados (\"se ha hablado de A, B y C\"). EXIGE "
+        "una DEFINICIÓN clara: qué ES X, qué hace, para quién, qué problema "
+        "resuelve. Para construirla:\n"
+        "  a) Si el directorio (DATOS ESTRUCTURADOS) tiene description del "
+        "proyecto, ÚSALA como base.\n"
+        "  b) Busca en los snippets de transcripts/resumen frases que "
+        "definan X: patrones tipo \"X es ...\", \"X se trata de ...\", "
+        "\"el objetivo de X es ...\", \"X permite ...\", \"X funciona como "
+        "...\", \"con X buscamos ...\", \"X resuelve ...\". Sintetiza esas "
+        "frases en 2-3 oraciones que respondan QUÉ ES X.\n"
+        "  c) Solo DESPUÉS de la definición, si hay espacio, añade en una "
+        "frase el estado/avance (\"se ha tratado en N sesiones donde se "
+        "discutió ...\"). Pero la definición VA PRIMERO.\n"
+        "  d) Si no hay info ni en directorio ni en transcripts para "
+        "definir X, decilo explícitamente: \"En el histórico no encuentro "
+        "una definición clara de X; solo se ha mencionado en contexto de "
+        "<los topics>\". NO inventes una definición.\n"
+        "Ejemplo malo: \"First Class es un proyecto dentro de Softnexus "
+        "que ha tenido varias sesiones donde se habló de tiquetera, "
+        "rediseño web e idiomas.\"\n"
+        "Ejemplo bueno: \"First Class es una plataforma de gestión de "
+        "tiquetera (mesa de ayuda) que Softnexus está integrando con su "
+        "ecosistema. Permite administrar tickets de soporte, soporta "
+        "múltiples idiomas y se conecta con los módulos de gestión vía "
+        "API. Actualmente está en fase de rediseño de la interfaz web.\""
     )
     quality_note = ""
     if low_quality:

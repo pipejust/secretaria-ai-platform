@@ -1127,7 +1127,8 @@
     "word_ai_generated": "Word · AI-generated download",
     "no_transcript_loaded": "This session has no transcript loaded.",
     "person": "person",
-    "people": "people"
+    "people": "people",
+    "project": "Project"
   },
   "pending": {
     "title": "Pending",

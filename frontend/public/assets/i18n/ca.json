@@ -1127,7 +1127,8 @@
     "word_ai_generated": "Word · descàrrega generada per IA",
     "no_transcript_loaded": "Aquesta sessió no té transcripció carregada.",
     "person": "persona",
-    "people": "persones"
+    "people": "persones",
+    "project": "Projecte"
   },
   "pending": {
     "title": "Pendents",
