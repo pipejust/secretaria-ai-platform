@@ -607,16 +607,47 @@ def _build_concept_index(
     return "\n".join(lines)
 
 
+def _score_session_for_howtech(
+    session_title: str,
+    title_match_terms: list[str],
+    concept_terms: list[str],
+    body_text: str = "",
+) -> tuple[int, int]:
+    """Score (title_score, body_hits) para priorizar sesiones que de
+    verdad discuten los conceptos preguntados.
+
+    - title_score: presencia de proper_nouns + howtech_concepts en TÍTULO
+      (alta señal de relevancia).
+    - body_hits: nº total de ocurrencias de los howtech_concepts en el
+      cuerpo (transcript + resumen). Sesiones con 0 hits son ruido y se
+      pueden descartar.
+    """
+    title_low = (session_title or "").lower()
+    body_low = (body_text or "").lower()
+    title_score = 0
+    for term in title_match_terms or []:
+        if term.lower() in title_low:
+            title_score += 1
+    for c in concept_terms or []:
+        if c.lower() in title_low:
+            title_score += 3  # peso alto: concepto en título
+    body_hits = 0
+    for c in concept_terms or []:
+        body_hits += body_low.count(c.lower())
+    return (title_score, body_hits)
+
+
 def _load_project_deep_context(
     db: "Session",
     tenant_id: int,
     proper_nouns: list[str],
-    limit_sessions: int = 14,
-    summary_chars: int = 2200,
-    decisions_chars: int = 1500,
+    limit_sessions: int = 6,
+    summary_chars: int = 1800,
+    decisions_chars: int = 1200,
     howtech_concepts: Optional[list[str]] = None,
-    transcript_snippet_window: int = 1200,
-    transcript_max_occ: int = 4,
+    transcript_snippet_window: int = 2000,
+    transcript_max_occ: int = 6,
+    require_concept_in_body: bool = True,
 ) -> list[dict]:
     """Cuando hay intent howtech y un nombre propio matchea un PROYECTO
     del tenant, este loader trae los CUERPOS COMPLETOS (raw_summary,
@@ -680,19 +711,60 @@ def _load_project_deep_context(
             return []
         q = q.where(or_(*title_filters))
     sessions = db.exec(
-        q.order_by(MeetingSession.id.desc()).limit(limit_sessions * 2)
+        q.order_by(MeetingSession.id.desc()).limit(limit_sessions * 6)
     ).all()
 
-    # 3. Para cada sesión, ensamblar el bloque.
-    out: list[dict] = []
+    # 3. RANKING — priorizamos sesiones que de verdad discuten los
+    # conceptos preguntados, no las que solo comparten el nombre del
+    # cliente en el título. Cuando howtech_concepts viene, una sesión
+    # SIN ninguna mención del concepto en cuerpo es ruido: dispersa al
+    # LLM hacia temas no preguntados (caso reportado: respuesta sobre
+    # "eventos" terminaba listando Docker, multi-tenant, tokens — porque
+    # el deep dump incluía sesiones de avances generales).
+    candidates: list[tuple[tuple[int, int], "MeetingSession"]] = []
     seen_sids: set[int] = set()
-    proj_cache: dict[int, str] = {}
     for s in sessions:
-        if len(out) >= limit_sessions:
-            break
         if not s.id or s.id in seen_sids:
             continue
         seen_sids.add(s.id)
+        body_text = " ".join([
+            s.raw_summary or "",
+            s.processed_decisions or "",
+            s.processed_agreements or "",
+        ])
+        score = _score_session_for_howtech(
+            s.title or "",
+            title_match_terms=proper_nouns,
+            concept_terms=howtech_concepts or [],
+            body_text=body_text,
+        )
+        title_score, body_hits = score
+        # Filtro: si hay conceptos pero la sesión no menciona ninguno en
+        # cuerpo NI en título → descartar. Si NO hay conceptos (no es
+        # howtech), aceptar todas.
+        if howtech_concepts and require_concept_in_body:
+            if body_hits == 0 and title_score == 0:
+                continue
+            # También descartar si solo machea el nombre del cliente pero
+            # NO hay hits del concepto en body — esa sesión no discute
+            # el tema preguntado.
+            concept_in_title = any(
+                c.lower() in (s.title or "").lower() for c in howtech_concepts
+            )
+            if body_hits == 0 and not concept_in_title:
+                continue
+        candidates.append((score, s))
+
+    # Ordenar por relevancia: title_score DESC, body_hits DESC, id DESC.
+    candidates.sort(key=lambda kv: (-kv[0][0], -kv[0][1], -(kv[1].id or 0)))
+
+    # 4. Ensamblar bloques. Sesiones más altas obtienen ventanas más
+    # grandes; las demás solo el resumen breve.
+    out: list[dict] = []
+    proj_cache: dict[int, str] = {}
+    for rank, (score, s) in enumerate(candidates[:limit_sessions]):
+        title_score, body_hits = score
+        is_top = rank < 2  # top-2 sesiones reciben más bandwidth
 
         proj_name = ""
         if s.project_id:
@@ -701,31 +773,37 @@ def _load_project_deep_context(
                 proj_cache[s.project_id] = (p.name if p else "") or ""
             proj_name = proj_cache[s.project_id]
 
+        # Para sesiones top: dossier más rico. Para otras: resumen y
+        # solo snippet de conceptos (no decisiones ni acuerdos enteros,
+        # para no diluir el foco).
         parts: list[str] = []
-        if (s.raw_summary or "").strip():
-            parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars]}")
-        if (s.processed_decisions or "").strip():
-            parts.append(f"[Decisiones]\n{(s.processed_decisions or '')[:decisions_chars]}")
-        if (s.processed_agreements or "").strip():
-            parts.append(f"[Acuerdos]\n{(s.processed_agreements or '')[:decisions_chars]}")
-        if (s.processed_risks or "").strip():
-            parts.append(f"[Riesgos]\n{(s.processed_risks or '')[:decisions_chars // 2]}")
+        if is_top:
+            if (s.raw_summary or "").strip():
+                parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars]}")
+            if (s.processed_decisions or "").strip():
+                parts.append(f"[Decisiones]\n{(s.processed_decisions or '')[:decisions_chars]}")
+            if (s.processed_agreements or "").strip():
+                parts.append(f"[Acuerdos]\n{(s.processed_agreements or '')[:decisions_chars]}")
+        else:
+            # Sesiones secundarias: solo resumen corto.
+            if (s.raw_summary or "").strip():
+                parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars // 2]}")
 
-        # Snippets del transcript alrededor de cada concepto técnico.
-        # Esto es lo que cambia la calidad de la respuesta: nombres
-        # concretos viven en el transcript, NO en el resumen.
+        # Snippets del transcript SIEMPRE alrededor de cada concepto —
+        # esos son los que llevan los nombres concretos. Sesiones top
+        # reciben ventanas grandes; secundarias, ventanas pequeñas.
         if howtech_concepts and (s.raw_transcript or "").strip():
             transcript = s.raw_transcript or ""
+            window = transcript_snippet_window if is_top else transcript_snippet_window // 2
+            max_occ = transcript_max_occ if is_top else max(2, transcript_max_occ // 2)
             for concept in howtech_concepts:
                 block = _name_snippets_all(
                     transcript, concept,
-                    window=transcript_snippet_window,
-                    max_occ=transcript_max_occ,
+                    window=window, max_occ=max_occ,
                 )
                 if block:
-                    # Recorte adicional para no inflar tokens.
-                    if len(block) > transcript_snippet_window * transcript_max_occ:
-                        block = block[: transcript_snippet_window * transcript_max_occ] + " …"
+                    if len(block) > window * max_occ:
+                        block = block[: window * max_occ] + " …"
                     parts.append(
                         f"[Transcripción — fragmentos sobre «{concept}»]\n{block}"
                     )
@@ -735,8 +813,10 @@ def _load_project_deep_context(
 
         proj_header = f"«{proj_name}»" if proj_name else "(sin proyecto)"
         title_header = s.title or "(sin título)"
+        rank_tag = " ★PRIORITARIA★" if is_top else ""
         content = (
-            f"[Dossier de proyecto {proj_header} — sesión «{title_header}»]\n"
+            f"[Dossier sesión «{title_header}» — proyecto {proj_header}"
+            f" — score=({title_score},{body_hits}){rank_tag}]\n"
             + "\n\n".join(parts)
         )
         out.append({
@@ -1511,9 +1591,11 @@ async def ask(
     # en el título. Es lo que necesita el LLM para sintetizar una
     # respuesta arquitectónica real.
     if howtech_mode and proper_nouns:
+        # limit_sessions=6: con filtro por concepto en body, traer 6
+        # sesiones realmente relevantes pesa más que 20 sesiones diluidas.
         deep_chunks = _load_project_deep_context(
             db, tenant.id, proper_nouns,
-            limit_sessions=20,
+            limit_sessions=6,
             howtech_concepts=howtech_concepts,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
@@ -1813,7 +1895,30 @@ async def ask(
         "sesión que mencionó la unidireccionalidad. Si dices \"los "
         "eventos pueden tener tiquetera o no\", cita la(s) sesión(es) "
         "que hicieron esa distinción. Cada CLAIM concreto va anclado a "
-        "su sesión fuente."
+        "su sesión fuente.\n"
+        "22. ENFOQUE EN LA PREGUNTA (anti-tangente): tu respuesta debe "
+        "abordar EXACTAMENTE lo que el usuario preguntó — ni más ni "
+        "menos. PROHIBIDO:\n"
+        "  - Listar temas no preguntados solo porque aparecen en el "
+        "contexto (no enumeres Docker, multi-tenant, autenticación si "
+        "la pregunta es sobre EVENTOS).\n"
+        "  - Resumir el dossier general del proyecto. El dossier es tu "
+        "MATERIA PRIMA, no tu respuesta.\n"
+        "  - Mezclar respuestas de OTROS clientes/proyectos del dossier "
+        "como si fueran del preguntado.\n"
+        "Antes de redactar, identifica las 2-3 dimensiones que la "
+        "pregunta toca (en \"cómo se manejan los eventos\": creación, "
+        "almacenamiento, conexión con otras partes). Cubre SOLO esas. "
+        "Las sesiones marcadas ★PRIORITARIA★ son las que más conceptos "
+        "preguntados mencionan — son TU fuente principal; las otras solo "
+        "complementan si añaden algo específico a esas dimensiones.\n"
+        "Estructura sugerida del `intro` para howtech:\n"
+        "  (1) Frase de apertura nombrando el concepto y su rol.\n"
+        "  (2) Distinciones / variantes / casos (\"con vs sin X\").\n"
+        "  (3) Relación con otros módulos directamente relevantes.\n"
+        "  (4) Estado actual / pendientes técnicos si aparecen.\n"
+        "Si el dossier no cubre una dimensión, DILO explícitamente en "
+        "vez de rellenar con temas no preguntados."
     )
     quality_note = ""
     if low_quality:
