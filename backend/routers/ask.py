@@ -394,6 +394,55 @@ _TECH_CONCEPTS = {
 }
 
 
+def _build_concept_index(
+    chunks: list[dict],
+    concepts: list[str],
+) -> str:
+    """Construye un mapa concepto → lista de session_ids que mencionan
+    ese concepto. Se inyecta al inicio del user_msg cuando howtech está
+    activo. Sirve para que el LLM:
+      a) Sepa de un vistazo cuántas sesiones cubren cada dimensión.
+      b) Pueda CITAR todas las sesiones relevantes en lugar de quedarse
+         con la primera que lee.
+      c) Identifique gaps (un concepto sin sesiones = "no encontré
+         detalle de X").
+    """
+    if not concepts or not chunks:
+        return ""
+    import re as _re
+
+    by_concept: dict[str, set[int]] = {c: set() for c in concepts}
+    for ch in chunks:
+        sid = ch.get("session_id")
+        if sid is None:
+            continue
+        # Buscamos cada concepto en el content del chunk (case-insensitive).
+        # El content del chunk ya combina los campos relevantes.
+        text = (ch.get("content") or "").lower()
+        for concept in concepts:
+            if _re.search(_re.escape(concept.lower()), text):
+                by_concept[concept].add(int(sid))
+
+    lines: list[str] = ["=== ÍNDICE CONCEPTO → SESIONES ==="]
+    lines.append(
+        "Mapa de qué sesiones discuten cada concepto. ÚSALO para integrar "
+        "información entre sesiones, no responder con una sola. Si un "
+        "concepto aparece en 5 sesiones, tu respuesta debe consultar las "
+        "5 y citarlas en intro_source_sessions."
+    )
+    any_hit = False
+    for concept, sids in by_concept.items():
+        if sids:
+            any_hit = True
+            ids_str = ", ".join(f"#{i}" for i in sorted(sids))
+            lines.append(f"- «{concept}»: {len(sids)} sesiones → {ids_str}")
+        else:
+            lines.append(f"- «{concept}»: 0 sesiones (sin detalle en el histórico)")
+    if not any_hit:
+        return ""
+    return "\n".join(lines)
+
+
 def _load_project_deep_context(
     db: "Session",
     tenant_id: int,
@@ -1277,7 +1326,7 @@ async def ask(
     if howtech_mode and proper_nouns:
         deep_chunks = _load_project_deep_context(
             db, tenant.id, proper_nouns,
-            limit_sessions=14,
+            limit_sessions=20,
             howtech_concepts=howtech_concepts,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
@@ -1558,7 +1607,20 @@ async def ask(
         "proyecto, encola un job en el cron service y dispara la "
         "notificación al canal del tenant. No encuentro detalle sobre "
         "el esquema exacto de la tabla ni sobre el formato de la firma. "
-        "(Sesiones #61, #312, #401)\""
+        "(Sesiones #61, #312, #401)\"\n"
+        "21. SÍNTESIS MULTI-SESIÓN (obligatoria en howtech): consulta "
+        "el `ÍNDICE CONCEPTO → SESIONES` al inicio del contexto. Si un "
+        "concepto aparece en N>1 sesiones, DEBES leer las N y combinar "
+        "lo que dice cada una. Tu respuesta integra perspectivas — una "
+        "sesión puede definir el concepto, otra explicar el flujo, otra "
+        "mencionar un bug o un pendiente. NO te quedes con la primera. "
+        "`intro_source_sessions` debe contener TODAS las sesiones que "
+        "aportaron material (no solo 1 o 2). Si dices \"actualmente la "
+        "API es unidireccional pero debe ser bidireccional\", cita la "
+        "sesión que mencionó la unidireccionalidad. Si dices \"los "
+        "eventos pueden tener tiquetera o no\", cita la(s) sesión(es) "
+        "que hicieron esa distinción. Cada CLAIM concreto va anclado a "
+        "su sesión fuente."
     )
     quality_note = ""
     if low_quality:
@@ -1603,10 +1665,19 @@ async def ask(
             f"auth) — declara explícitamente las que NO encuentras.{deep_hint}"
         )
 
+    # Índice concepto→sesiones cuando howtech detectó conceptos. Permite
+    # al LLM identificar de un vistazo qué sesiones cubren cada dimensión
+    # y EXIGE síntesis multi-sesión en lugar de respuesta basada en una.
+    concept_index_block = (
+        _build_concept_index(chunks, howtech_concepts)
+        if howtech_mode and howtech_concepts else ""
+    )
+
     user_msg = (
         f"{convo_hint}"
         f"Pregunta del usuario: {q}\n\n"
         + (f"{entity_block}\n\n" if entity_block else "")
+        + (f"{concept_index_block}\n\n" if concept_index_block else "")
         + (f"{sessions_inventory}\n\n" if sessions_inventory else "")
         + f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
           f"filtrados de {len(raw_chunks)} candidatos por umbral de relevancia):\n"
