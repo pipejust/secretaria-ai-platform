@@ -1284,8 +1284,8 @@
 /* ===== Respuesta IA — tipografía robusta para intros largos ===== */
 .aa-a-intro.md-block {
     margin: 0;
-    font-size: 14px;
-    line-height: 1.7;
+    font-size: 15px;
+    line-height: 1.75;
     color: var(--aa-text);
     text-align: justify;
     hyphens: auto;

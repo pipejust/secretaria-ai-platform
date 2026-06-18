@@ -1870,36 +1870,45 @@ async def ask(
         c for c in chunks
         if c.get("kind") in ("yesno_evidence", "project_deep")
     ])
-    # Sin cap rígido de palabras. La longitud se ajusta al contenido:
-    # más evidencia → más expansión; pregunta simple → respuesta breve.
-    if yesno_mode and n_evidence >= 4:
+    # Pisos de longitud cuando hay material denso. Markdown habilitado
+    # para enlaces a sesiones + párrafos justificados.
+    if yesno_mode and n_evidence >= 6:
         intro_length_hint = (
             f"Markdown con `\\n\\n` entre párrafos. Respuesta SÍ/NO en "
-            f"1ra frase. Luego INTEGRA las {n_evidence} sesiones que "
-            f"aporten algo distinto en párrafos separados — cada uno "
-            f"cubre un ángulo (regla general / distinción / caso "
-            f"específico / pendiente). Cita literal del transcript "
-            f"cuando ayude. Cuanto más material distintivo aporten las "
-            f"sesiones, más larga la respuesta. SIN cap superior — "
-            f"deja respirar."
+            f"1ra frase. Luego MÍNIMO 6 PÁRRAFOS totalizando al menos "
+            f"500 palabras INTEGRANDO las {n_evidence} sesiones de "
+            f"evidencia (cada párrafo cubre un ángulo: regla general / "
+            f"distinción / caso específico / pendiente / riesgo). Citas "
+            f"literales del transcript con atribución «<speaker> en "
+            f"<sesión>». No resumas — expande con detalle."
+        )
+    elif yesno_mode and n_evidence >= 3:
+        intro_length_hint = (
+            f"Markdown con `\\n\\n` entre párrafos. SÍ/NO en 1ra frase. "
+            f"Luego 4-6 párrafos integrando las {n_evidence} sesiones "
+            f"con citas y atribución sesión+fecha."
         )
     elif yesno_mode:
         intro_length_hint = (
             "Markdown. Respuesta SÍ/NO en 1ra frase + 2-4 frases que "
-            "contextualicen con sesión+fecha. Si hay poco material, breve."
+            "contextualicen con sesión+fecha."
         )
-    elif (howtech_mode or whatis_mode) and n_evidence >= 4:
+    elif (howtech_mode or whatis_mode) and n_evidence >= 6:
         intro_length_hint = (
-            f"Markdown con `\\n\\n` entre párrafos. INTEGRA las "
-            f"{n_evidence} sesiones con material aportando nombres "
-            f"concretos (endpoints, tablas, módulos, eventos, jobs). "
-            f"Cita atribución por sesión+fecha. Sin cap — expande "
-            f"según volumen de evidencia."
+            f"Markdown con `\\n\\n`. MÍNIMO 6 PÁRRAFOS ≥500 palabras. "
+            f"INTEGRA las {n_evidence} sesiones con nombres concretos "
+            f"(endpoints, tablas, módulos, eventos, jobs). Atribución "
+            f"sesión+fecha. No resumas — expande."
+        )
+    elif (howtech_mode or whatis_mode) and n_evidence >= 3:
+        intro_length_hint = (
+            f"Markdown con `\\n\\n`. 4-6 párrafos integrando las "
+            f"{n_evidence} sesiones con nombres concretos y atribución."
         )
     elif howtech_mode or whatis_mode:
         intro_length_hint = (
-            "Markdown. Respuesta descriptiva con nombres concretos. "
-            "Breve si el contexto es pequeño, ampliada si hay material."
+            "Markdown. Respuesta descriptiva con nombres concretos "
+            "(4-10 frases)."
         )
     else:
         intro_length_hint = "Markdown. Respuesta breve y directa."
@@ -2214,7 +2223,21 @@ async def ask(
         "  `[«First Class - Evento - api- tiquetera» (07 jun 2026)](/admin/curation/369)`\n"
         "Esto reemplaza la cita plana «…». Cada vez que invoques una "
         "sesión como fuente, ÚSALO. Si no recuerdas el ID, mira el "
-        "header `Sesión #<id>` del bloque correspondiente del contexto."
+        "header `Sesión #<id>` del bloque correspondiente del contexto.\n"
+        "28. NO ABANDONES decisions/risks/agreements/action_items por "
+        "tener un `intro` largo. Las cuatro arrays SIEMPRE se pueblan "
+        "cuando hay material EXPLÍCITO en el contexto:\n"
+        "  - `decisions`: cualquier frase del tipo «se decide …», «se "
+        "acuerda implementar …», «se va a hacer …» de los bloques "
+        "`[Decisiones]` o del transcript. Cada item con source_sessions.\n"
+        "  - `agreements`: acuerdos formales entre partes — del bloque "
+        "`[Acuerdos]` o transcript.\n"
+        "  - `risks`: riesgos/bloqueos/pendientes — del bloque `[Riesgos]` "
+        "o transcript.\n"
+        "  - `action_items`: tareas detectadas con owner si está.\n"
+        "Un `intro` rico NO compensa arrays vacías. La UI muestra ambos. "
+        "Si el contexto trae 5 decisiones y un riesgo identificado, "
+        "DEBEN aparecer en sus arrays — además de mencionarse en `intro`."
     )
     quality_note = ""
     if low_quality:
