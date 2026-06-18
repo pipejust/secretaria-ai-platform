@@ -1742,6 +1742,7 @@ async def ask(
     # TODAS las sesiones de ese proyecto + las que tengan el nombre
     # en el título. Es lo que necesita el LLM para sintetizar una
     # respuesta arquitectónica real.
+    deep_chunks: list[dict] = []
     if howtech_mode and proper_nouns:
         # limit_sessions=6: con filtro por concepto en body, traer 6
         # sesiones realmente relevantes pesa más que 20 sesiones diluidas.
@@ -1749,6 +1750,17 @@ async def ask(
             db, tenant.id, proper_nouns,
             limit_sessions=6,
             howtech_concepts=howtech_concepts,
+        )
+        seen = {(c["session_id"], c.get("kind")) for c in chunks}
+        for dc in deep_chunks:
+            key = (dc["session_id"], dc.get("kind"))
+            if key not in seen:
+                chunks.append(dc)
+                seen.add(key)
+        logger.info(
+            "ask: howtech project_deep → +%s chunks (sessions únicos: %s)",
+            len(deep_chunks),
+            len({c["session_id"] for c in deep_chunks}),
         )
 
     # Modo yes-no: la pregunta es relacional ("X maneja Y?"). El LLM
@@ -1781,17 +1793,6 @@ async def ask(
         logger.info(
             "ask: yesno_mode terms=%s + %s → +%s evidence chunks",
             proper_nouns, extra, len(yesno_chunks),
-        )
-        seen = {(c["session_id"], c.get("kind")) for c in chunks}
-        for dc in deep_chunks:
-            key = (dc["session_id"], dc.get("kind"))
-            if key not in seen:
-                chunks.append(dc)
-                seen.add(key)
-        logger.info(
-            "ask: howtech project_deep → +%s chunks (sessions únicos: %s)",
-            len(deep_chunks),
-            len({c["session_id"] for c in deep_chunks}),
         )
 
     # Métrica de calidad: distancia del mejor chunk (0 = perfecto).
