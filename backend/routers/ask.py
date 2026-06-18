@@ -591,8 +591,8 @@ def _load_yesno_evidence(
     proper_nouns: list[str],
     extra_terms: list[str],
     *,
-    limit_sessions: int = 8,
-    window: int = 1500,
+    limit_sessions: int = 14,
+    window: int = 2000,
     max_occ: int = 6,
 ) -> list[dict]:
     """Para preguntas yes-no/relacionales: trae snippets del transcript
@@ -669,13 +669,35 @@ def _load_yesno_evidence(
                 proj_cache[s.project_id] = (p.name if p else "") or ""
             proj_name = proj_cache[s.project_id]
 
+        # Formatear fecha legible para que el LLM pueda citarla.
+        date_display = ""
+        if s.date:
+            try:
+                from datetime import datetime as _dt
+                raw = s.date
+                if isinstance(raw, str) and raw.replace(".", "").isdigit():
+                    ts = float(raw)
+                    if ts > 10**12:
+                        ts /= 1000
+                    date_display = _dt.fromtimestamp(ts).strftime("%d %b %Y")
+                else:
+                    date_display = _dt.fromisoformat(str(raw)).strftime("%d %b %Y")
+            except Exception:
+                date_display = str(s.date)[:10]
+
         out.append({
             "session_id": s.id,
             "kind": "yesno_evidence",
             "content": (
-                f"[EVIDENCIA TEXTUAL — sesión «{s.title or ''}»]\n"
-                f"Términos buscados: {', '.join(terms)}\n"
-                f"{snippet}"
+                f"=== EVIDENCIA TEXTUAL #{s.id} ===\n"
+                f"Sesión: «{s.title or 'Sin título'}»\n"
+                f"Fecha: {date_display or '—'}\n"
+                f"Proyecto: {proj_name or '—'}\n"
+                f"Términos co-presentes: {', '.join(terms)}\n"
+                f"--- Fragmentos LITERALES del transcript (incluyen "
+                f"marcadores [Nombre Speaker]) ---\n"
+                f"{snippet}\n"
+                f"=== FIN EVIDENCIA #{s.id} ==="
             ),
             "distance": 0.0,
             "session_title": s.title or "",
@@ -1748,7 +1770,7 @@ async def ask(
         ][:4]
         yesno_chunks = _load_yesno_evidence(
             db, tenant.id, proper_nouns, extra,
-            limit_sessions=8,
+            limit_sessions=14,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
         for yc in yesno_chunks:
@@ -1845,8 +1867,10 @@ async def ask(
 
     if yesno_mode:
         intro_length_hint = (
-            "respuesta YES-NO directa en 1ra frase, 3-6 frases totales "
-            "citando evidencia textual del transcript"
+            "respuesta SÍ/NO directa en 1ra frase, luego 8-15 frases "
+            "INTEGRANDO evidencia de TODAS las sesiones que aportan, "
+            "con párrafos, citas literales del transcript (\"speaker dijo: …\"), "
+            "nombre de sesión + fecha en cada cita"
         )
     elif howtech_mode or whatis_mode:
         intro_length_hint = (
@@ -2127,7 +2151,33 @@ async def ask(
         "La distinción es: si al crear el evento se ACTIVA la opción "
         "Tiquetera Mi Boleto, la Tiquetera maneja la venta de entradas "
         "y First Class maneja el resto; si se DESACTIVA, First Class "
-        "maneja todo incluyendo la boletería. (Sesiones #N, #M)\""
+        "maneja todo incluyendo la boletería. (Sesiones #N, #M)\"\n"
+        "24. ATRIBUCIÓN POR SESIÓN (obligatoria en yesno + howtech): "
+        "cada CLAIM del intro debe atribuirse a la sesión específica "
+        "que aporta la evidencia. Formato sugerido para citas:\n"
+        "  - \"En «<TÍTULO SESIÓN>» (<FECHA>): <claim>.\"\n"
+        "  - \"Felipe Cortés en «<TÍTULO>» (<FECHA>) explicó: «<quote "
+        "literal del transcript>».\"\n"
+        "Los bloques `=== EVIDENCIA TEXTUAL #ID ===` traen Sesión, "
+        "Fecha, Speaker (en marcadores [Nombre Speaker]) y fragmentos "
+        "LITERALES. USA esos campos. Speaker se extrae del marcador "
+        "`[Nombre]` dentro del fragmento — cita el nombre cuando "
+        "transcribas una frase.\n"
+        "25. INTEGRACIÓN MULTI-SESIÓN (obligatoria en yesno con N>=3): "
+        "NO te quedes con una sesión. Si hay 11 sesiones de evidencia, "
+        "TU RESPUESTA DEBE INTEGRAR LAS 11 (o las que aporten algo "
+        "distinto). Cada sesión aporta un ángulo: una define la regla "
+        "general, otra aclara la excepción, otra menciona un caso "
+        "específico, otra revela un pendiente o riesgo. Sintetiza los "
+        "ángulos. Estructura sugerida del intro para yesno con muchas "
+        "fuentes:\n"
+        "  ¶1: Respuesta SÍ/NO + frase de contexto.\n"
+        "  ¶2: Regla general (citando sesión X + fecha).\n"
+        "  ¶3: Distinciones / variantes / casos (citando sesiones Y, Z).\n"
+        "  ¶4: Especificidad del caso preguntado (citando sesión W).\n"
+        "  ¶5: Pendientes / riesgos / contradicciones si aparecen.\n"
+        "intro_source_sessions lista TODAS las sesiones citadas — no "
+        "solo las que ‘son la fuente’, también las que matizan."
     )
     quality_note = ""
     if low_quality:
