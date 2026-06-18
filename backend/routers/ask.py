@@ -1003,21 +1003,11 @@ def _load_project_deep_context(
         # solo snippet de conceptos (no decisiones ni acuerdos enteros,
         # para no diluir el foco).
         parts: list[str] = []
-        if is_top:
-            if (s.raw_summary or "").strip():
-                parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars]}")
-            if (s.processed_decisions or "").strip():
-                parts.append(f"[Decisiones]\n{(s.processed_decisions or '')[:decisions_chars]}")
-            if (s.processed_agreements or "").strip():
-                parts.append(f"[Acuerdos]\n{(s.processed_agreements or '')[:decisions_chars]}")
-        else:
-            # Sesiones secundarias: solo resumen corto.
-            if (s.raw_summary or "").strip():
-                parts.append(f"[Resumen]\n{(s.raw_summary or '')[:summary_chars // 2]}")
 
-        # Snippets del transcript SIEMPRE alrededor de cada concepto —
-        # esos son los que llevan los nombres concretos. Sesiones top
-        # reciben ventanas grandes; secundarias, ventanas pequeñas.
+        # ORDEN INVERTIDO: transcript PRIMERO. El LLM anclaba en el
+        # resumen IA y emitia frases tipo "se discutio funcionalidades"
+        # (boilerplate del resumen). Si los snippets del transcript
+        # vienen primero, hay mas chance de que cite frases especificas.
         if howtech_concepts and (s.raw_transcript or "").strip():
             transcript = s.raw_transcript or ""
             window = transcript_snippet_window if is_top else transcript_snippet_window // 2
@@ -1033,6 +1023,20 @@ def _load_project_deep_context(
                     parts.append(
                         f"[Transcripción — fragmentos sobre «{concept}»]\n{block}"
                     )
+
+        # Resumen RECORTADO. Antes era 1800-2200c y dominaba el dossier.
+        # Ahora 600-900c para usar solo de contexto, no de fuente
+        # principal — la fuente principal es el transcript.
+        if is_top:
+            if (s.raw_summary or "").strip():
+                parts.append(f"[Resumen breve]\n{(s.raw_summary or '')[:900]}")
+            if (s.processed_decisions or "").strip():
+                parts.append(f"[Decisiones]\n{(s.processed_decisions or '')[:decisions_chars]}")
+            if (s.processed_agreements or "").strip():
+                parts.append(f"[Acuerdos]\n{(s.processed_agreements or '')[:decisions_chars]}")
+        else:
+            if (s.raw_summary or "").strip():
+                parts.append(f"[Resumen breve]\n{(s.raw_summary or '')[:600]}")
 
         if not parts:
             continue
@@ -2337,7 +2341,37 @@ async def ask(
         "Si tu respuesta dice solo «la plataforma se conecta con un "
         "tercero» sin nombrar quién, es VAGA. Si dice «la Tiquetera Mi "
         "Boleta administra la boletería por exigencia de la legislación "
-        "colombiana», es CONCRETA. Concreta gana."
+        "colombiana», es CONCRETA. Concreta gana.\n"
+        "30. ANTI-BOILERPLATE por sesión: cada párrafo que cita una "
+        "sesión DEBE aportar UN CLAIM ESPECÍFICO Y DISTINTIVO de "
+        "ESA sesión — no una frase genérica que cabría en cualquiera. "
+        "Si tu párrafo dice «se discutió X», «se habló de Y», «se "
+        "mencionó Z» SIN decir QUÉ se discutió/habló/mencionó "
+        "específicamente, está MAL. Reemplaza por:\n"
+        "  - Una decisión literal: «se decidió que <X> haga <Y>»\n"
+        "  - Una distinción concreta: «si se activa <opción>, entonces "
+        "<consecuencia>; si se desactiva, <otra consecuencia>»\n"
+        "  - Una cita atribuida: «<Speaker> explicó que «<frase del "
+        "transcript>»\n"
+        "  - Un dato técnico: «la <tabla/módulo/api> hace <acción>»\n"
+        "  - Un riesgo identificado: «<X> está bloqueado porque <Y>»\n"
+        "Antes de redactar cada párrafo, pregúntate: «¿esta misma frase "
+        "podría servir para CUALQUIER sesión de First Class?». Si la "
+        "respuesta es SÍ, está mal — busca en el [Transcripción] de esa "
+        "sesión un detalle específico, único.\n"
+        "Si dos sesiones tienen el mismo claim, AGRÚPALAS en un solo "
+        "párrafo (`En las sesiones X y Y, …`) en lugar de repetir.\n"
+        "Si una sesión no aporta nada distintivo más allá del claim "
+        "general, NO le dediques un párrafo entero — mencionala en la "
+        "lista de fuentes y ya. Cantidad de párrafos = cantidad de "
+        "ángulos distintos, no cantidad de sesiones.\n"
+        "Ejemplo malo: «En «X» (fecha), se discutió la implementación "
+        "de funcionalidades de compra y venta de boletos.»\n"
+        "Ejemplo bueno: «En «X» (fecha), Felipe explicó que la "
+        "Etiquetera Mi Boleta administra la boletería en el caso de "
+        "Arena USC porque la legislación colombiana prohíbe a una "
+        "plataforma de eventos vender boletos; First Class se queda con "
+        "la venta de alimentos, bebidas y promociones.»"
     )
     quality_note = ""
     if low_quality:
