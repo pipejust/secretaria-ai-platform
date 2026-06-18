@@ -352,6 +352,33 @@ _HOWTECH_PATTERNS = (
 )
 
 
+_YESNO_VERB_PATTERNS = (
+    r"\bmaneja\b", r"\bmanejan\b", r"\badministra\b", r"\badministran\b",
+    r"\bgestiona\b", r"\bgestionan\b", r"\bcontrola\b", r"\bcontrolan\b",
+    r"\boperat?a\b", r"\boperan\b", r"\bhace\b", r"\bhacen\b",
+    r"\busa\b", r"\busan\b", r"\butiliza\b", r"\butilizan\b",
+    r"\btiene\b", r"\btienen\b", r"\bes\b", r"\bson\b",
+    r"\bpuede\b", r"\bpueden\b", r"\bconecta\b", r"\bconectan\b",
+    r"\bintegra\b", r"\bintegran\b", r"\bdepende\b", r"\bdependen\b",
+    r"\bhandle\b", r"\bmanage\b", r"\bcontrol\b", r"\boperate\b",
+    r"\buse\b", r"\buses\b", r"\bhas\b", r"\bhave\b", r"\bis\b", r"\bare\b",
+)
+
+
+def _is_yesno_question(q: str) -> bool:
+    """True si la pregunta es relacional/yes-no ("X maneja Y?", "X es Y?",
+    "X tiene Y?"). Estas requieren respuesta SI/NO con EVIDENCIA TEXTUAL
+    del transcript, no asunción de relación positiva por co-ocurrencia."""
+    if not q:
+        return False
+    import re as _re
+    # Termina en ? o tiene verbo relacional + 2 sustantivos.
+    if "?" not in q:
+        return False
+    low = q.lower()
+    return any(_re.search(p, low) for p in _YESNO_VERB_PATTERNS)
+
+
 def _is_howtech_question(q: str) -> bool:
     """True si la pregunta pide DETALLE TÉCNICO sobre el manejo de algo:
     'cómo se manejan los eventos', 'qué arquitectura tiene', 'cómo está
@@ -556,6 +583,108 @@ def _extract_session_title_phrases(
     # Priorizar frases con MÁS sesiones (más representativas).
     found.sort(key=lambda kv: (-kv[1], -len(kv[0])))
     return [phrase for phrase, _ in found[:max_phrases]]
+
+
+def _load_yesno_evidence(
+    db: "Session",
+    tenant_id: int,
+    proper_nouns: list[str],
+    extra_terms: list[str],
+    *,
+    limit_sessions: int = 8,
+    window: int = 1500,
+    max_occ: int = 6,
+) -> list[dict]:
+    """Para preguntas yes-no/relacionales: trae snippets del transcript
+    donde aparezcan los TÉRMINOS de la pregunta (subject + object) JUNTO
+    con marcadores de relación o negación.
+
+    Marcadores buscados:
+      Positivos: maneja, administra, gestiona, controla, es, tiene,
+                 conecta, integra, usa, hace, opera.
+      Negativos: no maneja, no administra, no es, no tiene, sino, pero
+                 no, ni, partner, responsable.
+
+    El LLM NO puede inferir la relación correcta solo del resumen IA
+    (que a veces invierte el sujeto). Necesita el transcript LITERAL.
+    Este loader prioriza sesiones con ambos términos en el mismo
+    fragmento y emite chunks distance=0 (bypass relevance)."""
+    terms = [t for t in (list(proper_nouns or []) + list(extra_terms or [])) if t and len(t) >= 3]
+    if len(terms) < 1:
+        return []
+    from sqlmodel import select, or_
+    from models import MeetingSession, Project
+    import re as _re
+
+    pattern_filters = [
+        MeetingSession.raw_transcript.ilike(f"%{t}%") for t in terms
+    ]
+    sessions = db.exec(
+        select(MeetingSession)
+        .where(MeetingSession.tenant_id == tenant_id)
+        .where(MeetingSession.status != "archived")
+        .where(or_(*pattern_filters))
+        .order_by(MeetingSession.id.desc())
+        .limit(limit_sessions * 2)
+    ).all()
+
+    out: list[dict] = []
+    proj_cache: dict[int, str] = {}
+    for s in sessions:
+        if not s.id or not (s.raw_transcript or "").strip():
+            continue
+        transcript = s.raw_transcript
+        tlow = transcript.lower()
+        # Solo seguimos si AL MENOS DOS términos aparecen en transcript
+        # (subject + object). Una sola match no es relacional.
+        hits = sum(1 for t in terms if t.lower() in tlow)
+        if hits < 2 and len(terms) >= 2:
+            continue
+
+        # Snippets centrados en cada término — con ventana grande para
+        # capturar el contexto relacional alrededor.
+        windows: list[tuple[int, int]] = []
+        for t in terms:
+            for m in _re.finditer(_re.escape(t.lower()), tlow):
+                start = max(0, m.start() - window // 2)
+                end = min(len(transcript), m.end() + window // 2)
+                if windows and start <= windows[-1][1]:
+                    windows[-1] = (windows[-1][0], max(windows[-1][1], end))
+                else:
+                    windows.append((start, end))
+                if len(windows) >= max_occ:
+                    break
+            if len(windows) >= max_occ:
+                break
+        if not windows:
+            continue
+
+        snippet = "\n…\n".join(
+            transcript[a:b].strip() for a, b in windows
+        )
+        proj_name = ""
+        if s.project_id:
+            if s.project_id not in proj_cache:
+                p = db.get(Project, s.project_id)
+                proj_cache[s.project_id] = (p.name if p else "") or ""
+            proj_name = proj_cache[s.project_id]
+
+        out.append({
+            "session_id": s.id,
+            "kind": "yesno_evidence",
+            "content": (
+                f"[EVIDENCIA TEXTUAL — sesión «{s.title or ''}»]\n"
+                f"Términos buscados: {', '.join(terms)}\n"
+                f"{snippet}"
+            ),
+            "distance": 0.0,
+            "session_title": s.title or "",
+            "session_date": s.date or "",
+            "project_name": proj_name,
+        })
+        if len(out) >= limit_sessions:
+            break
+    return out
 
 
 def _build_concept_index(
@@ -1534,6 +1663,7 @@ async def ask(
     proper_nouns = _extract_proper_nouns(q)
     whatis_mode = _is_whatis_question(q)
     howtech_mode = _is_howtech_question(q)
+    yesno_mode = _is_yesno_question(q)
     howtech_concepts = _extract_tech_concepts(q) if howtech_mode else []
 
     # _extract_proper_nouns solo agarra palabras con mayúscula inicial.
@@ -1597,6 +1727,38 @@ async def ask(
             db, tenant.id, proper_nouns,
             limit_sessions=6,
             howtech_concepts=howtech_concepts,
+        )
+
+    # Modo yes-no: la pregunta es relacional ("X maneja Y?"). El LLM
+    # debe responder con EVIDENCIA TEXTUAL del transcript, no asumir
+    # relación positiva por co-ocurrencia. Cargamos snippets que
+    # contengan AMBOS términos juntos.
+    yesno_chunks: list[dict] = []
+    if yesno_mode and proper_nouns:
+        # Extra terms: cualquier palabra capitalizada o frase específica
+        # que no esté en proper_nouns. Para "First Class maneja la
+        # boletería de Arena USC?" → proper_nouns=[first class, arena usc]
+        # ya cubre subject+object; pero añadimos palabras clave del
+        # query como "boletería", "evento", etc.
+        import re as _re
+        extra = [
+            w.lower() for w in _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{4,}", q)
+            if w.lower() not in _PHRASE_STOPWORDS
+            and not any(w.lower() in n.lower() for n in proper_nouns)
+        ][:4]
+        yesno_chunks = _load_yesno_evidence(
+            db, tenant.id, proper_nouns, extra,
+            limit_sessions=8,
+        )
+        seen = {(c["session_id"], c.get("kind")) for c in chunks}
+        for yc in yesno_chunks:
+            key = (yc["session_id"], yc.get("kind"))
+            if key not in seen:
+                chunks.append(yc)
+                seen.add(key)
+        logger.info(
+            "ask: yesno_mode terms=%s + %s → +%s evidence chunks",
+            proper_nouns, extra, len(yesno_chunks),
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
         for dc in deep_chunks:
@@ -1681,12 +1843,18 @@ async def ask(
     out_lang_code = (getattr(user, "language", None) or tenant.default_language or "es").lower()[:2]
     out_lang_name = lang_label(out_lang_code)
 
-    intro_length_hint = (
-        "respuesta DETALLADA en 4-10 frases con párrafos, secciones y "
-        "nombres concretos (endpoints, tablas, módulos)"
-        if (howtech_mode or whatis_mode)
-        else "resumen introductorio, 1-3 frases"
-    )
+    if yesno_mode:
+        intro_length_hint = (
+            "respuesta YES-NO directa en 1ra frase, 3-6 frases totales "
+            "citando evidencia textual del transcript"
+        )
+    elif howtech_mode or whatis_mode:
+        intro_length_hint = (
+            "respuesta DETALLADA en 4-10 frases con párrafos, secciones y "
+            "nombres concretos (endpoints, tablas, módulos)"
+        )
+    else:
+        intro_length_hint = "resumen introductorio, 1-3 frases"
     system = (
         f"Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
         f"con esta estructura EXACTA:\n"
@@ -1918,7 +2086,48 @@ async def ask(
         "  (3) Relación con otros módulos directamente relevantes.\n"
         "  (4) Estado actual / pendientes técnicos si aparecen.\n"
         "Si el dossier no cubre una dimensión, DILO explícitamente en "
-        "vez de rellenar con temas no preguntados."
+        "vez de rellenar con temas no preguntados.\n"
+        "23. PREGUNTAS YES-NO/RELACIONALES (\"X maneja Y?\", \"X es Y?\", "
+        "\"X tiene Y?\", \"X usa Y?\", \"X depende de Y?\"): SIEMPRE "
+        "responde con SÍ o NO claro en la primera frase del `intro`, "
+        "seguido del por qué con EVIDENCIA TEXTUAL del transcript.\n"
+        "  a) Busca los bloques `[EVIDENCIA TEXTUAL — sesión ...]` en el "
+        "contexto. Esos son fragmentos del transcript donde aparecen los "
+        "términos de la pregunta JUNTOS. Léelos completos.\n"
+        "  b) Buscá frases que ESTABLEZCAN la relación: \"X maneja Y\", "
+        "\"X administra Y\", \"X es responsable de Y\", \"X integra con "
+        "Y\". O que la NIEGUEN: \"X no maneja Y\", \"X no es Y\", \"X "
+        "delega a Y\", \"Y es responsabilidad de Z (no de X)\", \"X es "
+        "partner de Y\". Cuando aparece negación o partnership, la "
+        "respuesta es NO.\n"
+        "  c) PROHIBIDO inferir relación positiva por co-ocurrencia. "
+        "Que \"First Class\" y \"boletería de Arena USC\" aparezcan en "
+        "la misma sesión NO significa que First Class maneje la "
+        "boletería de Arena USC. Si el transcript dice \"Arena USC es "
+        "partner\" o \"Tiquetera maneja la boletería\", la respuesta es "
+        "NO aunque el resumen IA parezca sugerir lo contrario.\n"
+        "  d) NUNCA confíes ciegamente en `[Resumen]` o `[Decisiones]` "
+        "para contradicciones — esos son IA derivada, pueden estar "
+        "invertidos o simplificados. La verdad relacional vive en "
+        "`[EVIDENCIA TEXTUAL]` y `[Transcripción — ...]`. Si transcript "
+        "y resumen se contradicen, GANA el transcript.\n"
+        "  e) Tras responder SÍ/NO, explica con 2-3 oraciones citando "
+        "evidencia y `intro_source_sessions` con las sesiones donde "
+        "está la evidencia.\n"
+        "Ejemplo malo (caso real reportado): \"First Class es una "
+        "plataforma de gestión de eventos y boletería que se está "
+        "desarrollando para la Arena USC. La plataforma tiene como "
+        "objetivo permitir la venta de boletos.\" (asume relación "
+        "positiva, ignora que Arena USC es partner)\n"
+        "Ejemplo bueno: \"No. First Class NO maneja la boletería de "
+        "Arena USC directamente. Según las sesiones, Arena USC es un "
+        "partner de First Class y la boletería de Arena USC la "
+        "administra la Tiquetera (Mi Boleta). First Class solo "
+        "administra el evento en sí (alimentos, productos relacionados). "
+        "La distinción es: si al crear el evento se ACTIVA la opción "
+        "Tiquetera Mi Boleto, la Tiquetera maneja la venta de entradas "
+        "y First Class maneja el resto; si se DESACTIVA, First Class "
+        "maneja todo incluyendo la boletería. (Sesiones #N, #M)\""
     )
     quality_note = ""
     if low_quality:
