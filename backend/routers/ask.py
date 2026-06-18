@@ -396,6 +396,76 @@ def _is_howtech_question(q: str) -> bool:
 # Conceptos técnicos comunes que el LLM debe poder rastrear en
 # transcripts cuando la pregunta es howtech. La lista NO es exhaustiva;
 # captura los que más aparecen en sesiones de producto/eng.
+# Mapa de sinonimos / vocabulario de dominio. Cuando el query menciona
+# un term clave, expandimos la busqueda con sus variantes para no
+# perder evidencia donde el transcript usa nombres especificos
+# (ej. user pregunta "boleteria" pero transcript dice "Tiquetera Mi Boleta",
+# "etiquetera", "Mi Boleto", "venta de entradas"). Sin esta expansion,
+# las ocurrencias clave NO aparecen en yesno_evidence chunks.
+_DOMAIN_SYNONYMS = {
+    # Tickets / boletería
+    "boletería": ["boleto", "boletas", "tiquetera", "etiquetera", "ticket",
+                  "tickets", "mi boleta", "mi boleto", "venta de entradas",
+                  "venta de boletos", "boletería"],
+    "boleteria": ["boleto", "boletas", "tiquetera", "etiquetera", "ticket",
+                  "tickets", "mi boleta", "mi boleto", "venta de entradas",
+                  "venta de boletos"],
+    "boleto": ["boletos", "tiquetera", "etiquetera", "ticket", "mi boleta",
+               "boletería"],
+    "boletos": ["boleto", "tiquetera", "etiquetera", "tickets", "mi boleta",
+                "boletería"],
+    "ticket": ["tickets", "boleto", "boletas", "tiquetera", "etiquetera"],
+    "tickets": ["ticket", "boleto", "boletos", "tiquetera", "etiquetera"],
+    "tiquetera": ["etiquetera", "mi boleta", "mi boleto", "boletería",
+                  "boletas"],
+    # Pagos / cartera
+    "pago": ["pagos", "cobro", "cartera", "cuota", "cuotas", "facturación"],
+    "pagos": ["pago", "cobro", "cartera", "cuota", "cuotas", "facturación"],
+    "cartera": ["cuota", "cuotas", "cobro", "pago"],
+    # Programas / fidelización
+    "puntos": ["motor de puntos", "fidelización", "fidelizacion", "core",
+               "acreditar"],
+    "fidelización": ["fidelizacion", "puntos", "motor de puntos"],
+    # Productos en venue
+    "alimento": ["alimentos", "bebidas", "comida", "snack"],
+    "alimentos": ["bebidas", "comida", "snacks", "cafeteria"],
+    "bebidas": ["alimentos", "comida"],
+    # Eventos
+    "evento": ["eventos", "concierto", "función"],
+    "eventos": ["evento", "conciertos", "funciones"],
+    # Integracion
+    "api": ["apis", "endpoint", "webhook", "integración", "integracion"],
+    "integración": ["integracion", "api", "webhook"],
+    # Legal
+    "ley": ["legislación", "legislacion", "legal", "normativa"],
+    "legislación": ["ley", "legislacion", "legal", "normativa"],
+}
+
+
+def _expand_with_synonyms(terms: list[str]) -> list[str]:
+    """Para cada termino, anade sinonimos del dominio. Deduplica
+    preservando orden. Tope 25 para no inflar SQL."""
+    if not terms:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for t in terms:
+        low = (t or "").lower().strip()
+        if not low:
+            continue
+        if low not in seen:
+            seen.add(low)
+            out.append(t)
+        for syn in _DOMAIN_SYNONYMS.get(low, []):
+            slow = syn.lower()
+            if slow not in seen:
+                seen.add(slow)
+                out.append(syn)
+        if len(out) >= 25:
+            break
+    return out
+
+
 _TECH_CONCEPTS = {
     "evento": ["evento", "eventos", "event", "events", "webhook", "webhooks"],
     "arquitectura": ["arquitectura", "architecture", "arquitectónic"],
@@ -609,15 +679,17 @@ def _load_yesno_evidence(
     (que a veces invierte el sujeto). Necesita el transcript LITERAL.
     Este loader prioriza sesiones con ambos términos en el mismo
     fragmento y emite chunks distance=0 (bypass relevance)."""
-    terms = [t for t in (list(proper_nouns or []) + list(extra_terms or [])) if t and len(t) >= 3]
-    if len(terms) < 1:
+    group_subject = [t for t in (proper_nouns or []) if t and len(t) >= 3]
+    group_object = [t for t in (extra_terms or []) if t and len(t) >= 3]
+    all_terms = group_subject + group_object
+    if not all_terms:
         return []
     from sqlmodel import select, or_
     from models import MeetingSession, Project
     import re as _re
 
     pattern_filters = [
-        MeetingSession.raw_transcript.ilike(f"%{t}%") for t in terms
+        MeetingSession.raw_transcript.ilike(f"%{t}%") for t in all_terms
     ]
     sessions = db.exec(
         select(MeetingSession)
@@ -625,7 +697,7 @@ def _load_yesno_evidence(
         .where(MeetingSession.status != "archived")
         .where(or_(*pattern_filters))
         .order_by(MeetingSession.id.desc())
-        .limit(limit_sessions * 2)
+        .limit(limit_sessions * 3)
     ).all()
 
     out: list[dict] = []
@@ -635,11 +707,14 @@ def _load_yesno_evidence(
             continue
         transcript = s.raw_transcript
         tlow = transcript.lower()
-        # Solo seguimos si AL MENOS DOS términos aparecen en transcript
-        # (subject + object). Una sola match no es relacional.
-        hits = sum(1 for t in terms if t.lower() in tlow)
-        if hits < 2 and len(terms) >= 2:
+        # Relacional REAL: al menos un term del SUBJECT y al menos uno
+        # del OBJECT en la transcripcion. Sin esto, una sesion que solo
+        # menciona "boleto" sin nada del sujeto se cuela.
+        has_subject = any(t.lower() in tlow for t in group_subject) if group_subject else True
+        has_object = any(t.lower() in tlow for t in group_object) if group_object else True
+        if not (has_subject and has_object):
             continue
+        terms = all_terms  # mantener nombre para downstream
 
         # Snippets centrados en cada término — con ventana grande para
         # capturar el contexto relacional alrededor.
@@ -1779,10 +1854,16 @@ async def ask(
             w.lower() for w in _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{4,}", q)
             if w.lower() not in _PHRASE_STOPWORDS
             and not any(w.lower() in n.lower() for n in proper_nouns)
-        ][:4]
+        ][:6]
+        # Expansion por sinonimos del dominio: "boletería" -> tiquetera,
+        # etiquetera, mi boleta, ticket, etc. Sin esto perdemos el
+        # transcript con los nombres reales.
+        extra = _expand_with_synonyms(extra)
         yesno_chunks = _load_yesno_evidence(
             db, tenant.id, proper_nouns, extra,
-            limit_sessions=14,
+            limit_sessions=16,
+            window=2500,
+            max_occ=8,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
         for yc in yesno_chunks:
@@ -2237,7 +2318,26 @@ async def ask(
         "  - `action_items`: tareas detectadas con owner si está.\n"
         "Un `intro` rico NO compensa arrays vacías. La UI muestra ambos. "
         "Si el contexto trae 5 decisiones y un riesgo identificado, "
-        "DEBEN aparecer en sus arrays — además de mencionarse en `intro`."
+        "DEBEN aparecer en sus arrays — además de mencionarse en `intro`.\n"
+        "29. EXTRACCIÓN DE NOMBRES PROPIOS DEL DOMINIO: lee el transcript "
+        "buscando los nombres ESPECÍFICOS de productos, plataformas, "
+        "leyes, módulos, partners. Tu respuesta DEBE incluir esos "
+        "nombres tal cual aparecen en el transcript, NO genéricos. "
+        "Ejemplos de nombres a buscar en preguntas de boletería/eventos:\n"
+        "  • Plataformas de tiquetera: «Tiquetera Mi Boleta», «Mi "
+        "Boleto», «Etiquetera», «Tiquetera externa».\n"
+        "  • Distinciones operativas: «evento con tiquetera» vs «evento "
+        "sin tiquetera», «activar/desactivar opción Tiquetera Mi Boleto».\n"
+        "  • Módulos relacionados: «cartera», «cuotas», «motor de "
+        "puntos», «Core», «alimentos y bebidas», «promotores».\n"
+        "  • Contexto legal: «legislación colombiana», «plataforma de "
+        "eventos no puede generar boletas».\n"
+        "  • Partners/casos: «Arena USC», «Cali Santiago de Cali».\n"
+        "  • Estado API: «unidireccional», «bidireccional».\n"
+        "Si tu respuesta dice solo «la plataforma se conecta con un "
+        "tercero» sin nombrar quién, es VAGA. Si dice «la Tiquetera Mi "
+        "Boleta administra la boletería por exigencia de la legislación "
+        "colombiana», es CONCRETA. Concreta gana."
     )
     quality_note = ""
     if low_quality:
