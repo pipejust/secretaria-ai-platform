@@ -36,11 +36,19 @@ export class MdRenderPipe implements PipeTransform {
         src = src.replace(/^\s*##\s+(.+)$/gm,  '<h3 class="md-h3">$1</h3>');
         src = src.replace(/^\s*#\s+(.+)$/gm,   '<h2 class="md-h2">$1</h2>');
 
-        // 4) Inline: **bold** y *italic* y `code`.
+        // 4) Inline: **bold** y *italic* y `code` y [text](url).
         //    bold primero (doble asterisco), luego italic (simple).
         src = src.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
         src = src.replace(/(^|[^\*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
         src = src.replace(/`([^`\n]+?)`/g, '<code class="md-code">$1</code>');
+        // Links [text](url) → <a target="_blank" rel="noopener">. Solo
+        // permitimos rutas internas (/admin/...) y http(s):// para evitar
+        // javascript: y otros vectores. La url ya está html-escapada en
+        // el paso 1, así que &amp; etc. son seguros aquí.
+        src = src.replace(
+            /\[([^\]\n]+?)\]\((\/[^)\s]+|https?:\/\/[^)\s]+)\)/g,
+            '<a class="md-link" target="_blank" rel="noopener noreferrer" href="$2">$1</a>',
+        );
 
         // 5) Listas: agrupar líneas consecutivas que empiezan con "- "
         //    o "* " o "1. " en <ul>/<ol>.

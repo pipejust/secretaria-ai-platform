@@ -211,14 +211,13 @@
                         </span>
                         <div class="aa-a-card">
                             <header class="aa-a-card-head">
-                                <p class="aa-a-intro">
-                                    <ng-container *ngIf="hasStructured(turn) && turn.structured?.intro; else genericIntro">
-                                        {{ turn.structured?.intro }}
-                                    </ng-container>
-                                    <ng-template #genericIntro>
-                                        {{ 'ask.generic_intro' | translate:{ n: turn.chunks_used } }}
-                                    </ng-template>
-                                </p>
+                                <ng-container *ngIf="hasStructured(turn) && turn.structured?.intro; else genericIntro">
+                                    <div class="aa-a-intro md-block"
+                                         [innerHTML]="turn.structured?.intro | mdRender"></div>
+                                </ng-container>
+                                <ng-template #genericIntro>
+                                    <p class="aa-a-intro">{{ 'ask.generic_intro' | translate:{ n: turn.chunks_used } }}</p>
+                                </ng-template>
                                 <div class="aa-a-actions">
                                     <button type="button" class="aa-a-action" (click)="copyAnswer(turn)" [attr.title]="'ask.copy_answer' | translate">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"

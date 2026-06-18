@@ -1870,43 +1870,39 @@ async def ask(
         c for c in chunks
         if c.get("kind") in ("yesno_evidence", "project_deep")
     ])
-    if yesno_mode:
-        # Cuando hay >=6 chunks de evidencia, exigimos respuesta larga
-        # multi-párrafo. Llama 3.3 70b puede generar 800+ palabras sin
-        # problema; el cap real es la instrucción.
-        if n_evidence >= 6:
-            intro_length_hint = (
-                f"respuesta SÍ/NO directa en 1ra frase, LUEGO MÍNIMO 6 "
-                f"PÁRRAFOS (separados por \\n\\n) totalizando al menos "
-                f"500 palabras, INTEGRANDO TODAS las {n_evidence} "
-                f"sesiones de evidencia que aporten algo distinto, "
-                f"con citas literales del transcript (\"<speaker> dijo en "
-                f"«<sesión>» (<fecha>): …\"), distinciones, casos "
-                f"específicos y pendientes. NO RESUMAS — EXPANDE"
-            )
-        else:
-            intro_length_hint = (
-                "respuesta SÍ/NO directa en 1ra frase, luego 8-15 frases "
-                "INTEGRANDO evidencia de TODAS las sesiones, con párrafos, "
-                "citas literales del transcript, nombre de sesión + fecha "
-                "en cada cita"
-            )
+    # Sin cap rígido de palabras. La longitud se ajusta al contenido:
+    # más evidencia → más expansión; pregunta simple → respuesta breve.
+    if yesno_mode and n_evidence >= 4:
+        intro_length_hint = (
+            f"Markdown con `\\n\\n` entre párrafos. Respuesta SÍ/NO en "
+            f"1ra frase. Luego INTEGRA las {n_evidence} sesiones que "
+            f"aporten algo distinto en párrafos separados — cada uno "
+            f"cubre un ángulo (regla general / distinción / caso "
+            f"específico / pendiente). Cita literal del transcript "
+            f"cuando ayude. Cuanto más material distintivo aporten las "
+            f"sesiones, más larga la respuesta. SIN cap superior — "
+            f"deja respirar."
+        )
+    elif yesno_mode:
+        intro_length_hint = (
+            "Markdown. Respuesta SÍ/NO en 1ra frase + 2-4 frases que "
+            "contextualicen con sesión+fecha. Si hay poco material, breve."
+        )
+    elif (howtech_mode or whatis_mode) and n_evidence >= 4:
+        intro_length_hint = (
+            f"Markdown con `\\n\\n` entre párrafos. INTEGRA las "
+            f"{n_evidence} sesiones con material aportando nombres "
+            f"concretos (endpoints, tablas, módulos, eventos, jobs). "
+            f"Cita atribución por sesión+fecha. Sin cap — expande "
+            f"según volumen de evidencia."
+        )
     elif howtech_mode or whatis_mode:
-        if n_evidence >= 4:
-            intro_length_hint = (
-                f"respuesta DETALLADA en MÍNIMO 5 PÁRRAFOS (\\n\\n) "
-                f"totalizando al menos 400 palabras, INTEGRANDO TODAS las "
-                f"{n_evidence} sesiones con material, con nombres concretos "
-                f"(endpoints, tablas, módulos, eventos, jobs), citas "
-                f"literales y atribución por sesión+fecha"
-            )
-        else:
-            intro_length_hint = (
-                "respuesta DETALLADA en 4-10 frases con párrafos, secciones y "
-                "nombres concretos (endpoints, tablas, módulos)"
-            )
+        intro_length_hint = (
+            "Markdown. Respuesta descriptiva con nombres concretos. "
+            "Breve si el contexto es pequeño, ampliada si hay material."
+        )
     else:
-        intro_length_hint = "resumen introductorio, 1-3 frases"
+        intro_length_hint = "Markdown. Respuesta breve y directa."
     system = (
         f"Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
         f"con esta estructura EXACTA:\n"
@@ -2206,18 +2202,19 @@ async def ask(
         "  ¶5: Pendientes / riesgos / contradicciones si aparecen.\n"
         "intro_source_sessions lista TODAS las sesiones citadas — no "
         "solo las que ‘son la fuente’, también las que matizan.\n"
-        "26. LONGITUD OBLIGATORIA — anti-resumen: cuando recibes >=6 "
-        "bloques `=== EVIDENCIA TEXTUAL ===` o `[Dossier sesión …]`, tu "
-        "`intro` DEBE TENER MÍNIMO 500 PALABRAS organizado en 6+ "
-        "párrafos separados por `\\n\\n`. Si quedas en menos de 500 "
-        "palabras estás resumiendo en vez de integrar — está MAL. Una "
-        "respuesta de 200 palabras NO INTEGRA 11 sesiones. Si te falta "
-        "qué decir, vuelve al contexto y EXTRAE más detalle: nombres "
-        "de speaker, quotes literales, distinciones entre sesiones, "
-        "decisiones específicas, riesgos mencionados, configuraciones. "
-        "Cada párrafo cubre UNA dimensión y cita AL MENOS UNA sesión "
-        "con nombre+fecha. Markdown permitido en intro (\\n\\n para "
-        "párrafos, **bold** para énfasis, listas con `-`)."
+        "26. FORMATO MARKDOWN del `intro` — el frontend lo renderiza:\n"
+        "  - Párrafos separados por línea en blanco (`\\n\\n`).\n"
+        "  - **bold** para énfasis en respuestas SÍ/NO, nombres clave, "
+        "decisiones críticas.\n"
+        "  - Listas con `- ` cuando enumeras casos o pasos.\n"
+        "  - Citas de speaker entre comillas, tipo: «<quote literal>».\n"
+        "27. ENLACES A SESIONES — OBLIGATORIO cuando cites una sesión: "
+        "formato markdown `[«TÍTULO» (FECHA)](/admin/curation/ID)`. "
+        "El frontend abre en pestaña nueva. Ejemplo:\n"
+        "  `[«First Class - Evento - api- tiquetera» (07 jun 2026)](/admin/curation/369)`\n"
+        "Esto reemplaza la cita plana «…». Cada vez que invoques una "
+        "sesión como fuente, ÚSALO. Si no recuerdas el ID, mira el "
+        "header `Sesión #<id>` del bloque correspondiente del contexto."
     )
     quality_note = ""
     if low_quality:
