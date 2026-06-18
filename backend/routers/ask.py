@@ -1866,18 +1866,45 @@ async def ask(
     out_lang_code = (getattr(user, "language", None) or tenant.default_language or "es").lower()[:2]
     out_lang_name = lang_label(out_lang_code)
 
+    n_evidence = len([
+        c for c in chunks
+        if c.get("kind") in ("yesno_evidence", "project_deep")
+    ])
     if yesno_mode:
-        intro_length_hint = (
-            "respuesta SÍ/NO directa en 1ra frase, luego 8-15 frases "
-            "INTEGRANDO evidencia de TODAS las sesiones que aportan, "
-            "con párrafos, citas literales del transcript (\"speaker dijo: …\"), "
-            "nombre de sesión + fecha en cada cita"
-        )
+        # Cuando hay >=6 chunks de evidencia, exigimos respuesta larga
+        # multi-párrafo. Llama 3.3 70b puede generar 800+ palabras sin
+        # problema; el cap real es la instrucción.
+        if n_evidence >= 6:
+            intro_length_hint = (
+                f"respuesta SÍ/NO directa en 1ra frase, LUEGO MÍNIMO 6 "
+                f"PÁRRAFOS (separados por \\n\\n) totalizando al menos "
+                f"500 palabras, INTEGRANDO TODAS las {n_evidence} "
+                f"sesiones de evidencia que aporten algo distinto, "
+                f"con citas literales del transcript (\"<speaker> dijo en "
+                f"«<sesión>» (<fecha>): …\"), distinciones, casos "
+                f"específicos y pendientes. NO RESUMAS — EXPANDE"
+            )
+        else:
+            intro_length_hint = (
+                "respuesta SÍ/NO directa en 1ra frase, luego 8-15 frases "
+                "INTEGRANDO evidencia de TODAS las sesiones, con párrafos, "
+                "citas literales del transcript, nombre de sesión + fecha "
+                "en cada cita"
+            )
     elif howtech_mode or whatis_mode:
-        intro_length_hint = (
-            "respuesta DETALLADA en 4-10 frases con párrafos, secciones y "
-            "nombres concretos (endpoints, tablas, módulos)"
-        )
+        if n_evidence >= 4:
+            intro_length_hint = (
+                f"respuesta DETALLADA en MÍNIMO 5 PÁRRAFOS (\\n\\n) "
+                f"totalizando al menos 400 palabras, INTEGRANDO TODAS las "
+                f"{n_evidence} sesiones con material, con nombres concretos "
+                f"(endpoints, tablas, módulos, eventos, jobs), citas "
+                f"literales y atribución por sesión+fecha"
+            )
+        else:
+            intro_length_hint = (
+                "respuesta DETALLADA en 4-10 frases con párrafos, secciones y "
+                "nombres concretos (endpoints, tablas, módulos)"
+            )
     else:
         intro_length_hint = "resumen introductorio, 1-3 frases"
     system = (
@@ -2178,7 +2205,19 @@ async def ask(
         "  ¶4: Especificidad del caso preguntado (citando sesión W).\n"
         "  ¶5: Pendientes / riesgos / contradicciones si aparecen.\n"
         "intro_source_sessions lista TODAS las sesiones citadas — no "
-        "solo las que ‘son la fuente’, también las que matizan."
+        "solo las que ‘son la fuente’, también las que matizan.\n"
+        "26. LONGITUD OBLIGATORIA — anti-resumen: cuando recibes >=6 "
+        "bloques `=== EVIDENCIA TEXTUAL ===` o `[Dossier sesión …]`, tu "
+        "`intro` DEBE TENER MÍNIMO 500 PALABRAS organizado en 6+ "
+        "párrafos separados por `\\n\\n`. Si quedas en menos de 500 "
+        "palabras estás resumiendo en vez de integrar — está MAL. Una "
+        "respuesta de 200 palabras NO INTEGRA 11 sesiones. Si te falta "
+        "qué decir, vuelve al contexto y EXTRAE más detalle: nombres "
+        "de speaker, quotes literales, distinciones entre sesiones, "
+        "decisiones específicas, riesgos mencionados, configuraciones. "
+        "Cada párrafo cubre UNA dimensión y cita AL MENOS UNA sesión "
+        "con nombre+fecha. Markdown permitido en intro (\\n\\n para "
+        "párrafos, **bold** para énfasis, listas con `-`)."
     )
     quality_note = ""
     if low_quality:
@@ -2256,6 +2295,15 @@ async def ask(
             convo_messages.append({"role": "user", "content": t.question})
             convo_messages.append({"role": "assistant", "content": t.answer})
 
+    # max_tokens dinámico: yesno/howtech con mucha evidencia necesitan
+    # más espacio. Sin cap explícito Groq usa ~4096 por defecto; lo
+    # subimos a 6000 para que la respuesta integrada (intro + sections)
+    # no se trunque.
+    if yesno_mode or howtech_mode or whatis_mode:
+        _max_tokens = 6000 if n_evidence >= 4 else 3500
+    else:
+        _max_tokens = 2000
+
     payload_llm = {
         "model": GROQ_MODEL,
         "messages": [
@@ -2264,6 +2312,7 @@ async def ask(
             {"role": "user", "content": user_msg},
         ],
         "temperature": 0.1,  # Bajamos temperatura para reducir confabulación.
+        "max_tokens": _max_tokens,
         # Modo JSON nativo de Groq (compat con OpenAI). Si Groq no soporta
         # response_format en esta versión del modelo, se ignora silently
         # y validamos parseando manualmente.
