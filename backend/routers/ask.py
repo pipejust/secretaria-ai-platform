@@ -467,6 +467,25 @@ _DOMAIN_SYNONYMS = {
     # Móvil / App
     "móvil": ["aplicación móvil", "app móvil", "mobile", "app", "aplicación"],
     "aplicación": ["app", "móvil", "aplicación móvil", "plataforma"],
+    # Homologación / "hacerlo igual a la sede, nada nuevo, equivalente".
+    # CLAVE: el mismo concepto se dice con MUCHAS palabras distintas en los
+    # transcripts (homologar, igual a la sede, como está en sede, equivalente,
+    # nada nuevo). Sin esta expansión, una pregunta con UNA de las variantes
+    # no encuentra las sesiones donde se dijo con OTRA variante.
+    "homologar": ["homologación", "homologa", "igual a la sede",
+                  "como está en la sede", "como está en sede",
+                  "igual a sede", "equivalente a la sede", "mismo que la sede",
+                  "réplica de la sede", "nada nuevo", "no hacer nada nuevo",
+                  "de la misma manera", "igual que funciona", "tal como en la sede"],
+    "homologación": ["homologar", "homologa", "igual a la sede",
+                     "como está en la sede", "equivalente", "nada nuevo",
+                     "de la misma manera", "igual a sede"],
+    "homologa": ["homologar", "homologación", "igual a la sede"],
+    "equivalente": ["homologar", "homologación", "igual a la sede",
+                    "como está en sede", "mismo que la sede"],
+    # "igual"/"mismo" como verbo de equivalencia funcional con la sede
+    "igual": ["homologar", "homologación", "igual a la sede",
+              "como está en la sede", "equivalente", "de la misma manera"],
 }
 
 
@@ -1908,14 +1927,28 @@ async def ask(
             proper_nouns, extra, len(yesno_chunks),
         )
 
+    # DETECCIÓN DE TÉRMINOS DE DOMINIO en la pregunta. Si la pregunta usa
+    # un concepto del vocabulario (homologar, BEPS, parametrización, sede,
+    # boletería…) — aunque esté en minúsculas y NO sea nombre propio —
+    # SIEMPRE disparamos la búsqueda literal expandida. Esto permite
+    # encontrar "el mismo concepto dicho con otras palabras": el usuario
+    # pregunta "homologar" y el transcript dice "igual a la sede" / "como
+    # está en sede" / "nada nuevo", todos en el mismo cluster de sinónimos.
+    qlow_full = q.lower()
+    domain_seed_terms: list[str] = []
+    for _key in _DOMAIN_SYNONYMS.keys():
+        if _key.lower() in qlow_full and _key.lower() not in [t.lower() for t in domain_seed_terms]:
+            domain_seed_terms.append(_key)
+
     # CONTENT-WORD FALLBACK: cuando pocas sesiones únicas encontradas
-    # (<6), buscar por palabras de contenido de la pregunta (≥4 chars,
-    # no-stopword) que NO estén ya cubiertas por proper_nouns. Cubre
-    # términos como "parametrización", "BEPS", "sede" que el vector
-    # search pierde y proper_noun detection no captura (todo-minúsculas
-    # o acrónimos sin equivalente en proyecto/contacto del tenant).
+    # (<6) O cuando la pregunta tiene términos de dominio, buscar por
+    # palabras de contenido de la pregunta (≥4 chars, no-stopword) que NO
+    # estén ya cubiertas por proper_nouns. Cubre términos como
+    # "parametrización", "BEPS", "sede", "homologar" que el vector search
+    # pierde y proper_noun detection no captura (todo-minúsculas o
+    # acrónimos sin equivalente en proyecto/contacto del tenant).
     unique_session_count = len({c["session_id"] for c in chunks})
-    if unique_session_count < 6:
+    if unique_session_count < 6 or domain_seed_terms:
         import re as _re
         _content_sw = frozenset([
             "para", "como", "esta", "este", "estos", "estas", "tiene", "hay",
@@ -1931,6 +1964,9 @@ async def ask(
             and w.lower() not in _PHRASE_STOPWORDS
             and w.lower() not in covered_low
         ]
+        # Los términos de dominio detectados van PRIMERO (incluye claves
+        # multi-palabra como "sede electrónica" que el tokenizador parte).
+        cw_raw = [t.lower() for t in domain_seed_terms] + cw_raw
         # Dedup preservando orden
         cw_seen: set[str] = set()
         content_words: list[str] = []
@@ -1938,7 +1974,7 @@ async def ask(
             if w not in cw_seen:
                 cw_seen.add(w)
                 content_words.append(w)
-        content_words = content_words[:5]
+        content_words = content_words[:8]
         if content_words:
             expanded_cw = _expand_with_synonyms(content_words)
             cw_chunks = _load_keyword_matches(
