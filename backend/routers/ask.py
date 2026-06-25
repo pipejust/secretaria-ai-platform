@@ -307,6 +307,18 @@ def _extract_proper_nouns(q: str) -> list[str]:
         candidates.append(tok)
         if len(candidates) >= 6:
             break
+    # También detectar acrónimos TODO-MAYÚSCULAS (BEPS, API, ONG…)
+    # que la regex anterior ignora (requiere minúsculas después de la inicial).
+    for tok in _re.findall(r"\b[A-ZÁÉÍÓÚÑ]{2,}\b", q):
+        if tok in _PROPER_NOUN_STOPWORDS:
+            continue
+        low = tok.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        candidates.append(tok)
+        if len(candidates) >= 6:
+            break
     return candidates
 
 
@@ -439,6 +451,22 @@ _DOMAIN_SYNONYMS = {
     # Legal
     "ley": ["legislación", "legislacion", "legal", "normativa"],
     "legislación": ["ley", "legislacion", "legal", "normativa"],
+    # BEPS / Sede electrónica (sistema colombiano de pensiones/beneficios)
+    "beps": ["beneficios económicos periódicos", "sede electrónica", "sede",
+             "aplicación móvil", "portal", "pensiones", "beneficios"],
+    "BEPS": ["beneficios económicos periódicos", "sede electrónica", "sede",
+             "aplicación móvil", "portal"],
+    "sede": ["sede electrónica", "beps", "portal", "plataforma", "aplicación"],
+    "sede electrónica": ["beps", "sede", "portal electrónica", "aplicación móvil"],
+    # Parametrización
+    "parametri": ["parametrización", "parametrizable", "parametrizar",
+                  "configuración", "mensajes", "parámetros"],
+    "parametrización": ["parametrizable", "parametrizar", "parametri",
+                        "configurar mensajes", "parámetros", "configuración"],
+    "parametrizable": ["parametrización", "parametrizar", "configurable"],
+    # Móvil / App
+    "móvil": ["aplicación móvil", "app móvil", "mobile", "app", "aplicación"],
+    "aplicación": ["app", "móvil", "aplicación móvil", "plataforma"],
 }
 
 
@@ -1880,6 +1908,58 @@ async def ask(
             proper_nouns, extra, len(yesno_chunks),
         )
 
+    # CONTENT-WORD FALLBACK: cuando pocas sesiones únicas encontradas
+    # (<6), buscar por palabras de contenido de la pregunta (≥4 chars,
+    # no-stopword) que NO estén ya cubiertas por proper_nouns. Cubre
+    # términos como "parametrización", "BEPS", "sede" que el vector
+    # search pierde y proper_noun detection no captura (todo-minúsculas
+    # o acrónimos sin equivalente en proyecto/contacto del tenant).
+    unique_session_count = len({c["session_id"] for c in chunks})
+    if unique_session_count < 6:
+        import re as _re
+        _content_sw = frozenset([
+            "para", "como", "esta", "este", "estos", "estas", "tiene", "hay",
+            "cual", "cuales", "cuando", "donde", "quien", "porque", "aunque",
+            "algo", "acten", "sobre", "hacer", "hacia", "desde", "maneja",
+            "manejo", "dónde", "cómo", "qué", "quién", "cuándo",
+        ])
+        covered_low = {n.lower() for n in proper_nouns}
+        cw_raw = [
+            w.lower()
+            for w in _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{4,}", q)
+            if w.lower() not in _content_sw
+            and w.lower() not in _PHRASE_STOPWORDS
+            and w.lower() not in covered_low
+        ]
+        # Dedup preservando orden
+        cw_seen: set[str] = set()
+        content_words: list[str] = []
+        for w in cw_raw:
+            if w not in cw_seen:
+                cw_seen.add(w)
+                content_words.append(w)
+        content_words = content_words[:5]
+        if content_words:
+            expanded_cw = _expand_with_synonyms(content_words)
+            cw_chunks = _load_keyword_matches(
+                db, tenant.id, payload.project_id, expanded_cw,
+                limit_per_name=8,
+                whatis_mode=whatis_mode or howtech_mode,
+                howtech_concepts=howtech_concepts,
+            )
+            seen_cw = {(c["session_id"], c.get("kind")) for c in chunks}
+            added_cw = 0
+            for kc in cw_chunks:
+                key = (kc["session_id"], kc.get("kind"))
+                if key not in seen_cw:
+                    chunks.append(kc)
+                    seen_cw.add(key)
+                    added_cw += 1
+            logger.info(
+                "ask: content_word_fallback words=%s → +%s chunks (%s sessions únicos)",
+                expanded_cw, added_cw, len({c["session_id"] for c in cw_chunks}),
+            )
+
     # Métrica de calidad: distancia del mejor chunk (0 = perfecto).
     best_distance = raw_chunks[0]["distance"] if raw_chunks else None
     low_quality = best_distance is not None and best_distance > 0.55  # señal para el prompt
@@ -1955,6 +2035,15 @@ async def ask(
         c for c in chunks
         if c.get("kind") in ("yesno_evidence", "project_deep")
     ])
+    # Sesiones únicas desde keyword fallback (no contadas en n_evidence
+    # pero igual deben escalar el piso de respuesta).
+    n_keyword_sessions = len({
+        c["session_id"] for c in chunks
+        if (c.get("kind") or "").startswith("keyword:")
+    })
+    # Para queries temáticas sin intent especial pero con muchas sesiones
+    # keyword: escalamos el piso igual que howtech/whatis.
+    effective_evidence = n_evidence if (yesno_mode or howtech_mode or whatis_mode) else max(n_evidence, n_keyword_sessions)
     # Pisos de longitud cuando hay material denso. Markdown habilitado
     # para enlaces a sesiones + párrafos justificados.
     if yesno_mode and n_evidence >= 6:
@@ -1994,6 +2083,19 @@ async def ask(
         intro_length_hint = (
             "Markdown. Respuesta descriptiva con nombres concretos "
             "(4-10 frases)."
+        )
+    elif effective_evidence >= 6:
+        intro_length_hint = (
+            f"Markdown con `\\n\\n` entre párrafos. MÍNIMO 6 PÁRRAFOS "
+            f"totalizando al menos 400 palabras. INTEGRA las "
+            f"{effective_evidence} sesiones donde se menciona el tema, "
+            f"citando sesión+fecha y detalles concretos de cada una. "
+            f"No resumas — expande con lo que cada sesión aportó."
+        )
+    elif effective_evidence >= 3:
+        intro_length_hint = (
+            f"Markdown con `\\n\\n`. 3-5 párrafos integrando las "
+            f"{effective_evidence} sesiones con atribución sesión+fecha."
         )
     else:
         intro_length_hint = "Markdown. Respuesta breve y directa."
