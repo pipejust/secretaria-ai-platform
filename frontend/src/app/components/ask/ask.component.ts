@@ -913,6 +913,28 @@ export class AskComponent implements OnInit, OnDestroy {
                   || s.risks?.length || s.agreements?.length);
     }
 
+    /** Convierte las referencias «#42» / «sesión #42» del intro en enlaces
+     *  markdown hacia la curación de esa sesión (`/admin/curation/<id>`),
+     *  para que el pipe `mdRender` los pinte como anclas clicables. Solo
+     *  enlaza ids que existen en las citations del turn (evita linkear
+     *  números que no son sesiones). */
+    linkifySessions(turn: ChatTurn): string {
+        const intro = turn?.structured?.intro || '';
+        if (!intro) return intro;
+        const ids = new Set<number>();
+        for (const c of (turn?.citations || [])) ids.add(c.session_id);
+        for (const s of (turn?.structured?.intro_source_sessions || [])) ids.add(s);
+        if (!ids.size) return intro;
+        return intro.replace(
+            /(?:sesi[oó]n(?:es)?\s+)?#(\d+)/gi,
+            (full: string, num: string) => {
+                const id = parseInt(num, 10);
+                if (!ids.has(id)) return full;
+                return `[${full}](/admin/curation/${id})`;
+            },
+        );
+    }
+
     /** Genera los queryParams para focus en una sección del curation
      *  cuando se hace click en un chip. La página destino los lee y hace
      *  scroll + highlight al item correspondiente. */

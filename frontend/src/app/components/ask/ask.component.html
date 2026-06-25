@@ -213,7 +213,7 @@
                             <header class="aa-a-card-head">
                                 <ng-container *ngIf="hasStructured(turn) && turn.structured?.intro; else genericIntro">
                                     <div class="aa-a-intro md-block"
-                                         [innerHTML]="turn.structured?.intro | mdRender"></div>
+                                         [innerHTML]="linkifySessions(turn) | mdRender"></div>
                                 </ng-container>
                                 <ng-template #genericIntro>
                                     <p class="aa-a-intro">{{ 'ask.generic_intro' | translate:{ n: turn.chunks_used } }}</p>
