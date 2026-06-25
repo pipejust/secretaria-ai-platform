@@ -1977,24 +1977,111 @@ async def ask(
         content_words = content_words[:8]
         if content_words:
             expanded_cw = _expand_with_synonyms(content_words)
-            cw_chunks = _load_keyword_matches(
-                db, tenant.id, payload.project_id, expanded_cw,
-                limit_per_name=8,
-                whatis_mode=whatis_mode or howtech_mode,
-                howtech_concepts=howtech_concepts,
-            )
-            seen_cw = {(c["session_id"], c.get("kind")) for c in chunks}
-            added_cw = 0
-            for kc in cw_chunks:
-                key = (kc["session_id"], kc.get("kind"))
-                if key not in seen_cw:
-                    chunks.append(kc)
-                    seen_cw.add(key)
-                    added_cw += 1
-            logger.info(
-                "ask: content_word_fallback words=%s → +%s chunks (%s sessions únicos)",
-                expanded_cw, added_cw, len({c["session_id"] for c in cw_chunks}),
-            )
+            # PRECISIÓN > RECALL. Términos GENÉRICOS (sede, móvil, app,
+            # plataforma, BEPS, pensiones…) matchean CASI TODAS las sesiones
+            # de un tenant cuyo proyecto entero ES eso → 40 sesiones de
+            # boilerplate y la frase específica se diluye. Separamos:
+            #   · ESPECÍFICOS = frases multi-palabra (≥2 palabras) o singles
+            #     curados (homologar, parametrización) → discriminan.
+            #   · GENÉRICOS = se descartan como semilla de búsqueda.
+            # Si hay específicos, buscamos SOLO con ellos. Esto reproduce la
+            # investigación manual: buscar "igual a la sede"/"homologar",
+            # no "sede"/"app".
+            _GENERIC_SEARCH_TERMS = frozenset([
+                "sede", "móvil", "movil", "app", "aplicación", "aplicacion",
+                "plataforma", "portal", "mobile", "beps", "pensiones",
+                "beneficios", "mensaje", "mensajes", "configuración",
+                "configuracion", "parámetros", "parametros", "trámite",
+                "tramite", "trámites", "tramites", "sede electrónica",
+                "sede electronica", "aplicación móvil", "aplicacion movil",
+                "app móvil", "beneficios económicos periódicos",
+            ])
+            _SPECIFIC_SINGLES = frozenset([
+                "homologar", "homologación", "homologacion", "homologa",
+                "parametrización", "parametrizacion", "parametrizable",
+                "parametrizar", "parametrizada", "equivalente", "espejo",
+            ])
+            specific_terms = [
+                t for t in expanded_cw
+                if t.lower() not in _GENERIC_SEARCH_TERMS
+                and (len(t.split()) >= 2 or t.lower() in _SPECIFIC_SINGLES)
+            ]
+            non_generic = [
+                t for t in expanded_cw if t.lower() not in _GENERIC_SEARCH_TERMS
+            ]
+            # Preferencia: específicos > no-genéricos > (nada). Nunca solo
+            # genéricos.
+            search_terms = specific_terms or non_generic
+            search_terms = search_terms[:12]
+            if search_terms:
+                cw_chunks = _load_keyword_matches(
+                    db, tenant.id, payload.project_id, search_terms,
+                    limit_per_name=5,
+                    whatis_mode=whatis_mode or howtech_mode,
+                    howtech_concepts=howtech_concepts,
+                )
+                # RANKING por especificidad: cuántos términos-búsqueda
+                # distintos aparecen en el contenido de cada sesión. Las
+                # sesiones que mencionan MÁS de las frases concepto van
+                # primero; cap a 8 sesiones para no diluir el contexto.
+                by_sess: dict[int, list[dict]] = {}
+                for kc in cw_chunks:
+                    by_sess.setdefault(kc["session_id"], []).append(kc)
+                def _spec_score(sid: int) -> int:
+                    blob = " ".join(
+                        (c.get("content") or "").lower() for c in by_sess[sid]
+                    )
+                    return sum(1 for t in search_terms if t.lower() in blob)
+                ranked_sids = sorted(
+                    by_sess.keys(), key=lambda s: (-_spec_score(s), -s)
+                )[:8]
+                seen_cw = {(c["session_id"], c.get("kind")) for c in chunks}
+                added_cw = 0
+                for sid in ranked_sids:
+                    for kc in by_sess[sid]:
+                        key = (kc["session_id"], kc.get("kind"))
+                        if key not in seen_cw:
+                            chunks.append(kc)
+                            seen_cw.add(key)
+                            added_cw += 1
+                logger.info(
+                    "ask: content_word_fallback specific=%s terms=%s → +%s chunks "
+                    "(top %s sessions de %s candidatas)",
+                    bool(specific_terms), search_terms, added_cw,
+                    len(ranked_sids), len(by_sess),
+                )
+
+    # RED DE SEGURIDAD anti-dilución: nunca pasar más de MAX_CTX_SESSIONS
+    # sesiones distintas al LLM. Demasiadas sesiones → el modelo produce un
+    # listado boilerplate ("se discutió la app y la plataforma") y pierde la
+    # evidencia específica. Prioridad de retención:
+    #   1) chunks distance==0 (evidencia literal / keyword / deep / recency)
+    #   2) chunks RAG ordenados por distancia ascendente (más relevantes)
+    MAX_CTX_SESSIONS = 16
+    if len({c["session_id"] for c in chunks}) > MAX_CTX_SESSIONS:
+        prioritized = sorted(
+            chunks, key=lambda c: (c.get("distance", 1.0))
+        )
+        kept: list[dict] = []
+        kept_sids: set[int] = set()
+        # Primera pasada: garantizar 1 chunk por sesión hasta el cap.
+        for c in prioritized:
+            sid = c["session_id"]
+            if sid in kept_sids:
+                continue
+            if len(kept_sids) >= MAX_CTX_SESSIONS:
+                break
+            kept.append(c)
+            kept_sids.add(sid)
+        # Segunda pasada: re-agregar chunks extra de las sesiones retenidas
+        # (un misma sesión puede tener evidencia + resumen + decisiones).
+        for c in prioritized:
+            if c in kept:
+                continue
+            if c["session_id"] in kept_sids:
+                kept.append(c)
+        chunks = kept
+        logger.info("ask: context capped to %s sessions (de muchas)", len(kept_sids))
 
     # Métrica de calidad: distancia del mejor chunk (0 = perfecto).
     best_distance = raw_chunks[0]["distance"] if raw_chunks else None
