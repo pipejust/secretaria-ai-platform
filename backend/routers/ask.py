@@ -2016,8 +2016,12 @@ async def ask(
             if search_terms:
                 cw_chunks = _load_keyword_matches(
                     db, tenant.id, payload.project_id, search_terms,
-                    limit_per_name=5,
-                    whatis_mode=whatis_mode or howtech_mode,
+                    limit_per_name=6,
+                    # SIEMPRE multi-ocurrencia: una sesión puede mencionar el
+                    # concepto varias veces (Lady dice "homologar como está en
+                    # sede" y Felipe dice "igual a Sede" en la MISMA sesión).
+                    # Con snippet único se pierde la cita más fuerte.
+                    whatis_mode=True,
                     howtech_concepts=howtech_concepts,
                 )
                 # RANKING por especificidad: cuántos términos-búsqueda
@@ -2034,7 +2038,7 @@ async def ask(
                     return sum(1 for t in search_terms if t.lower() in blob)
                 ranked_sids = sorted(
                     by_sess.keys(), key=lambda s: (-_spec_score(s), -s)
-                )[:8]
+                )[:10]
                 seen_cw = {(c["session_id"], c.get("kind")) for c in chunks}
                 added_cw = 0
                 for sid in ranked_sids:
@@ -2596,7 +2600,23 @@ async def ask(
         "Etiquetera Mi Boleta administra la boletería en el caso de "
         "Arena USC porque la legislación colombiana prohíbe a una "
         "plataforma de eventos vender boletos; First Class se queda con "
-        "la venta de alimentos, bebidas y promociones.»"
+        "la venta de alimentos, bebidas y promociones.»\n"
+        "31. NO HEDGEAR / NO NEGAR LO QUE SÍ ESTÁ: si en el contexto hay "
+        "frases literales que EXPRESAN el concepto preguntado —aunque con "
+        "OTRAS PALABRAS— debes AFIRMARLO y CITARLAS textual, nunca decir "
+        "«no se encontró una mención/decisión explícita». Conceptos "
+        "equivalentes que cuentan como la MISMA afirmación: «homologar», "
+        "«homologación», «hacerlo igual a la sede», «como está en la "
+        "sede», «que funcione de la misma manera que en la sede», "
+        "«equivalente a la sede», «replicar el trámite de la sede», «no "
+        "hacer nada nuevo», «desarrollos nuevos igual a Sede» → TODAS "
+        "significan: la app móvil debe quedar IGUAL a la sede electrónica "
+        "sin funcionalidad nueva. Si ves cualquiera de estas en el "
+        "transcript, la respuesta es SÍ: existe esa directriz; cítala con "
+        "«<Speaker> en «<sesión>» (fecha): «<frase textual>»». Prohibido "
+        "terminar con un párrafo que diga que «no hay decisión explícita» "
+        "cuando el contexto contiene estas frases. Solo niega si REALMENTE "
+        "no aparece ninguna."
     )
     quality_note = ""
     if low_quality:
