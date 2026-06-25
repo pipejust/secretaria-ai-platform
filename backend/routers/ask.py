@@ -1935,6 +1935,7 @@ async def ask(
     # pregunta "homologar" y el transcript dice "igual a la sede" / "como
     # está en sede" / "nada nuevo", todos en el mismo cluster de sinónimos.
     qlow_full = q.lower()
+    concept_specific_terms: list[str] = []  # frases-concepto que SÍ discriminan
     domain_seed_terms: list[str] = []
     for _key in _DOMAIN_SYNONYMS.keys():
         if _key.lower() in qlow_full and _key.lower() not in [t.lower() for t in domain_seed_terms]:
@@ -2013,6 +2014,7 @@ async def ask(
             # genéricos.
             search_terms = specific_terms or non_generic
             search_terms = search_terms[:12]
+            concept_specific_terms = list(specific_terms)
             if search_terms:
                 cw_chunks = _load_keyword_matches(
                     db, tenant.id, payload.project_id, search_terms,
@@ -2054,6 +2056,25 @@ async def ask(
                     bool(specific_terms), search_terms, added_cw,
                     len(ranked_sids), len(by_sess),
                 )
+
+    # PODA DE RUIDO: cuando la pregunta es sobre un CONCEPTO específico y
+    # encontramos evidencia literal de ese concepto, los chunks RAG
+    # genéricos (vector search) que NO mencionan ninguna frase-concepto son
+    # ruido — el LLM termina listándolos como «se discutió la app y la
+    # plataforma». Los descartamos, conservando: evidencia/keyword/deep
+    # (distance==0) y cualquier chunk que SÍ contenga una frase-concepto.
+    if concept_specific_terms:
+        cl_terms = [t.lower() for t in concept_specific_terms]
+        pruned = [
+            c for c in chunks
+            if c.get("distance", 1.0) == 0.0
+            or any(t in (c.get("content") or "").lower() for t in cl_terms)
+        ]
+        # Seguridad: si la poda deja muy poco, conservar original.
+        if len({c["session_id"] for c in pruned}) >= 2:
+            removed = len(chunks) - len(pruned)
+            chunks = pruned
+            logger.info("ask: concept-prune removed %s noise chunks", removed)
 
     # RED DE SEGURIDAD anti-dilución: nunca pasar más de MAX_CTX_SESSIONS
     # sesiones distintas al LLM. Demasiadas sesiones → el modelo produce un
