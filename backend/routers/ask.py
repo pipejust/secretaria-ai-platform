@@ -2197,12 +2197,15 @@ async def ask(
     if yesno_mode and n_evidence >= 6:
         intro_length_hint = (
             f"Markdown con `\\n\\n` entre párrafos. Respuesta SÍ/NO en "
-            f"1ra frase. Luego MÍNIMO 6 PÁRRAFOS totalizando al menos "
-            f"500 palabras INTEGRANDO las {n_evidence} sesiones de "
-            f"evidencia (cada párrafo cubre un ángulo: regla general / "
-            f"distinción / caso específico / pendiente / riesgo). Citas "
+            f"1ra frase. Luego UN párrafo POR CADA ÁNGULO DISTINTO que "
+            f"aporten las {n_evidence} sesiones (regla general / distinción "
+            f"/ caso específico / pendiente / riesgo) — típicamente 4-6 "
+            f"párrafos. Cada párrafo aporta info NUEVA; PROHIBIDO repetir o "
+            f"parafrasear una frase ya dicha. Si no hay 6 ángulos distintos, "
+            f"escribe MENOS párrafos — mejor 4 densos que 6 repetidos. NO "
+            f"cierres con un «En resumen» que repita lo anterior. Citas "
             f"literales del transcript con atribución «<speaker> en "
-            f"<sesión>». No resumas — expande con detalle."
+            f"<sesión>»."
         )
     elif yesno_mode and n_evidence >= 3:
         intro_length_hint = (
@@ -2217,10 +2220,12 @@ async def ask(
         )
     elif (howtech_mode or whatis_mode) and n_evidence >= 6:
         intro_length_hint = (
-            f"Markdown con `\\n\\n`. MÍNIMO 6 PÁRRAFOS ≥500 palabras. "
-            f"INTEGRA las {n_evidence} sesiones con nombres concretos "
-            f"(endpoints, tablas, módulos, eventos, jobs). Atribución "
-            f"sesión+fecha. No resumas — expande."
+            f"Markdown con `\\n\\n`. UN párrafo por ÁNGULO DISTINTO de las "
+            f"{n_evidence} sesiones (típicamente 4-6), con nombres "
+            f"concretos (endpoints, tablas, módulos, eventos, jobs) y "
+            f"atribución sesión+fecha. Cada párrafo aporta info NUEVA; "
+            f"PROHIBIDO repetir frases o cerrar con «En resumen» que "
+            f"reitere. Mejor 4 párrafos densos que 6 repetidos."
         )
     elif (howtech_mode or whatis_mode) and n_evidence >= 3:
         intro_length_hint = (
@@ -2234,11 +2239,11 @@ async def ask(
         )
     elif effective_evidence >= 6:
         intro_length_hint = (
-            f"Markdown con `\\n\\n` entre párrafos. MÍNIMO 6 PÁRRAFOS "
-            f"totalizando al menos 400 palabras. INTEGRA las "
-            f"{effective_evidence} sesiones donde se menciona el tema, "
-            f"citando sesión+fecha y detalles concretos de cada una. "
-            f"No resumas — expande con lo que cada sesión aportó."
+            f"Markdown con `\\n\\n` entre párrafos. UN párrafo por ÁNGULO "
+            f"DISTINTO de las {effective_evidence} sesiones (típicamente "
+            f"4-6), citando sesión+fecha y un detalle concreto NUEVO de "
+            f"cada una. PROHIBIDO repetir frases o cerrar con «En resumen» "
+            f"que reitere. Mejor 4 párrafos densos que 6 repetidos."
         )
     elif effective_evidence >= 3:
         intro_length_hint = (
@@ -2637,7 +2642,15 @@ async def ask(
         "«<Speaker> en «<sesión>» (fecha): «<frase textual>»». Prohibido "
         "terminar con un párrafo que diga que «no hay decisión explícita» "
         "cuando el contexto contiene estas frases. Solo niega si REALMENTE "
-        "no aparece ninguna."
+        "no aparece ninguna.\n"
+        "32. CERO REPETICIÓN: nunca repitas ni parafrasees una frase/claim "
+        "ya escrito en otro párrafo. Está PROHIBIDO un párrafo «En resumen» "
+        "o «En conclusión» que reitere lo ya dicho. Cada oración debe "
+        "aportar información NUEVA. Si la pregunta es binaria (ej. «¿son "
+        "dos X o una?») resuélvela de forma TAJANTE en la 1ra frase con la "
+        "distinción real del transcript (qué es cada cosa, quién lo dijo, "
+        "en qué sesión), y NO des vueltas: una afirmación clara > cinco "
+        "párrafos vagos que repiten «se utiliza para administración de…»."
     )
     quality_note = ""
     if low_quality:
