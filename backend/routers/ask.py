@@ -428,8 +428,23 @@ _DOMAIN_SYNONYMS = {
                 "boletería"],
     "ticket": ["tickets", "boleto", "boletas", "tiquetera", "etiquetera"],
     "tickets": ["ticket", "boleto", "boletos", "tiquetera", "etiquetera"],
-    "tiquetera": ["etiquetera", "mi boleta", "mi boleto", "boletería",
-                  "boletas"],
+    # ── ALIAS DE UNA MISMA ENTIDAD RENOMBRADA EN EL TIEMPO ──
+    # El módulo de boletería de First Class cambió de nombre por sesiones:
+    # etiqueta → etiquetera → taquilla/taquillera → tiquetera → «Mi Boleta».
+    # TODOS son el MISMO producto. El cluster es bidireccional para que
+    # preguntar por cualquier nombre traiga las sesiones de todos los demás
+    # (recall), y el LLM pueda INFERIR que son uno solo (ver regla 33).
+    "mi boleta": ["mi boleto", "tiquetera", "etiquetera", "etiqueta",
+                  "taquilla", "taquillera", "boletería", "admin mb"],
+    "mi boleto": ["mi boleta", "tiquetera", "etiquetera", "taquilla"],
+    "etiquetera": ["mi boleta", "tiquetera", "etiqueta", "taquilla",
+                   "taquillera", "boletería"],
+    "etiqueta": ["etiquetera", "mi boleta", "tiquetera", "taquilla"],
+    "taquilla": ["taquillera", "etiquetera", "mi boleta", "tiquetera",
+                 "boletería"],
+    "taquillera": ["taquilla", "etiquetera", "mi boleta", "tiquetera"],
+    "tiquetera": ["etiquetera", "mi boleta", "mi boleto", "taquilla",
+                  "taquillera", "etiqueta", "boletería", "boletas"],
     # Pagos / cartera
     "pago": ["pagos", "cobro", "cartera", "cuota", "cuotas", "facturación"],
     "pagos": ["pago", "cobro", "cartera", "cuota", "cuotas", "facturación"],
@@ -2001,6 +2016,9 @@ async def ask(
                 "homologar", "homologación", "homologacion", "homologa",
                 "parametrización", "parametrizacion", "parametrizable",
                 "parametrizar", "parametrizada", "equivalente", "espejo",
+                # Alias de la entidad renombrada (boletería First Class):
+                "etiquetera", "etiqueta", "taquilla", "taquillera",
+                "tiquetera",
             ])
             specific_terms = [
                 t for t in expanded_cw
@@ -2650,7 +2668,28 @@ async def ask(
         "dos X o una?») resuélvela de forma TAJANTE en la 1ra frase con la "
         "distinción real del transcript (qué es cada cosa, quién lo dijo, "
         "en qué sesión), y NO des vueltas: una afirmación clara > cinco "
-        "párrafos vagos que repiten «se utiliza para administración de…»."
+        "párrafos vagos que repiten «se utiliza para administración de…».\n"
+        "33. INFERENCIA DE IDENTIDAD / ENTIDAD RENOMBRADA EN EL TIEMPO: un "
+        "MISMO producto, módulo o componente suele aparecer con NOMBRES "
+        "DISTINTOS en sesiones de fechas distintas porque se fue renombrando "
+        "(ej. en First Class: «etiqueta» → «etiquetera» → «taquilla»/"
+        "«taquillera» → «tiquetera» → «Mi Boleta» son TODOS el mismo módulo "
+        "de boletería). NO los trates como cosas distintas. Debes:\n"
+        "  a) DETECTAR las señales de renombre en el transcript: «se llama "
+        "Y», «ahora es Y», «la X, perdón Y», «el proyecto de la X que se "
+        "llama Y», o el mismo rol/función descrito con nombres distintos en "
+        "sesiones de distinta fecha.\n"
+        "  b) UNIFICARLOS como UNA sola entidad y decirlo explícito: «X, Y "
+        "y Z son el mismo <componente>; hoy se llama <nombre actual>».\n"
+        "  c) Dar la LÍNEA DE TIEMPO del nombre cuando los datos lo "
+        "permitan: «en «<sesión>» (fecha) se le decía X; en «<sesión>» "
+        "(fecha posterior) ya se llama Y», citando sesión+fecha de cada "
+        "cambio.\n"
+        "  d) Responder usando el nombre ACTUAL/vigente, aclarando los "
+        "alias previos entre paréntesis.\n"
+        "Esto es INFERENCIA basada en evidencia (las señales del "
+        "transcript), NO invención: solo unifica nombres cuando el contexto "
+        "muestra que se refieren a la misma función/proyecto."
     )
     quality_note = ""
     if low_quality:
