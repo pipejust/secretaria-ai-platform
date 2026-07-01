@@ -545,9 +545,12 @@ async def _llm_analyze_query(q: str, project_names: list[str]) -> dict:
         ' "reformulated_query": "<la pregunta reescrita en forma '
         'declarativa canónica, con los conceptos explícitos>"}\n'
         f"Proyectos/clientes conocidos del workspace: {projs}.\n"
-        "Si la pregunta usa un término abstracto (ej. 'homologar'), agrega "
-        "en search_terms las formas en que la gente lo dice hablando "
-        "('igual a', 'lo mismo que', 'como está en')."
+        "Si la pregunta usa un término abstracto o formal, agrega en "
+        "search_terms las formas COLOQUIALES en que la gente diría ESE "
+        "término hablando en reunión — pero SOLO variantes del tema de "
+        "esta pregunta; nunca copies términos de ejemplo ni de otros "
+        "temas. Tampoco repitas palabras que ya están en la pregunta si "
+        "son genéricas (equipo, sesión, problema, compromiso)."
     )
     body = {
         "model": QUERY_ANALYZER_MODEL,
@@ -2203,6 +2206,17 @@ async def ask(
                 "tramite", "trámites", "tramites", "sede electrónica",
                 "sede electronica", "aplicación móvil", "aplicacion movil",
                 "app móvil", "beneficios económicos periódicos",
+                # Vocabulario omnipresente en actas — matchea TODO, no
+                # discrimina nada (aparece en casi cualquier reunión):
+                "sesión", "sesion", "sesiones", "reunión", "reunion",
+                "reuniones", "equipo", "equipos", "compromiso",
+                "compromisos", "pendiente", "pendientes", "problema",
+                "problemas", "falla", "fallas", "error", "errores",
+                "solución", "soluciones", "resolución", "revisar",
+                "revisión", "revision", "tarea", "tareas", "tema", "temas",
+                "proyecto", "proyectos", "cliente", "clientes", "avance",
+                "avances", "seguimiento", "igual a", "lo mismo que",
+                "como está en",
             ])
             _SPECIFIC_SINGLES = frozenset([
                 "homologar", "homologación", "homologacion", "homologa",
