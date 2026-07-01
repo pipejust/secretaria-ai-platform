@@ -609,9 +609,17 @@ async def _llm_analyze_query(
                     str(e).strip() for e in (data.get("entities") or [])
                     if isinstance(e, (str, int)) and len(str(e).strip()) >= 3
                 ][:6],
+                # min 4 chars: descarta pronombres/deícticos que el modelo
+                # a veces copia de la pregunta ('eso', 'ahí', 'él') — con
+                # ILIKE matchean todo y son puro ruido.
                 "search_terms": [
                     str(t).strip() for t in (data.get("search_terms") or [])
-                    if isinstance(t, (str, int)) and 3 <= len(str(t).strip()) <= 40
+                    if isinstance(t, (str, int)) and 4 <= len(str(t).strip()) <= 40
+                    and str(t).strip().lower() not in (
+                        "eso", "esa", "este", "esta", "aquello", "ello",
+                        "ahí", "alli", "allí", "quedó", "quedo", "dijo",
+                        "hablo", "habló", "mencionó", "menciono",
+                    )
                 ][:10],
                 "reformulated_query": str(data.get("reformulated_query") or "").strip()[:300],
             }
