@@ -507,7 +507,11 @@ _DOMAIN_SYNONYMS = {
 QUERY_ANALYZER_MODEL = "llama-3.1-8b-instant"
 
 
-async def _llm_analyze_query(q: str, project_names: list[str]) -> dict:
+async def _llm_analyze_query(
+    q: str,
+    project_names: list[str],
+    prior_turns: Optional[list] = None,
+) -> dict:
     """ETAPA DE COMPRENSIÓN DE QUERY (query understanding).
 
     Un LLM rápido y barato analiza la pregunta ANTES del retrieval y
@@ -531,6 +535,30 @@ async def _llm_analyze_query(q: str, project_names: list[str]) -> dict:
     if not settings.groq_api_key or not q or len(q) < 8:
         return {}
     projs = ", ".join(project_names[:15]) if project_names else "—"
+    # Contexto conversacional: si la pregunta es un SEGUIMIENTO ambiguo
+    # («¿y quién quedó responsable de eso?», «¿desde cuándo?»), el
+    # analizador DEBE resolver las referencias con el hilo previo y
+    # producir una reformulated_query AUTÓNOMA — es la que alimenta el
+    # retrieval. Sin esto, pgvector busca «eso» y trae basura.
+    convo_block = ""
+    if prior_turns:
+        pieces: list[str] = []
+        for t in prior_turns[-2:]:
+            tq = (getattr(t, "question", "") or "")[:200]
+            ta = (getattr(t, "answer", "") or "")[:350]
+            if tq:
+                pieces.append(f"Usuario preguntó: {tq}\nSe respondió: {ta}")
+        if pieces:
+            convo_block = (
+                "\nHILO PREVIO DE LA CONVERSACIÓN (para resolver "
+                "referencias como 'eso', 'él', 'esa decisión', 'ahí'):\n"
+                + "\n---\n".join(pieces)
+                + "\nSi la pregunta actual referencia el hilo, "
+                "reformulated_query DEBE ser autónoma: sustituye los "
+                "pronombres/deícticos por los nombres y temas concretos "
+                "del hilo. entities y search_terms también deben salir "
+                "del tema RESUELTO, no del pronombre.\n"
+            )
     sys_prompt = (
         "Analizas preguntas hechas sobre un archivo de transcripciones de "
         "reuniones de trabajo (español colombiano, mezcla de temas técnicos "
@@ -551,6 +579,7 @@ async def _llm_analyze_query(q: str, project_names: list[str]) -> dict:
         "esta pregunta; nunca copies términos de ejemplo ni de otros "
         "temas. Tampoco repitas palabras que ya están en la pregunta si "
         "son genéricas (equipo, sesión, problema, compromiso)."
+        f"{convo_block}"
     )
     body = {
         "model": QUERY_ANALYZER_MODEL,
@@ -1947,7 +1976,7 @@ async def ask(
             # información entre clientes).
             tenant_id=tenant.id,
         ),
-        _llm_analyze_query(q, _proj_names),
+        _llm_analyze_query(q, _proj_names, prior_turns=payload.prior_turns),
     )
     llm_entities: list[str] = (query_analysis or {}).get("entities") or []
     llm_search_terms: list[str] = (query_analysis or {}).get("search_terms") or []
@@ -2181,9 +2210,13 @@ async def ask(
             "manejo", "dónde", "cómo", "qué", "quién", "cuándo",
         ])
         covered_low = {n.lower() for n in proper_nouns}
+        # Tokenizamos pregunta + query resuelta por el analyzer: en
+        # seguimientos ambiguos («eso», «ahí») las palabras útiles viven
+        # en la reformulación, no en la pregunta cruda.
+        _token_src = q + (" " + llm_reformulated if llm_reformulated else "")
         cw_raw = [
             w.lower()
-            for w in _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{4,}", q)
+            for w in _re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{4,}", _token_src)
             if w.lower() not in _content_sw
             and w.lower() not in _PHRASE_STOPWORDS
             and w.lower() not in covered_low
