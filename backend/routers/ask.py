@@ -504,6 +504,91 @@ _DOMAIN_SYNONYMS = {
 }
 
 
+QUERY_ANALYZER_MODEL = "llama-3.1-8b-instant"
+
+
+async def _llm_analyze_query(q: str, project_names: list[str]) -> dict:
+    """ETAPA DE COMPRENSIÓN DE QUERY (query understanding).
+
+    Un LLM rápido y barato analiza la pregunta ANTES del retrieval y
+    devuelve:
+      · entities       — nombres propios/productos/personas mencionados
+      · search_terms   — 5-10 strings cortos (1-3 palabras) en el
+                         VOCABULARIO REAL de una reunión, incluyendo
+                         sinónimos y conjugaciones que la gente diría
+                         hablando (no lenguaje formal). Se usan para
+                         ILIKE literal sobre transcripts.
+      · reformulated_query — la pregunta reescrita de forma canónica
+                         para una 2da búsqueda vectorial.
+
+    Esto reemplaza la dependencia de diccionarios hardcodeados
+    (_DOMAIN_SYNONYMS cubre solo temas curados): el modelo genera las
+    variantes para CUALQUIER tema. Corre EN PARALELO con el vector
+    search (asyncio.gather) → no suma latencia percibida.
+
+    Fail-safe: ante cualquier error/timeout devuelve {} y el pipeline
+    sigue con las heurísticas existentes. Cero riesgo de regresión."""
+    if not settings.groq_api_key or not q or len(q) < 8:
+        return {}
+    projs = ", ".join(project_names[:15]) if project_names else "—"
+    sys_prompt = (
+        "Analizas preguntas hechas sobre un archivo de transcripciones de "
+        "reuniones de trabajo (español colombiano, mezcla de temas técnicos "
+        "y de negocio). Devuelve SOLO un objeto JSON con:\n"
+        '{"entities": [<nombres propios, productos, personas, clientes '
+        "mencionados o implicados en la pregunta>],\n"
+        ' "search_terms": [<5-10 strings de 1-3 palabras que aparecerían '
+        "LITERALMENTE en una conversación hablada sobre este tema: "
+        "sinónimos coloquiales, conjugaciones verbales, nombres "
+        "alternativos. NO palabras genéricas como 'aplicación', 'proyecto', "
+        "'plataforma', 'reunión', 'tema'>],\n"
+        ' "reformulated_query": "<la pregunta reescrita en forma '
+        'declarativa canónica, con los conceptos explícitos>"}\n'
+        f"Proyectos/clientes conocidos del workspace: {projs}.\n"
+        "Si la pregunta usa un término abstracto (ej. 'homologar'), agrega "
+        "en search_terms las formas en que la gente lo dice hablando "
+        "('igual a', 'lo mismo que', 'como está en')."
+    )
+    body = {
+        "model": QUERY_ANALYZER_MODEL,
+        "messages": [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": q},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 400,
+        "response_format": {"type": "json_object"},
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.post(GROQ_URL, json=body, headers=headers)
+            r.raise_for_status()
+            content = r.json()["choices"][0]["message"]["content"]
+            data = _json_lib.loads(content)
+            if not isinstance(data, dict):
+                return {}
+            # Sanitizar: solo strings, caps defensivos.
+            out = {
+                "entities": [
+                    str(e).strip() for e in (data.get("entities") or [])
+                    if isinstance(e, (str, int)) and len(str(e).strip()) >= 3
+                ][:6],
+                "search_terms": [
+                    str(t).strip() for t in (data.get("search_terms") or [])
+                    if isinstance(t, (str, int)) and 3 <= len(str(t).strip()) <= 40
+                ][:10],
+                "reformulated_query": str(data.get("reformulated_query") or "").strip()[:300],
+            }
+            return out
+    except Exception as exc:  # noqa: BLE001 — fail-safe deliberado
+        logger.warning("ask: query-analyzer falló (%s) — sigo sin él", exc)
+        return {}
+
+
 def _expand_with_synonyms(terms: list[str]) -> list[str]:
     """Para cada termino, anade sinonimos del dominio. Deduplica
     preservando orden. Tope 25 para no inflar SQL."""
@@ -1574,6 +1659,58 @@ def _load_recent_session_context(
     return out
 
 
+def _is_tasks_question(q: str) -> bool:
+    """True si la pregunta es sobre tareas/compromisos/pendientes/quién
+    debe hacer qué. Estas preguntas necesitan la tabla ActionItem (fuente
+    de verdad curada) además de los transcripts."""
+    qn = (q or "").lower()
+    triggers = (
+        "pendiente", "tarea", "compromiso", "responsable", "encargad",
+        "asignad", "quién debe", "quien debe", "quién tiene que",
+        "quien tiene que", "por hacer", "sin hacer", "sin resolver",
+        "action item", "to do", "todo list", "deadline", "fecha límite",
+        "fecha limite", "entregable",
+    )
+    return any(t in qn for t in triggers)
+
+
+def _load_action_items_context(
+    db: "Session", tenant_id: int, project_id: Optional[int], limit: int = 50,
+) -> str:
+    """Bloque compacto con los ActionItems REALES de la BD (no inferidos
+    del transcript). Incluye título, responsable, estado, fecha límite y
+    sesión origen. El LLM lo usa como fuente autoritativa para preguntas
+    de pendientes/compromisos — los transcripts complementan el contexto
+    pero el estado vigente vive aquí."""
+    from models import MeetingSession
+    q = (
+        select(ActionItemRow, MeetingSession)
+        .join(MeetingSession, MeetingSession.id == ActionItemRow.session_id)
+        .where(ActionItemRow.tenant_id == tenant_id)
+    )
+    if project_id:
+        q = q.where(MeetingSession.project_id == project_id)
+    q = q.order_by(ActionItemRow.id.desc()).limit(limit)
+    rows = db.exec(q).all()
+    if not rows:
+        return ""
+    lines = [
+        "=== TAREAS / ACTION ITEMS (tabla curada — fuente autoritativa "
+        "del ESTADO ACTUAL; si contradice al transcript, manda esta) ==="
+    ]
+    for ai, ms in rows:
+        status = (ai.status or "pending").strip()
+        owner = (ai.owner_name or "sin responsable").strip()
+        due = (ai.due_date or "").strip()
+        line = (
+            f"· [{status}] {ai.title or '(sin título)'} — resp: {owner}"
+            + (f" — vence: {due}" if due else "")
+            + f" — sesión #{ai.session_id} «{(ms.title or '')[:50]}»"
+        )
+        lines.append(line)
+    return "\n".join(lines)
+
+
 def _build_context(chunks: list[dict]) -> str:
     """Construye el contexto que recibe el LLM. Cada bloque incluye el
     metadato de la sesión (id, título, fecha, proyecto) Y el contenido
@@ -1773,17 +1910,63 @@ async def ask(
         ).all()
         sids_filter = [r[0] for r in valid] or None
 
-    raw_chunks = await search_similar(
-        db, q,
-        top_k=max(min(payload.top_k, 20), 1),
-        project_id=payload.project_id,
-        session_ids=sids_filter,
-        # CRÍTICO multi-tenant: restringe la búsqueda RAG a las sesiones
-        # del tenant del usuario. Sin esto, una pregunta de la empresa A
-        # podía recuperar fragmentos de actas de la empresa B (fuga de
-        # información entre clientes).
-        tenant_id=tenant.id,
+    # QUERY UNDERSTANDING en paralelo con el vector search: el analizador
+    # LLM (8B, ~1s) corre mientras pgvector busca — latencia extra ≈ 0.
+    import asyncio as _asyncio
+    from models import Project as _Project
+    _proj_names = [
+        p.name for p in db.exec(
+            select(_Project).where(_Project.tenant_id == tenant.id).limit(15)
+        ).all() if p.name
+    ]
+    raw_chunks, query_analysis = await _asyncio.gather(
+        search_similar(
+            db, q,
+            top_k=max(min(payload.top_k, 20), 1),
+            project_id=payload.project_id,
+            session_ids=sids_filter,
+            # CRÍTICO multi-tenant: restringe la búsqueda RAG a las sesiones
+            # del tenant del usuario. Sin esto, una pregunta de la empresa A
+            # podía recuperar fragmentos de actas de la empresa B (fuga de
+            # información entre clientes).
+            tenant_id=tenant.id,
+        ),
+        _llm_analyze_query(q, _proj_names),
     )
+    llm_entities: list[str] = (query_analysis or {}).get("entities") or []
+    llm_search_terms: list[str] = (query_analysis or {}).get("search_terms") or []
+    llm_reformulated: str = (query_analysis or {}).get("reformulated_query") or ""
+    if query_analysis:
+        logger.info(
+            "ask: query-analyzer entities=%s terms=%s reform=%r",
+            llm_entities, llm_search_terms, llm_reformulated[:80],
+        )
+
+    # 2DA BÚSQUEDA VECTORIAL con la query reformulada — recupera chunks
+    # que la redacción original no alcanza (paráfrasis, sinónimos). Merge
+    # por (session_id, kind) quedándose con la menor distancia.
+    if llm_reformulated and llm_reformulated.lower() != q.lower():
+        try:
+            reform_chunks = await search_similar(
+                db, llm_reformulated,
+                top_k=10,
+                project_id=payload.project_id,
+                session_ids=sids_filter,
+                tenant_id=tenant.id,
+            )
+            seen_rc = {(c.get("session_id"), c.get("kind")): i
+                       for i, c in enumerate(raw_chunks)}
+            for rc in reform_chunks:
+                key = (rc.get("session_id"), rc.get("kind"))
+                if key in seen_rc:
+                    idx = seen_rc[key]
+                    if rc["distance"] < raw_chunks[idx]["distance"]:
+                        raw_chunks[idx] = rc
+                else:
+                    raw_chunks.append(rc)
+            raw_chunks.sort(key=lambda c: c.get("distance", 1.0))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ask: reformulated search falló (%s)", exc)
 
     # Filtro de relevancia DINÁMICO (ver `_filter_relevant`).
     chunks = _filter_relevant(raw_chunks, override=payload.min_relevance)
@@ -1851,6 +2034,15 @@ async def ask(
             proper_nouns.append(phrase)
     if title_phrases:
         logger.info("ask: session_title_phrases → %s", title_phrases)
+
+    # Entidades detectadas por el query-analyzer LLM — cubren lo que las
+    # heurísticas de mayúsculas/títulos no ven (apodos, productos escritos
+    # raro, personas implícitas).
+    pn_low = {n.lower() for n in proper_nouns}
+    for ent in llm_entities:
+        if ent.lower() not in pn_low:
+            proper_nouns.append(ent)
+            pn_low.add(ent.lower())
     if proper_nouns:
         # Modo whatis ("qué es X") trae snippets más grandes y multiples
         # ocurrencias por sesión — necesario para extraer una definición
@@ -1964,7 +2156,7 @@ async def ask(
     # pierde y proper_noun detection no captura (todo-minúsculas o
     # acrónimos sin equivalente en proyecto/contacto del tenant).
     unique_session_count = len({c["session_id"] for c in chunks})
-    if unique_session_count < 6 or domain_seed_terms:
+    if unique_session_count < 6 or domain_seed_terms or llm_search_terms:
         import re as _re
         _content_sw = frozenset([
             "para", "como", "esta", "este", "estos", "estas", "tiene", "hay",
@@ -2025,6 +2217,15 @@ async def ask(
                 if t.lower() not in _GENERIC_SEARCH_TERMS
                 and (len(t.split()) >= 2 or t.lower() in _SPECIFIC_SINGLES)
             ]
+            # Términos del query-analyzer LLM: curados por-pregunta, se
+            # tratan como específicos (el prompt ya les prohíbe genéricos;
+            # el filtro de abajo es doble seguro).
+            st_low = {s.lower() for s in specific_terms}
+            for t in llm_search_terms:
+                tl = t.lower()
+                if tl not in _GENERIC_SEARCH_TERMS and tl not in st_low:
+                    specific_terms.append(t)
+                    st_low.add(tl)
             non_generic = [
                 t for t in expanded_cw if t.lower() not in _GENERIC_SEARCH_TERMS
             ]
@@ -2742,10 +2943,19 @@ async def ask(
         if howtech_mode and howtech_concepts else ""
     )
 
+    # Preguntas de tareas/pendientes: inyectar los ActionItems reales de
+    # la BD (estado vigente curado) — el transcript dice lo que se DIJO,
+    # la tabla dice lo que SIGUE pendiente.
+    tasks_block = (
+        _load_action_items_context(db, tenant.id, payload.project_id)
+        if _is_tasks_question(q) else ""
+    )
+
     user_msg = (
         f"{convo_hint}"
         f"Pregunta del usuario: {q}\n\n"
         + (f"{entity_block}\n\n" if entity_block else "")
+        + (f"{tasks_block}\n\n" if tasks_block else "")
         + (f"{concept_index_block}\n\n" if concept_index_block else "")
         + (f"{sessions_inventory}\n\n" if sessions_inventory else "")
         + f"Contexto extraído de actas anteriores ({len(chunks)} fragmentos relevantes, "
