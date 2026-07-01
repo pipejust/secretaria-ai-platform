@@ -895,20 +895,7 @@ def _load_yesno_evidence(
             proj_name = proj_cache[s.project_id]
 
         # Formatear fecha legible para que el LLM pueda citarla.
-        date_display = ""
-        if s.date:
-            try:
-                from datetime import datetime as _dt
-                raw = s.date
-                if isinstance(raw, str) and raw.replace(".", "").isdigit():
-                    ts = float(raw)
-                    if ts > 10**12:
-                        ts /= 1000
-                    date_display = _dt.fromtimestamp(ts).strftime("%d %b %Y")
-                else:
-                    date_display = _dt.fromisoformat(str(raw)).strftime("%d %b %Y")
-            except Exception:
-                date_display = str(s.date)[:10]
+        date_display = _fmt_session_date(s.date)
 
         out.append({
             "session_id": s.id,
@@ -1693,10 +1680,16 @@ def _load_action_items_context(
     )
     if project_id:
         q = q.where(MeetingSession.project_id == project_id)
-    q = q.order_by(ActionItemRow.id.desc()).limit(limit)
+    q = q.order_by(ActionItemRow.id.desc()).limit(limit * 2)
     rows = db.exec(q).all()
     if not rows:
         return ""
+    # Pendientes/bloqueadas PRIMERO — son las que la pregunta busca. Las
+    # done/cancelled van al final y solo si queda cupo (dan contexto de
+    # qué ya se cerró).
+    _open = [r for r in rows if (r[0].status or "pending") in ("pending", "blocked")]
+    _closed = [r for r in rows if r not in _open]
+    rows = (_open + _closed)[:limit]
     lines = [
         "=== TAREAS / ACTION ITEMS (tabla curada — fuente autoritativa "
         "del ESTADO ACTUAL; si contradice al transcript, manda esta) ==="
@@ -1714,6 +1707,26 @@ def _load_action_items_context(
     return "\n".join(lines)
 
 
+def _fmt_session_date(raw: object) -> str:
+    """Fecha legible ('07 Jun 2026') desde epoch-ms, epoch-s o ISO. El LLM
+    COPIA lo que ve en el contexto: si le damos ISO crudo, cita ISO crudo
+    en la respuesta. Formateamos en el único choke-point (context builder)
+    para que todas las citas salgan bonitas."""
+    if not raw:
+        return ""
+    from datetime import datetime as _dt
+    s = str(raw).strip()
+    try:
+        if s.replace(".", "").isdigit():
+            ts = float(s)
+            if ts > 10**12:
+                ts /= 1000
+            return _dt.fromtimestamp(ts).strftime("%d %b %Y")
+        return _dt.fromisoformat(s.replace("Z", "+00:00")).strftime("%d %b %Y")
+    except Exception:
+        return s[:10]
+
+
 def _build_context(chunks: list[dict]) -> str:
     """Construye el contexto que recibe el LLM. Cada bloque incluye el
     metadato de la sesión (id, título, fecha, proyecto) Y el contenido
@@ -1724,7 +1737,7 @@ def _build_context(chunks: list[dict]) -> str:
     for c in chunks:
         snippet = (c.get("content") or "")[:1200]
         title = c.get("session_title") or ""
-        date = c.get("session_date") or ""
+        date = _fmt_session_date(c.get("session_date"))
         proj = c.get("project_name") or ""
         # Header con todo el metadato para que el LLM pueda razonar sobre
         # las sesiones aunque la pregunta no esté literalmente en el chunk.
@@ -1749,7 +1762,7 @@ def _build_sessions_inventory(chunks: list[dict]) -> str:
             continue
         seen[sid] = {
             "title": c.get("session_title") or "(sin título)",
-            "date": c.get("session_date") or "",
+            "date": _fmt_session_date(c.get("session_date")),
             "project_name": c.get("project_name") or "",
         }
     if not seen:
