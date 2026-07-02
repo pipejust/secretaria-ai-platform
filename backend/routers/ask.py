@@ -1268,7 +1268,12 @@ def _name_snippets_all(text: str, name: str, window: int = 900, max_occ: int = 3
     if not text or not name:
         return ""
     import re as _re
-    pat = _re.compile(_re.escape(name), _re.IGNORECASE)
+    # Siglas cortas (≤3): match solo como palabra aislada — sin esto la
+    # ventana cae dentro de "trabajo"/"tres" y el snippet es ruido.
+    if len(name.strip()) <= 3:
+        pat = _re.compile(rf"\b{_re.escape(name.strip())}\b", _re.IGNORECASE)
+    else:
+        pat = _re.compile(_re.escape(name), _re.IGNORECASE)
     spans: list[tuple[int, int]] = []
     for m in pat.finditer(text):
         start = max(0, m.start() - window // 2)
@@ -1294,6 +1299,8 @@ def _load_keyword_matches(
     limit_per_name: int = 4,
     whatis_mode: bool = False,
     howtech_concepts: Optional[list[str]] = None,
+    scope_project_id: Optional[int] = None,
+    scope_title: Optional[str] = None,
 ) -> list[dict]:
     """Búsqueda LITERAL (SQL ILIKE) por nombres propios en transcript y
     secciones procesadas.
@@ -1320,23 +1327,50 @@ def _load_keyword_matches(
     proj_cache: dict[int, str] = {}
 
     for name in names:
-        # ILIKE con wildcards — buscamos `Camila`, `Camila,`, `con Camila`,
-        # etc. Postgres ILIKE es case-insensitive con índices opcionales
-        # (no críticos para datasets pequeños del MVP).
-        pattern = f"%{name}%"
-        q = (
-            select(MeetingSession)
-            .where(MeetingSession.tenant_id == tenant_id)
-            .where(
+        # TÉRMINOS CORTOS (≤3 chars: TR, ADM, INF, QA…): ILIKE '%TR%'
+        # matchea DENTRO de "trabajo"/"tres"/"otro" → basura en todas las
+        # sesiones. Usamos regex con word-boundary (~* '\yTR\y') para que
+        # solo matchee la sigla aislada.
+        if len(name.strip()) <= 3:
+            import re as _re2
+            safe = _re2.escape(name.strip())
+            pat_re = rf"\y{safe}\y"
+            body_filter = (
+                MeetingSession.raw_transcript.op("~*")(pat_re)
+                | MeetingSession.raw_summary.op("~*")(pat_re)
+                | MeetingSession.processed_decisions.op("~*")(pat_re)
+                | MeetingSession.processed_agreements.op("~*")(pat_re)
+                | MeetingSession.processed_risks.op("~*")(pat_re)
+            )
+        else:
+            # ILIKE con wildcards — buscamos `Camila`, `Camila,`, `con
+            # Camila`, etc. Case-insensitive.
+            pattern = f"%{name}%"
+            body_filter = (
                 (MeetingSession.raw_transcript.ilike(pattern))
                 | (MeetingSession.raw_summary.ilike(pattern))
                 | (MeetingSession.processed_decisions.ilike(pattern))
                 | (MeetingSession.processed_agreements.ilike(pattern))
                 | (MeetingSession.processed_risks.ilike(pattern))
             )
+        q = (
+            select(MeetingSession)
+            .where(MeetingSession.tenant_id == tenant_id)
+            .where(body_filter)
         )
         if project_id:
             q = q.where(MeetingSession.project_id == project_id)
+        if scope_project_id or scope_title:
+            # SCOPE "X en Y": la pregunta menciona un proyecto/cliente →
+            # restringimos a SUS sesiones (por project_id o título). Evita
+            # que "TR en ANH" traiga sesiones de First Class.
+            from sqlmodel import or_ as _or
+            scope_conds = []
+            if scope_project_id:
+                scope_conds.append(MeetingSession.project_id == scope_project_id)
+            if scope_title:
+                scope_conds.append(MeetingSession.title.ilike(f"%{scope_title}%"))
+            q = q.where(_or(*scope_conds))
         q = q.order_by(MeetingSession.id.desc()).limit(limit_per_name)
         rows = db.exec(q).all()
 
@@ -1578,11 +1612,18 @@ def _format_entity_facts_block(facts: dict) -> str:
 def _name_snippet(text: str, name: str, window: int = 600) -> str:
     """Devuelve una ventana de `window` chars centrada en la primera
     ocurrencia (case-insensitive) de `name` dentro de `text`. None si no
-    aparece."""
+    aparece. Siglas ≤3 chars: solo palabra aislada (word-boundary)."""
     if not text or not name:
         return ""
-    low = text.lower()
-    idx = low.find(name.lower())
+    if len(name.strip()) <= 3:
+        import re as _re
+        m = _re.search(rf"\b{_re.escape(name.strip())}\b", text, _re.IGNORECASE)
+        if not m:
+            return ""
+        idx = m.start()
+    else:
+        low = text.lower()
+        idx = low.find(name.lower())
     if idx == -1:
         return ""
     start = max(0, idx - window // 2)
@@ -2096,6 +2137,31 @@ async def ask(
         if ent.lower() not in pn_low:
             proper_nouns.append(ent)
             pn_low.add(ent.lower())
+
+    # SCOPE "X en <Proyecto>": si la pregunta menciona EXACTAMENTE un
+    # proyecto del tenant y no viene project_id del frontend, la búsqueda
+    # literal se restringe a las sesiones de ese proyecto (por project_id
+    # o por título). Caso reportado: «¿qué es TR en ANH?» traía sesiones
+    # de First Class porque TR se buscaba en TODO el tenant.
+    scoped_project_id: Optional[int] = None
+    scope_title_term: Optional[str] = None
+    if not payload.project_id:
+        from models import Project as _ScopeProject
+        _matched_scope: list[tuple[str, int]] = []
+        for ent in (known_entities or []):
+            row = db.exec(
+                select(_ScopeProject)
+                .where(_ScopeProject.tenant_id == tenant.id)
+                .where(_ScopeProject.name.ilike(ent))
+            ).first()
+            if row and row.id:
+                _matched_scope.append((ent, row.id))
+        if len(_matched_scope) == 1:
+            scope_title_term, scoped_project_id = _matched_scope[0]
+            logger.info(
+                "ask: scope detectado → proyecto «%s» (id=%s)",
+                scope_title_term, scoped_project_id,
+            )
     if proper_nouns:
         # Modo whatis ("qué es X") trae snippets más grandes y multiples
         # ocurrencias por sesión — necesario para extraer una definición
@@ -2109,6 +2175,8 @@ async def ask(
             limit_per_name=8 if howtech_mode else 4,
             whatis_mode=whatis_mode or howtech_mode,
             howtech_concepts=howtech_concepts,
+            scope_project_id=scoped_project_id,
+            scope_title=scope_title_term,
         )
         seen = {(c["session_id"], c.get("kind")) for c in chunks}
         for kc in kw_chunks:
@@ -2312,6 +2380,8 @@ async def ask(
                     # Con snippet único se pierde la cita más fuerte.
                     whatis_mode=True,
                     howtech_concepts=howtech_concepts,
+                    scope_project_id=scoped_project_id,
+                    scope_title=scope_title_term,
                 )
                 # RANKING por especificidad: cuántos términos-búsqueda
                 # distintos aparecen en el contenido de cada sesión. Las
@@ -2362,6 +2432,25 @@ async def ask(
             removed = len(chunks) - len(pruned)
             chunks = pruned
             logger.info("ask: concept-prune removed %s noise chunks", removed)
+
+    # PODA POR SCOPE: la pregunta es sobre UN proyecto concreto («… en
+    # ANH») → descartamos chunks de OTROS proyectos que el vector search
+    # coló (First Class, etc.). Mantener solo: sesiones del proyecto
+    # scope (por nombre de proyecto o título) y evidencia literal.
+    if scope_title_term:
+        _sc = scope_title_term.lower()
+        scoped = [
+            c for c in chunks
+            if _sc in (c.get("project_name") or "").lower()
+            or _sc in (c.get("session_title") or "").lower()
+        ]
+        if len({c["session_id"] for c in scoped}) >= 2:
+            removed_sc = len(chunks) - len(scoped)
+            chunks = scoped
+            logger.info(
+                "ask: scope-prune «%s» removió %s chunks de otros proyectos",
+                scope_title_term, removed_sc,
+            )
 
     # RED DE SEGURIDAD anti-dilución: nunca pasar más de MAX_CTX_SESSIONS
     # sesiones distintas al LLM. Demasiadas sesiones → el modelo produce un
@@ -2958,7 +3047,19 @@ async def ask(
         "alias previos entre paréntesis.\n"
         "Esto es INFERENCIA basada en evidencia (las señales del "
         "transcript), NO invención: solo unifica nombres cuando el contexto "
-        "muestra que se refieren a la misma función/proyecto."
+        "muestra que se refieren a la misma función/proyecto.\n"
+        "34. DEFINICIÓN DE SIGLAS/ACRÓNIMOS: cuando pregunten «¿qué es "
+        "<sigla>?», busca en los fragmentos la EXPANSIÓN de la sigla — "
+        "suele aparecer en aposición justo al lado («la carpeta TR, "
+        "términos de referencia»), en una enumeración paralela («la "
+        "carpeta DM con lo contractual, la INFE con lo técnico y la TR "
+        "con los entregables») o dicha por otro speaker al aclarar. "
+        "Responde con la definición CONCRETA + la cita textual y sesión "
+        "donde se define. Si distintos speakers dan matices distintos "
+        "(uno dice «términos de referencia», otro «transmittal de "
+        "entrega»), repórtalos ambos con su atribución. NUNCA digas «la "
+        "definición no está claramente establecida» si algún fragmento "
+        "contiene la sigla junto a su expansión."
     )
     quality_note = ""
     if low_quality:
