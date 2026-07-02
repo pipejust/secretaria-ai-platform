@@ -697,8 +697,32 @@
                         <textarea [(ngModel)]="newTask.description" rows="2"
                                   [placeholder]="'curation.task_description_placeholder' | translate"></textarea>
                         <div class="cp-manual-form-grid">
-                            <input type="text" [(ngModel)]="newTask.owner_name" [placeholder]="'project_detail.owner' | translate" />
-                            <input type="email" [(ngModel)]="newTask.owner_email" placeholder="correo@empresa.com" />
+                            <div class="cp-ac-wrap">
+                                <input type="text" [(ngModel)]="newTask.owner_name" [placeholder]="'project_detail.owner' | translate"
+                                       autocomplete="off"
+                                       (focus)="openContactSuggest('new-name', newTask.owner_name)"
+                                       (input)="openContactSuggest('new-name', newTask.owner_name)"
+                                       (blur)="closeContactSuggest()" />
+                                <ul class="cp-ac-list" *ngIf="contactSuggestOpen === 'new-name' && contactSuggestions.length">
+                                    <li *ngFor="let c of contactSuggestions" (mousedown)="pickContactForNew(c)">
+                                        <span class="cp-ac-name">{{ c.name }}</span>
+                                        <span class="cp-ac-meta" *ngIf="c.email || c.role || c.entity">{{ c.email || (c.role + (c.entity ? ' · ' + c.entity : '')) }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="cp-ac-wrap">
+                                <input type="email" [(ngModel)]="newTask.owner_email" placeholder="correo@empresa.com"
+                                       autocomplete="off"
+                                       (focus)="openContactSuggest('new-email', newTask.owner_email)"
+                                       (input)="openContactSuggest('new-email', newTask.owner_email)"
+                                       (blur)="closeContactSuggest()" />
+                                <ul class="cp-ac-list" *ngIf="contactSuggestOpen === 'new-email' && contactSuggestions.length">
+                                    <li *ngFor="let c of contactSuggestions" (mousedown)="pickContactForNew(c)">
+                                        <span class="cp-ac-name">{{ c.email || c.name }}</span>
+                                        <span class="cp-ac-meta" *ngIf="c.name && c.email">{{ c.name }}</span>
+                                    </li>
+                                </ul>
+                            </div>
                             <input type="date" [(ngModel)]="newTask.due_date" />
                         </div>
                         <div class="cp-manual-form-actions">
@@ -795,7 +819,7 @@
 
                             <!-- Inputs: responsable, correo, fecha -->
                             <div class="cp-task-fields">
-                                <div class="cp-field">
+                                <div class="cp-field cp-ac-wrap">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -804,9 +828,18 @@
                                     <input type="text"
                                            [(ngModel)]="task.owner_name"
                                            [placeholder]="'project_detail.owner' | translate"
-                                           (blur)="updateTaskField(task)" />
+                                           autocomplete="off"
+                                           (focus)="openContactSuggest('t' + task.id + '-name', task.owner_name)"
+                                           (input)="openContactSuggest('t' + task.id + '-name', task.owner_name)"
+                                           (blur)="updateTaskField(task); closeContactSuggest()" />
+                                    <ul class="cp-ac-list" *ngIf="contactSuggestOpen === ('t' + task.id + '-name') && contactSuggestions.length">
+                                        <li *ngFor="let c of contactSuggestions" (mousedown)="pickContactForTask(task, c)">
+                                            <span class="cp-ac-name">{{ c.name }}</span>
+                                            <span class="cp-ac-meta" *ngIf="c.email || c.role || c.entity">{{ c.email || (c.role + (c.entity ? ' · ' + c.entity : '')) }}</span>
+                                        </li>
+                                    </ul>
                                 </div>
-                                <div class="cp-field">
+                                <div class="cp-field cp-ac-wrap">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
@@ -815,7 +848,16 @@
                                     <input type="email"
                                            [(ngModel)]="task.owner_email"
                                            placeholder="correo@empresa.com"
-                                           (blur)="updateTaskField(task)" />
+                                           autocomplete="off"
+                                           (focus)="openContactSuggest('t' + task.id + '-email', task.owner_email)"
+                                           (input)="openContactSuggest('t' + task.id + '-email', task.owner_email)"
+                                           (blur)="updateTaskField(task); closeContactSuggest()" />
+                                    <ul class="cp-ac-list" *ngIf="contactSuggestOpen === ('t' + task.id + '-email') && contactSuggestions.length">
+                                        <li *ngFor="let c of contactSuggestions" (mousedown)="pickContactForTask(task, c)">
+                                            <span class="cp-ac-name">{{ c.email || c.name }}</span>
+                                            <span class="cp-ac-meta" *ngIf="c.name && c.email">{{ c.name }}</span>
+                                        </li>
+                                    </ul>
                                 </div>
                                 <div class="cp-field">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"

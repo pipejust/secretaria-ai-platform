@@ -432,6 +432,9 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
               };
               this.isLoading = false;
               this.cdr.detectChanges();
+              // Carga los contactos del proyecto para autocompletar el
+              // responsable de las tareas (nombre/correo).
+              this.loadProjectContacts(this.meetingData.project_id);
               // Si llegamos vía link con ?focus=..., aplicamos el scroll
               // y highlight ahora que la data y el DOM están listos.
               if (this.pendingFocus) {
@@ -449,6 +452,70 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  // ── AUTOCOMPLETE de responsable (nombre/correo) desde contactos del proyecto ──
+  projectContacts: { name: string; email: string; role?: string; entity?: string }[] = [];
+  /** key del input con dropdown abierto: `new-name` | `new-email` | `t<ID>-name` | `t<ID>-email` */
+  contactSuggestOpen: string | null = null;
+  contactSuggestions: { name: string; email: string; role?: string; entity?: string }[] = [];
+
+  loadProjectContacts(projectId: number | null | undefined): void {
+    this.projectContacts = [];
+    if (!projectId) return;
+    const headers = this.authService.getAuthHeaders();
+    this.http.get<any[]>(`${environment.apiUrl}/api/projects/${projectId}/contacts`, { headers })
+      .subscribe({
+        next: (rows) => {
+          this.projectContacts = (rows || [])
+            .filter(r => (r?.name || '').trim() || (r?.email || '').trim())
+            .map(r => ({
+              name: (r.name || '').trim(),
+              email: (r.email || '').trim(),
+              role: (r.role || '').trim(),
+              entity: (r.entity || '').trim(),
+            }));
+          this.cdr.detectChanges();
+        },
+        error: () => { /* silencioso: autocomplete es mejora, no crítico */ },
+      });
+  }
+
+  /** Filtra contactos por coincidencia en nombre O correo (letra por letra). */
+  private _filterContacts(query: string): { name: string; email: string; role?: string; entity?: string }[] {
+    const q = (query || '').toLowerCase().trim();
+    if (!this.projectContacts.length) return [];
+    if (!q) return this.projectContacts.slice(0, 8);
+    return this.projectContacts
+      .filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+      .slice(0, 8);
+  }
+
+  openContactSuggest(key: string, query: string): void {
+    this.contactSuggestions = this._filterContacts(query);
+    this.contactSuggestOpen = this.contactSuggestions.length ? key : null;
+    this.cdr.detectChanges();
+  }
+
+  /** Cierra el dropdown con un pequeño delay para que el click en una
+   *  opción se registre antes del blur. */
+  closeContactSuggest(): void {
+    setTimeout(() => { this.contactSuggestOpen = null; this.cdr.detectChanges(); }, 180);
+  }
+
+  pickContactForNew(c: { name: string; email: string }): void {
+    this.newTask.owner_name = c.name;
+    this.newTask.owner_email = c.email;
+    this.contactSuggestOpen = null;
+    this.cdr.detectChanges();
+  }
+
+  pickContactForTask(task: ActionItem, c: { name: string; email: string }): void {
+    task.owner_name = c.name;
+    task.owner_email = c.email;
+    this.contactSuggestOpen = null;
+    this.updateTaskField(task);
+    this.cdr.detectChanges();
   }
 
   updateTaskField(task: ActionItem) {
