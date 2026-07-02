@@ -1128,6 +1128,7 @@
     "no_transcript_loaded": "Aquesta sessió no té transcripció carregada.",
     "person": "persona",
     "people": "persones",
+    "add_participant": "Afegir participant",
     "project": "Projecte"
   },
   "pending": {

@@ -320,7 +320,7 @@
                      enriquece via merge con project_contacts del proyecto
                      del que la sesión pertenece.
                      ============================================================ -->
-                <article class="cp-card" id="cp-card-attendees" *ngIf="parsedAttendees.length"
+                <article class="cp-card" id="cp-card-attendees" *ngIf="parsedAttendees.length || editingAttendees"
                          [class.cp-card-focused]="focusedCard === 'cp-card-attendees'">
                     <header class="cp-card-head">
                         <div class="cp-card-icon cp-card-icon-blue">
@@ -339,8 +339,51 @@
                                 {{ (parsedAttendees.length === 1 ? 'meetings.person' : 'meetings.people') | translate }}
                             </p>
                         </div>
+                        <!-- Botón editar participantes (corrige inferencia IA) -->
+                        <button *ngIf="!editingAttendees" type="button"
+                                (click)="startEditAttendees()"
+                                style="margin-left:auto; background:none; border:1px solid #e2e8f0; border-radius:6px; padding:5px 10px; font-size:12.5px; color:#475569; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            {{ 'common.edit' | translate }}
+                        </button>
                     </header>
-                    <ul class="cp-attendee-list"
+
+                    <!-- MODO EDICIÓN -->
+                    <div *ngIf="editingAttendees" style="display:flex; flex-direction:column; gap:10px;">
+                        <div *ngFor="let a of editableAttendees; let i = index"
+                             style="display:flex; flex-direction:column; gap:6px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <input [(ngModel)]="a.name" placeholder="Nombre"
+                                       style="flex:1; padding:7px 9px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+                                <button type="button" (click)="removeAttendeeRow(i)" title="Quitar"
+                                        style="flex-shrink:0; width:30px; height:30px; border:1px solid #fecaca; background:#fef2f2; color:#dc2626; border-radius:6px; cursor:pointer; font-size:16px; line-height:1;">×</button>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <input [(ngModel)]="a.role" placeholder="Cargo"
+                                       style="flex:1; padding:7px 9px; border:1px solid #cbd5e1; border-radius:6px; font-size:12.5px;">
+                                <input [(ngModel)]="a.entity" placeholder="Empresa"
+                                       style="flex:1; padding:7px 9px; border:1px solid #cbd5e1; border-radius:6px; font-size:12.5px;">
+                            </div>
+                            <input [(ngModel)]="a.email" placeholder="Email (opcional)" type="email"
+                                   style="padding:7px 9px; border:1px solid #cbd5e1; border-radius:6px; font-size:12.5px;">
+                        </div>
+                        <button type="button" (click)="addAttendeeRow()"
+                                style="align-self:flex-start; background:none; border:1px dashed #cbd5e1; border-radius:6px; padding:7px 12px; font-size:12.5px; color:#475569; cursor:pointer;">
+                            + {{ 'meetings.add_participant' | translate }}
+                        </button>
+                        <div style="display:flex; gap:8px; margin-top:4px;">
+                            <button type="button" (click)="saveAttendees()"
+                                    style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">
+                                {{ 'common.save' | translate }}
+                            </button>
+                            <button type="button" (click)="cancelEditAttendees()"
+                                    style="background:#f1f5f9; color:#475569; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">
+                                {{ 'common.cancel' | translate }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <ul *ngIf="!editingAttendees" class="cp-attendee-list"
                         style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
                         <li *ngFor="let a of parsedAttendees"
                             class="cp-attendee-row"

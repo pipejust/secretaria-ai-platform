@@ -564,6 +564,13 @@ def delete_session(
         )
     return {"status": "success", "message": "Sesión eliminada"}
 
+class AttendeeInput(BaseModel):
+    name: str
+    role: Optional[str] = ""
+    entity: Optional[str] = ""
+    email: Optional[str] = ""
+
+
 class SessionUpdate(BaseModel):
     title: Optional[str] = None
     raw_summary: Optional[str] = None
@@ -573,6 +580,10 @@ class SessionUpdate(BaseModel):
     processed_agreements: Optional[str] = None
     status: Optional[str] = None
     project_id: Optional[int] = None
+    # Lista completa de participantes (reemplaza la existente). Permite
+    # que el curador corrija a mano quién estuvo — la inferencia IA falla
+    # en sesiones con speakers anónimos.
+    attendees: Optional[list[AttendeeInput]] = None
 
 class RegeneratePayload(BaseModel):
     raw_transcript: Optional[str] = None
@@ -845,7 +856,22 @@ def update_session_content(
         session_obj.status = payload.status
     if hasattr(payload, 'project_id') and payload.project_id is not None:
         session_obj.project_id = payload.project_id
-        
+    if payload.attendees is not None:
+        # Reemplazo total de la lista de participantes. Filtramos nombres
+        # vacíos y normalizamos placeholders '—' a "".
+        clean = []
+        for a in payload.attendees:
+            nm = (a.name or "").strip()
+            if not nm:
+                continue
+            clean.append({
+                "name": nm,
+                "role": (a.role or "").strip() or "—",
+                "entity": (a.entity or "").strip() or "—",
+                "email": (a.email or "").strip(),
+            })
+        session_obj.processed_attendees = json.dumps(clean, ensure_ascii=False)
+
     db.add(session_obj)
     db.commit()
     db.refresh(session_obj)

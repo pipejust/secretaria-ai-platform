@@ -960,6 +960,66 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     this.editing[key] = !this.editing[key];
   }
 
+  // ── Edición manual de PARTICIPANTES ──
+  // La inferencia IA falla en sesiones con speakers anónimos; el curador
+  // corrige a mano quién estuvo. Reemplaza processed_attendees vía PUT.
+  editingAttendees = false;
+  editableAttendees: { name: string; role: string; entity: string; email: string }[] = [];
+
+  startEditAttendees(): void {
+    this.editableAttendees = this.parsedAttendees.map(a => ({
+      name: a.name || '',
+      role: (a.role && a.role !== '—') ? a.role : '',
+      entity: (a.entity && a.entity !== '—') ? a.entity : '',
+      email: a.email || '',
+    }));
+    if (!this.editableAttendees.length) this.addAttendeeRow();
+    this.editingAttendees = true;
+    this.cdr.detectChanges();
+  }
+
+  addAttendeeRow(): void {
+    this.editableAttendees = [...this.editableAttendees, { name: '', role: '', entity: '', email: '' }];
+    this.cdr.detectChanges();
+  }
+
+  removeAttendeeRow(i: number): void {
+    this.editableAttendees = this.editableAttendees.filter((_, idx) => idx !== i);
+    this.cdr.detectChanges();
+  }
+
+  cancelEditAttendees(): void {
+    this.editingAttendees = false;
+    this.cdr.detectChanges();
+  }
+
+  saveAttendees(): void {
+    const clean = this.editableAttendees
+      .filter(a => (a.name || '').trim())
+      .map(a => ({
+        name: a.name.trim(),
+        role: (a.role || '').trim() || '—',
+        entity: (a.entity || '').trim() || '—',
+        email: (a.email || '').trim(),
+      }));
+    const headers = this.authService.getAuthHeaders();
+    this.showSaveMessage(this.translate.instant('curation.toast_saving_changes'));
+    this.http.put(`${environment.apiUrl}/api/sessions/${this.sessionId}`,
+      { attendees: clean }, { headers }
+    ).subscribe({
+      next: () => {
+        this.meetingData.processed_attendees = JSON.stringify(clean);
+        this.editingAttendees = false;
+        this.showSaveMessage(this.translate.instant('curation.toast_changes_saved'));
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.showSaveMessage(this.translate.instant('curation.toast_save_error'), true);
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   /** Toggle expand/collapse de la descripción de una tarea. */
   toggleTaskExpand(taskId: number | undefined): void {
     if (!taskId) return;

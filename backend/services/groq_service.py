@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -313,8 +313,14 @@ class OpenAIService:
         
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = None
+            openai_ok = False
             for attempt in range(3):
-                response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+                try:
+                    response = await client.post(self.BASE_URL, json=payload, headers=self.headers)
+                except httpx.HTTPError as net_err:
+                    logger.warning("OpenAI red/timeout intento %s: %s", attempt + 1, net_err)
+                    response = None
+                    continue
                 if response.status_code == 429 and attempt < 2:
                     wait_seconds = 2 + attempt * 2
                     try:
@@ -326,11 +332,34 @@ class OpenAIService:
                     logger.info("Durmiendo %ss antes de reintentar fallback tareas...", wait_seconds)
                     await asyncio.sleep(wait_seconds)
                     continue
-                if response.status_code != 200:
-                    logger.warning("OpenAI API Error: %s", response.text)
-                response.raise_for_status()
+                if response.status_code == 200:
+                    openai_ok = True
+                    break
+                logger.warning("OpenAI API Error: %s", response.text)
                 break
-            
+
+            # FALLBACK A GROQ: OpenAI agotó cuota/reintentos (429) o falló.
+            # Groq usa una API compatible con OpenAI y tiene cuota aparte —
+            # así la generación de tareas NO queda bloqueada por el rate
+            # limit de OpenAI. Sin esto el usuario ve "Fallando" y pierde
+            # el trabajo. El único uso del botón NO se marca en error, así
+            # que puede reintentar; pero preferimos entregar tareas ya.
+            if not openai_ok:
+                logger.warning(
+                    "OpenAI no disponible para tareas (status=%s) — usando "
+                    "fallback Groq.",
+                    getattr(response, "status_code", "n/a"),
+                )
+                groq_result = await self._groq_tasks_fallback(client, prompt)
+                if groq_result is not None:
+                    return groq_result
+                # Si Groq también falla, propagamos el error original.
+                if response is not None:
+                    response.raise_for_status()
+                raise RuntimeError(
+                    "OpenAI y Groq no disponibles para generar tareas."
+                )
+
             result_json = response.json()
             try:
                 content_str = result_json["choices"][0]["message"]["content"]
@@ -368,6 +397,67 @@ class OpenAIService:
                 logger.exception("Error procesando JSON en fallback tareas")
                 # Retornamos dict vacío en vez de raise para evitar romper la UI si falla
                 return {"action_items": []}
+
+    async def _groq_tasks_fallback(self, client: httpx.AsyncClient, prompt: str) -> Optional[dict]:
+        """Fallback de extracción de tareas usando Groq (API compatible
+        OpenAI) cuando OpenAI está caído / rate-limited. Devuelve el dict
+        con 'action_items' o None si Groq tampoco responde.
+
+        Groq no soporta json_schema strict, así que usamos json_object y
+        pedimos el esquema en el prompt. El parser downstream ya es
+        tolerante a varias formas del payload."""
+        if not settings.groq_api_key:
+            logger.warning("GROQ_API_KEY ausente — no hay fallback de tareas.")
+            return None
+        groq_url = "https://api.groq.com/openai/v1/chat/completions"
+        groq_prompt = (
+            prompt
+            + "\n\nDevuelve EXCLUSIVAMENTE un objeto JSON válido con la forma "
+            '{"action_items": [{"title": "...", "description": "...", '
+            '"owner_name": "...", "owner_email": "...", "due_date": '
+            '"YYYY-MM-DD|null", "due_time": "HH:MM|null", "priority": '
+            '"alta|media|baja"}]}. No incluyas texto fuera del JSON.'
+        )
+        body = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": "Eres un extractor de tareas. Respondes SOLO JSON."},
+                {"role": "user", "content": groq_prompt},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1,
+            "max_tokens": 8000,
+        }
+        headers = {
+            "Authorization": f"Bearer {settings.groq_api_key}",
+            "Content-Type": "application/json",
+        }
+        for attempt in range(3):
+            try:
+                r = await client.post(groq_url, json=body, headers=headers)
+            except httpx.HTTPError as net_err:
+                logger.warning("Groq fallback red/timeout intento %s: %s", attempt + 1, net_err)
+                continue
+            if r.status_code == 429 and attempt < 2:
+                await asyncio.sleep(2 + attempt * 2)
+                continue
+            if r.status_code != 200:
+                logger.warning("Groq fallback error %s: %s", r.status_code, r.text[:300])
+                return None
+            try:
+                content = r.json()["choices"][0]["message"]["content"]
+                data = json.loads(content)
+                items = data.get("action_items")
+                if isinstance(items, dict):
+                    items = items.get("items") or items.get("value") or []
+                if not isinstance(items, list):
+                    items = []
+                logger.info("Groq fallback OK: %s tareas extraídas.", len(items))
+                return {"action_items": items}
+            except Exception:
+                logger.exception("Groq fallback: JSON inválido")
+                return None
+        return None
 
     async def _execute_agent(self, client: httpx.AsyncClient, system_prompt: str, user_prompt: str, schema: dict = None, model_override: str = None) -> dict:
         """Helper to execute an LLM agent and safely parse its JSON response"""

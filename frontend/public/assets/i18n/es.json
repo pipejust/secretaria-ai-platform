@@ -1128,6 +1128,7 @@
     "no_transcript_loaded": "Esta sesión no tiene transcripción cargada.",
     "person": "persona",
     "people": "personas",
+    "add_participant": "Agregar participante",
     "project": "Proyecto"
   },
   "pending": {

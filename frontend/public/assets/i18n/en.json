@@ -1128,6 +1128,7 @@
     "no_transcript_loaded": "This session has no transcript loaded.",
     "person": "person",
     "people": "people",
+    "add_participant": "Add participant",
     "project": "Project"
   },
   "pending": {
