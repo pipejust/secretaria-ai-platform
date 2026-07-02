@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -50,7 +50,7 @@ interface Attendee {
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, MdRenderPipe, UserChipComponent, TranslateModule],
+    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe, UserChipComponent, TranslateModule],
     templateUrl: './meetings-list.component.html',
     styleUrls: ['./meetings-list.component.css']
 })
@@ -956,6 +956,21 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     viewCuration(sessionId: number, evt?: Event) {
         if (evt) { evt.stopPropagation(); }
         this.router.navigate(['/admin/curation', sessionId]);
+    }
+
+    /** Clic sobre el título (ahora un <a> con href a la curación).
+     *  - Clic izquierdo normal → abre el panel lateral (comportamiento
+     *    previo), evitando la navegación del href.
+     *  - Ctrl/⌘/Shift+clic → deja que el navegador use el href (nueva
+     *    pestaña / ventana). El clic central usa `auxclick` nativo, no
+     *    pasa por aquí, así que también abre en pestaña nueva.
+     *  En todos los casos frenamos la propagación para que la fila no
+     *  dispare `selectSession` por debajo. */
+    onTitleClick(s: any, evt: MouseEvent): void {
+        evt.stopPropagation();
+        if (evt.ctrlKey || evt.metaKey || evt.shiftKey) return;
+        evt.preventDefault();
+        this.selectSession(s);
     }
 
     deleteSession(session: any, evt?: Event) {

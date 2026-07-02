@@ -468,7 +468,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Es un <a> real (href a la curación) para habilitar "abrir en
+       pestaña nueva". Neutralizamos el look de link por defecto —
+       hereda el estilo de fila. */
+    text-decoration: none;
+    display: block;
+    cursor: pointer;
 }
+.row-title:hover { text-decoration: underline; }
 .row-subtitle {
     font-family: var(--font-sans);
     font-size: var(--text-12);

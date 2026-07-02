@@ -279,7 +279,16 @@
                             </svg>
                         </div>
                         <div class="cell-title-text">
-                            <span class="row-title">{{ s.title || ('meetings.no_title' | translate) }}</span>
+                            <!-- Anchor REAL a la curación: el href nativo
+                                 habilita "abrir en pestaña nueva" (clic
+                                 derecho), ctrl/⌘+clic y clic central. El
+                                 clic izquierdo normal mantiene el panel
+                                 lateral (preventDefault + selectSession). -->
+                            <a class="row-title"
+                               [routerLink]="['/admin/curation', s.id]"
+                               (click)="onTitleClick(s, $event)">
+                                {{ s.title || ('meetings.no_title' | translate) }}
+                            </a>
                         </div>
                     </div>
 
