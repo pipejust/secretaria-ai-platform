@@ -505,8 +505,16 @@ async def process_session_with_ai(
         )
         # Limpieza: prettificar nombres, deduplicar, filtrar placeholders.
         import re as _re
+        # ANTI-ALUCINACIÓN: cuando el transcript solo trae speakers
+        # anónimos ([Speaker 1/2]), Groq infiere asistentes por contexto y
+        # tiende a meter a los "regulares" del proyecto que NO estuvieron
+        # (caso reportado sesión 532: metió a 3 personas con 0 menciones).
+        # Exigimos que el PRIMER NOMBRE de cada asistente aparezca
+        # LITERALMENTE en el transcript. Si no aparece, se descarta.
+        _tl = (transcript or "").lower()
         seen_canon = set()
         final_attendees = []
+        dropped: list[str] = []
         for g in groq_atts:
             if not isinstance(g, dict):
                 continue
@@ -516,6 +524,12 @@ async def process_session_with_ai(
             low = raw_name.lower()
             # Filtrar placeholders genéricos como 'Speaker', 'Speaker 1', etc.
             if low == "speaker" or _re.match(r"^speaker\s*\d*$", low):
+                continue
+            # Verificación de presencia: el primer nombre (≥3 letras) debe
+            # estar en el transcript. Evita asistentes fantasma.
+            first = _re.split(r"\s+", raw_name.strip())[0].lower()
+            if len(first) >= 3 and first not in _tl:
+                dropped.append(raw_name)
                 continue
             canon = _canonical_speaker_name(raw_name)
             if canon in seen_canon:
@@ -527,6 +541,12 @@ async def process_session_with_ai(
                 "entity": g.get("entity") or "—",
                 "email": g.get("email") or "",
             })
+        if dropped:
+            logger.info(
+                "Sesión %s: descartados %s asistentes no mencionados en "
+                "transcript (anti-alucinación): %s",
+                session_id, len(dropped), dropped,
+            )
     session_obj.processed_attendees = json.dumps(final_attendees, ensure_ascii=False)
     db.add(session_obj)
     db.commit()
