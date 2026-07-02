@@ -2599,22 +2599,27 @@ async def ask(
         )
     elif (howtech_mode or whatis_mode) and n_evidence >= 6:
         intro_length_hint = (
-            f"Markdown con `\\n\\n`. UN párrafo por ÁNGULO DISTINTO de las "
-            f"{n_evidence} sesiones (típicamente 4-6), con nombres "
-            f"concretos (endpoints, tablas, módulos, eventos, jobs) y "
-            f"atribución sesión+fecha. Cada párrafo aporta info NUEVA; "
-            f"PROHIBIDO repetir frases o cerrar con «En resumen» que "
-            f"reitere. Mejor 4 párrafos densos que 6 repetidos."
+            f"Markdown con `\\n\\n`. LA PRIMERA FRASE ES LA RESPUESTA "
+            f"DIRECTA (la definición/explicación, sin preámbulos tipo "
+            f"«las sesiones registradas corresponden a…»). Luego UN "
+            f"párrafo por ÁNGULO DISTINTO de las {n_evidence} sesiones "
+            f"(típicamente 4-6), con nombres concretos (endpoints, "
+            f"tablas, módulos, eventos, jobs) y atribución sesión+fecha. "
+            f"Cada párrafo aporta info NUEVA; PROHIBIDO repetir frases o "
+            f"cerrar con «En resumen» que reitere."
         )
     elif (howtech_mode or whatis_mode) and n_evidence >= 3:
         intro_length_hint = (
-            f"Markdown con `\\n\\n`. 4-6 párrafos integrando las "
-            f"{n_evidence} sesiones con nombres concretos y atribución."
+            f"Markdown con `\\n\\n`. LA PRIMERA FRASE ES LA RESPUESTA "
+            f"DIRECTA (definición/explicación, sin preámbulos). Luego "
+            f"3-5 párrafos integrando las {n_evidence} sesiones con "
+            f"nombres concretos y atribución sesión+fecha."
         )
     elif howtech_mode or whatis_mode:
         intro_length_hint = (
-            "Markdown. Respuesta descriptiva con nombres concretos "
-            "(4-10 frases)."
+            "Markdown. LA PRIMERA FRASE ES LA RESPUESTA DIRECTA (la "
+            "definición, sin preámbulos meta sobre las sesiones). Luego "
+            "el detalle con nombres concretos (4-10 frases)."
         )
     elif effective_evidence >= 6:
         intro_length_hint = (
