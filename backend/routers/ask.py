@@ -1727,6 +1727,117 @@ def _load_recent_session_context(
     return out
 
 
+def _parse_summarize_last_n(q: str) -> Optional[int]:
+    """Detecta «resume las (últimas) N sesiones (de X)» y devuelve N.
+    None si la pregunta no es de ese tipo. Default 3 con «últimas», 5 sin
+    número explícito."""
+    import re as _re
+    low = (q or "").lower()
+    if not _re.search(r"(resum|s[ií]ntesis|sintetiz)", low):
+        return None
+    if not _re.search(r"(sesion|sesión|reunion|reunión|meeting)", low):
+        return None
+    m = _re.search(r"\b(\d{1,2})\b", low)
+    if m:
+        return max(1, min(int(m.group(1)), 8))
+    words = {"una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6}
+    for w, v in words.items():
+        if _re.search(rf"\b{w}\b", low):
+            return v
+    return 3 if _re.search(r"(últim|ultim|recient)", low) else 5
+
+
+def _load_sessions_digest(
+    db: "Session",
+    tenant_id: int,
+    topic_terms: list[str],
+    n: int,
+) -> list[dict]:
+    """Dossier RICO de las N sesiones más recientes que tocan el tema.
+
+    Selección: sesiones cuyo TÍTULO o PROYECTO matchea algún topic_term
+    (o cuyo transcript lo menciona como palabra, para siglas), ordenadas
+    por fecha DESC, exactamente N. Cada una produce UN chunk denso con
+    resumen + decisiones + acuerdos + riesgos + tareas reales — el
+    material que un analista usaría para resumir en detalle, no la frase
+    genérica del RAG."""
+    from sqlmodel import or_ as _or
+    from models import MeetingSession, Project
+    import re as _re
+
+    q = (
+        select(MeetingSession)
+        .where(MeetingSession.tenant_id == tenant_id)
+        .where(MeetingSession.status != "archived")
+    )
+    if topic_terms:
+        conds = []
+        for t in topic_terms:
+            pat = f"%{t}%"
+            conds.append(MeetingSession.title.ilike(pat))
+            if len(t.strip()) <= 3:
+                conds.append(MeetingSession.raw_transcript.op("~*")(rf"\y{_re.escape(t.strip())}\y"))
+            else:
+                conds.append(MeetingSession.raw_transcript.ilike(pat))
+            pids = db.exec(
+                select(Project.id)
+                .where(Project.tenant_id == tenant_id)
+                .where(Project.name.ilike(pat))
+            ).all()
+            if pids:
+                conds.append(MeetingSession.project_id.in_(list(pids)))
+        q = q.where(_or(*conds))
+    rows = db.exec(q).all()
+    # Orden por fecha real DESC (ISO string ordena bien; fallback id).
+    rows.sort(key=lambda s: ((s.date or ""), s.id or 0), reverse=True)
+    rows = rows[:n]
+
+    out: list[dict] = []
+    proj_cache: dict[int, str] = {}
+    for s in rows:
+        if not s.id:
+            continue
+        parts: list[str] = []
+        if (s.raw_summary or "").strip():
+            parts.append(f"[Resumen ejecutivo]\n{s.raw_summary.strip()[:2400]}")
+        if (s.processed_decisions or "").strip():
+            parts.append(f"[Decisiones]\n{s.processed_decisions.strip()[:1400]}")
+        if (s.processed_agreements or "").strip():
+            parts.append(f"[Acuerdos]\n{s.processed_agreements.strip()[:1400]}")
+        if (s.processed_risks or "").strip():
+            parts.append(f"[Riesgos]\n{s.processed_risks.strip()[:800]}")
+        tasks = db.exec(
+            select(ActionItemRow).where(ActionItemRow.session_id == s.id).limit(15)
+        ).all()
+        if tasks:
+            tl = "\n".join(
+                f"· [{t.status or 'pending'}] {t.title} — {t.owner_name or 'sin responsable'}"
+                + (f" (vence {t.due_date})" if t.due_date else "")
+                for t in tasks
+            )
+            parts.append(f"[Tareas de esta sesión]\n{tl}")
+        if not parts and (s.raw_transcript or "").strip():
+            parts.append(f"[Transcripción (inicio)]\n{s.raw_transcript.strip()[:2000]}")
+        if not parts:
+            continue
+        proj_name = ""
+        if s.project_id:
+            if s.project_id not in proj_cache:
+                p = db.get(Project, s.project_id)
+                proj_cache[s.project_id] = (p.name if p else "") or ""
+            proj_name = proj_cache[s.project_id]
+        out.append({
+            "session_id": s.id,
+            "kind": "session_digest",
+            "content": "\n\n".join(parts),
+            "distance": 0.0,
+            "session_title": s.title or "",
+            "session_date": s.date or "",
+            "project_name": proj_name,
+        })
+    return out
+
+
 def _is_tasks_question(q: str) -> bool:
     """True si la pregunta es sobre tareas/compromisos/pendientes/quién
     debe hacer qué. Estas preguntas necesitan la tabla ActionItem (fuente
@@ -1813,7 +1924,10 @@ def _build_context(chunks: list[dict]) -> str:
     TÍTULOS, no en los chunks de summary/decisions."""
     blocks = []
     for c in chunks:
-        snippet = (c.get("content") or "")[:1200]
+        # session_digest = dossier completo para resúmenes por sesión —
+        # necesita mucho más espacio que un chunk RAG normal.
+        _cap = 7000 if c.get("kind") == "session_digest" else 1200
+        snippet = (c.get("content") or "")[:_cap]
         title = c.get("session_title") or ""
         date = _fmt_session_date(c.get("session_date"))
         proj = c.get("project_name") or ""
@@ -2436,6 +2550,25 @@ async def ask(
             chunks = pruned
             logger.info("ask: concept-prune removed %s noise chunks", removed)
 
+    # MODO «RESUME LAS ÚLTIMAS N SESIONES (de X)»: selección EXACTA de N
+    # sesiones por fecha DESC + dossier rico por sesión (resumen +
+    # decisiones + acuerdos + riesgos + tareas). REEMPLAZA el contexto:
+    # la respuesta debe hablar SOLO de esas N, con detalle de analista,
+    # no de lo que el vector search haya colado.
+    summarize_n = _parse_summarize_last_n(q)
+    summarize_mode = False
+    if summarize_n:
+        _topic = [t for t in proper_nouns if len(t.strip()) >= 2][:4]
+        digest_chunks = _load_sessions_digest(db, tenant.id, _topic, summarize_n)
+        if digest_chunks:
+            chunks = digest_chunks
+            summarize_mode = True
+            logger.info(
+                "ask: summarize_mode n=%s topic=%s → %s sesiones: %s",
+                summarize_n, _topic, len(digest_chunks),
+                [c["session_id"] for c in digest_chunks],
+            )
+
     # PODA POR SCOPE: la pregunta es sobre UN proyecto concreto («… en
     # ANH») → descartamos chunks de OTROS proyectos que el vector search
     # coló (First Class, etc.). Mantener solo: sesiones del proyecto
@@ -2636,6 +2769,22 @@ async def ask(
         )
     else:
         intro_length_hint = "Markdown. Respuesta breve y directa."
+    # OVERRIDE resumen-por-sesión: manda sobre cualquier otro hint.
+    if summarize_mode:
+        n_dig = len({c["session_id"] for c in chunks})
+        intro_length_hint = (
+            f"Markdown con `\\n\\n`. RESUMEN DETALLADO de EXACTAMENTE "
+            f"{n_dig} sesiones, en orden cronológico del más reciente al "
+            f"más antiguo. UN BLOQUE POR SESIÓN: primero una línea "
+            f"`### «título» (fecha)`, luego 2-4 párrafos densos POR "
+            f"sesión cubriendo: (a) temas centrales con los detalles "
+            f"concretos discutidos (nombres, módulos, cifras), (b) "
+            f"decisiones tomadas, (c) compromisos/tareas con responsable, "
+            f"(d) riesgos o bloqueos. Usa el material de [Resumen "
+            f"ejecutivo]/[Decisiones]/[Acuerdos]/[Tareas] de cada dossier "
+            f"— NO frases genéricas de una línea. PROHIBIDO mencionar "
+            f"sesiones fuera de estas {n_dig}."
+        )
     system = (
         f"Eres el asistente de Acten. Tu salida DEBE ser un objeto JSON válido "
         f"con esta estructura EXACTA:\n"
@@ -3158,7 +3307,9 @@ async def ask(
     # más espacio. Sin cap explícito Groq usa ~4096 por defecto; lo
     # subimos a 6000 para que la respuesta integrada (intro + sections)
     # no se trunque.
-    if yesno_mode or howtech_mode or whatis_mode:
+    if summarize_mode:
+        _max_tokens = 7000  # resumen detallado por sesión — necesita aire
+    elif yesno_mode or howtech_mode or whatis_mode:
         _max_tokens = 6000 if n_evidence >= 4 else 3500
     else:
         _max_tokens = 2000
