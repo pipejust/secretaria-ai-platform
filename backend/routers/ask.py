@@ -2103,7 +2103,10 @@ async def ask(
     proper_nouns = _extract_proper_nouns(q)
     whatis_mode = _is_whatis_question(q)
     howtech_mode = _is_howtech_question(q)
-    yesno_mode = _is_yesno_question(q)
+    # Whatis EXCLUYE yesno: «¿qué es TR?» es definicional, no relacional.
+    # Sin esto el patrón verbal «es» + «?» disparaba yesno y la respuesta
+    # arrancaba con un «Sí.» sin sentido.
+    yesno_mode = _is_yesno_question(q) and not whatis_mode
     howtech_concepts = _extract_tech_concepts(q) if howtech_mode else []
 
     # _extract_proper_nouns solo agarra palabras con mayúscula inicial.
