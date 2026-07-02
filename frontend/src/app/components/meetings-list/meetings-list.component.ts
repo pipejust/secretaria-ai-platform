@@ -412,7 +412,18 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         return out;
     }
 
-    onSearchInput(): void { this.cdr.detectChanges(); }
+    private _searchDebounce: any = null;
+    /** Búsqueda: la hacemos en el BACKEND (ilike = case-insensitive) sobre
+     *  TODAS las sesiones, no solo la página cargada. Debounce 300ms para
+     *  no disparar una request por tecla. Resetea a página 1. */
+    onSearchInput(): void {
+        if (this._searchDebounce) clearTimeout(this._searchDebounce);
+        this._searchDebounce = setTimeout(() => {
+            this.currentPage = 1;
+            this.loadSessions();
+        }, 300);
+        this.cdr.detectChanges();
+    }
 
     /** Toggle del panel de filtros. Si se cierra, limpia los selectores
      *  visuales para no dejar filtros aplicados "invisibles". El filtro

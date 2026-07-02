@@ -65,10 +65,22 @@ def get_sessions(
         query = query.where(MeetingSession.status == status)
 
     if search:
-        search_filter = f"%{search}%"
+        # ILIKE = case-insensitive; busca en TODO el histórico del tenant
+        # (no solo la página cargada). Coincide por título, id, o nombre
+        # de proyecto (subquery de project_ids que matchean el término).
+        from models import Project as _Project
+        search_filter = f"%{search.strip()}%"
         conditions = [MeetingSession.title.ilike(search_filter)]
-        if search.isdigit():
-            conditions.append(MeetingSession.id == int(search))
+        if search.strip().isdigit():
+            conditions.append(MeetingSession.id == int(search.strip()))
+        proj_ids = db.exec(
+            select(_Project.id)
+            .where(_Project.tenant_id == tenant.id)
+            .where(_Project.name.ilike(search_filter))
+        ).all()
+        proj_ids = [pid for pid in proj_ids]
+        if proj_ids:
+            conditions.append(MeetingSession.project_id.in_(proj_ids))
         query = query.where(or_(*conditions))
         
     # Count total items for this filter
