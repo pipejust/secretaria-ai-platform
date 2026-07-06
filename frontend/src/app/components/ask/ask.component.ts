@@ -773,8 +773,19 @@ export class AskComponent implements OnInit, OnDestroy {
         return isToday ? `Hoy, ${time}` : d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) + `, ${time}`;
     }
 
-    /** Confianza visual basada en la cantidad de chunks usados. */
+    /** Confianza visual. Prioridad: CALIDAD de la evidencia sobre
+     *  cantidad. distance === 0 significa evidencia determinística
+     *  (match literal, dossier de sesión, tareas de BD) — eso es
+     *  confianza ALTA aunque sea un solo chunk (ej. "en la última
+     *  reunión de X" responde desde UNA sesión autoritativa). El
+     *  conteo de chunks queda como fallback para respuestas puramente
+     *  vectoriales. */
     confidenceLabel(turn: ChatTurn): { tone: 'high' | 'medium' | 'low'; text: string } {
+        const cits = turn?.citations || [];
+        const literal = cits.filter(c => (c as any)?.distance === 0).length;
+        if (literal >= 1) {
+            return { tone: 'high', text: this.translate.instant('ask.confidence_high') };
+        }
         const n = turn?.chunks_used || 0;
         if (n >= 5) return { tone: 'high',   text: this.translate.instant('ask.confidence_high') };
         if (n >= 3) return { tone: 'medium', text: this.translate.instant('ask.confidence_medium') };
