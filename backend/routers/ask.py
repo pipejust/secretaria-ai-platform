@@ -2556,6 +2556,20 @@ async def ask(
     # la respuesta debe hablar SOLO de esas N, con detalle de analista,
     # no de lo que el vector search haya colado.
     summarize_n = _parse_summarize_last_n(q)
+    # «EN LA ÚLTIMA REUNIÓN de X, …»: pregunta anclada a LA sesión más
+    # reciente del tema. Selección determinística por fecha (no por
+    # similitud vectorial, que se equivoca de sesión) + la respuesta se
+    # limita a esa única sesión.
+    latest_mode = False
+    if not summarize_n:
+        import re as _re_latest
+        if _re_latest.search(
+            r"(últim[ao]|ultim[ao]|last|más reciente|mas reciente)\s+"
+            r"(reuni[oó]n|sesi[oó]n|meeting)",
+            q.lower(),
+        ):
+            summarize_n = 1
+            latest_mode = True
     summarize_mode = False
     if summarize_n:
         _topic = [t for t in proper_nouns if len(t.strip()) >= 2][:4]
@@ -2770,7 +2784,21 @@ async def ask(
     else:
         intro_length_hint = "Markdown. Respuesta breve y directa."
     # OVERRIDE resumen-por-sesión: manda sobre cualquier otro hint.
-    if summarize_mode:
+    if summarize_mode and latest_mode:
+        _t0 = chunks[0] if chunks else {}
+        intro_length_hint = (
+            f"La sesión MÁS RECIENTE sobre el tema es "
+            f"«{_t0.get('session_title','')}» "
+            f"({_fmt_session_date(_t0.get('session_date'))}) — es LA "
+            f"única fuente para responder. Markdown. 1ra frase: "
+            f"identifica esa sesión y responde DIRECTO la pregunta. Si "
+            f"preguntan qué debe hacer una PERSONA, la lista [Tareas de "
+            f"esta sesión] es la fuente AUTORITATIVA: enumera TODAS las "
+            f"tareas asignadas a esa persona (título + estado), y "
+            f"complementa con el contexto del dossier sobre POR QUÉ se "
+            f"le asignaron. PROHIBIDO citar otras sesiones."
+        )
+    elif summarize_mode:
         n_dig = len({c["session_id"] for c in chunks})
         intro_length_hint = (
             f"Markdown con `\\n\\n`. RESUMEN DETALLADO de EXACTAMENTE "
