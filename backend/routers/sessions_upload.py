@@ -902,15 +902,58 @@ async def regenerate_fields_from_transcript(
     if attendees is not None:
         # Limpiar placeholders «Speaker N», anti-alucinación y CONECTAR
         # con los contactos reales del proyecto (name/role/entity/email
-        # canónicos de BD). Si tras limpiar no queda nadie, NO pisamos
-        # lo existente con basura.
+        # canónicos de BD).
         cleaned = _clean_and_match_attendees(
             attendees if isinstance(attendees, list) else [],
             project_contacts,
             session_obj.raw_transcript or "",
         )
-        if cleaned:
-            session_obj.processed_attendees = json.dumps(cleaned, ensure_ascii=False)
+        # MERGE, NUNCA REEMPLAZO: los participantes ya guardados (posibles
+        # ediciones MANUALES del curador — gente que participó aunque no
+        # esté en el proyecto ni hable en el transcript) se PRESERVAN
+        # siempre. La IA solo AGREGA nuevos o ENRIQUECE los existentes
+        # que tengan campos vacíos. Excepción: placeholders «Speaker N»
+        # previos sí se descartan.
+        import re as _re_att
+        existing: list[dict] = []
+        try:
+            existing = json.loads(session_obj.processed_attendees or "[]")
+            if not isinstance(existing, list):
+                existing = []
+        except Exception:
+            existing = []
+        merged: list[dict] = []
+        seen_names: set[str] = set()
+        for e in existing:
+            if not isinstance(e, dict):
+                continue
+            nm = str(e.get("name") or "").strip()
+            if not nm or _re_att.match(r"^speaker\s*\d*$", nm.lower()):
+                continue
+            merged.append({
+                "name": nm,
+                "role": str(e.get("role") or "—").strip() or "—",
+                "entity": str(e.get("entity") or "—").strip() or "—",
+                "email": str(e.get("email") or "").strip(),
+            })
+            seen_names.add(_norm_name(nm))
+        for c in cleaned:
+            key = _norm_name(c["name"])
+            if key in seen_names:
+                # Enriquecer el existente si le faltan datos.
+                for m in merged:
+                    if _norm_name(m["name"]) == key:
+                        if m["role"] in ("", "—") and c.get("role") not in ("", "—"):
+                            m["role"] = c["role"]
+                        if m["entity"] in ("", "—") and c.get("entity") not in ("", "—"):
+                            m["entity"] = c["entity"]
+                        if not m["email"] and c.get("email"):
+                            m["email"] = c["email"]
+                continue
+            merged.append(c)
+            seen_names.add(key)
+        if merged:
+            session_obj.processed_attendees = json.dumps(merged, ensure_ascii=False)
 
     themes = _unwrap_ai_field(structured_data.get("themes"))
     if themes is not None:

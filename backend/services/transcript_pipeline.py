@@ -547,7 +547,37 @@ async def process_session_with_ai(
                 "transcript (anti-alucinación): %s",
                 session_id, len(dropped), dropped,
             )
-    session_obj.processed_attendees = json.dumps(final_attendees, ensure_ascii=False)
+    # MERGE con los attendees YA GUARDADOS — preserva ediciones MANUALES
+    # del curador (participantes que asistieron aunque no estén en el
+    # proyecto ni hablen en el transcript, ej. invitados). El pipeline
+    # solo AGREGA/ENRIQUECE; nunca elimina. Placeholders «Speaker N»
+    # previos sí se descartan.
+    import re as _re_prev
+    _prev: list[dict] = []
+    try:
+        _prev = json.loads(session_obj.processed_attendees or "[]")
+        if not isinstance(_prev, list):
+            _prev = []
+    except Exception:
+        _prev = []
+    _merged: list[dict] = []
+    _seen_canon: set[str] = set()
+    for e in _prev:
+        if not isinstance(e, dict):
+            continue
+        nm = str(e.get("name") or "").strip()
+        if not nm or _re_prev.match(r"^speaker\s*\d*$", nm.lower()):
+            continue
+        _merged.append(e)
+        _seen_canon.add(_canonical_speaker_name(nm))
+    for a in final_attendees:
+        c = _canonical_speaker_name(a.get("name") or "")
+        if c and c in _seen_canon:
+            continue
+        _merged.append(a)
+        if c:
+            _seen_canon.add(c)
+    session_obj.processed_attendees = json.dumps(_merged, ensure_ascii=False)
     db.add(session_obj)
     db.commit()
 
