@@ -615,10 +615,31 @@ async def process_session_with_ai(
         if _nm and _em and _nm not in _email_by_canon:
             _email_by_canon[_nm] = _em
 
+    def _partial_contact(name: str) -> Optional[dict]:
+        """Match parcial contra project_contacts: «Felipe» → «Felipe
+        Cortés» si es el único Felipe. 2 palabras en común = match."""
+        import unicodedata as _ud
+        def norm(s: str) -> str:
+            s = _ud.normalize("NFD", (s or "").lower().strip())
+            return "".join(ch for ch in s if _ud.category(ch) != "Mn")
+        n_parts = set(norm(name).split())
+        if not n_parts:
+            return None
+        partial = []
+        for c in (project_contacts or []):
+            c_parts = set(norm(c.get("name") or "").split())
+            common = n_parts & c_parts
+            if len(common) >= 2:
+                return c
+            if common:
+                partial.append(c)
+        return partial[0] if len(partial) == 1 else None
+
     def _resolve_owner_email(name: str, current_email: str) -> str:
         """Devuelve el email del owner: respeta el que vino del LLM si
-        parece válido (tiene '@'), si no, lookup por nombre. Conserva ''
-        si el nombre es 'Unknown' o 'Por asignar'."""
+        parece válido (tiene '@'), si no, lookup por nombre (canónico
+        exacto → parcial vs contactos). Conserva '' si el nombre es
+        'Unknown' o 'Por asignar'."""
         if current_email and "@" in current_email:
             return current_email.strip().lower()
         if not name:
@@ -628,7 +649,11 @@ async def process_session_with_ai(
         if nl in ("unknown", "por asignar", "sin asignar", "no asignado", "n/a", "-"):
             return ""
         canon = _canonical_speaker_name(name)
-        return _email_by_canon.get(canon, "")
+        em = _email_by_canon.get(canon, "")
+        if em:
+            return em
+        c = _partial_contact(name)
+        return (c.get("email") or "").strip().lower() if c else ""
 
     created_tasks = 0
     for item_data in tasks_payload.get("action_items", []) or []:
@@ -662,6 +687,12 @@ async def process_session_with_ai(
         # asignadas a "Camila" llegaban sin correo aunque Camila estuviera
         # en project_contacts.
         owner_email = _resolve_owner_email(owner_name, owner_email)
+        # Nombre canónico del contacto cuando hay match («Felipe» →
+        # «Felipe Cortés») para que la tarea quede ligada a la persona
+        # real del proyecto.
+        _pc = _partial_contact(owner_name)
+        if _pc and (_pc.get("name") or "").strip():
+            owner_name = _pc["name"].strip()
 
         db.add(
             ActionItem(

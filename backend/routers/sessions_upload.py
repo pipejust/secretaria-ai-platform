@@ -576,6 +576,83 @@ def delete_session(
         )
     return {"status": "success", "message": "Sesión eliminada"}
 
+def _norm_name(s: str) -> str:
+    """lower + sin acentos, para comparar nombres."""
+    import unicodedata
+    s = unicodedata.normalize("NFD", (s or "").lower().strip())
+    return "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+
+
+def _match_contact(name: str, contacts: list[dict]) -> Optional[dict]:
+    """Matchea un nombre contra project_contacts. Jerarquía: nombre
+    completo → nombre+apellido contenidos → primer nombre único."""
+    n = _norm_name(name)
+    if not n or not contacts:
+        return None
+    for c in contacts:
+        if _norm_name(c.get("name", "")) == n:
+            return c
+    n_parts = set(n.split())
+    partial: list[dict] = []
+    for c in contacts:
+        c_parts = set(_norm_name(c.get("name", "")).split())
+        if len(n_parts & c_parts) >= 2:
+            return c
+        if n_parts and (n_parts & c_parts):
+            partial.append(c)
+    # Primer nombre único (ej. "Felipe" y solo hay un Felipe en contactos)
+    if len(partial) == 1:
+        return partial[0]
+    return None
+
+
+def _clean_and_match_attendees(
+    raw_atts: list, project_contacts: list[dict], transcript: str,
+) -> list[dict]:
+    """Post-proceso de attendees generados por IA:
+    1. Descarta placeholders «Speaker N» (diarización anónima).
+    2. Anti-alucinación: el primer nombre debe aparecer en el transcript.
+    3. CONEXIÓN con contactos del proyecto: si el nombre matchea un
+       project_contact, usa su name/role/entity/email canónicos de BD.
+    """
+    import re as _re
+    tl = (transcript or "").lower()
+    out: list[dict] = []
+    seen: set[str] = set()
+    for a in (raw_atts or []):
+        if not isinstance(a, dict):
+            continue
+        nm = str(a.get("name") or "").strip()
+        if not nm:
+            continue
+        if _re.match(r"^speaker\s*\d*$", nm.lower()):
+            continue
+        first = _re.split(r"\s+", nm)[0].lower()
+        if len(first) >= 3 and first not in tl:
+            continue
+        c = _match_contact(nm, project_contacts)
+        if c:
+            entry = {
+                "name": c.get("name") or nm,
+                "role": (c.get("role") or a.get("role") or "—").strip() or "—",
+                "entity": (c.get("entity") or a.get("entity") or "—").strip() or "—",
+                "email": (c.get("email") or a.get("email") or "").strip(),
+            }
+        else:
+            entry = {
+                "name": nm,
+                "role": str(a.get("role") or "—").strip() or "—",
+                "entity": str(a.get("entity") or "—").strip() or "—",
+                "email": str(a.get("email") or "").strip(),
+            }
+        key = _norm_name(entry["name"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(entry)
+    return out
+
+
 class AttendeeInput(BaseModel):
     name: str
     role: Optional[str] = ""
@@ -703,6 +780,15 @@ async def regenerate_tasks_from_transcript(
         if not title and not description:
             continue
 
+        # CONEXIÓN owner ↔ contacto del proyecto: si el nombre que asignó
+        # el LLM matchea un project_contact, usamos su nombre canónico y
+        # su email de BD (el LLM rara vez conoce el correo).
+        _c = _match_contact(owner_name, project_contacts)
+        if _c:
+            owner_name = _c.get("name") or owner_name
+            if not owner_email:
+                owner_email = (_c.get("email") or "").strip()
+
         action_item = ActionItem(
             tenant_id=tenant.id,
             session_id=session_id,
@@ -814,7 +900,17 @@ async def regenerate_fields_from_transcript(
     import json
     attendees = _unwrap_ai_field(structured_data.get("attendees"))
     if attendees is not None:
-        session_obj.processed_attendees = json.dumps(attendees, ensure_ascii=False)
+        # Limpiar placeholders «Speaker N», anti-alucinación y CONECTAR
+        # con los contactos reales del proyecto (name/role/entity/email
+        # canónicos de BD). Si tras limpiar no queda nadie, NO pisamos
+        # lo existente con basura.
+        cleaned = _clean_and_match_attendees(
+            attendees if isinstance(attendees, list) else [],
+            project_contacts,
+            session_obj.raw_transcript or "",
+        )
+        if cleaned:
+            session_obj.processed_attendees = json.dumps(cleaned, ensure_ascii=False)
 
     themes = _unwrap_ai_field(structured_data.get("themes"))
     if themes is not None:

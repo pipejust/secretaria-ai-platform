@@ -510,6 +510,19 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  /** Autocomplete en la edición de PARTICIPANTES: al elegir un contacto
+   *  precarga nombre + cargo + empresa + correo desde la BD. */
+  pickContactForAttendee(i: number, c: { name: string; email: string; role?: string; entity?: string }): void {
+    const row = this.editableAttendees[i];
+    if (!row) return;
+    row.name = c.name;
+    row.role = c.role || row.role;
+    row.entity = c.entity || row.entity;
+    row.email = c.email || row.email;
+    this.contactSuggestOpen = null;
+    this.cdr.detectChanges();
+  }
+
   pickContactForTask(task: ActionItem, c: { name: string; email: string }): void {
     task.owner_name = c.name;
     task.owner_email = c.email;
