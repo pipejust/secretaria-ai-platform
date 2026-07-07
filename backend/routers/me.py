@@ -50,8 +50,12 @@ def export_my_data(
     audit.log(db, current_user, request, action="gdpr_export",
               resource_type="user", resource_id=current_user.id)
 
+    # AISLAMIENTO: solo sesiones del tenant del usuario (antes contaba
+    # sesiones de TODAS las empresas). Se usa solo para el conteo.
     sessions = db.exec(
-        select(MeetingSession).where(MeetingSession.project_id != None)  # noqa: E711
+        select(MeetingSession)
+        .where(MeetingSession.tenant_id == current_user.tenant_id)
+        .where(MeetingSession.project_id != None)  # noqa: E711
     ).all()
     actions_assigned = db.exec(
         select(ActionItem).where(ActionItem.owner_email == current_user.email)

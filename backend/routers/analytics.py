@@ -26,11 +26,16 @@ def session_quality(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    # AISLAMIENTO: la sesión debe pertenecer al tenant del usuario. Sin
+    # esta verificación cualquier usuario podía leer la calidad de una
+    # sesión ajena pasando su id.
     sess = db.get(MeetingSession, session_id)
-    if not sess:
+    if not sess or sess.tenant_id != current_user.tenant_id:
         return {"error": "session not found"}
     actions = db.exec(
-        select(ActionItem).where(ActionItem.session_id == session_id)
+        select(ActionItem)
+        .where(ActionItem.session_id == session_id)
+        .where(ActionItem.tenant_id == current_user.tenant_id)
     ).all()
     scores = quality_scoring.compute(
         transcript=sess.raw_transcript or "",
@@ -48,8 +53,15 @@ def roi_dashboard(
     current_user: User = Depends(get_current_user),
 ):
     """Dashboard ROI ejecutivo del último N días."""
-    sessions = db.exec(select(MeetingSession)).all()
-    actions = db.exec(select(ActionItem)).all()
+    # AISLAMIENTO multi-tenant: solo datos de la empresa del usuario.
+    sessions = db.exec(
+        select(MeetingSession)
+        .where(MeetingSession.tenant_id == current_user.tenant_id)
+    ).all()
+    actions = db.exec(
+        select(ActionItem)
+        .where(ActionItem.tenant_id == current_user.tenant_id)
+    ).all()
 
     # Estimar palabras como proxy de minutos: 150 palabras ≈ 1 min
     total_minutes = 0
@@ -98,8 +110,11 @@ def recurring_meetings(
     current_user: User = Depends(get_current_user),
 ):
     """Detecta series recurrentes por similitud fuzzy de títulos."""
+    # AISLAMIENTO multi-tenant: solo sesiones de la empresa del usuario.
     sessions = db.exec(
-        select(MeetingSession).order_by(MeetingSession.id.desc())
+        select(MeetingSession)
+        .where(MeetingSession.tenant_id == current_user.tenant_id)
+        .order_by(MeetingSession.id.desc())
     ).all()
 
     # Agrupamiento simple O(n²). Para >1000 sesiones convendría LSH.
