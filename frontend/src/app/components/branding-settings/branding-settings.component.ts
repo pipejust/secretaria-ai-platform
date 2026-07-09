@@ -52,12 +52,23 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
         primary_color: '#223148',
         secondary_color: '#1B7F67',
         accent_color: '#D9A441',
+        sidebar_text_color: '',
         logo_data_url: '',
         logo_dark_data_url: '',
         icon_data_url: '',
         favicon_data_url: '',
         default_language: 'es',
     };
+
+    /** True si el color primario (fondo del sidebar) es claro → el texto
+     *  automático será oscuro. Usado por el swatch "auto" del form. */
+    get isPrimaryLight(): boolean {
+        const m = /^#?([0-9a-f]{6})$/i.exec(this.form.primary_color || '');
+        if (!m) return false;
+        const n = parseInt(m[1], 16);
+        const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.6;
+    }
 
     isSaving = false;
     isUploading = false;
@@ -117,6 +128,7 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
             primary_color: this.form.primary_color,
             secondary_color: this.form.secondary_color,
             accent_color: this.form.accent_color,
+            sidebar_text_color: this.form.sidebar_text_color,
         });
     }
 
@@ -302,6 +314,8 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
                 primary_color: this.form.primary_color,
                 secondary_color: this.form.secondary_color,
                 accent_color: this.form.accent_color,
+                // Color de fuente del sidebar ('' = automático por contraste).
+                sidebar_text_color: this.form.sidebar_text_color || '',
                 // Idioma del workspace — el backend lo persiste fuera de
                 // branding_json (en Tenant.default_language). Cambia el
                 // idioma del pipeline IA de aquí en adelante.

@@ -138,6 +138,8 @@ class BrandingPatch(BaseModel):
     primary_color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
     secondary_color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
     accent_color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    # Color de fuente del sidebar. Acepta hex o "" (=automático).
+    sidebar_text_color: str | None = Field(None, pattern=r"^(#[0-9A-Fa-f]{6})?$")
     # Permite borrar logo/icon enviando "" — útil para "quitar" desde la UI
     # sin tener que invocar DELETE /logo o /icon. Aceptamos data URLs para
     # casos donde el cliente prefiere PATCH+body en vez de POST multipart.

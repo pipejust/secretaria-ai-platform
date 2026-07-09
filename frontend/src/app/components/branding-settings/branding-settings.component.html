@@ -419,6 +419,29 @@
                                    (ngModelChange)="onColorChange()"
                                    pattern="#[0-9A-Fa-f]{6}"/>
                         </div>
+                        <!-- Color de fuente del menú lateral (sidebar).
+                             Vacío = automático (contraste por luminancia). -->
+                        <div class="br-color">
+                            <span class="br-color-label">{{ 'branding.sidebar_text_upper' | translate }}</span>
+                            <label class="br-color-swatch"
+                                   [style.background]="form.sidebar_text_color || (isPrimaryLight ? '#1F2937' : '#F5EFE6')">
+                                <input type="color"
+                                       [ngModel]="form.sidebar_text_color || (isPrimaryLight ? '#1F2937' : '#F5EFE6')"
+                                       (ngModelChange)="form.sidebar_text_color = $event; onColorChange()"/>
+                            </label>
+                            <span class="br-color-name">{{ form.sidebar_text_color ? form.sidebar_text_color : ('branding.sidebar_text_auto' | translate) }}</span>
+                            <input type="text" class="br-color-hex"
+                                   [(ngModel)]="form.sidebar_text_color"
+                                   (ngModelChange)="onColorChange()"
+                                   [placeholder]="'branding.sidebar_text_auto' | translate"
+                                   pattern="(#[0-9A-Fa-f]{6})?"/>
+                            <button type="button" class="br-btn br-btn--ghost"
+                                    style="margin-top:6px; padding:4px 10px; font-size:12px;"
+                                    *ngIf="form.sidebar_text_color"
+                                    (click)="form.sidebar_text_color = ''; onColorChange()">
+                                {{ 'branding.sidebar_text_reset' | translate }}
+                            </button>
+                        </div>
                     </div>
                     <footer class="br-card-foot">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

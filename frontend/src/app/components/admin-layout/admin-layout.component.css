@@ -15,7 +15,7 @@
     display: flex;
     flex-direction: column;
     background: var(--color-bg-sidebar);
-    color: var(--brand-cream-200);
+    color: var(--color-fg-sidebar, var(--brand-cream-200));
     z-index: 10;
     transition: width var(--dur-base) var(--ease-out);
     position: relative;
@@ -109,7 +109,9 @@
     text-transform: uppercase;
     letter-spacing: var(--tracking-label);
     font-weight: var(--fw-semibold);
-    color: var(--color-fg-soft);
+    /* Configurable desde Marca: color de fuente del sidebar (soft para
+       los títulos de categoría). Fallback al valor histórico. */
+    color: var(--color-fg-sidebar-soft, var(--color-fg-soft));
     margin: var(--space-16) var(--space-12) var(--space-8);
 }
 
@@ -122,7 +124,7 @@
     align-items: center;
     gap: var(--space-12);
     padding: var(--space-8) var(--space-12);
-    color: var(--brand-cream-200);
+    color: var(--color-fg-sidebar, var(--brand-cream-200));
     text-decoration: none;
     font-size: var(--text-14);
     font-weight: var(--fw-medium);
@@ -147,7 +149,7 @@
 
 .sidebar-nav a:hover {
     background: rgba(247, 244, 238, 0.06);
-    color: var(--color-fg-on-dark);
+    color: var(--color-fg-sidebar, var(--color-fg-on-dark));
 }
 
 /* Item activo del menú lateral = estado SELECCIONADO → color ACENTO.
@@ -156,7 +158,7 @@
    sobre el primario. */
 .sidebar-nav a.active {
     background: var(--brand-selected, var(--color-bg-sidebar-2));
-    color: var(--color-fg-on-dark);
+    color: var(--color-fg-sidebar, var(--color-fg-on-dark));
     font-weight: var(--fw-semibold);
     box-shadow: inset 3px 0 0 var(--brand-selected-hover, currentColor);
 }

@@ -29,6 +29,10 @@ export interface Branding {
   primary_color: string;
   secondary_color: string;
   accent_color: string;
+  /** Color de fuente del menú lateral (sidebar). '' = automático (el
+   *  servicio elige claro/oscuro según la luminancia del primary para
+   *  que el texto nunca quede ilegible sobre el fondo del sidebar). */
+  sidebar_text_color: string;
   /** Logo "completo" — wordmark + monograma juntos. Versión para
    *  fondos CLAROS (admin, dashboards, emails con header blanco). */
   logo_data_url: string;
@@ -61,6 +65,7 @@ const DEFAULT_BRAND: Branding = {
   primary_color: '#223148',
   secondary_color: '#1B7F67',
   accent_color: '#D9A441',
+  sidebar_text_color: '',
   logo_data_url: '',
   logo_dark_data_url: '',
   icon_data_url: '',
@@ -275,6 +280,15 @@ export class BrandingService {
     root.style.setProperty('--color-bg-aside',     primary);
     root.style.setProperty('--color-bg-aside-2',   this.shade(primary, -8));
 
+    // -------- Color de fuente del sidebar (vars DEDICADAS) --------
+    // Explícito si el tenant lo definió; si no, AUTO por contraste según
+    // la luminancia del fondo (primary) → nunca queda texto ilegible.
+    // Usamos vars propias (no pisamos las globales del topbar/otros).
+    const sidebarText = (b.sidebar_text_color || '').trim()
+      || (this.isLightColor(primary) ? '#1F2937' : '#F5EFE6');
+    root.style.setProperty('--color-fg-sidebar',      sidebarText);
+    root.style.setProperty('--color-fg-sidebar-soft', this.hexToRgba(sidebarText, 0.62));
+
     // -------- Botones de acción (relleno completo) → SECUNDARIO --------
     // Estas vars son las que históricamente usan los botones primarios.
     // Apuntan ahora al color secundario por petición del cliente.
@@ -291,6 +305,17 @@ export class BrandingService {
     // Color success/warning para badges informativos.
     root.style.setProperty('--color-success', secondary);
     root.style.setProperty('--color-warning', accent);
+  }
+
+  /** True si el color es "claro" (luminancia alta) → conviene texto
+   *  oscuro encima. Fórmula de luminancia percibida (WCAG relative). */
+  private isLightColor(hex: string): boolean {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return false;
+    const num = parseInt(m[1], 16);
+    const r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return lum > 0.6;
   }
 
   /** Convierte hex (#RRGGBB) a rgba con alpha — usado para tintes suaves. */

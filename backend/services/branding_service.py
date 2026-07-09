@@ -45,6 +45,10 @@ DEFAULT_BRANDING: dict[str, Any] = {
     "primary_color": "#223148",
     "secondary_color": "#1B7F67",
     "accent_color": "#D9A441",
+    # Color de fuente del menú lateral (sidebar). "" = automático: el
+    # frontend elige claro u oscuro según la luminancia del primary para
+    # que el texto nunca quede ilegible sobre el fondo del sidebar.
+    "sidebar_text_color": "",
     # Assets — data URLs (puede ser '')
     # logo_data_url:      versión "completa" (wordmark + monograma juntos)
     #                     pensada para fondos CLAROS — admin, dashboard,
