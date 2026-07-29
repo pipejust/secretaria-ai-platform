@@ -165,52 +165,63 @@ class SyncReport:
 
 # ── Emparejamiento ────────────────────────────────────────────────────
 
-def _match_person(
+def _match_people(
     remote: dict,
     contacts: list[ProjectContact],
     users: list[User],
-) -> tuple[Optional[Any], Optional[str]]:
-    """Empareja un empleado remoto con un ProjectContact o User de Acten.
+) -> list[tuple[Any, str]]:
+    """Empareja un empleado remoto con TODAS sus fichas en Acten.
 
-    Jerarquía (de más fiable a menos):
+    Una misma persona puede tener **varias filas** porque participa en
+    varios proyectos, y en cada uno puede figurar con un correo distinto
+    (ej. Felipe con `@nexura.com` en el proyecto de ese cliente y con
+    `@softnexus.io` en el interno). Todas esas fichas son la misma
+    persona y deben apuntar al mismo UUID.
+
+    Criterios, de más fiable a menos:
       1. `external_ref` ya asignado
       2. correo corporativo exacto
       3. cédula
       4. nombre: ≥2 tokens en común (nombre + apellido)
+
+    El criterio de nombre es el que rescata las fichas con correo de otro
+    dominio, que por definición no pueden emparejar por correo.
     """
     r_uuid = (remote.get("id") or "").strip()
     r_email = norm_email(remote.get("work_email"))
     r_cid = norm_id(remote.get("national_id"))
     r_tokens = name_tokens(remote.get("full_name"))
 
-    pool: list[tuple[Any, str]] = [(c, "contact") for c in contacts] + [(u, "user") for u in users]
+    pool: list[Any] = list(contacts) + list(users)
+    out: list[tuple[Any, str]] = []
+    seen: set[int] = set()
 
-    for obj, _ in pool:
-        if (getattr(obj, "external_ref", None) or "") == r_uuid and r_uuid:
-            return obj, "ya_enlazado"
+    def add(obj: Any, how: str) -> None:
+        if id(obj) not in seen:
+            seen.add(id(obj))
+            out.append((obj, how))
+
+    for obj in pool:
+        if r_uuid and (getattr(obj, "external_ref", None) or "") == r_uuid:
+            add(obj, "ya_enlazado")
 
     if r_email:
-        for obj, _ in pool:
+        for obj in pool:
             if norm_email(getattr(obj, "email", "")) == r_email:
-                return obj, "correo"
+                add(obj, "correo")
 
     if r_cid:
-        for obj, _ in pool:
-            local_cid = norm_id(getattr(obj, "phone", "") or "")
-            if local_cid and local_cid == r_cid:
-                return obj, "cedula"
+        for obj in pool:
+            if norm_id(getattr(obj, "phone", "") or "") == r_cid:
+                add(obj, "cedula")
 
-    if r_tokens:
-        best, best_n = None, 0
-        for obj, _ in pool:
-            common = len(r_tokens & name_tokens(getattr(obj, "name", None)
-                                                or getattr(obj, "full_name", "")))
-            if common > best_n:
-                best, best_n = obj, common
-        if best is not None and best_n >= 2:
-            return best, "nombre"
+    if len(r_tokens) >= 2:
+        for obj in pool:
+            local = getattr(obj, "name", None) or getattr(obj, "full_name", "")
+            if len(r_tokens & name_tokens(local)) >= 2:
+                add(obj, "nombre")
 
-    return None, None
+    return out
 
 
 def sync_employees(
@@ -234,9 +245,9 @@ def sync_employees(
     for emp in remote:
         uuid = (emp.get("id") or "").strip()
         status = (emp.get("status") or "").lower()
-        obj, how = _match_person(emp, contacts, users)
+        matches = _match_people(emp, contacts, users)
 
-        if obj is None:
+        if not matches:
             if status == "active":
                 rep.unmatched_remote.append({
                     "id": uuid, "nombre": emp.get("full_name"),
@@ -244,39 +255,51 @@ def sync_employees(
                 })
             continue
 
-        if how == "ya_enlazado":
-            rep.already_linked += 1
-            touched.add(id(obj))
-        else:
-            rep.bump(how or "?")
+        nuevos = [(o, h) for o, h in matches if h != "ya_enlazado"]
+        rep.already_linked += len(matches) - len(nuevos)
+
+        if nuevos:
             rep.linked.append({
                 "uuid": uuid,
                 "remoto": emp.get("full_name"),
-                "acten": getattr(obj, "name", None) or getattr(obj, "full_name", ""),
-                "criterio": how,
+                "fichas_en_acten": [
+                    {
+                        "acten": getattr(o, "name", None) or getattr(o, "full_name", ""),
+                        "correo": getattr(o, "email", ""),
+                        "criterio": h,
+                    }
+                    for o, h in nuevos
+                ],
             })
-            touched.add(id(obj))
-            if not dry_run:
-                obj.external_ref = uuid
-                # Dejar los datos idénticos a los de la empresa (maestro).
-                if hasattr(obj, "name") and emp.get("full_name"):
-                    obj.name = emp["full_name"]
-                if hasattr(obj, "full_name") and emp.get("full_name"):
-                    obj.full_name = emp["full_name"]
-                if emp.get("work_email"):
-                    obj.email = emp["work_email"]
-                if hasattr(obj, "role") and emp.get("position"):
-                    obj.role = emp["position"]
-                if hasattr(obj, "position") and emp.get("position"):
-                    obj.position = emp["position"]
-                db.add(obj)
 
-        # Alguien que dejó de estar activo: se desactiva de este lado.
+        for obj, how in matches:
+            touched.add(id(obj))
+            if how != "ya_enlazado":
+                rep.bump(how)
+            if dry_run:
+                continue
+            obj.external_ref = uuid
+            # La empresa es maestro de la IDENTIDAD (nombre, cargo).
+            if hasattr(obj, "name") and emp.get("full_name"):
+                obj.name = emp["full_name"]
+            if hasattr(obj, "full_name") and emp.get("full_name"):
+                obj.full_name = emp["full_name"]
+            if hasattr(obj, "role") and emp.get("position"):
+                obj.role = emp["position"]
+            if hasattr(obj, "position") and emp.get("position"):
+                obj.position = emp["position"]
+            # El CORREO NO se pisa: en cada proyecto la persona puede
+            # figurar con un correo distinto (el del cliente), y eso es
+            # deliberado. Solo se rellena si está vacío.
+            if not (getattr(obj, "email", "") or "").strip() and emp.get("work_email"):
+                obj.email = emp["work_email"]
+            # Alguien que dejó de estar activo se desactiva de este lado.
+            if status in ("inactive", "draft") and hasattr(obj, "is_active"):
+                obj.is_active = False
+            db.add(obj)
+
         if status in ("inactive", "draft"):
             rep.deactivated.append(emp.get("full_name") or uuid)
-            if not dry_run and hasattr(obj, "is_active"):
-                obj.is_active = False
-                db.add(obj)
 
     for c in contacts:
         if id(c) not in touched:
