@@ -598,11 +598,37 @@ empleado no es miembro del proyecto · `404` la tarea no existe o no es
 visible para ese empleado · `409` transición de estado inválida · `422`
 datos inconsistentes.
 
-### Paginación (común a `GET /sessions` y `GET /tasks`)
+### Paginación (común a todos los listados)
 
-`page` (default 1) · `limit` (default 20, máx 100) · respuesta con
-`{items, total, page, limit}`. Para sincronización incremental usen
-`updated_since` en ISO-8601 — mismo criterio que su `GET /employees`.
+`page` (default 1) · `limit` (**máx 200 en todos**, default 20 salvo el
+calendario que es 50). Antes `/tasks` y `/sessions` cortaban en 100 y
+`/calendar/events` en 200, sin más razón que el orden en que se
+escribieron.
+
+La respuesta trae `{items, total, page, limit, pages, has_more}`.
+
+> **`has_more` está por una razón concreta**, y nos la señaló su equipo:
+> el riesgo no es el `422` al pedir de más —ése se ve enseguida— sino
+> pedir **una** página y pintarla como si fuera todo. Con 653 tareas se
+> verían 100 y la pantalla no parecería rota; solo le faltarían cosas.
+
+Para sincronización incremental usen `updated_since` en ISO-8601 — mismo
+criterio que su `GET /employees`.
+
+### Tareas sin dueño: `owner: null`
+
+Una tarea que nadie ha cogido viene con **`owner: null`** y
+`unassigned: true`.
+
+> **Antes venía como `{"employee_external_id": null, "name": "Por
+> asignar"}`**, que desde fuera es indistinguible de una persona real sin
+> fichar — y en un proyecto de cliente ésas son la mayoría. Obligaba a
+> comparar el literal contra una lista, y ese código se rompe el día que
+> alguien traduzca la interfaz.
+>
+> No era cosmético: su pantalla oculta a la gente ajena al proyecto, y la
+> tarea sin dueño caía en ese grupo. Se escondía justo la que más conviene
+> ver. Corregido a petición suya.
 
 ### `POST /api/v1/ask`
 ✅ **Implementado** (alcance `ask:query`, ya en su clave).
@@ -620,6 +646,25 @@ Respuesta: `answer` (markdown) + `structured` con `intro`,
 `citations[]` (con `session_id`, `session_title`, `session_date`) — cada
 afirmación trazable a su sesión origen. `prior_turns` da contexto a las
 preguntas de seguimiento («¿y quién lo hace?»).
+
+**`citations` trae una entrada por trozo leído**, así que la misma reunión
+se repite si la respuesta se apoyó en su acuerdo, su riesgo y su
+transcripción. Es lo correcto para trazar, pero `session_id` **no sirve
+como clave de lista**.
+
+Por eso se añade **`cited_sessions`**, ya agrupada — una entrada por
+reunión, con `fragmentos` (cuántos trozos aportó) y `mejor_distancia`,
+ordenada por relevancia:
+
+```json
+"cited_sessions": [
+  {"session_id": 369, "session_title": "First Class - Evento - api-tiquetera",
+   "session_date": "2026-05-20T...", "fragmentos": 2, "mejor_distancia": 0.31}
+]
+```
+
+Ejemplo real: 20 `citations` → 13 `cited_sessions`. La lista detallada se
+queda como estaba.
 
 **El recorte de permisos ocurre ANTES del motor**, no después: con
 `X-On-Behalf-Of` la búsqueda se limita a las sesiones de los proyectos
