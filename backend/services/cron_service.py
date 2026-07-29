@@ -829,9 +829,82 @@ scheduler.add_job(
 )
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Sincronización con la plataforma de Servicios/RRHH
+# ══════════════════════════════════════════════════════════════════════
+
+def sync_servicios_directory() -> None:
+    """Trae empleados y proyectos de Servicios y los deja enlazados.
+
+    Corre sola: incremental cada 15 min y completa cada noche. Sin esto
+    alguien tendría que lanzarla a mano y el directorio se iría quedando
+    viejo — quien entra o sale de la empresa no se reflejaría.
+
+    Se aplica a **todos los tenants con la integración configurada**.
+    Best-effort: un fallo se registra y se reintenta en la siguiente
+    pasada, nunca tumba el proceso.
+    """
+    from services.servicios_sync import ServiciosClient, run_full_sync
+
+    client = ServiciosClient()
+    if not client.configured:
+        return  # integración no configurada en este despliegue
+
+    from database import engine as _engine
+    from models import Tenant as _T
+    from sqlmodel import Session as _S, select as _sel
+
+    try:
+        with _S(_engine) as db:
+            # Tenants que ya tienen algo enlazado, o el que se indique por
+            # entorno para el primer arranque.
+            import os as _os
+            slug = (_os.getenv("SERVICIOS_TENANT_SLUG", "") or "").strip()
+            tenants = []
+            if slug:
+                t = db.exec(_sel(_T).where(_T.slug == slug)).first()
+                if t:
+                    tenants = [t]
+            if not tenants:
+                from models import Project as _P
+                rows = db.exec(
+                    _sel(_P.tenant_id).where(_P.external_ref.is_not(None)).distinct()
+                ).all()
+                ids = {r[0] if isinstance(r, tuple) else r for r in rows}
+                tenants = [db.get(_T, i) for i in ids if i]
+            for t in tenants:
+                if not t or not t.is_active:
+                    continue
+                rep = run_full_sync(db, t.id, dry_run=False, client=client)
+                emp = rep.get("employees", {})
+                logger.info(
+                    "sync Servicios [%s]: %s personas enlazadas, %s sin pareja, errores=%s",
+                    t.slug, emp.get("enlazados_ahora"),
+                    len(emp.get("sin_pareja_en_acten") or []), rep.get("errores"),
+                )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("sync Servicios falló (se reintenta luego): %s", exc)
+
+
+# Incremental cada 15 min — muy por debajo de su tope de 120 req/min.
+scheduler.add_job(
+    sync_servicios_directory, "interval", minutes=15, max_instances=1,
+    coalesce=True, id="servicios_sync_incremental",
+)
+# Completa diaria de madrugada: actúa como reconciliación por ausencia
+# (quien esté activo aquí y no aparezca allá, se desactiva).
+scheduler.add_job(
+    sync_servicios_directory, "cron", hour=3, minute=20, max_instances=1,
+    coalesce=True, id="servicios_sync_diaria",
+)
+
+
 def start_cron() -> None:
     scheduler.start()
-    logger.info("Cron iniciado: envío automático cada 1 min + overdue check cada 1h.")
+    logger.info(
+        "Cron iniciado: envío automático cada 1 min + overdue check cada 1h "
+        "+ sync Servicios cada 15 min."
+    )
 
 
 def stop_cron() -> None:

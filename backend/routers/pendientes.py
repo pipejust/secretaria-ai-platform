@@ -285,7 +285,21 @@ def update_status(
     item.completed_at = (
         datetime.now().isoformat() if payload.status == "done" else None
     )
+    item.updated_at = datetime.now().isoformat()
     db.add(item)
     db.commit()
     db.refresh(item)
+
+    # El cambio hecho desde Acten también avisa a Servicios: si no, su
+    # tablero mostraría un estado viejo hasta el siguiente refresco manual.
+    try:
+        from services.webhook_sender import send_event_bg
+        send_event_bg("task.updated", {
+            "task_id": item.id,
+            "status": item.status,
+            "source": "acten",
+        }, tenant_id=item.tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("webhook task.updated (%s) no enviado: %s", item.id, exc)
+
     return {"id": item.id, "status": item.status, "completed_at": item.completed_at}

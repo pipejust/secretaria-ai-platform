@@ -835,14 +835,14 @@ async def process_session_with_ai(
                 "session_id": session_id,
                 "project_external_id": proyecto_ref,
                 "error": session_obj.processing_error[:500],
-            })
+            }, tenant_id=session_obj.tenant_id)
         else:
             send_event_bg("session.processed", {
                 "session_id": session_id,
                 "project_external_id": proyecto_ref,
                 "title": session_obj.title or "",
                 "counts": {"tasks": n_tareas},
-            })
+            }, tenant_id=session_obj.tenant_id)
     except Exception as exc:  # noqa: BLE001
         logger.warning("webhook de sesión %s no enviado: %s", session_id, exc)
 

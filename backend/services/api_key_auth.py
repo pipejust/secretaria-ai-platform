@@ -41,6 +41,7 @@ KNOWN_SCOPES = frozenset({
     "tasks:write",
     "ask:query",
     "sync:write",
+    "calendar:read",
 })
 
 

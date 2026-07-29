@@ -370,7 +370,7 @@ def patch_task(
         "status": item.status,
         "project_external_id": out.get("project_external_id"),
         "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
-    })
+    }, tenant_id=ctx.tenant.id)
     return out
 
 
@@ -477,5 +477,224 @@ def create_task(
         "project_external_id": out.get("project_external_id"),
         "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
         "origin": "manual",
-    })
+    }, tenant_id=ctx.tenant.id)
     return out
+
+
+# ══════════════════════════════════════════════════════════════════════
+# PREGUNTAR (RAG) — mismo motor que usa Acten por dentro
+# ══════════════════════════════════════════════════════════════════════
+
+class AskV1Request(BaseModel):
+    question: str
+    project_external_id: Optional[str] = None
+    session_ids: Optional[list[int]] = None
+    top_k: int = Field(default=8, ge=1, le=20)
+
+
+@router.post("/ask")
+async def ask_v1(
+    payload: AskV1Request,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("ask:query")),
+):
+    """Pregunta en lenguaje natural sobre las actas.
+
+    El alcance se recorta **antes** de llamar al motor: si viene
+    `X-On-Behalf-Of`, sólo se busca en las sesiones de los proyectos donde
+    esa persona es miembro. Sin ese recorte alguien podría preguntar por
+    un proyecto ajeno y recibir la respuesta en prosa.
+    """
+    from routers.ask import AskRequest, ask as _ask_core
+
+    project_id: Optional[int] = None
+    if payload.project_external_id:
+        project_id = _resolve_project(
+            db, ctx.tenant.id, payload.project_external_id,
+        ).id
+        if ctx.on_behalf_of and project_id not in ctx.visible_project_ids:
+            raise HTTPException(404, "Proyecto no encontrado.")
+
+    sids = payload.session_ids
+    visible = _visible_session_ids(db, ctx)
+    if visible is not None:
+        if not visible:
+            return {
+                "answer": "No tiene reuniones visibles todavía.",
+                "citations": [], "chunks_used": 0, "model": "",
+            }
+        sids = [s for s in sids if s in set(visible)] if sids else visible
+
+    core = AskRequest(
+        question=payload.question,
+        project_id=project_id,
+        top_k=payload.top_k,
+        session_ids=sids,
+    )
+    # El motor guarda la pregunta en el historial y necesita un `user.id`.
+    # Si la persona existe allá pero aún no tiene cuenta aquí, atribuimos
+    # la consulta a un administrador del tenant en vez de reventar.
+    actor = ctx.acting_user
+    if actor is None:
+        from models import User as _User
+        actor = db.exec(
+            select(_User)
+            .where(_User.tenant_id == ctx.tenant.id)
+            .where(_User.is_active == True)  # noqa: E712
+            .order_by(_User.id)
+        ).first()
+        if actor is None:
+            raise HTTPException(503, "El tenant no tiene usuarios activos.")
+
+    res = await _ask_core(payload=core, db=db, user=actor, tenant=ctx.tenant)
+    data = res.model_dump() if hasattr(res, "model_dump") else dict(res)
+    data.pop("structured", None)
+    return data
+
+
+# ══════════════════════════════════════════════════════════════════════
+# CALENDARIO
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/calendar/events")
+def list_calendar_events(
+    project_external_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("calendar:read")),
+):
+    """Eventos de calendario sincronizados (Google/Microsoft).
+
+    `CalendarEvent` no lleva `tenant_id`: cuelga de la cuenta OAuth de un
+    usuario. El aislamiento se hace por el join con `user.tenant_id`; no
+    se puede filtrar sólo por el evento.
+    """
+    from models import CalendarAccount, CalendarEvent, User
+
+    q = (
+        select(CalendarEvent, CalendarAccount.user_id)
+        .join(CalendarAccount, CalendarAccount.id == CalendarEvent.calendar_account_id)
+        .join(User, User.id == CalendarAccount.user_id)
+        .where(User.tenant_id == ctx.tenant.id)
+    )
+
+    if ctx.on_behalf_of:
+        mine = ctx.acting_user.id if ctx.acting_user else -1
+        vis = ctx.visible_project_ids or []
+        # Ve su propia agenda y la de los proyectos donde es miembro.
+        if vis:
+            q = q.where(
+                (CalendarAccount.user_id == mine)
+                | (CalendarEvent.project_id.in_(vis))
+            )
+        else:
+            q = q.where(CalendarAccount.user_id == mine)
+
+    if project_external_id:
+        proj = _resolve_project(db, ctx.tenant.id, project_external_id)
+        if ctx.on_behalf_of and proj.id not in (ctx.visible_project_ids or []):
+            raise HTTPException(404, "Proyecto no encontrado.")
+        q = q.where(CalendarEvent.project_id == proj.id)
+    if date_from:
+        q = q.where(CalendarEvent.start_at >= date_from)
+    if date_to:
+        q = q.where(CalendarEvent.start_at <= date_to)
+
+    rows = db.exec(q.order_by(CalendarEvent.start_at.desc())).all()
+    total = len(rows)
+    page_rows = rows[(page - 1) * limit: page * limit]
+    proj_refs = _project_ref_map(db, ctx.tenant.id)
+
+    import json as _json
+    items = []
+    for row in page_rows:
+        ev = row[0] if isinstance(row, tuple) else row
+        try:
+            attendees = _json.loads(ev.attendees_json or "[]")
+        except (ValueError, TypeError):
+            attendees = []
+        items.append({
+            "id": ev.id,
+            "title": ev.title or "",
+            "start_at": ev.start_at,
+            "end_at": ev.end_at,
+            "meeting_url": ev.meeting_url,
+            "project_external_id": (
+                proj_refs.get(ev.project_id) if ev.project_id else None
+            ),
+            "session_id": ev.session_id,
+            "attendees": attendees,
+        })
+    return {"items": items, "total": total, "page": page, "limit": limit}
+
+
+# ══════════════════════════════════════════════════════════════════════
+# ACTA EN DOCUMENTO (docx / pdf)
+# ══════════════════════════════════════════════════════════════════════
+
+@router.get("/sessions/{session_id}/document")
+def get_session_document(
+    session_id: int,
+    format: str = Query("pdf", pattern="^(pdf|docx)$"),
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
+):
+    """Acta de la reunión con la marca del tenant, en PDF o Word."""
+    from fastapi.responses import Response
+
+    s = db.get(MeetingSession, session_id)
+    if not s or s.tenant_id != ctx.tenant.id:
+        raise HTTPException(404, "Sesión no encontrada.")
+    if ctx.on_behalf_of and s.project_id not in (ctx.visible_project_ids or []):
+        raise HTTPException(404, "Sesión no encontrada.")
+
+    from routers.sessions_upload import generate_word_document_bytes
+
+    items = db.exec(
+        select(ActionItem).where(ActionItem.session_id == s.id)
+    ).all()
+    docx_bytes = generate_word_document_bytes(s, items, db).getvalue()
+    safe = "".join(
+        c for c in (s.title or f"acta-{s.id}") if c.isalnum() or c in " -_"
+    ).strip() or f"acta-{s.id}"
+
+    if format == "docx":
+        return Response(
+            content=docx_bytes,
+            media_type=(
+                "application/vnd.openxmlformats-officedocument"
+                ".wordprocessingml.document"
+            ),
+            headers={
+                "Content-Disposition": f'attachment; filename="{safe}.docx"'
+            },
+        )
+
+    # PDF: Gotenberg convierte el docx (conserva la plantilla corporativa).
+    import requests
+    from config import settings
+
+    base = (settings.gotenberg_url or "http://gotenberg:3000").rstrip("/")
+    try:
+        r = requests.post(
+            f"{base}/forms/libreoffice/convert",
+            files={"files": ("acta.docx", docx_bytes)},
+            timeout=60,
+        )
+        if not r.ok:
+            raise RuntimeError(f"Gotenberg {r.status_code}: {r.text[:200]}")
+        pdf_bytes = r.content
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Gotenberg falló para sesión %s: %s", s.id, exc)
+        from services.pdf_generator import CorporatePDFGenerator
+        from routers.sessions_upload import __build_corporate_data as _bcd
+        pdf_bytes = CorporatePDFGenerator(_bcd(s, items, db)).generar_buffer().getvalue()
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe}.pdf"'},
+    )

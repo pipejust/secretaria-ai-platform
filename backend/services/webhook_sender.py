@@ -59,6 +59,32 @@ def is_configured() -> bool:
     return bool(url and secret and key)
 
 
+# El emisor se configura por entorno, así que dispararía para **todos** los
+# tenants del despliegue. Un evento de otro cliente le filtraría a Servicios
+# el título de una reunión que no es suya; se acota al tenant integrado.
+_TENANT_ID_CACHE: dict[str, Optional[int]] = {}
+
+
+def allowed_tenant_id() -> Optional[int]:
+    """Id del único tenant cuyos eventos se emiten. `None` = sin acotar."""
+    slug = os.getenv("SERVICIOS_TENANT_SLUG", "softnexus").strip()
+    if not slug:
+        return None
+    if slug in _TENANT_ID_CACHE:
+        return _TENANT_ID_CACHE[slug]
+    try:
+        from sqlmodel import Session as _S, select as _sel
+        from database import engine as _engine
+        from models import Tenant as _T
+        with _S(_engine) as db:
+            t = db.exec(_sel(_T).where(_T.slug == slug)).first()
+        _TENANT_ID_CACHE[slug] = t.id if t else None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("no se pudo resolver el tenant '%s': %s", slug, exc)
+        return None
+    return _TENANT_ID_CACHE[slug]
+
+
 def sign(secret: str, timestamp: int | str, raw_body: bytes) -> str:
     """HMAC-SHA256 sobre `{timestamp}.{cuerpo crudo}`."""
     message = f"{timestamp}.".encode() + raw_body
@@ -137,14 +163,27 @@ async def send_event(
     return False
 
 
-def send_event_bg(event_type: str, data: dict[str, Any]) -> None:
+def send_event_bg(
+    event_type: str, data: dict[str, Any], *, tenant_id: Optional[int] = None,
+) -> None:
     """Dispara el envío sin bloquear al llamador.
 
     Si hay bucle de eventos corriendo, agenda la tarea; si no (código
     síncrono, cron), lo ejecuta en uno propio. Nunca propaga errores.
+
+    `tenant_id` acota el envío: si no es el tenant integrado, se descarta
+    en silencio. Omitirlo mantiene el comportamiento antiguo.
     """
     if not is_configured():
         return
+    if tenant_id is not None:
+        permitido = allowed_tenant_id()
+        if permitido is not None and tenant_id != permitido:
+            logger.debug(
+                "webhook %s omitido: tenant %s no es el integrado",
+                event_type, tenant_id,
+            )
+            return
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
