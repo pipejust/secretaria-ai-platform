@@ -12,6 +12,7 @@ import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { BrandingService } from '../../services/branding.service';
+import { parseLocalDate } from '../../shared/dates';
 
 interface ChartPoint { date: Date; label: string; value: number; }
 interface KpiTile {
@@ -504,6 +505,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     private _toDate(v: any): Date | null {
         if (v == null) return null;
+        // Una fecha sin hora («2026-07-28», como llega `due_date`) hay que
+        // construirla en local: `new Date` la interpretaría como UTC y en
+        // Colombia la pintaría un día antes.
+        if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim())) {
+            return parseLocalDate(v);
+        }
         const n = typeof v === 'string' && !isNaN(Number(v)) ? Number(v) : v;
         const d = new Date(n);
         return isNaN(d.getTime()) ? null : d;

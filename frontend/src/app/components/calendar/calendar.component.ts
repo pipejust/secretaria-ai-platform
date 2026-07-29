@@ -11,6 +11,8 @@ import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { LanguageService } from '../../services/language.service';
+import { isRealDueDate, toIsoDateOrNull } from '../../shared/due-date';
+import { parseLocalDate } from '../../shared/dates';
 
 interface CalAccount {
     id: number;
@@ -290,7 +292,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (res) => {
-                    this.tasks = (res?.items || []).filter(t => !!t.due_date);
+                    this.tasks = (res?.items || []).filter(t => isRealDueDate(t.due_date));
                     // Precargamos todos los emails de owners para que la foto
                     // aparezca de inmediato en los pills del calendario.
                     const emails = this.tasks.map(t => (t.owner_email || '').trim()).filter(Boolean);
@@ -596,16 +598,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Task helpers
     // ============================================================
     parseTaskDue(t: PendingTask): Date | null {
-        if (!t?.due_date) return null;
-        const s = String(t.due_date).trim();
-        if (!s) return null;
-        // Try ISO first
-        const iso = new Date(s);
-        if (!isNaN(iso.getTime())) return iso;
-        // Try YYYY-MM-DD prefix
-        const head = s.slice(0, 10);
-        const ymd = new Date(head + 'T00:00:00');
-        return isNaN(ymd.getTime()) ? null : ymd;
+        // Sólo `YYYY-MM-DD` (con o sin sufijo horario). `new Date(s)` a secas
+        // aceptaba cosas como «Dec 5 2026» o «2026» y las colocaba en el
+        // calendario en días inventados.
+        return parseLocalDate(toIsoDateOrNull(t?.due_date));
     }
 
     taskDateMatches(t: PendingTask, d: Date): boolean {

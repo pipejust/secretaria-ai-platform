@@ -40,6 +40,7 @@ from typing import Awaitable, Callable, Optional, TypeVar
 
 from sqlmodel import Session, select
 
+from date_utils import normalize_due_date
 from models import ActionItem, MeetingSession, Project, ProjectContact
 from services.groq_service import OpenAIService
 from services.llm_groq import GroqLLMService
@@ -700,7 +701,15 @@ async def process_session_with_ai(
             description = str(item_data.get("description") or "").strip()
             owner_name = str(item_data.get("owner_name") or "Unknown")
             owner_email = str(item_data.get("owner_email") or "")
-            due_date = item_data.get("due_date") or None
+            # El LLM a veces responde «No especificada» en vez de omitir la
+            # fecha. Eso no es una fecha: la tarea queda sin `due_date`.
+            due_date_bruto = item_data.get("due_date") or None
+            due_date = normalize_due_date(due_date_bruto)
+            if due_date_bruto and not due_date:
+                logger.warning(
+                    "Sesión %s: descarto due_date no-ISO del extractor: %r",
+                    session_id, due_date_bruto,
+                )
             due_time = (item_data.get("due_time") or "").strip() or None
             priority = (item_data.get("priority") or "media").lower().strip()
             if priority not in ("alta", "media", "baja"):

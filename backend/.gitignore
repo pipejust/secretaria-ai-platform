@@ -15,7 +15,10 @@ __pycache__/
 *.log
 
 # Generados / scratch
+# Los `test_*.py` sueltos en la raíz son scripts de prueba manual, no suite.
+# La suite de verdad vive en `tests/` y sí se versiona.
 test_*.py
+!tests/test_*.py
 debug_*.py
 fix_*.py
 add_column.py

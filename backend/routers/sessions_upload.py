@@ -3,12 +3,14 @@ from fastapi.responses import Response
 from sqlmodel import Session, select
 from models import MeetingSession, ActionItem, IntegrationSetting, Routing, Tenant, User
 from database import get_session
+from date_utils import is_valid_due_date, normalize_due_date
 from config import settings
 from routers.auth import get_current_tenant, get_current_user, require_admin, require_session_writer
 import uuid
 import os
 import io
 import json
+import logging
 import base64
 import datetime
 from typing import List, Optional
@@ -768,7 +770,15 @@ async def regenerate_tasks_from_transcript(
             description = str(item_data.get("description") or "").strip()
             owner_name = str(item_data.get("owner_name") or "Unknown")
             owner_email = str(item_data.get("owner_email") or "")
-            due_date = item_data.get("due_date") or None
+            # El LLM a veces responde «No especificada» en vez de omitir la
+            # fecha. Eso no es una fecha: la tarea queda sin `due_date`.
+            due_date_bruto = item_data.get("due_date") or None
+            due_date = normalize_due_date(due_date_bruto)
+            if due_date_bruto and not due_date:
+                logging.getLogger(__name__).warning(
+                    "Sesión %s: descarto due_date no-ISO del extractor: %r",
+                    session_id, due_date_bruto,
+                )
             due_time = (item_data.get("due_time") or "").strip() or None
             priority = (item_data.get("priority") or "media").lower().strip()
             if priority not in ("alta", "media", "baja"):
@@ -1048,11 +1058,14 @@ def update_action_item_manual(
     if not item or item.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Action Item not found")
 
+    if due_date is not None and not is_valid_due_date(due_date):
+        raise HTTPException(422, "due_date debe tener formato YYYY-MM-DD o venir vacío.")
+
     if title is not None:        item.title = title
     if description is not None:  item.description = description
     if owner_name is not None:   item.owner_name = owner_name
     if owner_email is not None:  item.owner_email = owner_email
-    if due_date is not None:     item.due_date = due_date or None
+    if due_date is not None:     item.due_date = normalize_due_date(due_date)
     if due_time is not None:     item.due_time = due_time or None
     if priority is not None:
         pri = priority.lower().strip()
@@ -1086,13 +1099,16 @@ def create_manual_action_item(
     if pri not in ("alta", "media", "baja"):
         pri = "media"
 
+    if not is_valid_due_date(due_date):
+        raise HTTPException(422, "due_date debe tener formato YYYY-MM-DD o venir vacío.")
+
     new_item = ActionItem(
         tenant_id=tenant.id,
         session_id=session_id,
         title=title,
         owner_name=owner_name,
         owner_email=owner_email,
-        due_date=due_date or None,
+        due_date=normalize_due_date(due_date),
         due_time=due_time or None,
         priority=pri,
         description=description,
@@ -1661,7 +1677,10 @@ async def dispatch_platforms(
 
         item_success = False
 
-        eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
+        # Jira, Trello y ClickUp esperan una fecha de verdad. Un texto libre
+        # es truthy y se colaba entero en el payload; si no hay fecha usable,
+        # hoy es un default mejor que un 400 del otro lado.
+        eff_due_date = normalize_due_date(item.due_date) or datetime.now().strftime("%Y-%m-%d")
 
         owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
         safe_description = f"{item.description}\n\n**Metadatos de Notiva**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"

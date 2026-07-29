@@ -35,6 +35,7 @@ from sqlmodel import Session, select
 
 from config import settings
 from database import get_session
+from date_utils import normalize_due_date
 from models import ActionItem as ActionItemRow, AskHistory, MeetingSession, Tenant, User
 from routers.auth import get_current_tenant, get_current_user
 from services.embedding_service import search_similar
@@ -1810,12 +1811,16 @@ def _load_sessions_digest(
             select(ActionItemRow).where(ActionItemRow.session_id == s.id).limit(15)
         ).all()
         if tasks:
-            tl = "\n".join(
-                f"· [{t.status or 'pending'}] {t.title} — {t.owner_name or 'sin responsable'}"
-                + (f" (vence {t.due_date})" if t.due_date else "")
-                for t in tasks
-            )
-            parts.append(f"[Tareas de esta sesión]\n{tl}")
+            lineas = []
+            for t in tasks:
+                linea = f"· [{t.status or 'pending'}] {t.title} — {t.owner_name or 'sin responsable'}"
+                # Si le damos «vence: No especificada» al modelo, lo repite en
+                # la respuesta. Sin fecha es sin fecha: no se menciona.
+                vence = normalize_due_date(t.due_date)
+                if vence:
+                    linea += f" (vence {vence})"
+                lineas.append(linea)
+            parts.append("[Tareas de esta sesión]\n" + "\n".join(lineas))
         if not parts and (s.raw_transcript or "").strip():
             parts.append(f"[Transcripción (inicio)]\n{s.raw_transcript.strip()[:2000]}")
         if not parts:
@@ -1886,7 +1891,7 @@ def _load_action_items_context(
     for ai, ms in rows:
         status = (ai.status or "pending").strip()
         owner = (ai.owner_name or "sin responsable").strip()
-        due = (ai.due_date or "").strip()
+        due = normalize_due_date(ai.due_date) or ""
         line = (
             f"· [{status}] {ai.title or '(sin título)'} — resp: {owner}"
             + (f" — vence: {due}" if due else "")
@@ -2063,8 +2068,12 @@ def _enrich_action_items_from_db(
             # extrajo (puede ser más sintético/legible) y rellenamos huecos.
             if not (it.owner or "").strip() and (match.owner_name or "").strip():
                 it.owner = match.owner_name
-            if not (it.due_date or "").strip() and (match.due_date or "").strip():
-                it.due_date = match.due_date
+            # Normalizamos también aquí: este relleno corre DESPUÉS de haber
+            # limpiado lo que dijo el LLM, y su condición de disparo es
+            # justamente el hueco que la limpieza acaba de dejar. Sin esto,
+            # el caso que el fix corrige es el que lo reintroduce.
+            if not (it.due_date or "").strip():
+                it.due_date = normalize_due_date(match.due_date) or ""
             # Status: si LLM dijo 'pending' (default), confiamos en la DB.
             if (it.status or "pending") == "pending" and (match.status or ""):
                 it.status = match.status
@@ -3410,7 +3419,10 @@ async def ask(
                     ActionItemDTO(
                         title=str(it.get("title") or "").strip(),
                         owner=str(it.get("owner") or "").strip(),
-                        due_date=str(it.get("due_date") or "").strip(),
+                        # El LLM contesta «No especificada» cuando no hay
+                        # fecha; eso no viaja en un campo que el otro lado
+                        # puede leer como fecha. Vacío significa sin fecha.
+                        due_date=normalize_due_date(it.get("due_date")) or "",
                         status=str(it.get("status") or "pending").strip().lower(),
                         source_sessions=sids,
                     )
