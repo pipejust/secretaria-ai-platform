@@ -24,6 +24,11 @@ lance nada a mano**.
 | **`GET /sessions/{id}/document`** | ✅ **nuevo** | PDF de 8 páginas y DOCX válidos; `format=txt` → `422` |
 | **`GET /calendar/events`** | ✅ **nuevo** | **737 elementos**: tareas con fecha + reuniones + agendas |
 | **Sync automática** | ✅ **nuevo** | Cada 15 min + completa a las 03:20 |
+| **Conectar Jira/Trello/Slack/CRM** | ✅ **nuevo** | Catálogo, credenciales y rutas por proyecto — ver §17 |
+| **Conectar agenda (Google/Microsoft)** | ✅ **nuevo** | OAuth sin sesión de Acten, con `state` firmado |
+| **Enviar el acta por correo** | ✅ **nuevo** | Alcance propio `sessions:send` |
+| **Artefactos por rol, comentarios, versiones** | ✅ **nuevo** | PRD, brief comercial, informe de estado |
+| **Búsqueda, analítica, notificaciones** | ✅ **nuevo** | Recortadas por persona salvo la analítica |
 | Sincronización PULL | ✅ | **7 personas y 6 proyectos enlazados por UUID** |
 | Asistente de enlace bidireccional | ✅ | Clasifica *enlaza* / *ambiguo* / *crear* |
 | Emisor de webhooks HMAC | ✅ | **Ciclo completo: `202 accepted`** |
@@ -111,9 +116,16 @@ alcance ausente en la clave · `503` = ellos no tienen el secreto puesto.
 
 ### ⏸ Pendientes
 
-**De Acten: nada.** Los dos que quedaban —agendar el sync y exponer
-`/ask`— están cerrados, junto con calendario y documentos. El lado
-Acten no bloquea ninguna tarea suya.
+**De Acten: nada.** Todo lo que hace Acten está expuesto en la v1 —
+sesiones, tareas, calendario, actas, integraciones, artefactos por rol,
+colaboración, búsqueda y analítica. Ver §17 para el mapa completo.
+
+**Una cosa que sí necesitamos de ustedes o del cliente:** para que el
+botón «conectar mi agenda» funcione hay que dar de alta una aplicación
+OAuth de Google y otra de Microsoft. Hoy no existen
+(`GOOGLE_OAUTH_CLIENT_ID` y `MS_OAUTH_CLIENT_ID` están vacías) y el
+endpoint responde `503` con ese mensaje exacto. Todo lo demás del
+calendario —tareas con fecha y reuniones— ya funciona sin eso.
 
 **De ellos:** la interfaz (reuniones, detalle, tareas, Kanban, Ask) — el
 mayor esfuerzo real, y ya no espera nada nuestro.
@@ -914,6 +926,136 @@ parcial de nombre no se crea nada — se devuelven los candidatos y decide
 un humano. Dar de alta a ciegas un «Cortés Burgos» crearía un tercer
 hermano que no existe, y ese error no se descubre hasta que alguien lee
 un acta que no le corresponde.
+
+---
+
+## 17. Superficie completa de la v1 — todo lo que hace Acten
+
+El acuerdo es que sus usuarios **nunca entran a Acten**. Hasta ahora eso
+solo se cumplía para leer reuniones y tareas: conectar Jira, apuntar un
+proyecto a Slack o mandar el acta por correo seguía exigiendo entrar.
+Ya no.
+
+### 17.1 Conectar plataformas
+
+| Endpoint | Alcance | Qué hace |
+|---|---|---|
+| `GET /api/v1/integrations/providers` | `integrations:read` | Catálogo: qué se puede conectar, qué campos pide cada uno y **qué hace con la sesión** |
+| `GET /api/v1/integrations` | `integrations:read` | Qué está conectado, qué campos faltan |
+| `PUT /api/v1/integrations/{id}` | `integrations:write` | Guarda credenciales |
+| `DELETE /api/v1/integrations/{id}` | `integrations:write` | Desconecta |
+
+**Las credenciales no se devuelven nunca.** La respuesta dice
+`campos_puestos: ["api_token"]`, no su valor. Una API que te deja releer
+el token de Jira que escribiste ayer es una filtración esperando a que
+alguien reutilice la clave. Pinten «conectado» con eso y un formulario
+que pida solo lo que falte.
+
+Once plataformas, en cuatro familias:
+
+| Familia | Plataformas | Efecto sobre la sesión |
+|---|---|---|
+| Tareas | Trello, Jira, ClickUp, Azure DevOps | una tarjeta/incidencia **por tarea** |
+| Mensajería | Slack, Microsoft Teams | **un** mensaje con el resumen |
+| Documentos | Notion, Google Docs | **una** página o documento |
+| CRM | HubSpot, Salesforce, Pipedrive | nota en el negocio del asistente |
+
+`ambito` dice dónde vive la credencial: `usuario` (Trello, Jira, ClickUp,
+Azure — cada persona la suya, para que las tareas no aparezcan creadas
+todas por la misma cuenta) o `empresa` (el resto, una sola).
+
+### 17.2 A dónde va cada proyecto
+
+| Endpoint | Alcance |
+|---|---|
+| `GET /api/v1/projects/{external_id}/routings` | `integrations:read` |
+| `POST /api/v1/projects/{external_id}/routings` | `integrations:write` |
+| `PATCH /api/v1/routings/{id}` · `DELETE /api/v1/routings/{id}` | `integrations:write` |
+| `POST /api/v1/sessions/{id}/dispatch` | `integrations:write` |
+
+El despacho automático ya ocurre al procesarse la sesión. `dispatch` es
+para el botón «reenviar» de cuando alguien corrigió las tareas después.
+
+### 17.3 Conectar una agenda sin pasar por Acten
+
+| Endpoint | Alcance |
+|---|---|
+| `POST /api/v1/calendar/connect?provider=google\|microsoft` | `calendar:write` |
+| `GET /api/v1/calendar/accounts` · `DELETE .../accounts/{id}` | `calendar:read` / `write` |
+| `POST /api/v1/calendar/sync` | `calendar:write` |
+
+`connect` devuelve `auth_url`: ábranla en una pestaña. El OAuth vuelve a
+Acten, que valida un **`state` firmado de 15 minutos** y guarda la cuenta
+a nombre de esa persona.
+
+> **Por qué el `state` firmado.** El callback de OAuth exigía sesión de
+> Acten, que sus empleados no tienen. Sin esto habría que pedirles que se
+> registren en Acten solo para enganchar su calendario — justo lo que la
+> integración viene a evitar. El enlace caduca a los 15 minutos: uno
+> eterno acaba reenviado por chat y conectando la agenda equivocada.
+
+> ⚠️ **Requisito pendiente:** hace falta dar de alta una aplicación OAuth
+> de Google y otra de Microsoft. Hoy no existen y `connect` responde
+> `503` diciéndolo. No afecta al resto del calendario.
+
+### 17.4 El acta
+
+| Endpoint | Alcance |
+|---|---|
+| `GET /api/v1/sessions/{id}/document?format=pdf\|docx` | `sessions:read` |
+| `POST /api/v1/sessions/{id}/email` | **`sessions:send`** |
+
+⚠️ **`email` es el único endpoint de la v1 que manda correo a terceros.**
+Por eso tiene alcance propio, deliberadamente **no** incluido en
+`sessions:read`: quien pueda leer un acta no debería poder, por descuido,
+mandársela a media empresa. Los destinatarios salen de los responsables
+de las tareas, no del cuerpo de la petición — una llamada no puede
+dirigir el acta a una dirección arbitraria.
+
+### 17.5 Artefactos por rol, colaboración, búsqueda y analítica
+
+| Endpoint | Alcance | Qué es |
+|---|---|---|
+| `GET /api/v1/output-templates` | `outputs:read` | PRD, Deal Brief, informe de estado, kickoff… |
+| `GET /api/v1/sessions/{id}/outputs` | `outputs:read` | Los ya generados |
+| `POST /api/v1/sessions/{id}/outputs?template_id=` | `outputs:write` | Genera uno (llama a un modelo) |
+| `GET`/`POST /api/v1/sessions/{id}/comments` | `comments:read` / `write` | Hilos sobre el acta |
+| `GET /api/v1/sessions/{id}/versions` | `sessions:read` | Historial de ediciones con `snapshot` |
+| `GET /api/v1/search?q=` | `sessions:read` | Búsqueda literal (distinta del `/ask`) |
+| `GET /api/v1/analytics/roi` · `/recurring` | `analytics:read` | Horas, cumplimiento, temas que no cierran |
+| `GET /api/v1/sessions/{id}/quality` | `sessions:read` | Puntuación del acta |
+| `GET /api/v1/notifications` | `notifications:read` | Avisos de esa persona |
+
+**La analítica es agregada de todo el tenant**, no de una persona: por eso
+tiene alcance propio y **no** se recorta con `X-On-Behalf-Of`. No la
+expongan a cualquier empleado sin pensarlo. Todo lo demás sí se recorta.
+
+### 17.6 Alcances de su clave de producción
+
+Ya los tiene todos. **Es la misma clave: el valor no ha cambiado nunca.**
+
+```
+sessions:read   sessions:send    tasks:read      tasks:write
+ask:query       calendar:read    calendar:write  integrations:read
+integrations:write               outputs:read    outputs:write
+comments:read   comments:write   analytics:read  notifications:read
+```
+
+### 17.7 ⚠️ Un fallo que salió al construir esto
+
+Las credenciales guardadas desde la interfaz de Acten **nunca llegaban a
+las integraciones**. La interfaz escribe `apiKey`, `apiToken`, `boardId`;
+todos los servicios leen `api_key`, `token`, `board_id`. El fallo es
+silencioso: la integración aparece «conectada» y el despacho muere dentro
+de un `try` con «faltan campos obligatorios».
+
+Comprobado en producción sobre el tenant `softnexus`: **Trello y Jira de
+Felipe, y ClickUp de otro usuario, llevaban así desde que se
+configuraron.** Ya está corregido —se normaliza al leer, sin migrar
+nada— y verificado: los tres resuelven.
+
+Lo escribimos porque explica por qué, si alguien probó una integración
+antes de hoy y «no hacía nada», no era su configuración.
 
 ---
 
