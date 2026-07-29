@@ -415,8 +415,14 @@ def sync_employees(
 def sync_projects(
     db: Session, tenant_id: int, client: ServiciosClient,
     *, dry_run: bool = True, report: Optional[SyncReport] = None,
+    archivar_ausentes: bool = True,
 ) -> SyncReport:
-    """Enlaza proyectos por nombre normalizado y marca `managed_externally`."""
+    """Enlaza proyectos por nombre normalizado y marca `managed_externally`.
+
+    `archivar_ausentes=False` cuando se sincroniza **un** proyecto suelto:
+    con la lista recortada a uno, «lo que no está en la lista» sería todo
+    lo demás, y archivarlo sería una catástrofe silenciosa.
+    """
     rep = report or SyncReport(dry_run=dry_run)
     remote = client.projects(status="active")
     rep.projects_seen = len(remote)
@@ -579,7 +585,7 @@ def sync_projects(
     # todo como está: una respuesta vacía puede ser un fallo suyo, y
     # archivarlo todo por eso no tiene vuelta fácil.
     refs_vivas = {(pr.get("id") or "").strip() for pr in remote if (pr.get("id") or "").strip()}
-    if refs_vivas:
+    if refs_vivas and archivar_ausentes:
         for p in db.exec(
             select(Project)
             .where(Project.tenant_id == tenant_id)
@@ -596,6 +602,51 @@ def sync_projects(
     if not dry_run:
         db.commit()
     return rep
+
+
+def sync_un_proyecto(
+    db: Session, tenant_id: int, proyecto: dict,
+    *, client: Optional[ServiciosClient] = None,
+) -> dict:
+    """Espeja **un** proyecto ahora mismo, con los datos que llegan.
+
+    Es el camino de «acabo de crearlo allá y lo quiero ver aquí ya». Se
+    reutiliza `sync_projects` en vez de escribir un alta aparte: así el
+    alta inmediata y la del cron aplican exactamente las mismas reglas y
+    no pueden divergir con el tiempo.
+
+    El archivado por ausencia se desactiva — ver `sync_projects`.
+    """
+    base = client or ServiciosClient()
+
+    class _Uno(ServiciosClient):
+        """Cliente que solo conoce este proyecto; el resto lo delega."""
+
+        def __init__(self) -> None:
+            super().__init__(base.base_url, base.api_key)
+
+        def projects(self, status: str = "active") -> list[dict]:
+            return [proyecto]
+
+        def employees(self, status: str = "all") -> list[dict]:
+            # Hace falta para poblar las fichas de los integrantes. Si su
+            # API no responde, el proyecto se crea igual y los integrantes
+            # entran en la siguiente pasada del cron.
+            try:
+                return base.employees(status=status)
+            except Exception:  # noqa: BLE001
+                return []
+
+    rep = sync_projects(db, tenant_id, _Uno(), dry_run=False,
+                        archivar_ausentes=False)
+    d = rep.as_dict()["proyectos"]
+    return {
+        "creado": d["creados_en_acten"],
+        "enlazado": d["enlazados"],
+        "renombrado": d["renombrados"],
+        "contactos_creados": d["contactos_creados"],
+        "errores": rep.errors,
+    }
 
 
 def run_full_sync(

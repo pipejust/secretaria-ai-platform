@@ -438,6 +438,57 @@ def run_sync(
     return run_full_sync(db, ctx.tenant.id, dry_run=dry_run)
 
 
+class ProyectoIn(BaseModel):
+    """Un proyecto suyo, tal como lo devuelve su `GET /api/v1/api/projects`."""
+
+    external_id: str = Field(min_length=1, description="El `id` del proyecto en su plataforma")
+    name: str = Field(min_length=1)
+    client_name: str = ""
+    status: str = "active"
+    members: list[dict[str, Any]] = Field(default_factory=list)
+
+
+@router.post("/sync/projects")
+def sync_proyectos(
+    payload: Optional[ProyectoIn] = None,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sync:write")),
+):
+    """Espeja un proyecto **al instante**, en cuanto lo crean allá.
+
+    Llámenlo justo después de crear o renombrar un proyecto y aparece en
+    Acten en esa misma llamada, sin esperar a la sincronización de fondo.
+
+    * **Con cuerpo** → se espeja ese proyecto con los datos que mandan. No
+      hace falta que su API esté disponible para leerlo de vuelta.
+    * **Sin cuerpo** → se resincroniza el catálogo entero, que sigue
+      valiendo como red de seguridad.
+
+    Es idempotente: llamarlo dos veces con el mismo `external_id` no
+    duplica nada. Y **no archiva**: mandar un proyecto no dice nada sobre
+    los demás.
+    """
+    from services.servicios_sync import (
+        ServiciosClient, sync_un_proyecto, sync_projects, SyncReport,
+    )
+
+    if payload is None:
+        rep = SyncReport(dry_run=False)
+        sync_projects(db, ctx.tenant.id, ServiciosClient(), dry_run=False, report=rep)
+        return {"modo": "catalogo_completo", **rep.as_dict()["proyectos"]}
+
+    return {
+        "modo": "un_proyecto",
+        **sync_un_proyecto(db, ctx.tenant.id, {
+            "id": payload.external_id.strip(),
+            "name": payload.name.strip(),
+            "client_name": payload.client_name,
+            "status": payload.status,
+            "members": payload.members,
+        }),
+    }
+
+
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=500)
     description: str = ""

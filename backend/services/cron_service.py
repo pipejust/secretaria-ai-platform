@@ -886,6 +886,58 @@ def sync_servicios_directory() -> None:
         logger.exception("sync Servicios falló (se reintenta luego): %s", exc)
 
 
+def sync_servicios_proyectos() -> None:
+    """Solo el catálogo de proyectos, cada pocos minutos.
+
+    Lo ideal es que nos avisen al crear uno —`POST /api/v1/sync/projects`
+    lo espeja en la misma llamada— pero eso depende de que lo llamen. Este
+    tirón es la red: **una** petición a su API, así que puede correr mucho
+    más seguido que la sincronización completa.
+    """
+    from services.servicios_sync import ServiciosClient, sync_projects
+
+    client = ServiciosClient()
+    if not client.configured:
+        return
+    from database import engine as _engine
+    from models import Project as _P, Tenant as _T
+    from sqlmodel import Session as _S, select as _sel
+    import os as _os
+
+    try:
+        with _S(_engine) as db:
+            slug = (_os.getenv("SERVICIOS_TENANT_SLUG", "") or "").strip()
+            tenants = []
+            if slug:
+                t = db.exec(_sel(_T).where(_T.slug == slug)).first()
+                if t:
+                    tenants = [t]
+            if not tenants:
+                rows = db.exec(
+                    _sel(_P.tenant_id).where(_P.external_ref.is_not(None)).distinct()
+                ).all()
+                ids = {r[0] if isinstance(r, tuple) else r for r in rows}
+                tenants = [db.get(_T, i) for i in ids if i]
+            for t in tenants:
+                if not t or not t.is_active:
+                    continue
+                rep = sync_projects(db, t.id, client, dry_run=False)
+                if rep.projects_unmatched or rep.projects_renamed or rep.projects_archived:
+                    logger.info(
+                        "proyectos [%s]: creados=%s renombrados=%s archivados=%s",
+                        t.slug, rep.projects_unmatched,
+                        rep.projects_renamed, rep.projects_archived,
+                    )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("sync de proyectos falló (se reintenta luego): %s", exc)
+
+
+# Catálogo de proyectos cada 3 min: un proyecto nuevo aparece casi de
+# inmediato aunque nadie nos avise. Es 1 petición, 20 a la hora.
+scheduler.add_job(
+    sync_servicios_proyectos, "interval", minutes=3, max_instances=1,
+    coalesce=True, id="servicios_proyectos",
+)
 # Incremental cada 15 min — muy por debajo de su tope de 120 req/min.
 scheduler.add_job(
     sync_servicios_directory, "interval", minutes=15, max_instances=1,
@@ -903,7 +955,7 @@ def start_cron() -> None:
     scheduler.start()
     logger.info(
         "Cron iniciado: envío automático cada 1 min + overdue check cada 1h "
-        "+ sync Servicios cada 15 min."
+        "+ proyectos cada 3 min + sync Servicios cada 15 min."
     )
 
 
