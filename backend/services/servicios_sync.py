@@ -466,21 +466,28 @@ def sync_projects(
             "uuid": uuid, "remoto": name, "acten": local.name,
             "miembros": len(miembros),
         })
+        # Ellos son el maestro: si allá renombran el proyecto o lo
+        # reactivan, aquí tiene que verse. Antes solo se copiaba al
+        # crearlo, así que un cambio de nombre no llegaba nunca y las dos
+        # plataformas acababan llamando distinto a lo mismo.
+        #
+        # Solo si es un renombrado de verdad: `norm_project` ignora el
+        # paréntesis, así que «Softnexus» y «Softnexus (interno)» son el
+        # mismo nombre, y copiarlo cambiaría lo que ve todo el mundo en
+        # Acten sin que nadie lo pidiera.
+        #
+        # La detección va **fuera** del bloque de escritura para que una
+        # pasada en seco pueda enseñar qué cambiaría. Aplicarla, no.
+        renombra = bool(name) and norm_project(local.name) != norm_project(name)
+        if renombra:
+            rep.projects_renamed.append({
+                "de": local.name, "a": name, "uuid": uuid,
+            })
+
         if not dry_run:
             local.external_ref = uuid
             local.managed_externally = True
-            # Ellos son el maestro: si allá renombran el proyecto o lo
-            # reactivan, aquí tiene que verse. Antes solo se copiaba al
-            # crearlo, así que un cambio de nombre no llegaba nunca y las
-            # dos plataformas acababan llamando distinto a lo mismo.
-            # Solo si es un renombrado de verdad. `norm_project` ignora
-            # el paréntesis, así que «Softnexus» y «Softnexus (interno)»
-            # se consideran el mismo nombre: copiarlo tal cual cambiaría
-            # lo que ve todo el mundo en Acten sin que nadie lo pidiera.
-            if name and norm_project(local.name) != norm_project(name):
-                rep.projects_renamed.append({
-                    "de": local.name, "a": name, "uuid": uuid,
-                })
+            if renombra:
                 local.name = name
             cliente = pr.get("client_name") or ""
             if cliente and not (local.description or "").strip():
@@ -572,7 +579,7 @@ def sync_projects(
     # todo como está: una respuesta vacía puede ser un fallo suyo, y
     # archivarlo todo por eso no tiene vuelta fácil.
     refs_vivas = {(pr.get("id") or "").strip() for pr in remote if (pr.get("id") or "").strip()}
-    if refs_vivas and not dry_run:
+    if refs_vivas:
         for p in db.exec(
             select(Project)
             .where(Project.tenant_id == tenant_id)
@@ -581,9 +588,10 @@ def sync_projects(
         ).all():
             ref = (p.external_ref or "").strip()
             if ref and ref not in refs_vivas:
-                p.is_active = False
-                db.add(p)
                 rep.projects_archived.append({"nombre": p.name, "uuid": ref})
+                if not dry_run:
+                    p.is_active = False
+                    db.add(p)
 
     if not dry_run:
         db.commit()
