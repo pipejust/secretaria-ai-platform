@@ -98,10 +98,20 @@ def _es_del_proyecto(
 ) -> bool:
     """¿El responsable de la tarea es integrante del proyecto?
 
-    Por correo primero. Si la tarea no trae correo —pasa cuando el nombre
-    salió de la transcripción— se cae a nombre, y se exige coincidencia de
-    **dos** palabras: con una sola, cualquier «Juan» del proyecto se
-    tragaría a un «Juan» externo, que es justo lo que esto quiere separar.
+    Devuelve `False` **solo cuando no hay ningún indicio** de que lo sea.
+    El sesgo es deliberado: este dato alimenta un interruptor que oculta
+    filas, y esconder el trabajo de alguien del equipo es peor error que
+    dejar visible el de alguien de fuera.
+
+    Por eso el correo no decide solo. Una misma persona figura con
+    correos distintos según el proyecto —Felipe está como `@nexura.com`
+    en el del cliente y como `@softnexus.io` en el interno— así que si el
+    correo no cuadra se sigue mirando el nombre en vez de darlo por
+    ajeno.
+
+    Con el nombre, dos palabras bastan. Con una sola —«William», tal cual
+    lo dejó la transcripción— vale si encaja con algún integrante: es
+    ambiguo, y ante la duda se muestra.
     """
     if not miembros:
         return False
@@ -109,12 +119,17 @@ def _es_del_proyecto(
 
     correos, nombres = miembros
     em = norm_email(item.owner_email)
-    if em:
-        return em in correos
+    if em and em in correos:
+        return True
+
     toks = name_tokens(item.owner_name)
     if not toks:
         return False
-    return any(len(toks & n) >= 2 for n in nombres)
+    if any(len(toks & n) >= 2 for n in nombres):
+        return True
+    if len(toks) == 1:
+        return any(toks & n for n in nombres)
+    return False
 
 
 def _serialize(
