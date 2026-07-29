@@ -314,28 +314,17 @@ def sync_employees(
                 ],
             })
 
-        # Un empleado puede tener VARIAS fichas de contacto (una por
-        # proyecto), pero solo UNA cuenta de usuario: `uq_user_external_ref`
-        # lo impone porque de esa cuenta cuelgan los permisos. Si hay más
-        # de un User candidato (ej. la misma persona con dos correos), se
-        # enlaza el de coincidencia por correo y el resto se reporta.
-        user_matches = [(o, h) for o, h in matches if isinstance(o, User)]
-        chosen_user = None
-        if user_matches:
-            chosen_user = next(
-                (o for o, h in user_matches if h in ("ya_enlazado", "correo")),
-                user_matches[0][0],
-            )
-            for o, _ in user_matches:
-                if o is not chosen_user:
-                    rep.duplicate_users.append({
-                        "empleado": emp.get("display_name") or emp.get("full_name"),
-                        "cuenta_no_enlazada": getattr(o, "email", ""),
-                    })
+        # Una persona puede tener VARIAS cuentas y VARIAS fichas, con
+        # correos distintos (Felipe: @softnexus.io, @softnexus.co y
+        # @nexura.com). TODAS enlazan al mismo UUID de empleado.
+        cuentas = [getattr(o, "email", "") for o, _ in matches if isinstance(o, User)]
+        if len(cuentas) > 1:
+            rep.duplicate_users.append({
+                "empleado": emp.get("display_name") or emp.get("full_name"),
+                "cuentas": cuentas,
+            })
 
         for obj, how in matches:
-            if isinstance(obj, User) and obj is not chosen_user:
-                continue
             touched.add(id(obj))
             if how != "ya_enlazado":
                 rep.bump(how)

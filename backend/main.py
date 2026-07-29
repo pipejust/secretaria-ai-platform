@@ -315,6 +315,9 @@ app.include_router(users_directory.router)
 # Auth por X-API-Key + scopes. Ver docs/INTEGRACION_ACTEN_RRHH.md
 from routers import integration_v1
 app.include_router(integration_v1.router)
+# Asistente de enlace bidireccional (wizard de onboarding entre plataformas)
+from routers import integration_link
+app.include_router(integration_link.router)
 
 
 @app.get("/")

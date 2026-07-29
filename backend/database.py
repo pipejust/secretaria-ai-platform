@@ -207,8 +207,12 @@ def _apply_lightweight_migrations() -> None:
             "ON project(tenant_id, external_ref) WHERE external_ref IS NOT NULL",
             "CREATE INDEX IF NOT EXISTS idx_projectcontact_external_ref "
             "ON projectcontact(external_ref)",
-            'CREATE UNIQUE INDEX IF NOT EXISTS uq_user_external_ref '
-            'ON "user"(tenant_id, external_ref) WHERE external_ref IS NOT NULL',
+            # NO es único: una misma persona puede tener VARIAS cuentas con
+            # correos distintos (ej. fcortes@softnexus.io, @softnexus.co y
+            # @nexura.com son el mismo Felipe). Todas apuntan a su UUID.
+            'DROP INDEX IF EXISTS uq_user_external_ref',
+            'CREATE INDEX IF NOT EXISTS idx_user_external_ref '
+            'ON "user"(tenant_id, external_ref)',
             # Kanban (§13.1 del contrato): columnas aditivas sobre las tareas.
             "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS kanban_column TEXT",
             "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS kanban_order INTEGER",
