@@ -2598,5 +2598,22 @@
     "show_password": "Mostrar contraseña",
     "hide_password": "Ocultar contraseña",
     "password": "Contraseña"
+  },
+  "pairing": {
+    "title": "Conectar la plataforma de la empresa",
+    "subtitle": "Un código y listo. Las credenciales las negocian los dos servidores; aquí no se maneja ninguna clave.",
+    "how_it_works": "Genera un código y pégalo en la pantalla de conexión de la otra plataforma. Ella se encarga del resto.",
+    "generate": "Generar código",
+    "code_label": "Código de conexión",
+    "code_hint": "Sirve una sola vez. Si caduca, genera otro: no pasa nada.",
+    "expires_in": "Caduca en",
+    "connected": "Conectada",
+    "receives_events": "Recibe avisos de sesiones y tareas.",
+    "no_events": "Conectada, pero sin dirección para los avisos.",
+    "disconnect": "Desconectar",
+    "disconnect_confirm": "Se revocará la clave y dejarán de llegar avisos. ¿Continuar?",
+    "disconnected": "Plataforma desconectada.",
+    "error": "No se pudo completar la operación.",
+    "copy_failed": "No se pudo copiar. Selecciónalo a mano."
   }
 }

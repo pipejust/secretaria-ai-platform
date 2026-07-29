@@ -709,3 +709,65 @@ select.st-input::-ms-expand { display: none; }
     line-height: 1.45;
 }
 .st-readonly-notice svg { flex-shrink: 0; }
+
+/* ── Emparejar con la plataforma de la empresa ──────────────────────── */
+/* La conexión entera cabe en un código corto. Todo el peso visual va al
+   código: es lo único que la persona tiene que copiar. */
+.pair-card .st-card-head { align-items: center; }
+
+.pair-badge {
+    padding: .18rem .55rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--color-success, #1B7F67) 14%, transparent);
+    color: var(--color-success, #1B7F67);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+
+.pair-steps,
+.pair-hint {
+    margin: 0;
+    color: var(--color-text-muted, #64748b);
+    font-size: .82rem;
+    line-height: 1.5;
+}
+.pair-empty { display: flex; flex-direction: column; align-items: flex-start; gap: .8rem; }
+
+.pair-code-box {
+    padding: 1.1rem 1.2rem;
+    border: 1px dashed var(--color-border, #cbd5e1);
+    border-radius: 12px;
+    background: var(--color-surface-2, #f8fafc);
+}
+.pair-code-label {
+    margin: 0 0 .5rem;
+    font-size: .74rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+}
+.pair-code-row { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.pair-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: clamp(1.25rem, 1rem + 1.2vw, 1.7rem);
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--color-text, #0f172a);
+    user-select: all;   /* un clic selecciona el código entero */
+}
+.pair-copy { flex: none; }
+
+.pair-expiry {
+    margin: .75rem 0 0;
+    font-size: .78rem;
+    font-variant-numeric: tabular-nums;   /* no baila al descontar */
+    color: var(--color-text-muted, #64748b);
+}
+.pair-expiry.is-urgent { color: var(--color-warning, #d97706); font-weight: 600; }
+.pair-hint { margin-top: .5rem; }
+
+.pair-linked { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
+.pair-linked-name { margin: 0; font-weight: 600; }
+.pair-linked-meta { margin: 0 0 .7rem; font-size: .82rem; color: var(--color-text-muted, #64748b); }

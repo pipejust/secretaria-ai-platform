@@ -509,6 +509,59 @@ class SessionPermission(SQLModel, table=True):
     granted_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
+class IntegrationPairing(SQLModel, table=True):
+    """Código de emparejamiento de un solo uso para conectar una plataforma.
+
+    Existe para que **nadie tenga que manejar una clave a mano**. Copiar
+    una cadena de cincuenta caracteres de un chat a un formulario acaba
+    con la clave en el historial de alguien, o pegada mal y con un cero
+    donde había una o. Aquí el humano copia un código corto y de vida
+    breve; la clave de verdad viaja de servidor a servidor y no la ve
+    ninguna persona.
+
+    Un solo uso y quince minutos: si se filtra, ya se ha canjeado o ya ha
+    caducado. Se guarda el hash, no el código, por la misma razón que las
+    claves.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    code_hash: str = Field(index=True, description="sha256 del código")
+    scopes: str = Field(default="[]", description="JSON array de alcances a conceder")
+    created_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    expires_at: str
+    redeemed_at: Optional[str] = Field(default=None)
+    redeemed_by: Optional[str] = Field(
+        default=None, description="Nombre que declaró la plataforma al canjear",
+    )
+    api_key_id: Optional[int] = Field(
+        default=None, description="Clave emitida en el canje.",
+    )
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class OutboundIntegration(SQLModel, table=True):
+    """A dónde manda Acten sus eventos, por empresa.
+
+    Antes esto vivía en variables de entorno, lo que ataba el despliegue
+    entero a **una** plataforma conectada. Al estar en base, cada empresa
+    apunta a la suya y el emparejamiento puede configurarlo solo.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    name: str = Field(default="", description="Nombre de la plataforma conectada")
+    webhook_url: str = Field(default="")
+    # Lo fija quien verifica: ellos reciben, así que el secreto es suyo.
+    webhook_secret: str = Field(default="")
+    # Clave con la que Acten llama a SU API (la dirección contraria).
+    remote_api_key: str = Field(default="")
+    remote_base_url: str = Field(default="")
+    is_active: bool = Field(default=True)
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    updated_at: Optional[str] = Field(default=None)
+
+
 class CalendarAccount(SQLModel, table=True):
     """Sprint 03 — credenciales OAuth de un usuario para Google/Microsoft."""
 

@@ -174,6 +174,9 @@ class SyncReport:
     projects_linked: list[dict] = field(default_factory=list)
     projects_unmatched: list[str] = field(default_factory=list)
     contacts_created: list[dict] = field(default_factory=list)
+    # Fichas que dejan de conceder acceso porque la persona ya no figura
+    # entre los integrantes del proyecto en la plataforma de Servicios.
+    membresias_retiradas: list[dict] = field(default_factory=list)
     duplicate_users: list[dict] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -196,6 +199,7 @@ class SyncReport:
             },
             "proyectos": {
                 "remotos": self.projects_seen,
+                "membresias_retiradas": self.membresias_retiradas,
                 "enlazados": self.projects_linked,
                 "creados_en_acten": self.projects_unmatched,
                 "contactos_creados": self.contacts_created,
@@ -463,6 +467,44 @@ def sync_projects(
                     "proyecto": local.name,
                     "persona": emp.get("display_name") or emp.get("full_name") or emp_uuid,
                 })
+
+            # ── Salidas del proyecto ────────────────────────────────────
+            # Quien ya no figura entre los integrantes deja de contar como
+            # tal. Sin esto la membresía solo crecía: alguien que sale de
+            # un cliente seguiría leyendo sus actas indefinidamente,
+            # porque la visibilidad se resuelve por `external_ref` de la
+            # ficha (`api_key_auth._resolve_visibility`).
+            #
+            # **La ficha no se borra, se desvincula.** Esa persona estuvo
+            # en las reuniones y su nombre debe seguir apareciendo en las
+            # actas donde participó; lo que se retira es el acceso, no la
+            # historia.
+            # Y una salvaguarda que no es teórica: hoy **cuatro de sus
+            # seis proyectos** devuelven `members: []`. Si una lista vacía
+            # valiera como «no queda nadie», la primera pasada del cron
+            # dejaría esos proyectos sin ningún integrante y toda su gente
+            # sin acceso. Una lista vacía se trata como «no informado».
+            vigentes = {
+                (m.get("employee_id") or "").strip()
+                for m in miembros
+                if (m.get("employee_id") or "").strip()
+            }
+            if not vigentes:
+                continue
+            for c in db.exec(
+                select(ProjectContact)
+                .where(ProjectContact.project_id == local.id)
+                .where(ProjectContact.external_ref.is_not(None))
+            ).all():
+                ref = (c.external_ref or "").strip()
+                if ref and ref not in vigentes:
+                    c.external_ref = None
+                    db.add(c)
+                    rep.membresias_retiradas.append({
+                        "proyecto": local.name,
+                        "persona": c.name or c.email or ref,
+                        "uuid": ref,
+                    })
 
     if not dry_run:
         db.commit()

@@ -2598,5 +2598,22 @@
     "show_password": "Mostra la contrasenya",
     "hide_password": "Amaga la contrasenya",
     "password": "Contrasenya"
+  },
+  "pairing": {
+    "title": "Connecta la plataforma de l'empresa",
+    "subtitle": "Un codi i llest. Les credencials les negocien els dos servidors; aquí no es manega cap clau.",
+    "how_it_works": "Genera un codi i enganxa'l a la pantalla de connexió de l'altra plataforma. Ella s'encarrega de la resta.",
+    "generate": "Genera codi",
+    "code_label": "Codi de connexió",
+    "code_hint": "Serveix un sol cop. Si caduca, genera'n un altre: no passa res.",
+    "expires_in": "Caduca en",
+    "connected": "Connectada",
+    "receives_events": "Rep avisos de sessions i tasques.",
+    "no_events": "Connectada, però sense adreça per als avisos.",
+    "disconnect": "Desconnecta",
+    "disconnect_confirm": "Es revocarà la clau i deixaran d'arribar avisos. Continuar?",
+    "disconnected": "Plataforma desconnectada.",
+    "error": "No s'ha pogut completar l'operació.",
+    "copy_failed": "No s'ha pogut copiar. Selecciona'l a mà."
   }
 }

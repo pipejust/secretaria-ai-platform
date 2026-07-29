@@ -395,6 +395,58 @@
                     </div>
                 </article>
 
+                <!-- Conectar la plataforma de la empresa -->
+                <article class="st-card pair-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">{{ 'pairing.title' | translate }}</h2>
+                            <p class="st-card-sub">{{ 'pairing.subtitle' | translate }}</p>
+                        </div>
+                        <span class="pair-badge" *ngIf="pairStatus?.conectada">
+                            {{ 'pairing.connected' | translate }}
+                        </span>
+                    </header>
+
+                    <div class="st-card-body st-stack">
+                        <!-- Ya conectada -->
+                        <div class="pair-linked" *ngIf="pairStatus?.conectada && !pairCode">
+                            <p class="pair-linked-name">{{ pairStatus?.plataforma }}</p>
+                            <p class="pair-linked-meta">
+                                {{ (pairStatus?.recibe_eventos ? 'pairing.receives_events' : 'pairing.no_events') | translate }}
+                            </p>
+                            <button type="button" class="st-btn st-btn-ghost" (click)="disconnectPlatform()"
+                                    [disabled]="pairBusy">
+                                {{ 'pairing.disconnect' | translate }}
+                            </button>
+                        </div>
+
+                        <!-- Sin conectar y sin código -->
+                        <div class="pair-empty" *ngIf="!pairStatus?.conectada && !pairCode">
+                            <p class="pair-steps">{{ 'pairing.how_it_works' | translate }}</p>
+                            <button type="button" class="st-btn st-btn-primary" (click)="createPairingCode()"
+                                    [disabled]="pairBusy">
+                                {{ 'pairing.generate' | translate }}
+                            </button>
+                        </div>
+
+                        <!-- Código vivo -->
+                        <div class="pair-code-box" *ngIf="pairCode">
+                            <p class="pair-code-label">{{ 'pairing.code_label' | translate }}</p>
+                            <div class="pair-code-row">
+                                <code class="pair-code">{{ pairCode }}</code>
+                                <button type="button" class="st-btn st-btn-ghost pair-copy"
+                                        (click)="copyPairingCode()">
+                                    {{ (pairCopied ? 'common.copied' : 'common.copy') | translate }}
+                                </button>
+                            </div>
+                            <p class="pair-expiry" [class.is-urgent]="pairSecondsLeft < 120">
+                                {{ 'pairing.expires_in' | translate }} {{ pairCountdown }}
+                            </p>
+                            <p class="pair-hint">{{ 'pairing.code_hint' | translate }}</p>
+                        </div>
+                    </div>
+                </article>
+
                 <!-- Plataformas de gestión -->
                 <article class="st-card" [class.is-readonly]="integrationsReadOnly">
                     <header class="st-card-head">

@@ -2598,5 +2598,22 @@
     "show_password": "Show password",
     "hide_password": "Hide password",
     "password": "Password"
+  },
+  "pairing": {
+    "title": "Connect the company platform",
+    "subtitle": "One code and you are done. The two servers negotiate the credentials; no key is handled here.",
+    "how_it_works": "Generate a code and paste it into the other platform's connection screen. It takes care of the rest.",
+    "generate": "Generate code",
+    "code_label": "Connection code",
+    "code_hint": "Single use. If it expires, generate another — no harm done.",
+    "expires_in": "Expires in",
+    "connected": "Connected",
+    "receives_events": "Receives session and task notices.",
+    "no_events": "Connected, but with no address for notices.",
+    "disconnect": "Disconnect",
+    "disconnect_confirm": "The key will be revoked and notices will stop. Continue?",
+    "disconnected": "Platform disconnected.",
+    "error": "The operation could not be completed.",
+    "copy_failed": "Could not copy. Select it by hand."
   }
 }

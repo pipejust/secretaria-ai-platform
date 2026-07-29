@@ -24,6 +24,15 @@ interface OAuthCfg {
   isActive?: boolean;
 }
 
+interface PairStatus {
+  conectada: boolean;
+  plataforma: string | null;
+  conectada_el: string | null;
+  recibe_eventos: boolean;
+  codigo_pendiente: boolean;
+  codigo_expira_el: string | null;
+}
+
 interface OAuthStatus {
   ready: boolean;
   source: 'tenant' | 'env' | null;
@@ -45,6 +54,16 @@ type SectionKey =
 })
 export class SettingsComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
+
+  // ── Emparejamiento con la plataforma de la empresa ──────────────────
+  // Todo el intercambio de credenciales se reduce a un código corto: la
+  // clave de API la negocian los dos servidores y aquí no se ve nunca.
+  pairStatus: PairStatus | null = null;
+  pairCode: string | null = null;
+  pairSecondsLeft = 0;
+  pairCopied = false;
+  pairBusy = false;
+  private pairTimer: ReturnType<typeof setInterval> | null = null;
   // ============================================================
   // Settings reales del backend (preservadas tal cual)
   // ============================================================
@@ -193,6 +212,104 @@ export class SettingsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.stopPairTimer();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // Emparejamiento
+  // ══════════════════════════════════════════════════════════════════
+
+  loadPairStatus(): void {
+    this.http.get<PairStatus>(
+      `${environment.apiUrl}/api/integrations/pairing/status`,
+      { headers: this.auth.getAuthHeaders() },
+    ).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (r) => { this.pairStatus = r; this.cdr.detectChanges(); },
+      // Un fallo aquí no debe romper la pantalla entera de ajustes.
+      error: () => { this.pairStatus = null; },
+    });
+  }
+
+  createPairingCode(): void {
+    if (this.pairBusy) return;
+    this.pairBusy = true;
+    this.http.post<{ codigo: string; expira_el: string; vigencia_min: number }>(
+      `${environment.apiUrl}/api/integrations/pairing`, {},
+      { headers: this.auth.getAuthHeaders() },
+    ).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (r) => {
+        this.pairBusy = false;
+        this.pairCode = r.codigo;
+        this.pairCopied = false;
+        this.startPairCountdown(r.expira_el);
+      },
+      error: (e) => {
+        this.pairBusy = false;
+        this.toast.error(e?.error?.detail || this.translate.instant('pairing.error'));
+      },
+    });
+  }
+
+  copyPairingCode(): void {
+    if (!this.pairCode) return;
+    navigator.clipboard?.writeText(this.pairCode).then(
+      () => {
+        this.pairCopied = true;
+        this.cdr.detectChanges();
+        setTimeout(() => { this.pairCopied = false; this.cdr.detectChanges(); }, 2500);
+      },
+      () => this.toast.error(this.translate.instant('pairing.copy_failed')),
+    );
+  }
+
+  disconnectPlatform(): void {
+    if (this.pairBusy) return;
+    if (!confirm(this.translate.instant('pairing.disconnect_confirm'))) return;
+    this.pairBusy = true;
+    this.http.delete<{ status: string }>(
+      `${environment.apiUrl}/api/integrations/pairing`,
+      { headers: this.auth.getAuthHeaders() },
+    ).pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.pairBusy = false;
+        this.pairCode = null;
+        this.stopPairTimer();
+        this.loadPairStatus();
+        this.toast.success(this.translate.instant('pairing.disconnected'));
+      },
+      error: (e) => {
+        this.pairBusy = false;
+        this.toast.error(e?.error?.detail || this.translate.instant('pairing.error'));
+      },
+    });
+  }
+
+  /** Cuenta atrás visible. Un código que caduca en silencio deja al que
+   *  lo pega mirando un error sin saber por qué. */
+  private startPairCountdown(expiraEl: string): void {
+    this.stopPairTimer();
+    const fin = new Date(expiraEl).getTime();
+    const tick = () => {
+      this.pairSecondsLeft = Math.max(0, Math.round((fin - Date.now()) / 1000));
+      if (this.pairSecondsLeft <= 0) {
+        this.pairCode = null;
+        this.stopPairTimer();
+        this.loadPairStatus();
+      }
+      this.cdr.detectChanges();
+    };
+    tick();
+    this.pairTimer = setInterval(tick, 1000);
+  }
+
+  private stopPairTimer(): void {
+    if (this.pairTimer) { clearInterval(this.pairTimer); this.pairTimer = null; }
+  }
+
+  get pairCountdown(): string {
+    const m = Math.floor(this.pairSecondsLeft / 60);
+    const sec = this.pairSecondsLeft % 60;
+    return `${m}:${String(sec).padStart(2, '0')}`;
   }
 
   get defaultGoogleRedirect(): string {
@@ -350,6 +467,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     this.loadOauthStatus();
     this.loadShareSettings();
+    this.loadPairStatus();
 
     this.settingsService.getSettings().subscribe({
       next: (data) => {
