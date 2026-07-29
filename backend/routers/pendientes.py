@@ -93,29 +93,16 @@ def _miembros_por_proyecto(
     return fuera
 
 
-# Marcadores que el extractor deja cuando la reunión no dijo responsable.
-# No son personas, así que la pregunta «¿es del proyecto?» no aplica.
-_SIN_RESPONSABLE = {
-    "por asignar", "sin asignar", "no asignado", "sin responsable",
-    "por definir", "pendiente", "todos", "equipo", "n/a", "na", "-",
-    "unassigned", "tbd",
-}
-
-
 def _tiene_responsable(item: ActionItem) -> bool:
     """¿La tarea tiene un responsable identificable?
 
-    El marcador se cuela también en el correo —hay 14 filas con
-    `owner_email = "Por asignar"`— así que se mira el nombre primero: si
-    es un marcador, no hay dueño por mucho que el otro campo esté lleno.
+    La lista de marcadores vive en `services.owners`: la misma pregunta se
+    hace aquí, en la API pública y en el calendario, y tres copias del
+    literal es una que alguien traducirá algún día.
     """
-    nombre = (item.owner_name or "").strip().lower()
-    if nombre in _SIN_RESPONSABLE:
-        return False
-    correo = (item.owner_email or "").strip().lower()
-    if correo and correo not in _SIN_RESPONSABLE:
-        return True
-    return bool(nombre)
+    from services.owners import tiene_responsable
+
+    return tiene_responsable(item.owner_name, item.owner_email)
 
 
 def _es_del_proyecto(

@@ -39,6 +39,27 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
 }
 
 
+# Mismo tope en todos los listados. Antes `/tasks` y `/sessions` cortaban
+# en 100 y `/calendar/events` en 200, sin más razón que el orden en que se
+# escribieron. El riesgo no es el `422` —ése se ve enseguida— sino pedir
+# una página y pintarla como si fuera todo; por eso las respuestas llevan
+# además `has_more` y `pages`.
+MAX_LIMIT = 200
+
+
+def _paginar(items: list, page: int, limit: int) -> dict:
+    total = len(items)
+    trozo = items[(page - 1) * limit: page * limit]
+    return {
+        "items": trozo,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": max(1, (total + limit - 1) // limit),
+        "has_more": page * limit < total,
+    }
+
+
 def _now() -> str:
     return datetime.now().isoformat()
 
@@ -64,20 +85,33 @@ def _resolve_project(
     return proj
 
 
-def _owner_block(db: Session, item: ActionItem) -> dict[str, Any]:
-    """Bloque `owner` de una tarea, con el UUID externo cuando se conoce."""
+def _owner_block(db: Session, item: ActionItem) -> Optional[dict[str, Any]]:
+    """Bloque `owner`, o **`None` si la tarea no tiene dueño**.
+
+    Antes se devolvía `{"employee_external_id": null, "name": "Por
+    asignar"}`, que desde fuera no se distingue de una persona real sin
+    fichar — y en un proyecto de cliente ésas son la mayoría. Obligaba a
+    quien consume a comparar el literal contra una lista, y ese código se
+    rompe el día que alguien traduzca la interfaz.
+    """
+    from services.owners import limpiar, tiene_responsable
+
+    if not tiene_responsable(item.owner_name, item.owner_email):
+        return None
+
+    correo = limpiar(item.owner_email)
     ext = None
-    if item.owner_email:
+    if correo:
         row = db.exec(
             select(ProjectContact.external_ref)
-            .where(ProjectContact.email == item.owner_email)
+            .where(ProjectContact.email == correo)
             .where(ProjectContact.external_ref.is_not(None))
         ).first()
         ext = row[0] if isinstance(row, tuple) else row
     return {
         "employee_external_id": ext,
-        "name": item.owner_name or "",
-        "email": item.owner_email or "",
+        "name": limpiar(item.owner_name) or "",
+        "email": correo or "",
     }
 
 
@@ -86,13 +120,17 @@ def _serialize_task(
     session_project: dict[int, Optional[int]],
 ) -> dict[str, Any]:
     pid = session_project.get(item.session_id)
+    duenio = _owner_block(db, item)
     return {
         "id": item.id,
         "title": item.title or "",
         "description": item.description or "",
         "status": item.status or "pending",
         "priority": item.priority or "media",
-        "owner": _owner_block(db, item),
+        "owner": duenio,
+        # Explícito además de `owner: null`, para quien prefiera un
+        # booleano a comprobar la ausencia de un objeto.
+        "unassigned": duenio is None,
         "due_date": item.due_date,
         "due_time": item.due_time,
         "source_session_id": item.session_id,
@@ -132,7 +170,7 @@ def list_sessions(
     status_filter: Optional[str] = Query(None, alias="status"),
     search: Optional[str] = None,
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=MAX_LIMIT),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
 ):
@@ -141,7 +179,7 @@ def list_sessions(
 
     if ctx.on_behalf_of:
         if not ctx.visible_project_ids:
-            return {"items": [], "total": 0, "page": page, "limit": limit}
+            return _paginar([], page, limit)
         q = q.where(MeetingSession.project_id.in_(ctx.visible_project_ids))
 
     if project_external_id:
@@ -174,7 +212,9 @@ def list_sessions(
             "status": s.status,
             "counts": {"tasks": n_tasks},
         })
-    return {"items": items, "total": total, "page": page, "limit": limit}
+    sobre = _paginar(rows, page, limit)
+    sobre["items"] = items
+    return sobre
 
 
 @router.get("/sessions/{session_id}")
@@ -240,7 +280,7 @@ def list_tasks(
     updated_since: Optional[str] = None,
     search: Optional[str] = None,
     page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=MAX_LIMIT),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("tasks:read")),
 ):
@@ -249,7 +289,7 @@ def list_tasks(
     visible = _visible_session_ids(db, ctx)
     if visible is not None:
         if not visible:
-            return {"items": [], "total": 0, "page": page, "limit": limit}
+            return _paginar([], page, limit)
         q = q.where(ActionItem.session_id.in_(visible))
 
     if project_external_id:
@@ -285,10 +325,9 @@ def list_tasks(
             .where(MeetingSession.tenant_id == ctx.tenant.id)
         ).all()
     }
-    return {
-        "items": [_serialize_task(db, t, proj_refs, sess_proj) for t in page_rows],
-        "total": total, "page": page, "limit": limit,
-    }
+    sobre = _paginar(rows, page, limit)
+    sobre["items"] = [_serialize_task(db, t, proj_refs, sess_proj) for t in page_rows]
+    return sobre
 
 
 class TaskPatch(BaseModel):
@@ -572,10 +611,41 @@ async def ask_v1(
             raise HTTPException(503, "El tenant no tiene usuarios activos.")
 
     res = await _ask_core(payload=core, db=db, user=actor, tenant=ctx.tenant)
-    # Se devuelve tal cual, incluido `structured` — el contrato §7 promete
-    # `intro`, `decisions[]`, `action_items[]`, `risks[]`, `agreements[]`
-    # y `citations[]` con título y fecha de cada sesión.
-    return res
+    # `citations` trae **una entrada por trozo leído**: la misma reunión
+    # aparece tres veces si la respuesta se apoyó en su acuerdo, su riesgo
+    # y su transcripción. Es lo correcto para trazar cada afirmación, pero
+    # quien pinta «Sesión #N» necesita agrupar antes, y usar `session_id`
+    # como clave de lista rompe el renderizador porque no es única.
+    #
+    # Se añade la vista agrupada sin quitar la detallada.
+    datos = res.model_dump() if hasattr(res, "model_dump") else dict(res)
+    vistas: dict[int, dict[str, Any]] = {}
+    for c in datos.get("citations") or []:
+        sid = c.get("session_id")
+        if sid is None:
+            continue
+        entrada = vistas.setdefault(sid, {
+            "session_id": sid,
+            "session_title": c.get("session_title"),
+            "session_date": c.get("session_date"),
+            "project_name": c.get("project_name"),
+            "fragmentos": 0,
+            # La distancia menor de todas: es el trozo que mejor encajó.
+            "mejor_distancia": c.get("distance"),
+        })
+        entrada["fragmentos"] += 1
+        d = c.get("distance")
+        if d is not None and (
+            entrada["mejor_distancia"] is None or d < entrada["mejor_distancia"]
+        ):
+            entrada["mejor_distancia"] = d
+        entrada["session_title"] = entrada["session_title"] or c.get("session_title")
+        entrada["session_date"] = entrada["session_date"] or c.get("session_date")
+    datos["cited_sessions"] = sorted(
+        vistas.values(),
+        key=lambda x: (x["mejor_distancia"] if x["mejor_distancia"] is not None else 9),
+    )
+    return datos
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -592,7 +662,7 @@ def list_calendar_events(
         description="Qué pintar: coma entre 'tasks', 'sessions' y 'events'.",
     ),
     page: int = Query(1, ge=1),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=MAX_LIMIT),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("calendar:read")),
 ):
@@ -658,7 +728,8 @@ def list_calendar_events(
                 "all_day": not t.due_time,
                 "status": t.status or "pending",
                 "priority": t.priority or "media",
-                "owner": _owner_block(db, t),
+                "owner": duenio,
+                "unassigned": duenio is None,
                 "project_external_id": proj_refs.get(pid) if pid else None,
                 "session_id": t.session_id,
                 "meeting_url": None,
@@ -702,11 +773,7 @@ def list_calendar_events(
 
     if "events" not in quiere:
         items.sort(key=lambda x: x["start_at"] or "", reverse=True)
-        total = len(items)
-        return {
-            "items": items[(page - 1) * limit: page * limit],
-            "total": total, "page": page, "limit": limit,
-        }
+        return _paginar(items, page, limit)
 
     q = (
         select(CalendarEvent, CalendarAccount.user_id)
@@ -761,11 +828,7 @@ def list_calendar_events(
         })
 
     items.sort(key=lambda x: x["start_at"] or "", reverse=True)
-    total = len(items)
-    return {
-        "items": items[(page - 1) * limit: page * limit],
-        "total": total, "page": page, "limit": limit,
-    }
+    return _paginar(items, page, limit)
 
 
 # ══════════════════════════════════════════════════════════════════════
