@@ -45,6 +45,24 @@ interface PendingTask {
     bucket: 'vencido' | 'proximo' | 'pendiente' | 'sin_fecha' | 'completado' | 'cancelado' | 'bloqueado';
 }
 
+// `due_date` es texto libre en la base de datos y arrastró frases del
+// extractor viejo («No especificada»). Una tarea entra al calendario sólo
+// si su fecha es de verdad, con el mismo criterio que usa el backend
+// (backend/date_utils.py) para que ambos lados cuenten lo mismo.
+const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/;
+
+function isRealDueDate(value: string | null | undefined): boolean {
+    if (!value) return false;
+    const head = String(value).trim().slice(0, 10);
+    if (!ISO_DATE_PREFIX.test(head)) return false;
+    // Descarta días que no existen («2026-02-31»). Comparamos componentes en
+    // hora local: `toISOString()` pasaría por UTC y en zonas UTC+ devolvería
+    // el día anterior, tumbando fechas perfectamente válidas.
+    const [y, m, day] = head.split('-').map(Number);
+    const d = new Date(y, m - 1, day);
+    return d.getFullYear() === y && d.getMonth() === m - 1 && d.getDate() === day;
+}
+
 interface DayCell {
     date: Date;
     iso: string;
@@ -290,7 +308,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (res) => {
-                    this.tasks = (res?.items || []).filter(t => !!t.due_date);
+                    this.tasks = (res?.items || []).filter(t => isRealDueDate(t.due_date));
                     // Precargamos todos los emails de owners para que la foto
                     // aparezca de inmediato en los pills del calendario.
                     const emails = this.tasks.map(t => (t.owner_email || '').trim()).filter(Boolean);
@@ -596,16 +614,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Task helpers
     // ============================================================
     parseTaskDue(t: PendingTask): Date | null {
-        if (!t?.due_date) return null;
-        const s = String(t.due_date).trim();
-        if (!s) return null;
-        // Try ISO first
-        const iso = new Date(s);
-        if (!isNaN(iso.getTime())) return iso;
-        // Try YYYY-MM-DD prefix
-        const head = s.slice(0, 10);
-        const ymd = new Date(head + 'T00:00:00');
-        return isNaN(ymd.getTime()) ? null : ymd;
+        // Sólo `YYYY-MM-DD` (con o sin sufijo horario). `new Date(s)` a secas
+        // aceptaba cosas como «Dec 5 2026» o «2026» y las colocaba en el
+        // calendario en días inventados.
+        if (!isRealDueDate(t?.due_date)) return null;
+        const head = String(t.due_date).trim().slice(0, 10);
+        return new Date(head + 'T00:00:00');
     }
 
     taskDateMatches(t: PendingTask, d: Date): boolean {

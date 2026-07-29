@@ -13,7 +13,6 @@ los proyectos donde es miembro**. La resolución vive en
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime
 from typing import Any, Optional
 
@@ -22,6 +21,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from database import get_session
+from date_utils import is_valid_due_date, normalize_due_date
 from models import ActionItem, MeetingSession, Project, ProjectContact
 from services.api_key_auth import IntegrationContext, require_scopes
 
@@ -37,10 +37,6 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
     "done":      {"pending"},          # reabrir
     "cancelled": set(),                # terminal
 }
-
-
-# Una fecha de verdad, no «No especificada» ni «próxima semana».
-_FECHA_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}")
 
 
 def _now() -> str:
@@ -355,6 +351,11 @@ def patch_task(
             raise HTTPException(422, "priority debe ser alta | media | baja.")
         item.priority = p
 
+    if "due_date" in data:
+        if not is_valid_due_date(data["due_date"]):
+            raise HTTPException(422, "due_date debe ser YYYY-MM-DD o null.")
+        data["due_date"] = normalize_due_date(data["due_date"])
+
     for src, dst in (("title", "title"), ("description", "description"),
                      ("due_date", "due_date"), ("due_time", "due_time"),
                      ("column", "kanban_column"), ("order", "kanban_order")):
@@ -453,6 +454,9 @@ def create_task(
     if pr not in ("alta", "media", "baja"):
         pr = "media"
 
+    if not is_valid_due_date(payload.due_date):
+        raise HTTPException(422, "due_date debe ser YYYY-MM-DD o null.")
+
     item = ActionItem(
         tenant_id=ctx.tenant.id,
         session_id=session_id,
@@ -460,7 +464,7 @@ def create_task(
         description=payload.description or "",
         owner_name=owner_name,
         owner_email=owner_email,
-        due_date=payload.due_date,
+        due_date=normalize_due_date(payload.due_date),
         due_time=payload.due_time,
         priority=pr,
         status="pending",
@@ -637,13 +641,14 @@ def list_calendar_events(
         for t, pid in db.exec(tq).all():
             if project_external_id and proj_refs.get(pid) != project_external_id:
                 continue
-            # `due_date` es texto libre y arrastra basura histórica del
-            # extractor: hay tareas con «No especificada» ahí. Colarlas
+            # `due_date` es texto libre y arrastró basura histórica del
+            # extractor: hubo tareas con «No especificada» ahí. Colarlas
             # como `start_at` rompería cualquier calendario del otro lado,
             # así que solo pasan las que son una fecha de verdad.
-            if not _FECHA_ISO.match(t.due_date or ""):
+            fecha = normalize_due_date(t.due_date)
+            if not fecha:
                 continue
-            inicio = t.due_date + ("T" + t.due_time if t.due_time else "")
+            inicio = fecha + ("T" + t.due_time if t.due_time else "")
             items.append({
                 "kind": "task",
                 "id": t.id,
