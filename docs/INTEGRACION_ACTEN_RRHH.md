@@ -380,7 +380,7 @@ idénticos** y ustedes no se enteran.
 
 ## 6. Endpoints de lectura (lo que pinta la UI de RRHH)
 
-### `POST /api/v1/sync/projects` — un proyecto nuevo, al instante
+### `POST /api/v1/sync/projects` — proyectos nuevos, al instante
 
 Llámenlo justo después de crear, renombrar o reactivar un proyecto y
 aparece en Acten **en esa misma llamada**. Alcance `sync:write`, ya en su
@@ -396,9 +396,20 @@ clave.
 }
 ```
 
-* **Con cuerpo** → se espeja ese proyecto con los datos que mandan; no
-  hace falta que su API esté disponible para leerlo de vuelta.
-* **Sin cuerpo** → resincroniza el catálogo entero.
+Acepta **las dos formas**. El contrato documentaba una y la
+implementación aceptaba la otra; rechazar la documentada solo hacía
+perder el rato a quien empezara por leerla:
+
+| Cuerpo | Qué hace |
+|---|---|
+| `{"external_id": …, "name": …}` | un proyecto |
+| `{"projects": [ {...}, {...} ]}` | un lote |
+| sin cuerpo | resincroniza el catálogo entero |
+
+**Los opcionales aceptan `null`.** `client_name: null` devolvía `422`, y un
+proyecto interno no tiene cliente. Peor: el fallo era invisible, porque
+avisarnos no interrumpe el alta de su lado — el proyecto existiría allá y
+no aquí hasta que alguien fuera a buscarlo.
 
 **Idempotente**: llamarlo dos veces con el mismo `external_id` no
 duplica. **Nunca archiva**: mandar un proyecto no dice nada sobre los
@@ -412,6 +423,40 @@ intactos.
 > **cada 3 minutos** (una sola petición) y hace la sincronización completa
 > cada 15. Si no llaman a este endpoint, un proyecto nuevo aparece igual;
 > solo tarda un poco más.
+
+### Leer como empresa, no como persona — `org:read`
+
+Una cuenta de administración **no es un empleado**: no tiene ficha, así
+que `X-On-Behalf-Of` no puede nombrar a nadie. La alternativa era
+preguntar una vez por cada persona y sumar los resultados, que es una
+tanda de llamadas por pantalla y una vista reconstruida que cambia sola
+si cambia nuestro recorte.
+
+```http
+X-API-Key: …
+X-On-Behalf-Of: *          ← «esta llamada es de la empresa»
+```
+
+Requiere el alcance **`org:read`**, aparte y revocable por su cuenta —
+igual que `sessions:send`. Una clave capaz de leer el tenant entero sin
+recorte no es una clave de lectura normal.
+
+| | Con `*` | Con el UUID de William |
+|---|---|---|
+| `/sessions` | 131 | 64 |
+| `/tasks` | 897 | 398 |
+| `/calendar/events` | 1010 | 450 |
+
+**Qué cubre.** Todas las lecturas, incluidos `/link/directory/people` y
+`/link/directory/projects`, que son operaciones de sistema y pedían una
+persona sin sentido.
+
+**Qué no cubre, a propósito.** Lo que necesita un autor de verdad
+—comentar, generar un artefacto, enviar el acta— sigue exigiendo el UUID
+de alguien: «la empresa» no firma nada. Responden `400` pidiendo la
+persona.
+
+Sin el alcance, `*` responde `403` con ese motivo exacto.
 
 ### `GET /api/v1/sessions`
 Query: `project_external_id`, `updated_since`, `status`, `page`, `limit`, `search`
@@ -617,8 +662,11 @@ X-On-Behalf-Of: <employee_id (uuid) del usuario de la sesión>
 - **`X-On-Behalf-Of`** es obligatorio en lecturas y en `PATCH`. Acten
   resuelve UUID → proyectos donde es miembro → tareas y sesiones visibles.
   Sin la cabecera → `400`.
-- Alcances de Acten: `sessions:read`, `tasks:read`, `tasks:write`,
-  `ask:query`, **`calendar:read`**, `sync:write`.
+- Alcances de Acten: `sessions:read`, `sessions:send`, `tasks:read`,
+  `tasks:write`, `ask:query`, `calendar:read`, `calendar:write`,
+  `integrations:read`, `integrations:write`, `outputs:read`,
+  `outputs:write`, `comments:read`, `comments:write`, `analytics:read`,
+  `notifications:read`, `sync:write` y **`org:read`**.
 - **Su clave de producción ya tiene** `sessions:read`, `tasks:read`,
   `tasks:write`, `ask:query` y `calendar:read`. **Es la misma clave: el
   valor no cambió**, solo se le sumó el alcance de calendario.
