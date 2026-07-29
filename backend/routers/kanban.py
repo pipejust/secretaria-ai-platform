@@ -57,80 +57,91 @@ TRANSICIONES: dict[str, set[str]] = {
 SIN_DUENO = "__sin_dueno__"
 
 
+# Nombres que en realidad son dos personas: «Alejandro Cortés y Felipe
+# Cortés». Nunca sirven de puente entre carriles — ver `Identidades`.
+_SEPARADORES = (" y ", " & ", " + ", "/", ",", ";", " and ")
+
+
 class Identidades:
     """Agrupa las mil formas de escribir a la misma persona.
 
-    La primera versión usaba el nombre tal cual venía y salían **109
-    calles para siete personas**: «Alejandro», «Alejandro Cortes»,
-    «Alejandro Cortés» y «Alejandro Cortés B» eran cuatro carriles
-    distintos. El nombre lo escribe la transcripción y cambia de una
-    reunión a otra.
+    Dos cosas que enseñaron los datos reales, y ninguna era obvia:
 
-    El criterio, en orden:
+    **El correo no sirve para agrupar.** Hay 6 tareas de «Lady Edith
+    Ardila» con `owner_email = fcortes@nexura.com`, y otras 14 con «Por
+    asignar» en ese campo. Agrupar por correo juntaba a Lady con Felipe.
+    El correo se usa solo para mostrar y para «solo mías».
 
-    1. **Correo**, si lo hay. Es lo único estable.
-    2. **Nombre por palabras**, sin tildes ni mayúsculas. Dos nombres que
-       comparten dos palabras son la misma persona.
-    3. **Un solo nombre de pila** («Alejandro») se pega al carril de quien
-       ya exista con ese nombre, si solo encaja con uno. Si encaja con
-       dos, se queda aparte: juntar a dos Alejandros distintos es peor que
-       mostrar un carril de más.
+    **Un nombre compuesto hace de puente.** Solo hay dos tareas con
+    «Alejandro Cortés y Felipe Cortés», pero bastaron para fundir los dos
+    carriles en uno de 179 tarjetas: comparte dos palabras con cada uno.
+    Los compuestos tienen carril propio y **no entran en el índice**.
+
+    Lo que queda: se agrupan dos nombres cuando **uno contiene al otro**
+    palabra por palabra. «Alejandro» entra en «Alejandro Cortés»; «Lady
+    Ardila», en «Lady Edith Ardila Ramirez». Dos nombres que solo se
+    cruzan a medias se quedan separados — mostrar un carril de más es
+    barato; fundir a dos personas, no.
     """
 
     def __init__(self) -> None:
-        self.por_correo: dict[str, str] = {}
-        self.por_tokens: list[tuple[set[str], str]] = []
+        self.indice: list[tuple[frozenset[str], str]] = []
         self.etiqueta: dict[str, str] = {}
         self.correo_de: dict[str, Optional[str]] = {}
+
+    @staticmethod
+    def es_compuesto(nombre: Optional[str]) -> bool:
+        n = f" {(nombre or '').strip().lower()} "
+        return any(sep in n for sep in _SEPARADORES)
 
     def clave(self, nombre: Optional[str], correo: Optional[str]) -> str:
         from services.servicios_sync import name_tokens, norm_email
 
+        toks = frozenset(name_tokens(nombre))
         em = norm_email(correo)
-        if em and em in self.por_correo:
-            k = self.por_correo[em]
-            self._mejor_etiqueta(k, nombre)
+
+        if not toks:
+            # Sin nombre utilizable, el correo es lo único que hay.
+            if not em:
+                return SIN_DUENO
+            self._registrar(em, nombre, em, indexar=False)
+            return em
+
+        if self.es_compuesto(nombre):
+            k = " ".join(sorted(toks))
+            self._registrar(k, nombre, em, indexar=False)
             return k
 
-        toks = name_tokens(nombre)
         encontrada: Optional[str] = None
-        if toks:
-            fuertes = [k for t, k in self.por_tokens if len(toks & t) >= 2]
-            if fuertes:
-                encontrada = fuertes[0]
-            elif len(toks) == 1:
-                # Solo el nombre de pila: vale si encaja con una persona y
-                # solo una.
-                sueltos = {k for t, k in self.por_tokens if toks & t}
-                if len(sueltos) == 1:
-                    encontrada = next(iter(sueltos))
-
+        for t, k in self.indice:
+            if toks <= t or t <= toks:
+                encontrada = k
+                break
         if encontrada is None:
-            encontrada = em or (" ".join(sorted(toks)) if toks else "")
-            if not encontrada:
-                return SIN_DUENO
-            self.correo_de.setdefault(encontrada, em)
-
-        if em:
-            self.por_correo[em] = encontrada
-            if not self.correo_de.get(encontrada):
-                self.correo_de[encontrada] = em
-        if toks:
-            self.por_tokens.append((toks, encontrada))
-        self._mejor_etiqueta(encontrada, nombre)
+            encontrada = " ".join(sorted(toks))
+        self._registrar(encontrada, nombre, em, indexar=True, toks=toks)
         return encontrada
 
-    def _mejor_etiqueta(self, clave: str, nombre: Optional[str]) -> None:
-        """Se queda con el nombre más completo visto para esa persona.
-
-        «Alejandro Cortés» dice más que «Alejandro», y quien mira el
-        tablero quiere el de verdad, no el primero que apareció."""
+    def _registrar(
+        self, clave: str, nombre: Optional[str], correo: Optional[str],
+        *, indexar: bool, toks: Optional[frozenset[str]] = None,
+    ) -> None:
+        if indexar and toks:
+            # Se guarda el conjunto más amplio visto: así «Alejandro» y
+            # «Alejandro Cortés B» siguen cayendo en el mismo carril.
+            for i, (t, k) in enumerate(self.indice):
+                if k == clave:
+                    self.indice[i] = (t | toks, k)
+                    break
+            else:
+                self.indice.append((toks, clave))
         n = (nombre or "").strip()
-        if not n:
-            return
-        actual = self.etiqueta.get(clave, "")
-        if len(n.split()) > len(actual.split()) or (not actual):
-            self.etiqueta[clave] = n
+        if n:
+            actual = self.etiqueta.get(clave, "")
+            if not actual or len(n.split()) > len(actual.split()):
+                self.etiqueta[clave] = n
+        if correo and not self.correo_de.get(clave):
+            self.correo_de[clave] = correo
 
 
 def _persona(item: ActionItem, ident: Identidades) -> dict[str, Any]:
@@ -183,7 +194,14 @@ def tablero(
         ).all()
     }
 
+    # «Solo mías» por correo **y** por nombre: la mayoría de las tareas
+    # traen el nombre que dijo la transcripción y ningún correo, así que
+    # filtrar solo por correo dejaría el tablero casi vacío.
+    from services.servicios_sync import name_tokens
     mio = (user.email or "").strip().lower()
+    mis_tokens = name_tokens(user.full_name) | name_tokens(
+        (user.email or "").split("@")[0].replace(".", " ")
+    )
     ident = Identidades()
     gente: dict[str, dict] = {}
     por_columna: dict[str, list] = {k: [] for k in CLAVES}
@@ -193,8 +211,13 @@ def tablero(
         if not incluir_cerradas and estado in ("done", "cancelled"):
             continue
         p = _persona(it, ident)
-        if solo_mias and (p["correo"] or "").lower() != mio:
-            continue
+        if solo_mias:
+            suyo = (p["correo"] or "").lower() == mio
+            if not suyo and mis_tokens:
+                t = name_tokens(p["nombre"])
+                suyo = bool(t) and (t <= mis_tokens or mis_tokens <= t)
+            if not suyo:
+                continue
 
         if p["clave"] not in gente:
             gente[p["clave"]] = {
