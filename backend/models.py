@@ -144,6 +144,11 @@ class User(SQLModel, table=True):
     # el seed inicial.
     is_superadmin: bool = Field(default=False)
 
+    # Integración externa: UUID del empleado en la plataforma de Servicios.
+    # Los usuarios creados por sincronización NO inician sesión en la UI de
+    # Acten — existen para permisos (`X-On-Behalf-Of`) y atribución.
+    external_ref: Optional[str] = Field(default=None, index=True)
+
     # Campos de perfil opcionales — usados por la vista de Control de Accesos.
     phone: Optional[str] = Field(default=None)
     department: Optional[str] = Field(default=None)
@@ -208,6 +213,13 @@ class Project(SQLModel, table=True):
     description: str = Field(default="")
     is_active: bool = Field(default=True)
 
+    # ── Integración externa (plataforma de Servicios/RRHH) ──
+    # `external_ref` = UUID del proyecto en el sistema externo, que es su
+    # dueño canónico. `managed_externally` marca el proyecto como
+    # read-only en la UI de Acten (se edita allá, no aquí).
+    external_ref: Optional[str] = Field(default=None, index=True)
+    managed_externally: bool = Field(default=False)
+
     # Auto-Dispatch parametrizable por proyecto. Si `auto_dispatch_enabled` es True,
     # tras `auto_dispatch_timeout_hours` horas en estado 'pending' la sesión se
     # despacha automáticamente (correos + plataformas) sin curación humana.
@@ -251,6 +263,8 @@ class ProjectContact(SQLModel, table=True):
     role: str
     phone: Optional[str] = Field(default=None)
     entity: Optional[str] = Field(default=None)
+    # Integración externa: UUID del empleado en la plataforma de Servicios.
+    external_ref: Optional[str] = Field(default=None, index=True)
 
     project: Optional[Project] = Relationship(back_populates="contacts")
 
@@ -625,6 +639,22 @@ class ActionItem(SQLModel, table=True):
     completed_at: Optional[str] = Field(
         default=None,
         description="ISO timestamp cuando status pasa a 'done'.",
+    )
+
+    # ── Integración externa + Kanban ──
+    origin: str = Field(
+        default="meeting",
+        description="'meeting' (nació de una reunión) | 'manual' (creada por un humano)",
+    )
+    kanban_column: Optional[str] = Field(
+        default=None, description="Columna del tablero Kanban. Opcional."
+    )
+    kanban_order: Optional[int] = Field(
+        default=None, description="Posición dentro de la columna. Opcional."
+    )
+    updated_at: Optional[str] = Field(
+        default=None,
+        description="ISO timestamp de la última modificación — habilita ?updated_since=",
     )
 
     session: Optional[MeetingSession] = Relationship(back_populates="action_items")

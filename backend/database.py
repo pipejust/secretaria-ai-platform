@@ -193,6 +193,28 @@ def _apply_lightweight_migrations() -> None:
             # Landing CMS — contenido editable de acten.app (solo tenant 'acten').
             "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS landing_content_json TEXT NOT NULL DEFAULT '{}'",
             # ============================================================
+            # Integración externa (plataforma de RRHH/Servicios).
+            # `external_ref` = id de la entidad en el sistema externo (UUID).
+            # Permite mapear sin duplicar datos ni ensuciar el modelo.
+            # Ver docs/INTEGRACION_ACTEN_RRHH.md
+            # ============================================================
+            "ALTER TABLE project ADD COLUMN IF NOT EXISTS external_ref TEXT",
+            "ALTER TABLE project ADD COLUMN IF NOT EXISTS managed_externally BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE projectcontact ADD COLUMN IF NOT EXISTS external_ref TEXT",
+            'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS external_ref TEXT',
+            # Un mismo external_ref no puede repetirse dentro de un tenant.
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_project_external_ref "
+            "ON project(tenant_id, external_ref) WHERE external_ref IS NOT NULL",
+            "CREATE INDEX IF NOT EXISTS idx_projectcontact_external_ref "
+            "ON projectcontact(external_ref)",
+            'CREATE UNIQUE INDEX IF NOT EXISTS uq_user_external_ref '
+            'ON "user"(tenant_id, external_ref) WHERE external_ref IS NOT NULL',
+            # Kanban (§13.1 del contrato): columnas aditivas sobre las tareas.
+            "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS kanban_column TEXT",
+            "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS kanban_order INTEGER",
+            "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT 'meeting'",
+            "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS updated_at TEXT",
+            # ============================================================
             # Integraciones per-user (Trello/Jira/ClickUp/Azure + Calendar).
             # ============================================================
             # Antes IntegrationSetting era per-tenant pura. Ahora coexisten:

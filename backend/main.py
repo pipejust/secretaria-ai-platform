@@ -311,6 +311,10 @@ from routers import search  # Búsqueda global (search del topbar)
 app.include_router(search.router)
 from routers import users_directory  # Directorio: resolve email → User del tenant
 app.include_router(users_directory.router)
+# API pública v1 — integración con la plataforma de Servicios/RRHH.
+# Auth por X-API-Key + scopes. Ver docs/INTEGRACION_ACTEN_RRHH.md
+from routers import integration_v1
+app.include_router(integration_v1.router)
 
 
 @app.get("/")
