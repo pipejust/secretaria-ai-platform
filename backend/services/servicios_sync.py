@@ -174,6 +174,7 @@ class SyncReport:
     projects_linked: list[dict] = field(default_factory=list)
     projects_unmatched: list[str] = field(default_factory=list)
     contacts_created: list[dict] = field(default_factory=list)
+    duplicate_users: list[dict] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
     def bump(self, key: str) -> None:
@@ -191,6 +192,7 @@ class SyncReport:
                 "sin_pareja_en_acten": self.unmatched_remote,
                 "en_acten_sin_pareja_remota": self.unmatched_local,
                 "desactivados": self.deactivated,
+                "cuentas_duplicadas": self.duplicate_users,
             },
             "proyectos": {
                 "remotos": self.projects_seen,
@@ -312,7 +314,28 @@ def sync_employees(
                 ],
             })
 
+        # Un empleado puede tener VARIAS fichas de contacto (una por
+        # proyecto), pero solo UNA cuenta de usuario: `uq_user_external_ref`
+        # lo impone porque de esa cuenta cuelgan los permisos. Si hay más
+        # de un User candidato (ej. la misma persona con dos correos), se
+        # enlaza el de coincidencia por correo y el resto se reporta.
+        user_matches = [(o, h) for o, h in matches if isinstance(o, User)]
+        chosen_user = None
+        if user_matches:
+            chosen_user = next(
+                (o for o, h in user_matches if h in ("ya_enlazado", "correo")),
+                user_matches[0][0],
+            )
+            for o, _ in user_matches:
+                if o is not chosen_user:
+                    rep.duplicate_users.append({
+                        "empleado": emp.get("display_name") or emp.get("full_name"),
+                        "cuenta_no_enlazada": getattr(o, "email", ""),
+                    })
+
         for obj, how in matches:
+            if isinstance(obj, User) and obj is not chosen_user:
+                continue
             touched.add(id(obj))
             if how != "ya_enlazado":
                 rep.bump(how)
