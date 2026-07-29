@@ -458,6 +458,101 @@ persona.
 
 Sin el alcance, `*` responde `403` con ese motivo exacto.
 
+### Curación — corregir lo que sacó la IA
+
+| Endpoint | Alcance |
+|---|---|
+| `PATCH /api/v1/sessions/{id}` | **`sessions:write`** |
+| `PATCH /api/v1/tasks/{id}` · `DELETE /api/v1/tasks/{id}` | `tasks:write` |
+| `POST /api/v1/sessions/{id}/regenerate-tasks` | `tasks:write` |
+| `POST /api/v1/sessions/{id}/suggest-fields` | `sessions:write` |
+
+`PATCH /sessions/{id}` acepta `title`, `summary`, `decisions`,
+`agreements`, `risks`, `language`, `status` y `project_external_id`. Solo
+se toca lo que venga.
+
+> **Se guarda lo que se manda, sin volver a pasar por el modelo.** Quien
+> corrige un acta lo hace porque el modelo se equivocó; regenerar al
+> guardar borraría la corrección sin que nadie se entere. Para pedir
+> sugerencias está `suggest-fields`, que es una llamada aparte.
+
+**Forma canónica de `decisions`, `agreements` y `risks`: texto libre.** Se
+guardan literalmente. Acten los emite en markdown —normalmente una lista
+con viñetas— pero **no impone forma al escribir**: lo que manden es
+exactamente lo que se devolverá después.
+
+`DELETE /tasks/{id}` **borra**, no cancela. Una tarea que la IA se inventó
+no es una tarea cancelada, y dejarla ensucia el recuento de todo el
+mundo. Para «esto ya no se hace» está `status: cancelled`.
+
+`PATCH /tasks/{id}` acepta además **`owner_name` y `owner_email`** en
+texto libre, para la gente que no está en el directorio — la mayoría en
+un proyecto de cliente. Si viene `owner_external_id`, manda ése.
+
+**Las dos acciones de IA son de un solo uso por sesión**, igual que en
+Acten: la segunda llamada responde `409`. Regenerar borra las tareas
+actuales, y quien ya corrigió una a mano no debería perderla por pulsar
+dos veces. `suggest-fields` **no toca el resumen ejecutivo**.
+
+### Plantillas documentales — `.docx`, no markdown
+
+Son **dos cosas distintas con nombres parecidos**, y conviene separarlas:
+
+| | Qué es |
+|---|---|
+| `/output-templates` | Artefactos que escribe un modelo: PRD, Deal Brief, informe de estado. Markdown |
+| `/document-templates` | Los **archivos Word** con los que se genera el acta formal |
+
+| Endpoint | Alcance |
+|---|---|
+| `GET /document-templates` (`?tipo=`) | `outputs:read` |
+| `GET /document-templates/categories` | `outputs:read` |
+| `GET /document-templates/layout/blocks` | `outputs:read` |
+| `POST /document-templates` (multipart) | `outputs:write` |
+| `PATCH /document-templates/{id}` | `outputs:write` |
+| `PUT /document-templates/{id}/file` | `outputs:write` |
+| `DELETE /document-templates/{id}` (`?definitivo=`) | `outputs:write` |
+| `GET`/`PUT /document-templates/{id}/layout` | `outputs:read` / `write` |
+| `GET /document-templates/{id}/versions` | `outputs:read` |
+| `GET /document-templates/{id}/preview` | `outputs:read` |
+
+El `layout` es lo que guarda el constructor visual:
+
+```json
+{
+  "bloques": ["meta", "attendees", "summary", "decisions",
+              "risks", "agreements", "action_items"],
+  "estilos": {"familia": "Roboto", "tamano_pt": 12, "fondo_cabeceras": "#df1616"}
+}
+```
+
+**La lista de bloques se sirve desde `GET /layout/blocks`** — no la
+escriban a mano. El día que se añada uno, aparece solo en su selector en
+vez de faltar sin que nadie se entere. Un bloque desconocido en el `PUT`
+responde `422` diciendo cuál.
+
+Dos sitios donde la respuesta honesta es «no»:
+
+* **`/versions` es un registro de acciones, no un archivo por versión.**
+  Acten guarda un solo `.docx` y lo sustituye, así que no se puede
+  descargar una versión anterior. La respuesta lo dice en
+  `guarda_archivos_anteriores: false` en vez de insinuar lo contrario.
+* **`DELETE` desactiva por defecto.** Un acta generada hace meses apunta a
+  esa plantilla, y borrarla deja el documento sin explicación de cómo se
+  produjo. Con `?definitivo=true` se borra de verdad.
+
+### `duracion` y `origen` en el listado
+
+`GET /sessions` trae ahora `origin`, `language`, `duration_min` y
+`duration_is_estimate`.
+
+* **`origin`** (`manual` | `web`) es un dato real: sale del id de la
+  grabación.
+* **`duration_min` es una estimación, no una medida.** Acten nunca guardó
+  la duración de la reunión; se calcula a 150 palabras por minuto sobre la
+  transcripción. Por eso viene con `duration_is_estimate: true` — decidan
+  ustedes si la pintan, pero no la presenten como medida.
+
 ### `GET /api/v1/sessions`
 Query: `project_external_id`, `updated_since`, `status`, `page`, `limit`, `search`
 ```json
