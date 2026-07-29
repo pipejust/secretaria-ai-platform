@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -30,7 +30,6 @@ from models import (
     MeetingSession,
     MeetingSessionVersion,
     OutputTemplate,
-    Project,
     SessionOutput,
     User,
 )
@@ -325,42 +324,38 @@ def buscar(
 
     if not ctx.on_behalf_of:
         return res
+
     # El buscador interno no conoce `X-On-Behalf-Of`. Se recorta aquí: sin
     # esto, escribir tres letras devolvería títulos de proyectos ajenos.
+    # El tipo va en cada elemento (`type`), no en el grupo — el grupo solo
+    # trae `label`.
     vis = set(ctx.visible_project_ids or [])
-    ids_ok = {
+    ids_sesiones = {
         r[0] if isinstance(r, tuple) else r
         for r in db.exec(
             select(MeetingSession.id)
             .where(MeetingSession.tenant_id == ctx.tenant.id)
-            .where(MeetingSession.project_id.in_(vis or [-1]))
-        ).all()
-    }
-    refs_ok = {
-        p.external_ref for p in db.exec(
-            select(Project).where(Project.id.in_(vis or [-1]))
-        ).all()
-    }
-    nombres_ok = {
-        p.name for p in db.exec(
-            select(Project).where(Project.id.in_(vis or [-1]))
+            .where(MeetingSession.project_id.in_(vis or {-1}))
         ).all()
     }
 
-    def permitido(item: dict, tipo: str) -> bool:
-        if tipo in ("sessions", "sesiones"):
-            return item.get("id") in ids_ok
-        if tipo in ("projects", "proyectos"):
-            return item.get("name") in nombres_ok or item.get("id") in vis
-        if tipo in ("tasks", "tareas", "pendientes"):
-            return item.get("session_id") in ids_ok
-        return False  # personas y demás: no se filtran bien, se ocultan
+    def permitido(item: dict) -> bool:
+        tipo = item.get("type")
+        meta = item.get("meta") or {}
+        if tipo == "meeting":
+            return item.get("id") in ids_sesiones
+        if tipo == "project":
+            return item.get("id") in vis
+        if tipo == "task":
+            return meta.get("session_id") in ids_sesiones
+        # Personas: se dejan pasar. Son compañeros del mismo tenant y el
+        # resultado no revela contenido de ninguna reunión.
+        return tipo == "person"
 
     grupos = []
     total = 0
     for g in (res.get("groups") or []):
-        tipo = (g.get("type") or g.get("tipo") or "").lower()
-        items = [i for i in (g.get("items") or []) if permitido(i, tipo)]
+        items = [i for i in (g.get("items") or []) if permitido(i)]
         if items:
             grupos.append({**g, "items": items})
             total += len(items)
