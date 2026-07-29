@@ -1677,7 +1677,10 @@ async def dispatch_platforms(
 
         item_success = False
 
-        eff_due_date = item.due_date if item.due_date else datetime.now().strftime("%Y-%m-%d")
+        # Jira, Trello y ClickUp esperan una fecha de verdad. Un texto libre
+        # es truthy y se colaba entero en el payload; si no hay fecha usable,
+        # hoy es un default mejor que un 400 del otro lado.
+        eff_due_date = normalize_due_date(item.due_date) or datetime.now().strftime("%Y-%m-%d")
 
         owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
         safe_description = f"{item.description}\n\n**Metadatos de Notiva**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"

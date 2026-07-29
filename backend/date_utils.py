@@ -46,12 +46,21 @@ def normalize_due_date(value: Any) -> Optional[str]:
 
 
 def is_valid_due_date(value: Any) -> bool:
-    """True si `value` está vacío o es una fecha ISO válida.
+    """True si `value` está vacío o es exactamente `YYYY-MM-DD`.
 
-    Pensado para validar input explícito: un campo vacío significa «sin
-    fecha» y es legítimo, pero un texto que no es fecha es un error del
-    llamador y no debe guardarse en silencio.
+    Pensado para validar input explícito (formularios y API pública): un
+    campo vacío significa «sin fecha» y es legítimo, pero cualquier otra
+    cosa es un error del llamador y merece un 422.
+
+    Es más estricto que `normalize_due_date` a propósito. Aquel tolera un
+    sufijo horario porque procesa lo que ya está guardado o lo que escupe
+    un LLM, donde recortar es mejor que perder la tarea. Aquí no: aceptar
+    `2026-07-28T15:00` y guardar sólo la fecha tiraría las 15:00 en
+    silencio, y descartar parte de un dato que acabas de aceptar es
+    justo lo que este módulo existe para evitar. La hora se manda en
+    `due_time`.
     """
     if value is None or not str(value).strip():
         return True
-    return normalize_due_date(value) is not None
+    texto = str(value).strip()
+    return len(texto) == 10 and normalize_due_date(texto) == texto

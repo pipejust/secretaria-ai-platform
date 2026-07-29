@@ -60,6 +60,9 @@ function isRealDueDate(value: string | null | undefined): boolean {
     // el día anterior, tumbando fechas perfectamente válidas.
     const [y, m, day] = head.split('-').map(Number);
     const d = new Date(y, m - 1, day);
+    // `new Date(y, ...)` mapea los años 0-99 a 1900+y, así que «0099-01-01»
+    // se rechazaría aquí y el backend sí la acepta. setFullYear lo corrige.
+    d.setFullYear(y);
     return d.getFullYear() === y && d.getMonth() === m - 1 && d.getDate() === day;
 }
 

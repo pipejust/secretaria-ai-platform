@@ -35,9 +35,31 @@ def test_texto_libre_del_llm_no_es_fecha(valor):
     # La hora vive en `due_time`, así que el sufijo horario se descarta.
     ("2026-07-28T10:30", "2026-07-28"),
     ("2026-07-28 10:30:00", "2026-07-28"),
+    # Cola de basura pegada a una fecha buena: nos quedamos con la fecha.
+    ("2026-07-28 (aprox)", "2026-07-28"),
 ])
 def test_fechas_iso_se_normalizan_a_solo_fecha(valor, esperado):
     assert normalize_due_date(valor) == esperado
+
+
+@pytest.mark.parametrize("valor", [
+    "2026-07-28T10:30",
+    "2026-07-28 10:30:00",
+    "2026-07-28 (aprox)",
+    "2026-07-283",
+])
+def test_input_explicito_no_acepta_nada_pegado_a_la_fecha(valor):
+    """`normalize_due_date` recorta, pero validar input no puede recortar.
+
+    Aceptar `2026-07-28T15:00` en un POST y guardar sólo la fecha tiraría
+    las 15:00 sin avisar. La hora se manda en `due_time`.
+    """
+    assert normalize_due_date(valor) is not None   # sí se puede rescatar
+    assert is_valid_due_date(valor) is False       # pero no se acepta callado
+
+
+@pytest.mark.parametrize("valor", ["2026-07-28", "  2026-07-28  "])
+def test_input_explicito_acepta_la_fecha_pelada(valor):
     assert is_valid_due_date(valor) is True
 
 

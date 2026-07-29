@@ -22,6 +22,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session, select
 
 from database import get_session
+from date_utils import normalize_due_date
 from models import ActionItem, MeetingSession, Project, Routing, Tenant, User
 from routers.auth import get_current_tenant, require_admin
 from services.fireflies_service import FirefliesService
@@ -593,6 +594,9 @@ async def _dispatch_routing(
     # — se vuelve ruido) usando el routing como entity para deduplicar.
     routing_failures = 0
     for act in action_items:
+        # Trello/Jira/ClickUp/Azure esperan una fecha de verdad; un texto
+        # libre reventaba el payload del otro lado.
+        act_due = normalize_due_date(act.due_date)
         try:
             if "trello" in dest_type:
                 await service.create_card(
@@ -600,14 +604,14 @@ async def _dispatch_routing(
                     config.get("list_id"),
                     act.title,
                     act.description,
-                    act.due_date,
+                    act_due,
                 )
             elif "jira" in dest_type:
                 await service.create_issue(
                     config.get("project_key"),
                     act.title,
                     act.description,
-                    due_date=act.due_date,
+                    due_date=act_due,
                     owner_email=act.owner_email,
                 )
             elif "clickup" in dest_type:
@@ -615,14 +619,14 @@ async def _dispatch_routing(
                     config.get("list_id"),
                     act.title,
                     act.description,
-                    due_date=act.due_date,
+                    due_date=act_due,
                     owner_email=act.owner_email,
                 )
             elif "azure" in dest_type or "devops" in dest_type:
                 await service.create_work_item(
                     title=act.title,
                     description=act.description,
-                    due_date=act.due_date,
+                    due_date=act_due,
                     owner_email=act.owner_email,
                 )
         except Exception:
