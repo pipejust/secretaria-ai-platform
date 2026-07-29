@@ -485,11 +485,19 @@ def create_task(
 # PREGUNTAR (RAG) — mismo motor que usa Acten por dentro
 # ══════════════════════════════════════════════════════════════════════
 
+class AskV1PriorTurn(BaseModel):
+    question: str
+    answer: str = ""
+
+
 class AskV1Request(BaseModel):
     question: str
     project_external_id: Optional[str] = None
     session_ids: Optional[list[int]] = None
     top_k: int = Field(default=8, ge=1, le=20)
+    # Turnos previos del mismo hilo, para preguntas de seguimiento
+    # («¿y quién lo hace?»). Se envían los últimos N en orden cronológico.
+    prior_turns: Optional[list[AskV1PriorTurn]] = None
 
 
 @router.post("/ask")
@@ -521,15 +529,23 @@ async def ask_v1(
         if not visible:
             return {
                 "answer": "No tiene reuniones visibles todavía.",
-                "citations": [], "chunks_used": 0, "model": "",
+                "structured": None, "citations": [],
+                "chunks_used": 0, "model": "",
             }
         sids = [s for s in sids if s in set(visible)] if sids else visible
+
+    from routers.ask import PriorTurn as _PriorTurn
+    turns = [
+        _PriorTurn(question=t.question, answer=t.answer)
+        for t in (payload.prior_turns or [])
+    ] or None
 
     core = AskRequest(
         question=payload.question,
         project_id=project_id,
         top_k=payload.top_k,
         session_ids=sids,
+        prior_turns=turns,
     )
     # El motor guarda la pregunta en el historial y necesita un `user.id`.
     # Si la persona existe allá pero aún no tiene cuenta aquí, atribuimos
@@ -547,9 +563,10 @@ async def ask_v1(
             raise HTTPException(503, "El tenant no tiene usuarios activos.")
 
     res = await _ask_core(payload=core, db=db, user=actor, tenant=ctx.tenant)
-    data = res.model_dump() if hasattr(res, "model_dump") else dict(res)
-    data.pop("structured", None)
-    return data
+    # Se devuelve tal cual, incluido `structured` — el contrato §7 promete
+    # `intro`, `decisions[]`, `action_items[]`, `risks[]`, `agreements[]`
+    # y `citations[]` con título y fecha de cada sesión.
+    return res
 
 
 # ══════════════════════════════════════════════════════════════════════
