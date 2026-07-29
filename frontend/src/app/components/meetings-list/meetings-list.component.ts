@@ -13,6 +13,7 @@ import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { UserChipComponent } from '../shared/user-chip/user-chip.component';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { BrandingService } from '../../services/branding.service';
+import { parseLocalDate } from '../../shared/dates';
 
 /** Sub-tab de la card del header (filtro rápido por status). */
 type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
@@ -715,8 +716,10 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     }
     formatDueDate(due: any): string {
         if (!due) return '—';
-        const d = new Date(due);
-        if (isNaN(d.getTime())) return String(due);
+        // `due_date` es una fecha sin hora: `new Date(due)` la interpretaría
+        // como UTC y en Colombia pintaría el día anterior.
+        const d = parseLocalDate(due);
+        if (!d) return String(due);
         return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
     }
 
