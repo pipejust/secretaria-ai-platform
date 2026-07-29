@@ -762,6 +762,8 @@ negocia, no se asume.
 | 11 | ~~Sync periódica~~ | ✅ automática cada 15 min + completa 03:20 |
 | 12 | Agenda conectada (Google/Microsoft) | ⏸ solo afecta a `kind: "event"`; tareas y reuniones ya llegan |
 | 13 | ~~Quién crea en el asistente~~ | ✅ **bidireccional en una ejecución** — ver §16 |
+| 14 | ~~Entrega de credenciales~~ | ✅ **emparejamiento por código** — ver §18 |
+| 15 | ~~Membresía al desasignar~~ | ✅ el sync retira el acceso — ver §4.a |
 | 4 | 0 proyectos en producción de RRHH | ⏸ solo afecta producción; QA ya tiene datos |
 | 5 | UI en Angular (tareas + Kanban) | 🔨 de su lado, arranca cuando tengan la clave |
 | 6 | ~~Permisos por sesión~~ | ✅ miembro de proyecto ve las reuniones de ese proyecto |
@@ -1061,6 +1063,76 @@ nada— y verificado: los tres resuelven.
 
 Lo escribimos porque explica por qué, si alguien probó una integración
 antes de hoy y «no hacía nada», no era su configuración.
+
+---
+
+## 18. Conectar sin manejar claves — emparejamiento por código
+
+**Sustituye al intercambio manual de credenciales.** Lo de esta semana dejó
+claro por qué hacía falta: la clave que emitimos el 28 no la tenía nadie —
+ni ustedes ni nosotros— porque el único momento en que existe en claro es
+la respuesta que la emite, y ahí se perdió.
+
+### El flujo
+
+1. Un administrador de Acten pulsa **Conectar plataforma** en
+   *Ajustes → Integraciones*. Sale un código:
+
+   ```
+   ACTEN-4K7M-Q2XP        (válido 15 min, un solo uso)
+   ```
+
+2. Lo pegan en su pantalla de conexión.
+3. **Su servidor** llama a `POST /api/v1/pair/redeem`:
+
+```json
+{
+  "codigo": "ACTEN-4K7M-Q2XP",
+  "plataforma": "Servicios RRHH",
+  "webhook_url": "https://servicios.softnexus.io/api/v1/api/webhooks/acten",
+  "webhook_secret": "<el suyo, el que verifica>",
+  "api_base_url": "https://servicios.softnexus.io/api/v1/api",
+  "api_key": "<la que nos dan para llamarles>"
+}
+```
+
+Y reciben, **una sola vez**, la clave con los quince alcances, el `api_base`,
+la lista de eventos y el contrato de firma.
+
+> **Llámenlo desde su servidor, nunca desde el navegador.** Si lo llama el
+> navegador, la clave llega al navegador, y ahí deja de ser un secreto.
+
+### Por qué así
+
+| Antes | Ahora |
+|---|---|
+| Clave de 50 caracteres por canal cifrado | Código de 8, legible en voz alta |
+| Alguien la copia, la pega, la guarda | Va de servidor a servidor |
+| Si se pierde, hay que reemitirla | Si el código se pierde, ya caducó |
+| Secreto HMAC en un segundo mensaje | En la misma llamada |
+| Un destino por despliegue (variables de entorno) | Uno por empresa, en base |
+
+El código no lleva I, O, 0 ni 1 — son las que se confunden al leerlas. Se
+acepta con guiones, sin ellos, en minúsculas o con espacios de más.
+
+### Lo que ve quien conecta
+
+Nada de claves. Un botón, un código con su cuenta atrás, y después
+«Conectada · recibe avisos de sesiones y tareas», con un botón para
+desconectar que revoca la clave y corta los eventos.
+
+### Seguridad del canje
+
+`redeem` **no lleva autenticación** — quien llama todavía no tiene ninguna
+credencial, el código *es* la credencial. Por eso, a la vez: un solo uso,
+quince minutos, se guarda el hash y no el código, y **la misma respuesta para
+código inexistente, gastado o caducado** (distinguirlos le diría a quien
+prueba al azar cuándo ha acertado).
+
+Probado contra producción: canje correcto → clave de 15 alcances que responde
+`200` en sesiones, tareas, calendario e integraciones · segundo canje del
+mismo código → `400` · código inventado → `400`, mismo texto · código con otra
+forma → `422`.
 
 ---
 
