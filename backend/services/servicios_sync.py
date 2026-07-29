@@ -107,18 +107,44 @@ class ServiciosClient:
     def projects(self, status: str = "active") -> list[dict]:
         return self._get("/api/v1/api/projects", {"status": status}).get("items", []) or []
 
-    def resolve_employee(self, work_email: str = "", national_id: str = "") -> Optional[dict]:
-        p = {}
+    def resolve_employee(
+        self, work_email: str = "", name: str = "",
+    ) -> tuple[Optional[dict], str]:
+        """Resuelve una persona contra su directorio. Devuelve (ficha, estado).
+
+        Estados: `ok` · `ambiguo` (409) · `no_existe` (404) · `error`.
+
+        **El 409 y el 404 significan cosas distintas y no se tratan igual.**
+        409 = la persona existe pero el nombre no basta para distinguirla
+        (tienen dos hermanos Cortés Burgos); hay que escoger a mano, nunca
+        adivinar — asignar mal es darle a alguien las actas de otro.
+        404 = no está dada de alta.
+        """
+        p: dict[str, Any] = {}
         if work_email:
             p["work_email"] = work_email
-        elif national_id:
-            p["national_id"] = national_id
+        elif name:
+            p["name"] = name
         else:
-            return None
+            return None, "error"
+        if not self.configured:
+            return None, "error"
         try:
-            return self._get("/api/v1/api/employees/resolve", p)
-        except Exception:
-            return None
+            with httpx.Client(timeout=DEFAULT_TIMEOUT) as c:
+                r = c.get(
+                    f"{self.base_url}/api/v1/api/employees/resolve",
+                    params=p, headers={"X-API-Key": self.api_key},
+                )
+            if r.status_code == 200:
+                return r.json(), "ok"
+            if r.status_code == 409:
+                return r.json(), "ambiguo"
+            if r.status_code == 404:
+                return None, "no_existe"
+            return None, "error"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("resolve falló (%s): %s", p, exc)
+            return None, "error"
 
 
 # ── Resultado del sync ────────────────────────────────────────────────
@@ -181,16 +207,22 @@ def _match_people(
     Criterios, de más fiable a menos:
       1. `external_ref` ya asignado
       2. correo corporativo exacto
-      3. cédula
-      4. nombre: ≥2 tokens en común (nombre + apellido)
+      3. nombre: ≥2 tokens en común
 
-    El criterio de nombre es el que rescata las fichas con correo de otro
-    dominio, que por definición no pueden emparejar por correo.
+    **NO se empareja por cédula**: sus `national_id` no tienen formato
+    homogéneo (unos con separadores de millar, otros sin) y solo produce
+    falsos negativos. Lo normalizarán más adelante.
+
+    Para el nombre se usa `display_name` («Felipe Cortés») y no
+    `full_name` («Andrés Felipe Cortés Burgos»): el legal lleva piezas que
+    nadie usa al nombrar a la persona, y con dos hermanos Cortés Burgos
+    comparar el legal completo acerca peligrosamente a confundirlos.
     """
     r_uuid = (remote.get("id") or "").strip()
     r_email = norm_email(remote.get("work_email"))
-    r_cid = norm_id(remote.get("national_id"))
-    r_tokens = name_tokens(remote.get("full_name"))
+    # display_name es el nombre por el que se le llama — el que coincide
+    # con nuestras fichas. Fallback al legal si aún no viene.
+    r_tokens = name_tokens(remote.get("display_name") or remote.get("full_name"))
 
     pool: list[Any] = list(contacts) + list(users)
     out: list[tuple[Any, str]] = []
@@ -209,11 +241,6 @@ def _match_people(
         for obj in pool:
             if norm_email(getattr(obj, "email", "")) == r_email:
                 add(obj, "correo")
-
-    if r_cid:
-        for obj in pool:
-            if norm_id(getattr(obj, "phone", "") or "") == r_cid:
-                add(obj, "cedula")
 
     if len(r_tokens) >= 2:
         for obj in pool:
@@ -280,10 +307,13 @@ def sync_employees(
                 continue
             obj.external_ref = uuid
             # La empresa es maestro de la IDENTIDAD (nombre, cargo).
-            if hasattr(obj, "name") and emp.get("full_name"):
-                obj.name = emp["full_name"]
-            if hasattr(obj, "full_name") and emp.get("full_name"):
-                obj.full_name = emp["full_name"]
+            # En pantalla va `display_name` («Felipe Cortés»), no el legal
+            # («Andrés Felipe Cortés Burgos»), que es para contratos.
+            shown = emp.get("display_name") or emp.get("full_name")
+            if hasattr(obj, "name") and shown:
+                obj.name = shown
+            if hasattr(obj, "full_name") and shown:
+                obj.full_name = shown
             if hasattr(obj, "role") and emp.get("position"):
                 obj.role = emp["position"]
             if hasattr(obj, "position") and emp.get("position"):
@@ -337,14 +367,30 @@ def sync_projects(
             rep.projects_unmatched.append(name)
             continue
 
+        miembros = pr.get("members") or []
         rep.projects_linked.append({
             "uuid": uuid, "remoto": name, "acten": local.name,
-            "miembros": len(pr.get("members") or []),
+            "miembros": len(miembros),
         })
         if not dry_run:
             local.external_ref = uuid
             local.managed_externally = True
             db.add(local)
+            # Correo POR PROYECTO: la misma persona puede participar con el
+            # correo del cliente. Se prefiere `members[].email`; si viene
+            # vacío, el contacto conserva el que ya tenía.
+            for m in miembros:
+                emp_uuid = (m.get("employee_id") or "").strip()
+                m_email = (m.get("email") or "").strip()
+                if not emp_uuid or not m_email:
+                    continue
+                for c in db.exec(
+                    select(ProjectContact)
+                    .where(ProjectContact.project_id == local.id)
+                    .where(ProjectContact.external_ref == emp_uuid)
+                ).all():
+                    c.email = m_email
+                    db.add(c)
 
     if not dry_run:
         db.commit()
