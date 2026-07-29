@@ -174,6 +174,8 @@ class SyncReport:
     projects_linked: list[dict] = field(default_factory=list)
     projects_unmatched: list[str] = field(default_factory=list)
     contacts_created: list[dict] = field(default_factory=list)
+    projects_renamed: list[dict] = field(default_factory=list)
+    projects_archived: list[dict] = field(default_factory=list)
     # Fichas que dejan de conceder acceso porque la persona ya no figura
     # entre los integrantes del proyecto en la plataforma de Servicios.
     membresias_retiradas: list[dict] = field(default_factory=list)
@@ -202,6 +204,8 @@ class SyncReport:
                 "membresias_retiradas": self.membresias_retiradas,
                 "enlazados": self.projects_linked,
                 "creados_en_acten": self.projects_unmatched,
+                "renombrados": self.projects_renamed,
+                "archivados": self.projects_archived,
                 "contactos_creados": self.contacts_created,
             },
             "errores": self.errors,
@@ -465,6 +469,25 @@ def sync_projects(
         if not dry_run:
             local.external_ref = uuid
             local.managed_externally = True
+            # Ellos son el maestro: si allá renombran el proyecto o lo
+            # reactivan, aquí tiene que verse. Antes solo se copiaba al
+            # crearlo, así que un cambio de nombre no llegaba nunca y las
+            # dos plataformas acababan llamando distinto a lo mismo.
+            # Solo si es un renombrado de verdad. `norm_project` ignora
+            # el paréntesis, así que «Softnexus» y «Softnexus (interno)»
+            # se consideran el mismo nombre: copiarlo tal cual cambiaría
+            # lo que ve todo el mundo en Acten sin que nadie lo pidiera.
+            if name and norm_project(local.name) != norm_project(name):
+                rep.projects_renamed.append({
+                    "de": local.name, "a": name, "uuid": uuid,
+                })
+                local.name = name
+            cliente = pr.get("client_name") or ""
+            if cliente and not (local.description or "").strip():
+                local.description = cliente
+            activo = (pr.get("status") or "active") == "active"
+            if local.is_active != activo:
+                local.is_active = activo
             db.add(local)
             # Integrantes: crear la ficha si falta y aplicar el correo POR
             # PROYECTO (`members[].email`), que puede ser el del cliente.
@@ -538,6 +561,29 @@ def sync_projects(
                         "persona": c.name or c.email or ref,
                         "uuid": ref,
                     })
+
+    # ── Proyectos archivados allá ──────────────────────────────────────
+    # `projects(status="active")` solo trae los vivos, así que uno
+    # archivado en su plataforma se quedaba activo aquí para siempre — con
+    # sus reuniones visibles y ocupando sitio en los selectores.
+    #
+    # Solo se tocan los espejados (`managed_externally`), nunca un
+    # proyecto creado a mano en Acten. Y si el catálogo vino vacío se deja
+    # todo como está: una respuesta vacía puede ser un fallo suyo, y
+    # archivarlo todo por eso no tiene vuelta fácil.
+    refs_vivas = {(pr.get("id") or "").strip() for pr in remote if (pr.get("id") or "").strip()}
+    if refs_vivas and not dry_run:
+        for p in db.exec(
+            select(Project)
+            .where(Project.tenant_id == tenant_id)
+            .where(Project.managed_externally == True)  # noqa: E712
+            .where(Project.is_active == True)  # noqa: E712
+        ).all():
+            ref = (p.external_ref or "").strip()
+            if ref and ref not in refs_vivas:
+                p.is_active = False
+                db.add(p)
+                rep.projects_archived.append({"nombre": p.name, "uuid": ref})
 
     if not dry_run:
         db.commit()
