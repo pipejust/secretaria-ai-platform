@@ -42,6 +42,16 @@ KNOWN_SCOPES = frozenset({
     "ask:query",
     "sync:write",
     "calendar:read",
+    "calendar:write",
+    "sessions:send",
+    "integrations:read",
+    "integrations:write",
+    "outputs:read",
+    "outputs:write",
+    "comments:read",
+    "comments:write",
+    "analytics:read",
+    "notifications:read",
 })
 
 

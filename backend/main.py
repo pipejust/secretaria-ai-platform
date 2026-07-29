@@ -319,6 +319,12 @@ app.include_router(integration_v1.router)
 from routers import integration_link
 app.include_router(integration_link.router)
 
+from routers import integration_v1_platform
+app.include_router(integration_v1_platform.router)
+
+from routers import integration_v1_content
+app.include_router(integration_v1_content.router)
+
 
 @app.get("/")
 def read_root():

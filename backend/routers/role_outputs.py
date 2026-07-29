@@ -80,10 +80,12 @@ async def generate_output(
     current_user: User = Depends(get_current_user),
 ):
     sess = db.get(MeetingSession, session_id)
-    if not sess:
+    # Aislamiento: sin comprobar el tenant, cualquiera podía generar un
+    # artefacto sobre la transcripción de otra empresa pasando su id.
+    if not sess or sess.tenant_id != current_user.tenant_id:
         raise HTTPException(404, "Sesión no encontrada.")
     tpl = db.get(OutputTemplate, template_id)
-    if not tpl or not tpl.is_active:
+    if not tpl or not tpl.is_active or tpl.tenant_id != current_user.tenant_id:
         raise HTTPException(404, "Plantilla no encontrada o inactiva.")
     if not sess.raw_transcript:
         raise HTTPException(400, "La sesión no tiene transcripción para procesar.")

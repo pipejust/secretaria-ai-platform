@@ -76,6 +76,60 @@ def oauth_config_status(
     }
 
 
+
+def get_current_user_optional(
+    request: Request, db: Session = Depends(get_session),
+) -> Optional[User]:
+    """Usuario de la sesión si lo hay, `None` si no.
+
+    Los callbacks de OAuth los abre el navegador del empleado, que puede
+    no tener sesión de Acten. Exigirla ahí rompería la conexión desde la
+    plataforma de Servicios.
+    """
+    auth = request.headers.get("Authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        return None
+    try:
+        return get_current_user(token=auth[7:], db=db)
+    except HTTPException:
+        return None
+
+
+def _usuario_del_callback(
+    state: Optional[str], current_user: Optional[User], provider: str,
+    db: Session,
+) -> User:
+    """A quién pertenece la agenda que se acaba de autorizar.
+
+    Dos caminos, y el segundo es el que importa: cuando el empleado
+    conecta desde la plataforma de Servicios **no hay sesión de Acten**,
+    porque el acuerdo es que esa gente nunca entra. En ese caso el
+    `state` es un token firmado por nosotros (emitido por
+    `POST /api/v1/calendar/connect`) que dice de quién es el permiso.
+
+    Sin esto habría que pedirles que se registren en Acten solo para
+    enganchar su calendario, que es exactamente lo que la integración
+    viene a evitar.
+    """
+    if state:
+        from routers.integration_v1_platform import leer_state
+        datos = leer_state(state)
+        if datos:
+            if datos.get("provider") != provider:
+                raise HTTPException(400, "El enlace de conexión no es de este proveedor.")
+            u = db.get(User, datos.get("uid"))
+            if not u or u.tenant_id != datos.get("tid"):
+                raise HTTPException(400, "El enlace de conexión ya no es válido.")
+            return u
+    if current_user:
+        return current_user
+    raise HTTPException(
+        401,
+        "Falta la sesión o un enlace de conexión válido. Los enlaces de "
+        "`/api/v1/calendar/connect` caducan a los 15 minutos.",
+    )
+
+
 @router.get("/google/auth_url")
 def google_auth_url(
     current_user: User = Depends(get_current_user),
@@ -109,9 +163,10 @@ def microsoft_auth_url(
 async def google_callback(
     code: str = Query(...),
     state: Optional[str] = Query(None),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_session),
 ):
+    current_user = _usuario_del_callback(state, current_user, "google", db)
     cfg = _load_oauth_cfg("google", current_user.tenant_id, db)
     try:
         tok = await google_exchange_code(code, cfg=cfg)
@@ -149,9 +204,10 @@ async def google_callback(
 async def microsoft_callback(
     code: str = Query(...),
     state: Optional[str] = Query(None),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_session),
 ):
+    current_user = _usuario_del_callback(state, current_user, "microsoft", db)
     cfg = _load_oauth_cfg("microsoft", current_user.tenant_id, db)
     try:
         tok = await microsoft_exchange_code(code, cfg=cfg)
