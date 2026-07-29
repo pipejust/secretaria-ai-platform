@@ -2592,7 +2592,8 @@
     "project_detail": "Project details",
     "ask": "Ask Acten",
     "calendar": "Calendar",
-    "outputs": "Artifacts"
+    "outputs": "Artifacts",
+    "kanban": "Task board"
   },
   "password_input": {
     "show_password": "Show password",
@@ -2615,5 +2616,19 @@
     "disconnected": "Platform disconnected.",
     "error": "The operation could not be completed.",
     "copy_failed": "Could not copy. Select it by hand."
+  },
+  "kanban": {
+    "title": "Board",
+    "cards": "tasks",
+    "people": "people",
+    "search": "Search task…",
+    "by_person": "By person",
+    "only_mine": "Only mine",
+    "include_closed": "Show closed",
+    "unassigned": "Unassigned",
+    "empty_col": "Nothing here",
+    "nothing": "No tasks to show.",
+    "load_error": "The board could not be loaded.",
+    "move_error": "The card could not be moved."
   }
 }

@@ -1,0 +1,269 @@
+/* Tablero Kanban.
+   Dos vistas: calles por persona (la que se pidió — ver de un vistazo qué
+   lleva cada uno) y el tablero clásico de columnas. */
+
+:host {
+    --kb-gap: .7rem;
+    --kb-col-min: 220px;
+    --kb-radius: 10px;
+    display: block;
+}
+
+.kb-page { padding: 1.2rem 1.4rem 3rem; }
+
+/* ── Cabecera ─────────────────────────────────────────────────────── */
+.kb-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-block-end: 1.1rem;
+}
+.kb-title {
+    margin: 0;
+    font-size: clamp(1.3rem, 1.1rem + .9vw, 1.75rem);
+    font-weight: 700;
+    letter-spacing: -.015em;
+}
+.kb-sub { margin: .2rem 0 0; font-size: .82rem; color: var(--color-text-muted, #64748b); }
+
+.kb-tools { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
+
+.kb-search, .kb-select {
+    padding: .42rem .6rem;
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: 8px;
+    background: var(--color-surface, #fff);
+    color: inherit;
+    font: inherit;
+    font-size: .82rem;
+}
+.kb-search { inline-size: 190px; }
+.kb-search:focus-visible, .kb-select:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 1px;
+}
+
+.kb-chip {
+    padding: .42rem .7rem;
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: 999px;
+    background: var(--color-surface, #fff);
+    color: var(--color-text-muted, #64748b);
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-fast, 150ms) ease,
+                color var(--duration-fast, 150ms) ease,
+                border-color var(--duration-fast, 150ms) ease;
+}
+.kb-chip:hover { border-color: var(--color-primary, #2563eb); }
+.kb-chip.is-on {
+    background: var(--color-primary, #2563eb);
+    border-color: var(--color-primary, #2563eb);
+    color: #fff;
+}
+
+.kb-loading, .kb-nothing {
+    margin: 2rem 0;
+    color: var(--color-text-muted, #64748b);
+    font-size: .88rem;
+}
+
+/* ── Vista por persona ────────────────────────────────────────────── */
+/* Rejilla: primera pista para el nombre, una por columna. La tabla
+   entera hace scroll horizontal en pantallas pequeñas — nunca la página. */
+.kb-lane-headers,
+.kb-lane {
+    display: grid;
+    grid-template-columns: 172px repeat(4, minmax(var(--kb-col-min), 1fr));
+    gap: var(--kb-gap);
+}
+.kb-lane-headers { margin-block-end: .45rem; }
+.kb-lane-col {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+}
+
+.kb-lane {
+    margin-block-end: var(--kb-gap);
+    padding-block: .5rem;
+    border-block-start: 1px solid var(--color-border, #e2e8f0);
+}
+.kb-lane-who {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding-block-start: .3rem;
+    min-inline-size: 0;
+}
+.kb-who-name {
+    font-size: .84rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.kb-who-count {
+    margin-inline-start: auto;
+    padding: .05rem .38rem;
+    border-radius: 999px;
+    background: var(--color-surface-2, #eef2f7);
+    color: var(--color-text-muted, #64748b);
+    font-size: .7rem;
+    font-weight: 700;
+}
+
+.kb-lane-col-drop {
+    min-block-size: 54px;
+    padding: .3rem;
+    border-radius: var(--kb-radius);
+    background: var(--color-surface-2, #f8fafc);
+    transition: background var(--duration-fast, 150ms) ease,
+                box-shadow var(--duration-fast, 150ms) ease;
+}
+.kb-lane-col-drop.is-over,
+.kb-col.is-over {
+    background: color-mix(in oklab, var(--color-primary, #2563eb) 8%, transparent);
+    box-shadow: inset 0 0 0 2px var(--color-primary, #2563eb);
+}
+
+/* ── Vista clásica ────────────────────────────────────────────────── */
+.kb-board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(var(--kb-col-min), 1fr));
+    gap: var(--kb-gap);
+    align-items: start;
+}
+.kb-col {
+    padding: .55rem;
+    border-radius: var(--kb-radius);
+    background: var(--color-surface-2, #f8fafc);
+    min-block-size: 120px;
+    transition: background var(--duration-fast, 150ms) ease,
+                box-shadow var(--duration-fast, 150ms) ease;
+}
+.kb-col-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-block-end: .5rem;
+    padding-inline: .15rem;
+}
+.kb-col-title {
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+}
+.kb-col-count {
+    padding: .05rem .38rem;
+    border-radius: 999px;
+    background: var(--color-surface, #fff);
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--color-text-muted, #64748b);
+}
+
+/* ── Tarjeta ──────────────────────────────────────────────────────── */
+.kb-card {
+    position: relative;
+    display: block;
+    margin-block-end: .4rem;
+    padding: .55rem .6rem .5rem .78rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    background: var(--color-surface, #fff);
+    cursor: grab;
+    /* Solo transform/opacity: mover una tarjeta no debe recalcular layout. */
+    transition: transform var(--duration-fast, 150ms) cubic-bezier(.16, 1, .3, 1),
+                box-shadow var(--duration-fast, 150ms) ease,
+                opacity var(--duration-fast, 150ms) ease;
+}
+.kb-card:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgb(15 23 42 / .09); }
+.kb-card:active { cursor: grabbing; }
+.kb-card.is-dragging { opacity: .4; transform: scale(.98); }
+
+/* Franja de prioridad: color semántico, no decorativo. */
+.kb-prio {
+    position: absolute;
+    inset-block: .5rem;
+    inset-inline-start: .34rem;
+    inline-size: 3px;
+    border-radius: 3px;
+    background: var(--color-border, #cbd5e1);
+}
+.kb-prio.is-alta  { background: var(--color-danger, #dc2626); }
+.kb-prio.is-media { background: var(--color-warning, #d97706); }
+.kb-prio.is-baja  { background: var(--color-success, #1B7F67); }
+
+.kb-card-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: .8rem;
+    line-height: 1.35;
+    font-weight: 600;
+    color: inherit;
+    text-decoration: none;
+}
+.kb-card-title:hover { text-decoration: underline; }
+
+.kb-card-who { display: flex; align-items: center; gap: .35rem; margin-block-start: .4rem; }
+.kb-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .4rem;
+    margin-block-start: .35rem;
+    font-size: .7rem;
+    color: var(--color-text-muted, #64748b);
+}
+.kb-proj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-due { flex: none; font-variant-numeric: tabular-nums; }
+.kb-due.is-late { color: var(--color-danger, #dc2626); font-weight: 700; }
+
+.kb-avatar {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 26px;
+    block-size: 26px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    flex: none;
+}
+.kb-avatar--sm { inline-size: 19px; block-size: 19px; font-size: .58rem; }
+.kb-avatar.is-none {
+    background: transparent !important;
+    border: 1px dashed var(--color-border, #cbd5e1);
+    color: var(--color-text-muted, #64748b);
+}
+
+.kb-empty {
+    margin: .2rem 0 0;
+    text-align: center;
+    color: var(--color-border, #cbd5e1);
+    font-size: .74rem;
+}
+
+/* ── Estrecho ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .kb-page { padding-inline: .8rem; overflow-x: auto; }
+    .kb-lane-headers, .kb-lane { grid-template-columns: 132px repeat(4, 190px); }
+    .kb-board { grid-template-columns: repeat(4, 200px); }
+    .kb-search { inline-size: 140px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kb-card, .kb-col, .kb-lane-col-drop { transition: none; }
+    .kb-card:hover { transform: none; }
+}

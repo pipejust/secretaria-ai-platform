@@ -1,0 +1,121 @@
+<div class="kb-page">
+
+    <!-- ── Cabecera ── -->
+    <header class="kb-head">
+        <div class="kb-head-text">
+            <h1 class="kb-title">{{ 'kanban.title' | translate }}</h1>
+            <p class="kb-sub" *ngIf="tablero">
+                {{ tablero.total }} {{ 'kanban.cards' | translate }} ·
+                {{ tablero.personas.length }} {{ 'kanban.people' | translate }}
+            </p>
+        </div>
+
+        <div class="kb-tools">
+            <input type="search" class="kb-search" [(ngModel)]="busqueda"
+                   [placeholder]="'kanban.search' | translate" />
+
+            <select class="kb-select" [(ngModel)]="proyectoId" (ngModelChange)="cargar()">
+                <option [ngValue]="null">{{ 'common.all_projects' | translate }}</option>
+                <option *ngFor="let p of proyectos" [ngValue]="p.id">{{ p.name }}</option>
+            </select>
+
+            <button type="button" class="kb-chip" [class.is-on]="porPersona"
+                    (click)="alternarPorPersona()">
+                {{ 'kanban.by_person' | translate }}
+            </button>
+            <button type="button" class="kb-chip" [class.is-on]="soloMias"
+                    (click)="soloMias = !soloMias; cargar()">
+                {{ 'kanban.only_mine' | translate }}
+            </button>
+            <button type="button" class="kb-chip" [class.is-on]="incluirCerradas"
+                    (click)="incluirCerradas = !incluirCerradas; cargar()">
+                {{ 'kanban.include_closed' | translate }}
+            </button>
+        </div>
+    </header>
+
+    <p class="kb-loading" *ngIf="cargando">{{ 'common.loading' | translate }}</p>
+
+    <!-- ══ Vista por persona ══ -->
+    <ng-container *ngIf="porPersona && tablero && !cargando">
+        <div class="kb-lane-headers">
+            <span class="kb-lane-spacer"></span>
+            <span class="kb-lane-col" *ngFor="let c of tablero.columnas; trackBy: trackColumna">
+                {{ c.titulo }}
+            </span>
+        </div>
+
+        <section class="kb-lane" *ngFor="let calle of calles; trackBy: trackCalle">
+            <div class="kb-lane-who">
+                <span class="kb-avatar" [style.background]="tono(calle.persona)"
+                      [class.is-none]="esSinDueno(calle.persona)">
+                    {{ iniciales(calle.persona) }}
+                </span>
+                <span class="kb-who-name">{{ nombrePersona(calle.persona) }}</span>
+                <span class="kb-who-count">{{ calle.total }}</span>
+            </div>
+
+            <div class="kb-lane-col-drop" *ngFor="let c of tablero.columnas; trackBy: trackColumna"
+                 [class.is-over]="columnaSobre === c.key && arrastrando"
+                 (dragover)="sobreColumna(c.key, $event)"
+                 (dragleave)="columnaSobre = null"
+                 (drop)="soltar(c.key, $event)">
+                <article class="kb-card" *ngFor="let t of calle.porColumna[c.key]; trackBy: trackTarjeta"
+                         draggable="true"
+                         (dragstart)="empezarArrastre(t, $event)"
+                         (dragend)="terminarArrastre()"
+                         [class.is-dragging]="arrastrando?.id === t.id">
+                    <span class="kb-prio" [class]="'is-' + t.prioridad"></span>
+                    <a class="kb-card-title" [routerLink]="['/admin/curation', t.session_id]"
+                       [title]="t.titulo">{{ t.titulo }}</a>
+                    <div class="kb-card-meta">
+                        <span class="kb-proj">{{ t.proyecto }}</span>
+                        <span class="kb-due" *ngIf="t.vence" [class.is-late]="venceTarde(t)">
+                            {{ t.vence }}
+                        </span>
+                    </div>
+                </article>
+                <p class="kb-empty" *ngIf="!calle.porColumna[c.key].length">—</p>
+            </div>
+        </section>
+
+        <p class="kb-nothing" *ngIf="!calles.length">{{ 'kanban.nothing' | translate }}</p>
+    </ng-container>
+
+    <!-- ══ Vista clásica ══ -->
+    <section class="kb-board" *ngIf="!porPersona && tablero && !cargando">
+        <div class="kb-col" *ngFor="let c of tablero.columnas; trackBy: trackColumna"
+             [class.is-over]="columnaSobre === c.key && arrastrando"
+             (dragover)="sobreColumna(c.key, $event)"
+             (dragleave)="columnaSobre = null"
+             (drop)="soltar(c.key, $event)">
+            <header class="kb-col-head">
+                <span class="kb-col-title">{{ c.titulo }}</span>
+                <span class="kb-col-count">{{ tarjetasDe(c).length }}</span>
+            </header>
+
+            <article class="kb-card" *ngFor="let t of tarjetasDe(c); trackBy: trackTarjeta"
+                     draggable="true"
+                     (dragstart)="empezarArrastre(t, $event)"
+                     (dragend)="terminarArrastre()"
+                     [class.is-dragging]="arrastrando?.id === t.id">
+                <span class="kb-prio" [class]="'is-' + t.prioridad"></span>
+                <a class="kb-card-title" [routerLink]="['/admin/curation', t.session_id]"
+                   [title]="t.titulo">{{ t.titulo }}</a>
+                <div class="kb-card-who">
+                    <span class="kb-avatar kb-avatar--sm" [style.background]="tono(t.persona)"
+                          [class.is-none]="t.sin_dueno">{{ iniciales(t.persona) }}</span>
+                    <span class="kb-who-name">{{ nombrePersona(t.persona) }}</span>
+                </div>
+                <div class="kb-card-meta">
+                    <span class="kb-proj">{{ t.proyecto }}</span>
+                    <span class="kb-due" *ngIf="t.vence" [class.is-late]="venceTarde(t)">
+                        {{ t.vence }}
+                    </span>
+                </div>
+            </article>
+
+            <p class="kb-empty" *ngIf="!tarjetasDe(c).length">{{ 'kanban.empty_col' | translate }}</p>
+        </div>
+    </section>
+</div>

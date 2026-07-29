@@ -2592,7 +2592,8 @@
     "project_detail": "Detall del projecte",
     "ask": "Pregunta a Acten",
     "calendar": "Calendari",
-    "outputs": "Artefactes"
+    "outputs": "Artefactes",
+    "kanban": "Tauler de tasques"
   },
   "password_input": {
     "show_password": "Mostra la contrasenya",
@@ -2615,5 +2616,19 @@
     "disconnected": "Plataforma desconnectada.",
     "error": "No s'ha pogut completar l'operació.",
     "copy_failed": "No s'ha pogut copiar. Selecciona'l a mà."
+  },
+  "kanban": {
+    "title": "Tauler",
+    "cards": "tasques",
+    "people": "persones",
+    "search": "Cerca tasca…",
+    "by_person": "Per persona",
+    "only_mine": "Només meves",
+    "include_closed": "Mostra tancades",
+    "unassigned": "Sense responsable",
+    "empty_col": "Res aquí",
+    "nothing": "No hi ha tasques a mostrar.",
+    "load_error": "No s'ha pogut carregar el tauler.",
+    "move_error": "No s'ha pogut moure la targeta."
   }
 }

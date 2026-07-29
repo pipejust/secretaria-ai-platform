@@ -118,6 +118,18 @@
                         <span class="nav-text" *ngIf="!isCollapsed">{{ 'meetings.tabs.tasks' | translate }}</span>
                     </a>
                 </li>
+                <li *ngIf="canSee('tareas')">
+                    <a routerLink="/admin/kanban" routerLinkActive="active" [title]="'kanban.title' | translate"
+                       data-nav-key="tareas">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="5" height="18" rx="1"></rect>
+                            <rect x="10" y="3" width="5" height="12" rx="1"></rect>
+                            <rect x="17" y="3" width="4" height="8" rx="1"></rect>
+                        </svg>
+                        <span class="nav-text" *ngIf="!isCollapsed">{{ 'kanban.title' | translate }}</span>
+                    </a>
+                </li>
                 <li *ngIf="canSee('reportes')">
                     <a routerLink="/admin/reportes" routerLinkActive="active" [title]="'admin_layout.reports_title' | translate">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"

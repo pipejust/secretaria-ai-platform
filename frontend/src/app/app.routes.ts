@@ -101,6 +101,12 @@ export const routes: Routes = [
                 data: { titleKey: 'route_titles.projects', description: 'Administra tus proyectos corporativos, mapeo de contactos y definición de rutas de integración hacia Trello, Jira, ClickUp o Azure.', robots: 'noindex, nofollow' }
             },
             {
+                path: 'kanban',
+                loadComponent: () => import('./components/kanban/kanban.component').then(m => m.KanbanComponent),
+                title: 'Tablero de tareas | Acten',
+                data: { titleKey: 'route_titles.kanban', description: 'Tablero Kanban de tareas por persona y por estado, con arrastrar y soltar.', robots: 'noindex, nofollow' }
+            },
+            {
                 path: 'templates',
                 component: TemplatesComponent,
                 title: 'Plantillas Documentales | Acten',

@@ -2592,7 +2592,8 @@
     "project_detail": "Detalle de proyecto",
     "ask": "Pregunta a Acten",
     "calendar": "Calendario",
-    "outputs": "Artefactos"
+    "outputs": "Artefactos",
+    "kanban": "Tablero de tareas"
   },
   "password_input": {
     "show_password": "Mostrar contraseña",
@@ -2615,5 +2616,19 @@
     "disconnected": "Plataforma desconectada.",
     "error": "No se pudo completar la operación.",
     "copy_failed": "No se pudo copiar. Selecciónalo a mano."
+  },
+  "kanban": {
+    "title": "Tablero",
+    "cards": "tareas",
+    "people": "personas",
+    "search": "Buscar tarea…",
+    "by_person": "Por persona",
+    "only_mine": "Solo mías",
+    "include_closed": "Ver cerradas",
+    "unassigned": "Sin responsable",
+    "empty_col": "Nada aquí",
+    "nothing": "No hay tareas que mostrar.",
+    "load_error": "No se pudo cargar el tablero.",
+    "move_error": "No se pudo mover la tarjeta."
   }
 }
