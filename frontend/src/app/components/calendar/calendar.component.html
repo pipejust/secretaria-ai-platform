@@ -168,6 +168,16 @@
           <span class="cal-toggle-dot cal-toggle-dot--emerald"></span>
           {{ 'calendar.include_completed' | translate }}
         </label>
+        <label class="cal-toggle"
+               [title]="'calendar.show_external_owners_hint' | translate">
+          <input type="checkbox" [checked]="showExternalOwners"
+                 (change)="toggleExternalOwners()"/>
+          <span class="cal-toggle-dot cal-toggle-dot--slate"></span>
+          {{ 'calendar.show_external_owners' | translate }}
+          <small class="cal-toggle-count" *ngIf="externalOwnersCount > 0">
+            {{ externalOwnersCount }}
+          </small>
+        </label>
       </div>
     </div>
   </section>

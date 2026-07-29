@@ -1233,7 +1233,10 @@
     "toast_pick_meeting": "Select a meeting.",
     "toast_task_needs_title": "Task needs a title.",
     "toast_task_created": "Task added successfully.",
-    "toast_task_create_error": "Could not create task."
+    "toast_task_create_error": "Could not create task.",
+    "show_external_owners": "Show owners outside the project",
+    "show_external_owners_hint": "Tasks assigned to someone who is not a project member. Turning this off hides them here; they still exist.",
+    "owner_not_in_project": "The owner is not a project member"
   },
   "templates": {
     "title": "Templates",
@@ -2153,7 +2156,9 @@
     "toast_task_created": "Task created successfully.",
     "toast_task_create_error": "Could not create task.",
     "provider_google": "Google",
-    "provider_microsoft": "Microsoft 365"
+    "provider_microsoft": "Microsoft 365",
+    "show_external_owners": "Show owners outside the project",
+    "show_external_owners_hint": "Tasks assigned to someone who is not a project member. Turning this off hides them here; they still exist."
   },
   "landing": {
     "plus_n_more": "+2 more",

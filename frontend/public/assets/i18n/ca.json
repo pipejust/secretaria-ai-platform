@@ -1233,7 +1233,10 @@
     "toast_pick_meeting": "Selecciona una reunió.",
     "toast_task_needs_title": "La tasca necessita un títol.",
     "toast_task_created": "Tasca afegida correctament.",
-    "toast_task_create_error": "No s'ha pogut crear la tasca."
+    "toast_task_create_error": "No s'ha pogut crear la tasca.",
+    "show_external_owners": "Mostra responsables aliens al projecte",
+    "show_external_owners_hint": "Tasques assignades a algú que no consta entre els integrants del projecte. En apagar-ho deixen de veure's aquí, però continuen existint.",
+    "owner_not_in_project": "El responsable no és integrant del projecte"
   },
   "templates": {
     "title": "Plantilles",
@@ -2153,7 +2156,9 @@
     "toast_task_created": "Tasca creada correctament.",
     "toast_task_create_error": "No s'ha pogut crear la tasca.",
     "provider_google": "Google",
-    "provider_microsoft": "Microsoft 365"
+    "provider_microsoft": "Microsoft 365",
+    "show_external_owners": "Mostra responsables aliens al projecte",
+    "show_external_owners_hint": "Tasques assignades a algú que no consta entre els integrants del projecte. En apagar-ho deixen de veure's aquí, però continuen existint."
   },
   "landing": {
     "plus_n_more": "+2 més",

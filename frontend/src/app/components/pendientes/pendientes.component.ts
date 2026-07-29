@@ -38,6 +38,8 @@ interface PendingItem {
     completed_at: string | null;
     is_approved: boolean;
     project_name: string;
+    /** null = la tarea no cuelga de ningún proyecto. */
+    owner_in_project?: boolean | null;
     bucket: 'vencido' | 'proximo' | 'pendiente' | 'sin_fecha' | 'completado' | 'cancelado' | 'bloqueado';
 }
 
@@ -103,6 +105,16 @@ export class PendientesComponent implements OnInit, OnDestroy {
 
     /** Toggle del panel de filtros (mismo patrón que /admin/meetings). */
     showFilters = false;
+
+    /** Mostrar tareas de gente ajena al proyecto.
+     *
+     * Una reunión reparte encargos a quien esté delante, y a veces esa
+     * persona no es del equipo: un cliente, alguien de otra área. La tarea
+     * es real y no se borra, pero al mirar «cómo va este proyecto» esas
+     * filas ensucian el reparto. Por defecto se ven — ocultarlas sin
+     * avisar sería esconder trabajo pendiente. */
+    showExternalOwners = true;
+    private static readonly EXTERNOS_KEY = 'acten.pendientes.verExternos';
 
     /** Lista de proyectos del tenant (para selects). */
     projects: ProjectLite[] = [];
@@ -170,6 +182,10 @@ export class PendientesComponent implements OnInit, OnDestroy {
     ) {}
 
     ngOnInit(): void {
+        try {
+            const guardado = localStorage.getItem(PendientesComponent.EXTERNOS_KEY);
+            if (guardado !== null) this.showExternalOwners = guardado === '1';
+        } catch { /* modo privado */ }
         this.loadStats();
         this.load();
         this.loadProjects();
@@ -330,6 +346,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
         this.dueFilter = '';
         this.activeTab = 'todas';
         this.bucket = 'activos';
+        this.showExternalOwners = true;
         this.currentPage = 1;
         this.load();
     }
@@ -347,7 +364,27 @@ export class PendientesComponent implements OnInit, OnDestroy {
         if (this.priorityFilter.trim()) n++;
         if (this.statusFilter.trim())   n++;
         if (this.bucket && this.bucket !== 'activos') n++;
+        if (!this.showExternalOwners) n++;
         return n;
+    }
+
+    /** Cuántas filas se ocultarían al apagar el interruptor. Se muestra
+     *  junto a él: un filtro que no dice qué esconde se queda encendido
+     *  por miedo o apagado por descuido. */
+    get externalOwnersCount(): number {
+        return this.items.filter(it => it.owner_in_project === false).length;
+    }
+
+    toggleExternalOwners(): void {
+        this.showExternalOwners = !this.showExternalOwners;
+        try {
+            localStorage.setItem(
+                PendientesComponent.EXTERNOS_KEY,
+                this.showExternalOwners ? '1' : '0',
+            );
+        } catch { /* modo privado: la preferencia dura la sesión */ }
+        this.currentPage = 1;
+        this.cdr.detectChanges();
     }
 
     // ============================================================
@@ -592,6 +629,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
                 if (!hay.includes(q)) return false;
             }
             if (proj && !(it.project_name || '').toLowerCase().includes(proj)) return false;
+            if (!this.showExternalOwners && it.owner_in_project === false) return false;
             if (pri && this.priority(it) !== pri) return false;
             if (st) {
                 const lbl = this.estadoLabel(it).toLowerCase();

@@ -1435,3 +1435,73 @@
 .tk-session-empty { padding: 16px; text-align: center; font-size: 12px; color: var(--tk-text-soft); }
 
 :host { display: block; height: 100%; }
+
+/* ── Interruptor de responsables ajenos al proyecto ─────────────────── */
+/* Una reunión reparte encargos a quien esté delante, y a veces esa
+   persona no es del equipo. La tarea es real; lo que estorba es verla
+   cuando se mira el reparto del proyecto. */
+.filter-group--switch { grid-column: 1 / -1; }
+
+.ext-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    cursor: pointer;
+    user-select: none;
+}
+.ext-switch input { position: absolute; opacity: 0; pointer-events: none; }
+
+.ext-switch-track {
+    position: relative;
+    inline-size: 34px;
+    block-size: 19px;
+    border-radius: 999px;
+    background: var(--color-primary, #2563eb);
+    transition: background var(--duration-fast, 150ms) ease;
+    flex: none;
+}
+.ext-switch-knob {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-start: 2px;
+    inline-size: 15px;
+    block-size: 15px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .3);
+    transition: transform var(--duration-fast, 150ms) cubic-bezier(.16, 1, .3, 1);
+}
+.ext-switch.is-off .ext-switch-track { background: var(--color-border, #cbd5e1); }
+.ext-switch.is-off .ext-switch-knob  { transform: translateX(15px); }
+.ext-switch input:focus-visible + .ext-switch-track {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 2px;
+}
+
+.ext-switch-text { font-size: .82rem; font-weight: 500; }
+.ext-switch-text small {
+    margin-inline-start: .35rem;
+    padding: .05rem .34rem;
+    border-radius: 999px;
+    background: var(--color-surface-2, #eef2f7);
+    color: var(--color-text-muted, #64748b);
+    font-size: .7rem;
+    font-weight: 600;
+}
+.ext-switch-hint {
+    margin: .3rem 0 0 2.55rem;
+    font-size: .74rem;
+    line-height: 1.35;
+    color: var(--color-text-muted, #64748b);
+}
+
+/* Punto discreto: distingue la fila sin gritar. */
+.tk-ext-dot {
+    display: inline-block;
+    margin-inline-end: .3rem;
+    color: var(--color-warning, #d97706);
+    font-size: 1.4rem;
+    line-height: 0;
+    vertical-align: middle;
+    cursor: help;
+}

@@ -678,6 +678,18 @@
 .cal-toggle-dot--indigo  { background: #2F3C6A; }
 .cal-toggle-dot--amber   { background: #D9A441; }
 .cal-toggle-dot--emerald { background: #1B7F67; }
+.cal-toggle-dot--slate   { background: #7A8699; }
+
+/* Conteo junto al interruptor: dice cuántas filas se ocultan. */
+.cal-toggle-count {
+    margin-inline-start: .3rem;
+    padding: .04rem .32rem;
+    border-radius: 999px;
+    background: var(--color-surface-2, #eef2f7);
+    color: var(--color-text-muted, #64748b);
+    font-size: .68rem;
+    font-weight: 600;
+}
 
 /* Event color variants — solo el punto va coloreado, fondo transparente */
 .cal-pill--indigo  .cal-pill-dot { background: #155EEF; }

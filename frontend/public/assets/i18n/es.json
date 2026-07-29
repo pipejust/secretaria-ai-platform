@@ -1233,7 +1233,10 @@
     "toast_pick_meeting": "Selecciona una reunión.",
     "toast_task_needs_title": "La tarea necesita un título.",
     "toast_task_created": "Tarea agregada correctamente.",
-    "toast_task_create_error": "No se pudo crear la tarea."
+    "toast_task_create_error": "No se pudo crear la tarea.",
+    "show_external_owners": "Ver responsables ajenos al proyecto",
+    "show_external_owners_hint": "Tareas asignadas a alguien que no figura entre los integrantes del proyecto. Al apagarlo dejan de verse aquí, pero siguen existiendo.",
+    "owner_not_in_project": "El responsable no es integrante del proyecto"
   },
   "templates": {
     "title": "Plantillas",
@@ -2153,7 +2156,9 @@
     "toast_task_created": "Tarea creada correctamente.",
     "toast_task_create_error": "No se pudo crear la tarea.",
     "provider_google": "Google",
-    "provider_microsoft": "Microsoft 365"
+    "provider_microsoft": "Microsoft 365",
+    "show_external_owners": "Ver responsables ajenos al proyecto",
+    "show_external_owners_hint": "Tareas asignadas a alguien que no figura entre los integrantes del proyecto. Al apagarlo dejan de verse aquí, pero siguen existiendo."
   },
   "landing": {
     "plus_n_more": "+2 más",

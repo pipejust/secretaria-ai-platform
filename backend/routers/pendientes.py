@@ -65,12 +65,65 @@ def _classify(item: ActionItem, now: datetime) -> str:
     return "pendiente"
 
 
+def _miembros_por_proyecto(
+    db: Session, tenant_id: int,
+) -> Dict[int, tuple[set[str], list[set[str]]]]:
+    """project_id → (correos, nombres en tokens) de sus integrantes.
+
+    Se calcula una vez por petición: preguntarlo por tarea serían cientos
+    de consultas para pintar una lista.
+    """
+    from models import ProjectContact
+    from services.servicios_sync import name_tokens, norm_email
+
+    filas = db.exec(
+        select(ProjectContact, Project.id)
+        .join(Project, Project.id == ProjectContact.project_id)
+        .where(Project.tenant_id == tenant_id)
+    ).all()
+    fuera: Dict[int, tuple[set[str], list[set[str]]]] = {}
+    for contacto, pid in filas:
+        correos, nombres = fuera.setdefault(pid, (set(), []))
+        em = norm_email(contacto.email)
+        if em:
+            correos.add(em)
+        toks = name_tokens(contacto.name)
+        if toks:
+            nombres.append(toks)
+    return fuera
+
+
+def _es_del_proyecto(
+    item: ActionItem, miembros: Optional[tuple[set[str], list[set[str]]]],
+) -> bool:
+    """¿El responsable de la tarea es integrante del proyecto?
+
+    Por correo primero. Si la tarea no trae correo —pasa cuando el nombre
+    salió de la transcripción— se cae a nombre, y se exige coincidencia de
+    **dos** palabras: con una sola, cualquier «Juan» del proyecto se
+    tragaría a un «Juan» externo, que es justo lo que esto quiere separar.
+    """
+    if not miembros:
+        return False
+    from services.servicios_sync import name_tokens, norm_email
+
+    correos, nombres = miembros
+    em = norm_email(item.owner_email)
+    if em:
+        return em in correos
+    toks = name_tokens(item.owner_name)
+    if not toks:
+        return False
+    return any(len(toks & n) >= 2 for n in nombres)
+
+
 def _serialize(
     item: ActionItem,
     project_name: str,
     now: datetime,
     user_meta: Optional[Dict[str, Dict[str, Any]]] = None,
     tenant_name: str = "",
+    owner_in_project: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Serializa un ActionItem para respuesta API.
 
@@ -109,6 +162,10 @@ def _serialize(
         "is_approved": item.is_approved,
         "external_id": item.external_id,
         "project_name": project_name,
+        # ¿El responsable figura entre los integrantes del proyecto?
+        # `None` cuando la tarea no cuelga de ningún proyecto y la
+        # pregunta no tiene sentido.
+        "owner_in_project": owner_in_project,
         "bucket": _classify(item, now),
     }
 
@@ -124,6 +181,13 @@ def list_pendientes(
     project_id: Optional[int] = Query(None),
     owner: Optional[str] = Query(None, description="Texto a buscar en owner_name/email"),
     priority: Optional[str] = Query(None, description="alta | media | baja"),
+    externos: bool = Query(
+        True,
+        description=(
+            "Incluir tareas cuyo responsable NO figura entre los "
+            "integrantes del proyecto. En false se ocultan."
+        ),
+    ),
     limit: int = Query(500, ge=1, le=2000),
 ):
     """Lista action_items del TENANT actual con su clasificación temporal.
@@ -182,12 +246,19 @@ def list_pendientes(
             # use ese email al lookupear (no se persiste a la BD).
             i.owner_email = u["email"]
     tenant_name = tenant.name or ""
+    miembros = _miembros_por_proyecto(db, tenant.id)
 
     out: List[Dict[str, Any]] = []
     for item in items:
         proj_id = session_to_project.get(item.session_id)
         proj_name = project_names.get(proj_id, "General") if proj_id else "General"
-        record = _serialize(item, proj_name, now, user_meta=user_meta, tenant_name=tenant_name)
+        en_proyecto = _es_del_proyecto(item, miembros.get(proj_id)) if proj_id else None
+        if externos is False and en_proyecto is False:
+            continue
+        record = _serialize(
+            item, proj_name, now, user_meta=user_meta, tenant_name=tenant_name,
+            owner_in_project=en_proyecto,
+        )
 
         if bucket:
             wanted = bucket.lower()

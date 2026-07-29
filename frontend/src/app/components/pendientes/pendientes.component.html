@@ -159,6 +159,23 @@
                             </select>
                         </div>
 
+                        <div class="filter-group filter-group--switch">
+                            <label class="ext-switch" [class.is-off]="!showExternalOwners">
+                                <input type="checkbox" [checked]="showExternalOwners"
+                                       (change)="toggleExternalOwners()" />
+                                <span class="ext-switch-track"><span class="ext-switch-knob"></span></span>
+                                <span class="ext-switch-text">
+                                    {{ 'pendientes.show_external_owners' | translate }}
+                                    <small *ngIf="externalOwnersCount > 0">
+                                        {{ externalOwnersCount }}
+                                    </small>
+                                </span>
+                            </label>
+                            <p class="ext-switch-hint">
+                                {{ 'pendientes.show_external_owners_hint' | translate }}
+                            </p>
+                        </div>
+
                         <button type="button" class="filters-clear-link" (click)="clearFilters()">
                             {{ 'common.clear_filters' | translate }}
                         </button>
@@ -194,6 +211,8 @@
                                     <div class="tk-task-code">{{ taskCode(it) }}</div>
                                 </td>
                                 <td class="td-project">
+                                    <span class="tk-ext-dot" *ngIf="it.owner_in_project === false"
+                                          [title]="'pendientes.owner_not_in_project' | translate">·</span>
                                     <span class="tk-project-badge"
                                           [style.background]="projectTone(it.project_name).bg"
                                           [style.color]="projectTone(it.project_name).fg"

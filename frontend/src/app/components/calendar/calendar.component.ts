@@ -44,6 +44,8 @@ interface PendingTask {
     completed_at: string | null;
     is_approved: boolean;
     project_name: string;
+    /** null = la tarea no cuelga de ningún proyecto. */
+    owner_in_project?: boolean | null;
     bucket: 'vencido' | 'proximo' | 'pendiente' | 'sin_fecha' | 'completado' | 'cancelado' | 'bloqueado';
 }
 
@@ -132,6 +134,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
     showMeetings = true;
     showTasks = true;
     showCompletedTasks = false;
+
+    /** Pintar tareas de gente que no es del proyecto.
+     *
+     * En una reunión se reparten encargos a quien esté delante, y a veces
+     * esa persona no es del equipo. La tarea es real y no se toca; lo que
+     * estorba es verla en el calendario del proyecto. Por defecto se ve:
+     * ocultar trabajo pendiente sin avisar es peor que el ruido. */
+    showExternalOwners = true;
+    private static readonly EXTERNOS_KEY = 'acten.calendario.verExternos';
 
     // Por solicitud del usuario: ocultar la tarjeta de reuniones del panel derecho.
     // Mantenemos la data + filtros para no romper la grilla.
@@ -227,6 +238,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        try {
+            const guardado = localStorage.getItem(CalendarComponent.EXTERNOS_KEY);
+            if (guardado !== null) this.showExternalOwners = guardado === '1';
+        } catch { /* modo privado */ }
         this.loadNotes();
         this.loadAccounts();
         this.loadEvents();
@@ -499,11 +514,29 @@ export class CalendarComponent implements OnInit, OnDestroy {
         });
     }
 
+    /** Cuántas tareas desaparecerían al apagar el interruptor. Un filtro
+     *  que no dice qué esconde no se usa. */
+    get externalOwnersCount(): number {
+        return this.tasks.filter(t => t.owner_in_project === false).length;
+    }
+
+    toggleExternalOwners(): void {
+        this.showExternalOwners = !this.showExternalOwners;
+        try {
+            localStorage.setItem(
+                CalendarComponent.EXTERNOS_KEY,
+                this.showExternalOwners ? '1' : '0',
+            );
+        } catch { /* modo privado: dura la sesión */ }
+        this.cdr.detectChanges();
+    }
+
     get filteredTasks(): PendingTask[] {
         if (!this.showTasks) return [];
         const q = this.filterSearch.trim().toLowerCase();
         return this.tasks.filter(t => {
             if (!this.showCompletedTasks && (t.status === 'done' || t.status === 'cancelled')) return false;
+            if (!this.showExternalOwners && t.owner_in_project === false) return false;
             if (q) {
                 const hay = `${t.title || ''} ${t.owner_name || ''} ${t.project_name || ''}`.toLowerCase();
                 if (!hay.includes(q)) return false;
