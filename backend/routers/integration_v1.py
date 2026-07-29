@@ -13,6 +13,7 @@ los proyectos donde es miembro**. La resolución vive en
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 from typing import Any, Optional
 
@@ -36,6 +37,10 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
     "done":      {"pending"},          # reabrir
     "cancelled": set(),                # terminal
 }
+
+
+# Una fecha de verdad, no «No especificada» ni «próxima semana».
+_FECHA_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}")
 
 
 def _now() -> str:
@@ -631,6 +636,12 @@ def list_calendar_events(
             tq = tq.where(ActionItem.due_date <= date_to[:10])
         for t, pid in db.exec(tq).all():
             if project_external_id and proj_refs.get(pid) != project_external_id:
+                continue
+            # `due_date` es texto libre y arrastra basura histórica del
+            # extractor: hay tareas con «No especificada» ahí. Colarlas
+            # como `start_at` rompería cualquier calendario del otro lado,
+            # así que solo pasan las que son una fecha de verdad.
+            if not _FECHA_ISO.match(t.due_date or ""):
                 continue
             inicio = t.due_date + ("T" + t.due_time if t.due_time else "")
             items.append({
