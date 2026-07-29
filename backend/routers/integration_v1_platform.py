@@ -177,13 +177,19 @@ def list_integrations(
             ctx.acting_user.id
             if (p["ambito"] == "usuario" and ctx.acting_user) else None
         )
-        row = db.exec(_setting_query(_clave_almacen(p["id"]), ctx, uid)).first()
+        almacen = _clave_almacen(p["id"])
+        row = db.exec(_setting_query(almacen, ctx, uid)).first()
         cfg: dict = {}
         if row:
             try:
                 cfg = json.loads(row.config_json or "{}")
             except (json.JSONDecodeError, TypeError):
                 cfg = {}
+            # Las filas guardadas desde la interfaz de Acten vienen en
+            # camelCase; sin normalizar, algo conectado se reportaría
+            # como «faltan todos los campos».
+            from services.integrations import normalizar_config
+            cfg = normalizar_config(cfg, almacen)
         puestos = [c for c in p["campos"] if str(cfg.get(c) or "").strip()]
         out.append({
             "id": p["id"],

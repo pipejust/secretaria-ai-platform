@@ -86,7 +86,45 @@ def _load_provider_config(
         raise IntegrationConfigError(
             f"config_json para '{provider_name}' debe ser un objeto JSON."
         )
-    return config
+    return normalizar_config(config, provider_name)
+
+
+# La interfaz de Acten guarda las credenciales en camelCase (`apiKey`,
+# `apiToken`, `boardId`) y los servicios las leen en snake_case
+# (`api_key`, `token`). Nadie lo notó porque el fallo es silencioso: la
+# integración aparece «conectada» en pantalla y el despacho revienta con
+# «faltan campos obligatorios» dentro de un try. Se normaliza al leer,
+# que arregla las filas ya guardadas sin migrar nada.
+_ALIAS_POR_PROVIDER = {
+    # En Trello, lo que la interfaz llama `apiToken` es el `token`.
+    "trello": {"apiToken": "token", "apitoken": "token"},
+}
+
+
+def _camel_a_snake(nombre: str) -> str:
+    fuera = []
+    for i, ch in enumerate(nombre):
+        if ch.isupper() and i:
+            fuera.append("_")
+        fuera.append(ch.lower())
+    return "".join(fuera)
+
+
+def normalizar_config(config: Dict[str, Any], provider_name: str) -> Dict[str, Any]:
+    """Añade la forma snake_case sin tocar lo que ya venga bien.
+
+    No pisa un valor existente con uno vacío: hay filas que arrastran
+    ambas formas, la vieja con el valor bueno y la nueva en blanco.
+    """
+    salida = dict(config)
+    alias = _ALIAS_POR_PROVIDER.get(provider_name, {})
+    for clave, valor in config.items():
+        destino = alias.get(clave) or _camel_a_snake(clave)
+        if destino == clave:
+            continue
+        if str(valor or "").strip() and not str(salida.get(destino) or "").strip():
+            salida[destino] = valor
+    return salida
 
 
 def _require(config: Dict[str, Any], keys: list[str], provider: str) -> None:
