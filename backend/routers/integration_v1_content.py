@@ -25,6 +25,7 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import (
+    Project,
     ActionItem,
     Comment,
     MeetingSession,
@@ -168,6 +169,135 @@ async def despachar_a_plataformas(
     return await dispatch_platforms(
         session_id=s.id,
         request=DispatchPlatformsRequest(action_item_ids=ids),
+        db=db, tenant=ctx.tenant, _writer=_actor(ctx),
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════
+# CURACIÓN — corregir lo que sacó la IA
+# ══════════════════════════════════════════════════════════════════════
+
+class ActaPatch(BaseModel):
+    """Campos del acta. Solo se toca lo que venga; el resto no se roza.
+
+    `decisions`, `agreements` y `risks` son **texto libre**: se guardan
+    tal cual llegan. Acten los emite en markdown —típicamente una lista
+    con viñetas— pero no impone forma al escribir, así que lo que manden
+    es exactamente lo que se devolverá después.
+    """
+
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    decisions: Optional[str] = None
+    agreements: Optional[str] = None
+    risks: Optional[str] = None
+    language: Optional[str] = None
+    status: Optional[str] = None
+    project_external_id: Optional[str] = None
+
+
+@router.patch("/sessions/{session_id}")
+def editar_acta(
+    session_id: int,
+    payload: ActaPatch,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Guarda la corrección de una persona sobre el acta.
+
+    **Se guarda lo que se manda, sin volver a pasar por el modelo.** Si
+    guardar volviera a generar el texto, la corrección se perdería sin que
+    nadie se entere — y quien corrige un acta lo hace justamente porque el
+    modelo se equivocó. Para pedir sugerencias está `suggest-fields`, que
+    es una acción aparte y explícita.
+    """
+    s = _sesion(db, ctx, session_id)
+
+    if payload.project_external_id is not None:
+        ref = payload.project_external_id.strip()
+        if not ref:
+            s.project_id = None
+        else:
+            proj = db.exec(
+                select(Project)
+                .where(Project.tenant_id == ctx.tenant.id)
+                .where(Project.external_ref == ref)
+            ).first()
+            if not proj:
+                raise HTTPException(
+                    422, f"No existe un proyecto sincronizado con id '{ref}'.",
+                )
+            s.project_id = proj.id
+
+    campos = {
+        "title": "title",
+        "summary": "raw_summary",
+        "decisions": "processed_decisions",
+        "agreements": "processed_agreements",
+        "risks": "processed_risks",
+        "language": "language",
+        "status": "status",
+    }
+    tocados = []
+    for entrada, columna in campos.items():
+        valor = getattr(payload, entrada)
+        if valor is not None:
+            setattr(s, columna, valor)
+            tocados.append(entrada)
+    if payload.project_external_id is not None:
+        tocados.append("project_external_id")
+
+    if not tocados:
+        raise HTTPException(422, "No se envió ningún campo que cambiar.")
+
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return {"id": s.id, "actualizados": tocados}
+
+
+@router.post("/sessions/{session_id}/regenerate-tasks")
+async def regenerar_tareas(
+    session_id: int,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("tasks:write")),
+):
+    """Vuelve a extraer las tareas de la transcripción con IA.
+
+    **Se puede una sola vez por sesión**, igual que en Acten: la segunda
+    llamada responde `409`. El límite existe porque regenerar borra las
+    tareas actuales, y quien ya corrigió una a mano no debería perderla
+    por pulsar dos veces.
+    """
+    from routers.sessions_upload import (
+        RegeneratePayload, regenerate_tasks_from_transcript,
+    )
+
+    s = _sesion(db, ctx, session_id)
+    return await regenerate_tasks_from_transcript(
+        session_id=s.id, payload=RegeneratePayload(),
+        db=db, tenant=ctx.tenant, _writer=_actor(ctx),
+    )
+
+
+@router.post("/sessions/{session_id}/suggest-fields")
+async def sugerir_campos(
+    session_id: int,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Sugiere idioma, decisiones, riesgos, acuerdos, asistentes y temas.
+
+    **No toca el resumen ejecutivo**, que viene de la grabación y se edita
+    a mano. Y también es de un solo uso por sesión.
+    """
+    from routers.sessions_upload import (
+        RegeneratePayload, regenerate_fields_from_transcript,
+    )
+
+    s = _sesion(db, ctx, session_id)
+    return await regenerate_fields_from_transcript(
+        session_id=s.id, payload=RegeneratePayload(),
         db=db, tenant=ctx.tenant, _writer=_actor(ctx),
     )
 

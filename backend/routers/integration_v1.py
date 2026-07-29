@@ -204,12 +204,23 @@ def list_sessions(
         n_tasks = len(db.exec(
             select(ActionItem).where(ActionItem.session_id == s.id)
         ).all())
+        # `origin` sale del id de la grabación y es un dato real.
+        # `duration_min` **no**: Acten no guarda la duración de la reunión,
+        # así que se estima a 150 palabras por minuto sobre la
+        # transcripción. Va marcado como estimación para que nadie la
+        # presente como medida — su interfaz decide si la pinta o no.
+        ff = (s.fireflies_id or "").upper()
+        palabras = len((s.raw_transcript or "").split())
         items.append({
             "id": s.id,
             "title": s.title or "",
             "date": s.date,
             "project_external_id": proj_refs.get(s.project_id) if s.project_id else None,
             "status": s.status,
+            "language": s.language or None,
+            "origin": "manual" if (not ff or ff.startswith("MANUAL-")) else "web",
+            "duration_min": max(1, round(palabras / 150)) if palabras else None,
+            "duration_is_estimate": True,
             "counts": {"tasks": n_tasks},
         })
     sobre = _paginar(rows, page, limit)
@@ -333,6 +344,10 @@ def list_tasks(
 class TaskPatch(BaseModel):
     status: Optional[str] = None
     owner_external_id: Optional[str] = None
+    # Para quien no está en el directorio — la mayoría en un proyecto de
+    # cliente. `owner_external_id` sigue mandando si vienen los dos.
+    owner_name: Optional[str] = None
+    owner_email: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     due_date: Optional[str] = None
@@ -400,6 +415,12 @@ def patch_task(
                      ("column", "kanban_column"), ("order", "kanban_order")):
         if src in data:
             setattr(item, dst, data[src])
+
+    if payload.owner_external_id is None:
+        if payload.owner_name is not None:
+            item.owner_name = payload.owner_name.strip()
+        if payload.owner_email is not None:
+            item.owner_email = payload.owner_email.strip()
 
     item.updated_at = _now()
     db.add(item); db.commit(); db.refresh(item)
@@ -533,6 +554,41 @@ class TaskCreate(BaseModel):
     due_time: Optional[str] = None
     priority: str = "media"
     column: Optional[str] = None
+
+
+@router.delete("/tasks/{task_id}")
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("tasks:write")),
+):
+    """Borra una tarea. Para las que la IA se inventó.
+
+    Se borra de verdad, no se marca como cancelada: una tarea que nunca
+    debió existir no es una tarea cancelada, y dejarla ensucia el recuento
+    de todo el mundo. Para «esto ya no se hace» está `status: cancelled`.
+    """
+    item = db.get(ActionItem, task_id)
+    if not item or item.tenant_id != ctx.tenant.id:
+        raise HTTPException(404, "Tarea no encontrada.")
+    visible = _visible_session_ids(db, ctx)
+    if visible is not None and item.session_id not in visible:
+        raise HTTPException(404, "Tarea no encontrada.")
+
+    proj_refs = _project_ref_map(db, ctx.tenant.id)
+    s2 = db.get(MeetingSession, item.session_id)
+    out = _serialize_task(db, item, proj_refs, {item.session_id: s2.project_id if s2 else None})
+
+    db.delete(item)
+    db.commit()
+
+    from services.webhook_sender import send_event_bg
+    send_event_bg("task.updated", {
+        "task_id": task_id,
+        "status": "deleted",
+        "project_external_id": out.get("project_external_id"),
+    }, tenant_id=ctx.tenant.id)
+    return {"status": "borrada", "id": task_id}
 
 
 @router.post("/tasks", status_code=status.HTTP_201_CREATED)

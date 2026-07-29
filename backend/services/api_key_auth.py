@@ -48,6 +48,9 @@ KNOWN_SCOPES = frozenset({
     # lectura normal, y debe poder darse y quitarse sola.
     "org:read",
     "sessions:send",
+    # Corregir el acta. Separado de `sessions:read` y de `sessions:send`:
+    # leer, escribir y enviar por correo son tres permisos distintos.
+    "sessions:write",
     "integrations:read",
     "integrations:write",
     "outputs:read",
