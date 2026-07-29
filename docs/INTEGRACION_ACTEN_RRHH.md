@@ -567,8 +567,10 @@ Al pasar a `done`, Acten sella `completed_at` automáticamente.
 
 **Validación:** si `owner_external_id` no corresponde a un empleado
 sincronizado (§4), responde `422` — no se acepta un responsable fantasma.
-`due_date` responde `422` si no es `YYYY-MM-DD`; para dejar la tarea sin
-fecha, mándenlo como `null` u omítanlo. Aplica igual en el `PATCH`.
+`due_date` responde `422` si no es exactamente `YYYY-MM-DD` — sin sufijo
+horario, porque la hora va en `due_time` y recortarla en silencio sería
+peor que rechazarla. Para dejar la tarea sin fecha, mándenlo como `null` u
+omítanlo. Aplica igual en el `PATCH`.
 
 ### Autenticación de su servidor contra Acten
 
