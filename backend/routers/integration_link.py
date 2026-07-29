@@ -254,14 +254,67 @@ def link_preview(
                 "remoto": rpr.name,
             })
 
+    # ── El otro sentido ────────────────────────────────────────────────
+    # Lo anterior dice qué falta *en Acten*. Falta la mitad simétrica: qué
+    # existe aquí y no allá. Sin ella el asistente solo sirve a quien ya
+    # tiene poblada la plataforma de Servicios, y una integración que solo
+    # funciona en un sentido obliga a dar de alta a mano el otro.
+    #
+    # Se calcula en la misma pasada, con las mismas listas ya cargadas: no
+    # hay carrera, porque una ejecución la orquesta un solo lado.
+    refs_remotos = {p.external_ref for p in payload.people}
+    correos_remotos = {norm_email(p.work_email) for p in payload.people if p.work_email}
+    nombres_remotos = [name_tokens(p.display_name or p.full_name) for p in payload.people]
+
+    def _emparejado_alla(c: ProjectContact) -> bool:
+        if (c.external_ref or "") in refs_remotos:
+            return True
+        em = norm_email(c.email)
+        if em and em in correos_remotos:
+            return True
+        toks = name_tokens(c.name)
+        return any(len(toks & r) >= 2 for r in nombres_remotos)
+
+    # Agrupadas por persona real: Felipe tiene tres fichas y un solo cuerpo.
+    pendientes_alla: dict[str, dict] = {}
+    for c in contacts:
+        if _emparejado_alla(c):
+            continue
+        key = " ".join(sorted(name_tokens(c.name))) or (c.name or "").lower()
+        e = pendientes_alla.setdefault(key, {
+            "tipo": "persona", "acten": c.name or "",
+            "correos": [], "external_ref_acten": c.external_ref,
+        })
+        em = norm_email(c.email)
+        if em and em not in e["correos"]:
+            e["correos"].append(em)
+
+    refs_proy_remotos = {p.external_ref for p in payload.projects}
+    nombres_proy_remotos = {norm_project(p.name) for p in payload.projects}
+    faltantes_en_servicios: list[dict] = [
+        {
+            "tipo": "proyecto", "acten": p.name,
+            "external_ref_acten": p.external_ref,
+            "sesiones": len(db.exec(
+                select(MeetingSession).where(MeetingSession.project_id == p.id)
+            ).all()),
+        }
+        for p in projects
+        if (p.external_ref or "") not in refs_proy_remotos
+        and norm_project(p.name) not in nombres_proy_remotos
+    ]
+    faltantes_en_servicios.extend(pendientes_alla.values())
+
     return {
         "enlaces": enlaces,
         "ambiguos": ambiguos,
         "faltantes": faltantes,
+        "faltantes_en_servicios": faltantes_en_servicios,
         "resumen": {
             "enlazables": len(enlaces),
             "requieren_decision": len(ambiguos),
             "a_crear_en_acten": len(faltantes),
+            "a_crear_en_servicios": len(faltantes_en_servicios),
         },
     }
 

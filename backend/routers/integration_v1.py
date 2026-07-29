@@ -578,18 +578,119 @@ def list_calendar_events(
     project_external_id: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    include: str = Query(
+        "tasks,sessions,events",
+        description="Qué pintar: coma entre 'tasks', 'sessions' y 'events'.",
+    ),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("calendar:read")),
 ):
-    """Eventos de calendario sincronizados (Google/Microsoft).
+    """El calendario tal como se ve en Acten.
+
+    **No son solo los eventos de Google/Microsoft.** El calendario de Acten
+    se arma sobre todo con **tareas que tienen fecha de vencimiento** y con
+    las **reuniones**; las agendas OAuth son el tercer ingrediente y hoy
+    están vacías porque nadie ha conectado una. Devolver solo esas dejaba
+    el calendario en blanco pese a que en pantalla hay datos.
+
+    Cada elemento trae `kind`: `task` | `session` | `event`.
 
     `CalendarEvent` no lleva `tenant_id`: cuelga de la cuenta OAuth de un
     usuario. El aislamiento se hace por el join con `user.tenant_id`; no
     se puede filtrar sólo por el evento.
     """
     from models import CalendarAccount, CalendarEvent, User
+
+    quiere = {x.strip() for x in (include or "").split(",") if x.strip()}
+    proj_refs = _project_ref_map(db, ctx.tenant.id)
+    vis = ctx.visible_project_ids or []
+    items: list[dict[str, Any]] = []
+
+    # ── Tareas con fecha ───────────────────────────────────────────────
+    # Es lo que realmente llena el calendario de Acten. En Acten un
+    # administrador ve las de todo el tenant; aquí se recorta por persona,
+    # que es lo acordado para la integración.
+    if "tasks" in quiere:
+        tq = (
+            select(ActionItem, MeetingSession.project_id)
+            .join(MeetingSession, MeetingSession.id == ActionItem.session_id)
+            .where(ActionItem.tenant_id == ctx.tenant.id)
+            .where(ActionItem.due_date.is_not(None))
+            .where(ActionItem.due_date != "")
+        )
+        if ctx.on_behalf_of:
+            if not vis:
+                tq = tq.where(MeetingSession.project_id == -1)
+            else:
+                tq = tq.where(MeetingSession.project_id.in_(vis))
+        if date_from:
+            tq = tq.where(ActionItem.due_date >= date_from[:10])
+        if date_to:
+            tq = tq.where(ActionItem.due_date <= date_to[:10])
+        for t, pid in db.exec(tq).all():
+            if project_external_id and proj_refs.get(pid) != project_external_id:
+                continue
+            inicio = t.due_date + ("T" + t.due_time if t.due_time else "")
+            items.append({
+                "kind": "task",
+                "id": t.id,
+                "title": t.title or "",
+                "start_at": inicio,
+                "end_at": inicio,
+                "all_day": not t.due_time,
+                "status": t.status or "pending",
+                "priority": t.priority or "media",
+                "owner": _owner_block(db, t),
+                "project_external_id": proj_refs.get(pid) if pid else None,
+                "session_id": t.session_id,
+                "meeting_url": None,
+                "attendees": [],
+            })
+
+    # ── Reuniones ──────────────────────────────────────────────────────
+    if "sessions" in quiere:
+        sq = (
+            select(MeetingSession)
+            .where(MeetingSession.tenant_id == ctx.tenant.id)
+            .where(MeetingSession.status != "archived")
+        )
+        if ctx.on_behalf_of:
+            if not vis:
+                sq = sq.where(MeetingSession.project_id == -1)
+            else:
+                sq = sq.where(MeetingSession.project_id.in_(vis))
+        if date_from:
+            sq = sq.where(MeetingSession.date >= date_from)
+        if date_to:
+            sq = sq.where(MeetingSession.date <= date_to)
+        for ms in db.exec(sq).all():
+            if project_external_id and proj_refs.get(ms.project_id) != project_external_id:
+                continue
+            items.append({
+                "kind": "session",
+                "id": ms.id,
+                "title": ms.title or "",
+                "start_at": ms.date,
+                "end_at": ms.date,
+                "all_day": False,
+                "status": ms.status,
+                "project_external_id": (
+                    proj_refs.get(ms.project_id) if ms.project_id else None
+                ),
+                "session_id": ms.id,
+                "meeting_url": None,
+                "attendees": [],
+            })
+
+    if "events" not in quiere:
+        items.sort(key=lambda x: x["start_at"] or "", reverse=True)
+        total = len(items)
+        return {
+            "items": items[(page - 1) * limit: page * limit],
+            "total": total, "page": page, "limit": limit,
+        }
 
     q = (
         select(CalendarEvent, CalendarAccount.user_id)
@@ -620,32 +721,35 @@ def list_calendar_events(
     if date_to:
         q = q.where(CalendarEvent.start_at <= date_to)
 
-    rows = db.exec(q.order_by(CalendarEvent.start_at.desc())).all()
-    total = len(rows)
-    page_rows = rows[(page - 1) * limit: page * limit]
-    proj_refs = _project_ref_map(db, ctx.tenant.id)
-
     import json as _json
-    items = []
-    for row in page_rows:
+    for row in db.exec(q).all():
         ev = row[0] if isinstance(row, tuple) else row
         try:
             attendees = _json.loads(ev.attendees_json or "[]")
         except (ValueError, TypeError):
             attendees = []
         items.append({
+            "kind": "event",
             "id": ev.id,
             "title": ev.title or "",
             "start_at": ev.start_at,
             "end_at": ev.end_at,
-            "meeting_url": ev.meeting_url,
+            "all_day": False,
+            "status": None,
             "project_external_id": (
                 proj_refs.get(ev.project_id) if ev.project_id else None
             ),
             "session_id": ev.session_id,
+            "meeting_url": ev.meeting_url,
             "attendees": attendees,
         })
-    return {"items": items, "total": total, "page": page, "limit": limit}
+
+    items.sort(key=lambda x: x["start_at"] or "", reverse=True)
+    total = len(items)
+    return {
+        "items": items[(page - 1) * limit: page * limit],
+        "total": total, "page": page, "limit": limit,
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════
