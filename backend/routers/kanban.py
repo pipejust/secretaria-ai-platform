@@ -53,19 +53,102 @@ TRANSICIONES: dict[str, set[str]] = {
 }
 
 
-def _persona(item: ActionItem) -> dict[str, Any]:
-    """Quién carga con la tarea. `None` cuando no la ha cogido nadie."""
+# Carril de las tareas que no ha cogido nadie.
+SIN_DUENO = "__sin_dueno__"
+
+
+class Identidades:
+    """Agrupa las mil formas de escribir a la misma persona.
+
+    La primera versión usaba el nombre tal cual venía y salían **109
+    calles para siete personas**: «Alejandro», «Alejandro Cortes»,
+    «Alejandro Cortés» y «Alejandro Cortés B» eran cuatro carriles
+    distintos. El nombre lo escribe la transcripción y cambia de una
+    reunión a otra.
+
+    El criterio, en orden:
+
+    1. **Correo**, si lo hay. Es lo único estable.
+    2. **Nombre por palabras**, sin tildes ni mayúsculas. Dos nombres que
+       comparten dos palabras son la misma persona.
+    3. **Un solo nombre de pila** («Alejandro») se pega al carril de quien
+       ya exista con ese nombre, si solo encaja con uno. Si encaja con
+       dos, se queda aparte: juntar a dos Alejandros distintos es peor que
+       mostrar un carril de más.
+    """
+
+    def __init__(self) -> None:
+        self.por_correo: dict[str, str] = {}
+        self.por_tokens: list[tuple[set[str], str]] = []
+        self.etiqueta: dict[str, str] = {}
+        self.correo_de: dict[str, Optional[str]] = {}
+
+    def clave(self, nombre: Optional[str], correo: Optional[str]) -> str:
+        from services.servicios_sync import name_tokens, norm_email
+
+        em = norm_email(correo)
+        if em and em in self.por_correo:
+            k = self.por_correo[em]
+            self._mejor_etiqueta(k, nombre)
+            return k
+
+        toks = name_tokens(nombre)
+        encontrada: Optional[str] = None
+        if toks:
+            fuertes = [k for t, k in self.por_tokens if len(toks & t) >= 2]
+            if fuertes:
+                encontrada = fuertes[0]
+            elif len(toks) == 1:
+                # Solo el nombre de pila: vale si encaja con una persona y
+                # solo una.
+                sueltos = {k for t, k in self.por_tokens if toks & t}
+                if len(sueltos) == 1:
+                    encontrada = next(iter(sueltos))
+
+        if encontrada is None:
+            encontrada = em or (" ".join(sorted(toks)) if toks else "")
+            if not encontrada:
+                return SIN_DUENO
+            self.correo_de.setdefault(encontrada, em)
+
+        if em:
+            self.por_correo[em] = encontrada
+            if not self.correo_de.get(encontrada):
+                self.correo_de[encontrada] = em
+        if toks:
+            self.por_tokens.append((toks, encontrada))
+        self._mejor_etiqueta(encontrada, nombre)
+        return encontrada
+
+    def _mejor_etiqueta(self, clave: str, nombre: Optional[str]) -> None:
+        """Se queda con el nombre más completo visto para esa persona.
+
+        «Alejandro Cortés» dice más que «Alejandro», y quien mira el
+        tablero quiere el de verdad, no el primero que apareció."""
+        n = (nombre or "").strip()
+        if not n:
+            return
+        actual = self.etiqueta.get(clave, "")
+        if len(n.split()) > len(actual.split()) or (not actual):
+            self.etiqueta[clave] = n
+
+
+def _persona(item: ActionItem, ident: Identidades) -> dict[str, Any]:
+    """Quién carga con la tarea. Clave agrupada por identidad real."""
     from services.owners import limpiar, tiene_responsable
 
     if not tiene_responsable(item.owner_name, item.owner_email):
-        return {"clave": "__sin_dueno__", "nombre": None, "correo": None}
+        return {"clave": SIN_DUENO, "nombre": None, "correo": None}
     correo = limpiar(item.owner_email)
     nombre = limpiar(item.owner_name)
-    # La clave agrupa: el correo manda porque el nombre viene de la
-    # transcripción y cambia de una reunión a otra («William» / «William
-    # Aragón»). Sin correo, el nombre normalizado.
-    clave = (correo or "").lower() or (nombre or "").strip().lower()
-    return {"clave": clave, "nombre": nombre, "correo": correo}
+    clave = ident.clave(nombre, correo)
+    if clave == SIN_DUENO:
+        return {"clave": SIN_DUENO, "nombre": None, "correo": None}
+    return {
+        "clave": clave,
+        "nombre": ident.etiqueta.get(clave) or nombre,
+        "correo": ident.correo_de.get(clave) or correo,
+    }
 
 
 @router.get("")
@@ -101,6 +184,7 @@ def tablero(
     }
 
     mio = (user.email or "").strip().lower()
+    ident = Identidades()
     gente: dict[str, dict] = {}
     por_columna: dict[str, list] = {k: [] for k in CLAVES}
 
@@ -108,7 +192,7 @@ def tablero(
         estado = it.status if it.status in CLAVES else "pending"
         if not incluir_cerradas and estado in ("done", "cancelled"):
             continue
-        p = _persona(it)
+        p = _persona(it, ident)
         if solo_mias and (p["correo"] or "").lower() != mio:
             continue
 
@@ -143,9 +227,18 @@ def tablero(
             key=lambda c: (c["orden"], c["vence"] or "9999-12-31", c["id"])
         )
 
+    for k, g in gente.items():
+        if k != SIN_DUENO:
+            g["nombre"] = ident.etiqueta.get(k) or g["nombre"]
+    for col in por_columna.values():
+        for c in col:
+            k = c["persona"]["clave"]
+            if k != SIN_DUENO:
+                c["persona"]["nombre"] = ident.etiqueta.get(k) or c["persona"]["nombre"]
+
     personas = sorted(
         gente.values(),
-        key=lambda g: (g["clave"] == "__sin_dueno__", (g["nombre"] or "~").lower()),
+        key=lambda g: (g["clave"] == SIN_DUENO, (g["nombre"] or "~").lower()),
     )
     return {
         "columnas": [
