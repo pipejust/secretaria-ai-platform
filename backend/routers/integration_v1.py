@@ -361,7 +361,17 @@ def patch_task(
 
     proj_refs = _project_ref_map(db, ctx.tenant.id)
     s = db.get(MeetingSession, item.session_id)
-    return _serialize_task(db, item, proj_refs, {item.session_id: s.project_id if s else None})
+    out = _serialize_task(db, item, proj_refs, {item.session_id: s.project_id if s else None})
+
+    # Aviso a Servicios. Best-effort: si falla, la tarea ya quedó guardada.
+    from services.webhook_sender import send_event_bg
+    send_event_bg("task.updated", {
+        "task_id": item.id,
+        "status": item.status,
+        "project_external_id": out.get("project_external_id"),
+        "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
+    })
+    return out
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -458,4 +468,14 @@ def create_task(
 
     proj_refs = _project_ref_map(db, ctx.tenant.id)
     s2 = db.get(MeetingSession, item.session_id)
-    return _serialize_task(db, item, proj_refs, {item.session_id: s2.project_id if s2 else None})
+    out = _serialize_task(db, item, proj_refs, {item.session_id: s2.project_id if s2 else None})
+
+    from services.webhook_sender import send_event_bg
+    send_event_bg("task.created", {
+        "task_id": item.id,
+        "session_id": item.session_id,
+        "project_external_id": out.get("project_external_id"),
+        "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
+        "origin": "manual",
+    })
+    return out

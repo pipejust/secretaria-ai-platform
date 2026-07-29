@@ -817,6 +817,35 @@ async def process_session_with_ai(
     db.add(session_obj)
     db.commit()
 
+    # ---------- 7b. Avisar a la plataforma de Servicios --------------------
+    # Solo SEÑAL: ellos refrescan por API. Best-effort — si el webhook
+    # falla, la sesión ya quedó procesada y guardada.
+    try:
+        from services.webhook_sender import send_event_bg
+        proyecto_ref = None
+        if session_obj.project_id:
+            from models import Project as _P
+            _p = db.get(_P, session_obj.project_id)
+            proyecto_ref = _p.external_ref if _p else None
+        n_tareas = len(db.exec(
+            select(ActionItem).where(ActionItem.session_id == session_id)
+        ).all())
+        if errors:
+            send_event_bg("session.failed", {
+                "session_id": session_id,
+                "project_external_id": proyecto_ref,
+                "error": session_obj.processing_error[:500],
+            })
+        else:
+            send_event_bg("session.processed", {
+                "session_id": session_id,
+                "project_external_id": proyecto_ref,
+                "title": session_obj.title or "",
+                "counts": {"tasks": n_tareas},
+            })
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("webhook de sesión %s no enviado: %s", session_id, exc)
+
     # ---------- 8. Notificar a los admins ---------------------------------
     try:
         from services.notification_service import (
