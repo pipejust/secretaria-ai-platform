@@ -259,9 +259,16 @@ def tablero(
             if k != SIN_DUENO:
                 c["persona"]["nombre"] = ident.etiqueta.get(k) or c["persona"]["nombre"]
 
+    # Sin responsable arriba —es lo accionable— y después por carga. Con
+    # 68 carriles, el orden alfabético entierra a quien más lleva debajo
+    # de gente con una tarjeta suelta.
     personas = sorted(
         gente.values(),
-        key=lambda g: (g["clave"] == SIN_DUENO, (g["nombre"] or "~").lower()),
+        key=lambda g: (
+            g["clave"] != SIN_DUENO,
+            -g["tarjetas"],
+            (g["nombre"] or "~").lower(),
+        ),
     )
     return {
         "columnas": [
