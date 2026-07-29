@@ -516,20 +516,39 @@ Son **dos cosas distintas con nombres parecidos**, y conviene separarlas:
 | `GET /document-templates/{id}/versions` | `outputs:read` |
 | `GET /document-templates/{id}/preview` | `outputs:read` |
 
-El `layout` es lo que guarda el constructor visual:
+El `layout` es lo que guarda el constructor visual. **Estos son los
+nombres reales** — el ejemplo que había aquí antes usaba unos inventados
+(`familia`, `tamano_pt`, `fondo_cabeceras`) que nunca existieron:
 
 ```json
 {
   "bloques": ["meta", "attendees", "summary", "decisions",
               "risks", "agreements", "action_items"],
-  "estilos": {"familia": "Roboto", "tamano_pt": 12, "fondo_cabeceras": "#df1616"}
+  "bloques_ignorados": [],
+  "estilos": {
+    "fontFamily": "Roboto", "fontSize": 12,
+    "textColor": "#000000", "headingColor": "#df1616",
+    "headingTextColor": "#FFFFFF", "headingMargin": 10,
+    "tableHeaderBg": "#df1616", "tableHeaderTextColor": "#ffffff"
+  }
 }
 ```
 
-**La lista de bloques se sirve desde `GET /layout/blocks`** — no la
-escriban a mano. El día que se añada uno, aparece solo en su selector en
-vez de faltar sin que nadie se entere. Un bloque desconocido en el `PUT`
-responde `422` diciendo cuál.
+**Las dos listas se sirven desde la API** — `GET /layout/blocks` y
+`GET /layout/styles`, con el valor por defecto de cada estilo. No las
+escriban a mano: el día que se añada una, aparece sola en su selector.
+
+**Un nombre desconocido responde `422`, tanto en bloques como en
+estilos.** Antes los estilos se aceptaban a ciegas: el `PUT` devolvía
+`200`, el generador ignoraba lo que no reconocía y el documento salía con
+los valores por defecto sin que nadie pudiera averiguar por qué. Un fallo
+que contesta `200` no se encuentra mirando.
+
+**`bloques_ignorados`** son restos de versiones viejas que el generador
+**ya descarta al renderizar**. Van aparte para que reenviar el layout tal
+cual no falle: cuando venían mezclados en `bloques`, una plantilla con un
+bloque obsoleto no se podía guardar desde ninguna interfaz sin quitarle
+algo primero.
 
 Dos sitios donde la respuesta honesta es «no»:
 
