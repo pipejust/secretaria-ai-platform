@@ -12,24 +12,17 @@
  *   la fecha que descartar la tarea entera.
  * - `isExactIsoDate` no tolera nada pegado. Es para ESCRIBIR: el backend
  *   responde 422 a cualquier otra cosa, y la hora se manda en `due_time`.
+ *
+ * Para convertir a `Date` usa `parseLocalDate` de `./dates`.
  */
+
+import { parseLocalDate } from './dates';
 
 const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/;
 
 /** `true` si de `value` se puede sacar una fecha real. */
 export function isRealDueDate(value: string | null | undefined): boolean {
-    if (!value) return false;
-    const head = String(value).trim().slice(0, 10);
-    if (!ISO_DATE_PREFIX.test(head)) return false;
-    // Descarta días que no existen («2026-02-31»). Comparamos componentes en
-    // hora local: `toISOString()` pasaría por UTC y en zonas UTC+ devolvería
-    // el día anterior, tumbando fechas perfectamente válidas.
-    const [y, m, day] = head.split('-').map(Number);
-    const d = new Date(y, m - 1, day);
-    // `new Date(y, ...)` mapea los años 0-99 a 1900+y, así que «0099-01-01»
-    // se rechazaría aquí y el backend sí la acepta. setFullYear lo corrige.
-    d.setFullYear(y);
-    return d.getFullYear() === y && d.getMonth() === m - 1 && d.getDate() === day;
+    return toIsoDateOrNull(value) !== null;
 }
 
 /** `true` si `value` es exactamente `YYYY-MM-DD`, sin nada pegado. */
@@ -39,8 +32,11 @@ export function isExactIsoDate(value: string | null | undefined): boolean {
     return s.length === 10 && isRealDueDate(s);
 }
 
-/** La fecha sola, o `null` si no hay ninguna que rescatar. */
+/** La fecha sola (`YYYY-MM-DD`), o `null` si no hay ninguna que rescatar. */
 export function toIsoDateOrNull(value: string | null | undefined): string | null {
-    if (!isRealDueDate(value)) return null;
-    return String(value).trim().slice(0, 10);
+    if (!value) return null;
+    const head = String(value).trim().slice(0, 10);
+    if (!ISO_DATE_PREFIX.test(head)) return null;
+    // parseLocalDate descarta los días que no existen («2026-02-31»).
+    return parseLocalDate(head) ? head : null;
 }

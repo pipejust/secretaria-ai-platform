@@ -11,7 +11,8 @@ import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { LanguageService } from '../../services/language.service';
-import { isRealDueDate } from '../../shared/due-date';
+import { isRealDueDate, toIsoDateOrNull } from '../../shared/due-date';
+import { parseLocalDate } from '../../shared/dates';
 
 interface CalAccount {
     id: number;
@@ -600,9 +601,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         // Sólo `YYYY-MM-DD` (con o sin sufijo horario). `new Date(s)` a secas
         // aceptaba cosas como «Dec 5 2026» o «2026» y las colocaba en el
         // calendario en días inventados.
-        if (!isRealDueDate(t?.due_date)) return null;
-        const head = String(t.due_date).trim().slice(0, 10);
-        return new Date(head + 'T00:00:00');
+        return parseLocalDate(toIsoDateOrNull(t?.due_date));
     }
 
     taskDateMatches(t: PendingTask, d: Date): boolean {

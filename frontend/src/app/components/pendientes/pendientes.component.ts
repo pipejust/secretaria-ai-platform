@@ -11,6 +11,7 @@ import { ToastService } from '../../services/toast.service';
 import { UserDirectoryService, UserSummary } from '../../services/user-directory.service';
 import { UserChipComponent } from '../shared/user-chip/user-chip.component';
 import { environment } from '../../../environments/environment';
+import { parseLocalDate } from '../../shared/dates';
 
 interface PendingItem {
     id: number;
@@ -473,8 +474,8 @@ export class PendientesComponent implements OnInit, OnDestroy {
     formatDate(d: string | null): string {
         if (!d) return '—';
         try {
-            const v = new Date(d);
-            if (isNaN(v.getTime())) return d;
+            const v = parseLocalDate(d);
+            if (!v) return d;
             return v.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
                 .replace('.', '');
         } catch {
@@ -486,8 +487,8 @@ export class PendientesComponent implements OnInit, OnDestroy {
     formatDateShort(d: string | null): string {
         if (!d) return '';
         try {
-            const v = new Date(d);
-            if (isNaN(v.getTime())) return d;
+            const v = parseLocalDate(d);
+            if (!v) return d;
             const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
             return `${months[v.getMonth()]}\n${String(v.getDate()).padStart(2,'0')}`;
         } catch {
@@ -498,8 +499,8 @@ export class PendientesComponent implements OnInit, OnDestroy {
     formatDateLong(d: string | null): string {
         if (!d) return '';
         try {
-            const v = new Date(d);
-            if (isNaN(v.getTime())) return d;
+            const v = parseLocalDate(d);
+            if (!v) return d;
             const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
             return `${v.getDate()} ${months[v.getMonth()]} ${v.getFullYear()}`;
         } catch {
@@ -715,8 +716,8 @@ export class PendientesComponent implements OnInit, OnDestroy {
             if (this.workloadProjectFilter &&
                 it.project_name !== this.workloadProjectFilter) return false;
             if (this.workloadRangeFilter === 'week' || this.workloadRangeFilter === 'month') {
-                const d = it.due_date ? new Date(it.due_date) : null;
-                if (!d || isNaN(d.getTime())) return false;
+                const d = parseLocalDate(it.due_date);
+                if (!d) return false;
                 const now = new Date();
                 const diffDays = (d.getTime() - now.getTime()) / 86_400_000;
                 if (this.workloadRangeFilter === 'week'  && diffDays > 7)  return false;
