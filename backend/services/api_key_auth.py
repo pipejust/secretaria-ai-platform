@@ -43,6 +43,10 @@ KNOWN_SCOPES = frozenset({
     "sync:write",
     "calendar:read",
     "calendar:write",
+    # Leer el tenant entero, sin recortar por persona. Separado a
+    # propósito: una clave capaz de ver todo es otra cosa que una de
+    # lectura normal, y debe poder darse y quitarse sola.
+    "org:read",
     "sessions:send",
     "integrations:read",
     "integrations:write",
@@ -94,6 +98,11 @@ class IntegrationContext:
     on_behalf_of: Optional[str] = None
     acting_user: Optional[User] = None
     visible_project_ids: list[int] = field(default_factory=list)
+    # True cuando la llamada es «de la empresa», no de una persona: se
+    # pidió con `X-On-Behalf-Of: *` y la clave tiene `org:read`. Los
+    # endpoints de lectura no recortan; los que necesitan un autor real
+    # (comentar, generar, enviar) siguen exigiendo una persona.
+    org_wide: bool = False
 
     def has(self, scope: str) -> bool:
         return scope in self.scopes
@@ -173,9 +182,29 @@ def require_scopes(*required: str) -> Callable[..., IntegrationContext]:
 
         acting_user: Optional[User] = None
         visible: list[int] = []
-        if x_on_behalf_of:
-            acting_user, visible = _resolve_visibility(db, tenant.id, x_on_behalf_of.strip())
+        org_wide = False
+        actor = (x_on_behalf_of or "").strip()
+
+        if actor == "*":
+            # Una cuenta de administración no es un empleado y no tiene
+            # ficha: pedirle un UUID de persona obliga a elegir a alguien
+            # al azar, o a sumar consultas persona por persona hasta
+            # rozar el límite de peticiones.
+            if "org:read" not in scopes:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    "X-On-Behalf-Of: * necesita el alcance 'org:read'.",
+                )
+            org_wide = True
+        elif actor:
+            acting_user, visible = _resolve_visibility(db, tenant.id, actor)
         elif needs_actor:
+            if "org:read" in scopes:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    "Falta X-On-Behalf-Of. Usa el UUID del empleado, o '*' "
+                    "para leer como empresa.",
+                )
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
                 "Falta la cabecera X-On-Behalf-Of (UUID del empleado).",
@@ -192,9 +221,13 @@ def require_scopes(*required: str) -> Callable[..., IntegrationContext]:
             tenant=tenant,
             api_key=row,
             scopes=scopes,
-            on_behalf_of=(x_on_behalf_of or "").strip() or None,
+            # En modo empresa se deja a `None` a propósito: todos los
+            # endpoints ya preguntan «¿hay persona?» para decidir si
+            # recortan, y así no hay que tocar ninguno.
+            on_behalf_of=None if org_wide else (actor or None),
             acting_user=acting_user,
             visible_project_ids=visible,
+            org_wide=org_wide,
         )
 
     return _dep

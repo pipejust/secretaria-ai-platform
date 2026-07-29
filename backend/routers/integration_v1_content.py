@@ -49,6 +49,32 @@ def _sesion(db: Session, ctx: IntegrationContext, session_id: int) -> MeetingSes
     return s
 
 
+def _actor_o_sistema(ctx: IntegrationContext, db: Session) -> User:
+    """Un `User` para operaciones de **lectura** que necesitan uno.
+
+    En modo empresa (`X-On-Behalf-Of: *`) no hay persona detrás, pero la
+    búsqueda y la analítica piden un usuario solo para resolver el tenant.
+    Se usa cualquier cuenta activa: no cambia lo que se devuelve, porque
+    en ese modo no se recorta por persona.
+
+    Las escrituras siguen usando `_actor`: un comentario o un correo
+    necesitan un autor de verdad, y «la empresa» no firma nada.
+    """
+    if ctx.acting_user:
+        return ctx.acting_user
+    if ctx.org_wide:
+        u = db.exec(
+            select(User)
+            .where(User.tenant_id == ctx.tenant.id)
+            .where(User.is_active == True)  # noqa: E712
+            .order_by(User.id)
+        ).first()
+        if u:
+            return u
+        raise HTTPException(503, "La empresa no tiene usuarios activos.")
+    return _actor(ctx)
+
+
 def _actor(ctx: IntegrationContext) -> User:
     """Persona en cuyo nombre se actúa. Distingue «falta la cabecera» de
     «esa persona no está enlazada»: son dos arreglos distintos."""
@@ -320,7 +346,7 @@ def buscar(
     """
     from routers.search import global_search
 
-    res = global_search(q=q, db=db, user=_actor(ctx), tenant=ctx.tenant)
+    res = global_search(q=q, db=db, user=_actor_o_sistema(ctx, db), tenant=ctx.tenant)
 
     if not ctx.on_behalf_of:
         return res
@@ -376,7 +402,7 @@ def analitica_roi(
     """
     from routers.analytics import roi_dashboard
 
-    return roi_dashboard(days=days, db=db, current_user=_actor(ctx))
+    return roi_dashboard(days=days, db=db, current_user=_actor_o_sistema(ctx, db))
 
 
 @router.get("/analytics/recurring")
@@ -387,7 +413,7 @@ def analitica_recurrentes(
     """Temas que se repiten sesión tras sesión sin cerrarse."""
     from routers.analytics import recurring_meetings
 
-    return recurring_meetings(db=db, current_user=_actor(ctx))
+    return recurring_meetings(db=db, current_user=_actor_o_sistema(ctx, db))
 
 
 @router.get("/sessions/{session_id}/quality")
@@ -400,7 +426,7 @@ def calidad_sesion(
     from routers.analytics import session_quality
 
     s = _sesion(db, ctx, session_id)
-    return session_quality(session_id=s.id, db=db, current_user=_actor(ctx))
+    return session_quality(session_id=s.id, db=db, current_user=_actor_o_sistema(ctx, db))
 
 
 # ══════════════════════════════════════════════════════════════════════

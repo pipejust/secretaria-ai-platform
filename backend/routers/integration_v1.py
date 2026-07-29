@@ -439,53 +439,87 @@ def run_sync(
 
 
 class ProyectoIn(BaseModel):
-    """Un proyecto suyo, tal como lo devuelve su `GET /api/v1/api/projects`."""
+    """Un proyecto suyo, tal como lo devuelve su `GET /api/v1/api/projects`.
+
+    Los opcionales aceptan `null`. Un proyecto interno **no tiene
+    cliente**, y ese caso llegó a devolver `422` — un fallo que además no
+    se veía, porque el aviso a nosotros no interrumpe el alta de su lado:
+    el proyecto existiría allá y no aquí, y nadie se entera hasta que
+    alguien lo busca.
+    """
 
     external_id: str = Field(min_length=1, description="El `id` del proyecto en su plataforma")
     name: str = Field(min_length=1)
-    client_name: str = ""
-    status: str = "active"
-    members: list[dict[str, Any]] = Field(default_factory=list)
+    client_name: Optional[str] = None
+    status: Optional[str] = "active"
+    members: Optional[list[dict[str, Any]]] = None
+
+    def a_remoto(self) -> dict[str, Any]:
+        return {
+            "id": self.external_id.strip(),
+            "name": self.name.strip(),
+            "client_name": self.client_name or "",
+            "status": (self.status or "active"),
+            "members": self.members or [],
+        }
+
+
+class ProyectosIn(BaseModel):
+    """Varios proyectos de una. Es la forma que documentaba §4.b."""
+
+    projects: list[ProyectoIn] = Field(min_length=1)
 
 
 @router.post("/sync/projects")
 def sync_proyectos(
-    payload: Optional[ProyectoIn] = None,
+    payload: Optional[dict[str, Any]] = None,
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("sync:write")),
 ):
-    """Espeja un proyecto **al instante**, en cuanto lo crean allá.
+    """Espeja proyectos **al instante**, en cuanto los crean allá.
 
-    Llámenlo justo después de crear o renombrar un proyecto y aparece en
-    Acten en esa misma llamada, sin esperar a la sincronización de fondo.
+    Llámenlo justo después de crear o renombrar y aparece en Acten en esa
+    misma llamada, sin esperar a la sincronización de fondo.
 
-    * **Con cuerpo** → se espeja ese proyecto con los datos que mandan. No
-      hace falta que su API esté disponible para leerlo de vuelta.
-    * **Sin cuerpo** → se resincroniza el catálogo entero, que sigue
-      valiendo como red de seguridad.
+    Acepta las **dos formas**, porque el contrato documentaba una y la
+    implementación aceptaba la otra, y rechazar la documentada solo hacía
+    perder el rato a quien empezara por leerla:
 
-    Es idempotente: llamarlo dos veces con el mismo `external_id` no
-    duplica nada. Y **no archiva**: mandar un proyecto no dice nada sobre
-    los demás.
+    * un proyecto plano en la raíz → `{"external_id": …, "name": …}`
+    * un lote → `{"projects": [ {...}, {...} ]}`
+    * sin cuerpo → resincroniza el catálogo entero
+
+    Idempotente. **Nunca archiva**: mandar unos proyectos no dice nada
+    sobre los demás.
     """
     from services.servicios_sync import (
         ServiciosClient, sync_un_proyecto, sync_projects, SyncReport,
     )
 
-    if payload is None:
+    if not payload:
         rep = SyncReport(dry_run=False)
         sync_projects(db, ctx.tenant.id, ServiciosClient(), dry_run=False, report=rep)
         return {"modo": "catalogo_completo", **rep.as_dict()["proyectos"]}
 
+    if "projects" in payload:
+        lote = ProyectosIn(**payload)
+        resultados = [
+            sync_un_proyecto(db, ctx.tenant.id, pr.a_remoto())
+            for pr in lote.projects
+        ]
+        return {
+            "modo": "lote",
+            "proyectos": len(resultados),
+            "creados": [x for r in resultados for x in r["creado"]],
+            "renombrados": [x for r in resultados for x in r["renombrado"]],
+            "errores": [x for r in resultados for x in r["errores"]],
+            "detalle": resultados,
+        }
+
+    uno = ProyectoIn(**payload)
     return {
         "modo": "un_proyecto",
-        **sync_un_proyecto(db, ctx.tenant.id, {
-            "id": payload.external_id.strip(),
-            "name": payload.name.strip(),
-            "client_name": payload.client_name,
-            "status": payload.status,
-            "members": payload.members,
-        }),
+        **sync_un_proyecto(db, ctx.tenant.id, uno.a_remoto()),
     }
 
 
