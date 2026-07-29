@@ -54,6 +54,29 @@ BLOQUES = [
 ]
 IDS_BLOQUES = {b["id"] for b in BLOQUES}
 
+# Los estilos que el generador lee de verdad — salen de `_DEFAULTS` en
+# `services/docx_generator.py`. Se sirven y se validan por la misma razón:
+# **un `PUT` con un nombre inventado respondía `200` y guardaba un objeto
+# que el generador ignora**. El documento salía con los estilos por
+# defecto y nadie podía averiguar por qué; un fallo que contesta `200` no
+# se encuentra mirando.
+ESTILOS = [
+    {"id": "fontFamily",           "tipo": "texto",  "por_defecto": "Calibri"},
+    {"id": "fontSize",             "tipo": "numero", "por_defecto": 10},
+    {"id": "textColor",            "tipo": "color",  "por_defecto": "#111827"},
+    {"id": "mutedColor",           "tipo": "color",  "por_defecto": "#64748B"},
+    {"id": "primaryColor",         "tipo": "color",  "por_defecto": "#0F172A"},
+    {"id": "accentColor",          "tipo": "color",  "por_defecto": "#0EA5E9"},
+    {"id": "headingColor",         "tipo": "color",  "por_defecto": "#0F172A"},
+    {"id": "headingTextColor",     "tipo": "color",  "por_defecto": "#FFFFFF"},
+    {"id": "headingMargin",        "tipo": "numero", "por_defecto": 10},
+    {"id": "tableHeaderBg",        "tipo": "color",  "por_defecto": "#0F172A"},
+    {"id": "tableHeaderTextColor", "tipo": "color",  "por_defecto": "#FFFFFF"},
+    {"id": "rowAltBg",             "tipo": "color",  "por_defecto": "#F8FAFC"},
+    {"id": "borderColor",          "tipo": "color",  "por_defecto": "#E2E8F0"},
+]
+IDS_ESTILOS = {e["id"] for e in ESTILOS}
+
 CATEGORIAS = [
     {"id": "meeting",  "nombre": "Reuniones"},
     {"id": "project",  "nombre": "Proyecto"},
@@ -195,6 +218,14 @@ def bloques_disponibles(
 ):
     """Bloques que sabe pintar el generador. Para el constructor visual."""
     return {"items": BLOQUES, "total": len(BLOQUES)}
+
+
+@router.get("/layout/styles")
+def estilos_disponibles(
+    ctx: IntegrationContext = Depends(require_scopes("outputs:read")),
+):
+    """Claves de estilo que el generador lee, con su valor por defecto."""
+    return {"items": ESTILOS, "total": len(ESTILOS)}
 
 
 @router.get("/categories")
@@ -412,10 +443,18 @@ def leer_layout(
 ):
     """Lo que guarda el constructor: qué bloques y con qué estilos."""
     t = _una(db, ctx, template_id)
+    guardados = _bloques(t)
+    # Se devuelven solo los que el generador sabe pintar. El resto son
+    # restos de versiones viejas que **ya se ignoran al generar**, y
+    # colarlos en `bloques` hacía que reenviar el layout tal cual saliera
+    # `422`: una plantilla que ninguna interfaz podía guardar sin quitarle
+    # algo. Van aparte, para que se vean sin estorbar.
     return {
-        "bloques": _bloques(t),
+        "bloques": [b for b in guardados if b in IDS_BLOQUES],
+        "bloques_ignorados": [b for b in guardados if b not in IDS_BLOQUES],
         "estilos": _estilos(t),
         "bloques_disponibles": BLOQUES,
+        "estilos_disponibles": ESTILOS,
     }
 
 
@@ -440,6 +479,15 @@ def guardar_layout(
         t.mapping_config = json.dumps(payload.bloques)
 
     if payload.estilos is not None:
+        desconocidos = [k for k in payload.estilos if k not in IDS_ESTILOS]
+        if desconocidos:
+            raise HTTPException(
+                422,
+                f"Estilos que el generador no lee: {desconocidos}. "
+                f"Ver /document-templates/layout/styles. "
+                f"Aceptarlos devolvería 200 y el documento saldría con los "
+                f"valores por defecto sin que nadie supiera por qué.",
+            )
         obj = _estilos(t)
         obj.update(payload.estilos)
         obj["__meta"] = _meta(t)
