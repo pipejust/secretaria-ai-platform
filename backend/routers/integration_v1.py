@@ -364,6 +364,25 @@ def patch_task(
     return _serialize_task(db, item, proj_refs, {item.session_id: s.project_id if s else None})
 
 
+# ══════════════════════════════════════════════════════════════════════
+# SINCRONIZACIÓN (PULL desde la plataforma de Servicios)
+# ══════════════════════════════════════════════════════════════════════
+
+@router.post("/sync/run")
+def run_sync(
+    dry_run: bool = Query(True, description="true = solo reporta, no escribe"),
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sync:write")),
+):
+    """Trae empleados y proyectos de Servicios y los enlaza por UUID.
+
+    `dry_run=true` (por defecto) reporta qué haría sin tocar la base.
+    La incremental pide `status=all` a propósito — ver el módulo.
+    """
+    from services.servicios_sync import run_full_sync
+    return run_full_sync(db, ctx.tenant.id, dry_run=dry_run)
+
+
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=500)
     description: str = ""
