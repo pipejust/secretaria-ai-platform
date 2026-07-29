@@ -274,9 +274,12 @@ async def regenerar_tareas(
     )
 
     s = _sesion(db, ctx, session_id)
+    # Se acepta también en modo empresa: regenerar es una operación, no
+    # una firma. Exigir una persona obligaría a la pantalla de
+    # administración a elegir a alguien al azar para pulsar un botón.
     return await regenerate_tasks_from_transcript(
         session_id=s.id, payload=RegeneratePayload(),
-        db=db, tenant=ctx.tenant, _writer=_actor(ctx),
+        db=db, tenant=ctx.tenant, _writer=_actor_o_sistema(ctx, db),
     )
 
 
@@ -298,7 +301,7 @@ async def sugerir_campos(
     s = _sesion(db, ctx, session_id)
     return await regenerate_fields_from_transcript(
         session_id=s.id, payload=RegeneratePayload(),
-        db=db, tenant=ctx.tenant, _writer=_actor(ctx),
+        db=db, tenant=ctx.tenant, _writer=_actor_o_sistema(ctx, db),
     )
 
 
