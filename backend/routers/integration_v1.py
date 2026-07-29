@@ -719,6 +719,7 @@ def list_calendar_events(
             if not fecha:
                 continue
             inicio = fecha + ("T" + t.due_time if t.due_time else "")
+            duenio = _owner_block(db, t)
             items.append({
                 "kind": "task",
                 "id": t.id,
