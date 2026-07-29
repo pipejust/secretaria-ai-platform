@@ -407,13 +407,23 @@ def analitica_roi(
 
 @router.get("/analytics/recurring")
 def analitica_recurrentes(
+    similitud: float = Query(0.8, ge=0.5, le=1.0),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("analytics:read")),
 ):
-    """Temas que se repiten sesión tras sesión sin cerrarse."""
+    """Reuniones que se repiten, detectadas por parecido de títulos.
+
+    `similitud` va explícito a propósito: el handler interno lo declara
+    como `Query(0.8)`, y llamarlo sin él le pasa el objeto `Query` en vez
+    del número. Reventaba con `'>=' not supported between float and
+    Query` — un `500` que solo aparece si se ejercita, no leyendo.
+    """
     from routers.analytics import recurring_meetings
 
-    return recurring_meetings(db=db, current_user=_actor_o_sistema(ctx, db))
+    return recurring_meetings(
+        similarity_threshold=similitud,
+        db=db, current_user=_actor_o_sistema(ctx, db),
+    )
 
 
 @router.get("/sessions/{session_id}/quality")
