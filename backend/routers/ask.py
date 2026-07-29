@@ -35,6 +35,7 @@ from sqlmodel import Session, select
 
 from config import settings
 from database import get_session
+from date_utils import normalize_due_date
 from models import ActionItem as ActionItemRow, AskHistory, MeetingSession, Tenant, User
 from routers.auth import get_current_tenant, get_current_user
 from services.embedding_service import search_similar
@@ -3410,7 +3411,10 @@ async def ask(
                     ActionItemDTO(
                         title=str(it.get("title") or "").strip(),
                         owner=str(it.get("owner") or "").strip(),
-                        due_date=str(it.get("due_date") or "").strip(),
+                        # El LLM contesta «No especificada» cuando no hay
+                        # fecha; eso no viaja en un campo que el otro lado
+                        # puede leer como fecha. Vacío significa sin fecha.
+                        due_date=normalize_due_date(it.get("due_date")) or "",
                         status=str(it.get("status") or "pending").strip().lower(),
                         source_sessions=sids,
                     )
