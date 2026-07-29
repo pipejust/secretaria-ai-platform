@@ -12,7 +12,7 @@ import { environment } from '../../../environments/environment';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { LanguageService } from '../../services/language.service';
 import { isRealDueDate, toIsoDateOrNull } from '../../shared/due-date';
-import { parseLocalDate } from '../../shared/dates';
+import { isDateOnly, parseLocalDate } from '../../shared/dates';
 
 interface CalAccount {
     id: number;
@@ -426,7 +426,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         for (let i = 0; i < 42; i++) {
             const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
             const iso = this.toISO(d);
-            const dayEvents = filteredEvents.filter(ev => this.sameDay(new Date(ev.start_at), d));
+            const dayEvents = filteredEvents.filter(ev => this.sameDay(this.eventStart(ev), d));
             const dayTasks = filteredTasks.filter(t => this.taskDateMatches(t, d));
             cells.push({
                 date: d,
@@ -462,7 +462,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         const today = this.startOfDay(this.today);
         for (let i = 0; i < 7; i++) {
             const d = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + i);
-            const dayEvents = filteredEvents.filter(ev => this.sameDay(new Date(ev.start_at), d));
+            const dayEvents = filteredEvents.filter(ev => this.sameDay(this.eventStart(ev), d));
             const dayTasks = filteredTasks.filter(t => this.taskDateMatches(t, d));
             cells.push({
                 date: d,
@@ -489,7 +489,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
             return buckets.get(key)!;
         };
         for (const ev of this.filteredEvents) {
-            const d = this.startOfDay(new Date(ev.start_at));
+            const inicio = this.eventStart(ev);
+            if (!inicio) continue;
+            const d = this.startOfDay(inicio);
             ensure(d).events.push(ev);
         }
         for (const t of this.filteredTasks) {
@@ -546,7 +548,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
 
     get selectedDayEvents(): CalEvent[] {
-        return this.filteredEvents.filter(ev => this.sameDay(new Date(ev.start_at), this.selected));
+        return this.filteredEvents.filter(ev => this.sameDay(this.eventStart(ev), this.selected));
     }
 
     get selectedDayTasks(): PendingTask[] {
@@ -588,8 +590,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
         // Reuniones sin acta también aparecen como pendientes secundarios.
         for (const ev of this.filteredEvents) {
             if (ev.session_id) continue;
-            const d = new Date(ev.start_at);
-            if (isNaN(d.getTime())) continue;
+            const d = this.eventStart(ev);
+            if (!d) continue;
             if (d < today || d > horizon) continue;
             const sameToday = this.sameDay(d, today);
             items.push({
@@ -777,16 +779,37 @@ export class CalendarComponent implements OnInit, OnDestroy {
         return EVENT_PALETTE[Math.abs(h) % EVENT_PALETTE.length];
     }
 
+    /** Inicio del evento en hora local, o `null` si no hay fecha usable. */
+    private eventStart(ev: CalEvent): Date | null {
+        return parseLocalDate(ev?.start_at);
+    }
+
+    private eventEnd(ev: CalEvent): Date | null {
+        return parseLocalDate(ev?.end_at);
+    }
+
+    /**
+     * Un evento de día completo llega sin hora: Google manda `start.date`
+     * en vez de `start.dateTime` y el backend lo guarda tal cual.
+     */
+    private isAllDayEvent(ev: CalEvent): boolean {
+        return isDateOnly(ev?.start_at);
+    }
+
     eventTime(ev: CalEvent): string {
-        if (!ev?.start_at) return '';
-        const d = new Date(ev.start_at);
-        if (isNaN(d.getTime())) return '';
+        // Un evento de día completo no tiene hora que mostrar. Antes se
+        // pintaba la medianoche desplazada por UTC, que en Colombia salía
+        // como «19:00» del día anterior.
+        if (this.isAllDayEvent(ev)) return '';
+        const d = this.eventStart(ev);
+        if (!d) return '';
         return d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
     eventTimeRange(ev: CalEvent): string {
-        const a = ev.start_at ? new Date(ev.start_at) : null;
-        const b = ev.end_at ? new Date(ev.end_at) : null;
+        if (this.isAllDayEvent(ev)) return '';
+        const a = this.eventStart(ev);
+        const b = this.eventEnd(ev);
         if (!a) return '';
         const left = a.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
         if (!b) return left;
@@ -809,33 +832,32 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     eventStatusLabel(ev: CalEvent): string {
         if (ev.session_id) return this.translate.instant('calendar.event_has_minutes');
-        const start = new Date(ev.start_at);
-        if (!isNaN(start.getTime()) && start < this.today) return this.translate.instant('calendar.event_missing_minutes');
+        const start = this.eventStart(ev);
+        if (start && start < this.today) return this.translate.instant('calendar.event_missing_minutes');
         return this.translate.instant('calendar.event_scheduled');
     }
 
     eventStatusKind(ev: CalEvent): 'linked' | 'missing' | 'scheduled' | 'live' {
         if (this.isEventLive(ev)) return 'live';
         if (ev.session_id) return 'linked';
-        const start = new Date(ev.start_at);
-        if (!isNaN(start.getTime()) && start < this.today) return 'missing';
+        const start = this.eventStart(ev);
+        if (start && start < this.today) return 'missing';
         return 'scheduled';
     }
 
     isEventLive(ev: CalEvent): boolean {
         const now = new Date();
-        const start = ev.start_at ? new Date(ev.start_at) : null;
-        const end = ev.end_at ? new Date(ev.end_at) : null;
-        if (!start || isNaN(start.getTime())) return false;
-        if (!end || isNaN(end.getTime())) return false;
+        const start = this.eventStart(ev);
+        const end = this.eventEnd(ev);
+        if (!start || !end) return false;
         return start <= now && now <= end;
     }
 
     badgeLabel(ev: CalEvent): string {
         if (this.isEventLive(ev)) return this.translate.instant('calendar.event_in_progress');
         if (ev.session_id) return this.translate.instant('calendar.event_has_minutes');
-        const start = new Date(ev.start_at);
-        if (!isNaN(start.getTime()) && start < this.today) return this.translate.instant('calendar.event_missing_minutes');
+        const start = this.eventStart(ev);
+        if (start && start < this.today) return this.translate.instant('calendar.event_missing_minutes');
         return this.translate.instant('calendar.event_upcoming');
     }
 
@@ -979,7 +1001,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
         return new Date(d.getFullYear(), d.getMonth(), d.getDate());
     }
 
-    private sameDay(a: Date, b: Date): boolean {
+    private sameDay(a: Date | null, b: Date): boolean {
+        if (!a) return false;
         return a.getFullYear() === b.getFullYear()
             && a.getMonth() === b.getMonth()
             && a.getDate() === b.getDate();

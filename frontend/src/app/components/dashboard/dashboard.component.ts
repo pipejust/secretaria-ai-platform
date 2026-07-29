@@ -456,10 +456,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
      *  fromDate y toDate (mínimo 1 para no romper el chart). */
     private get _periodDays(): number {
         if (this.hasCustomRange) {
-            const from = new Date(this.customFromDate);
-            const to = new Date(this.customToDate);
-            from.setHours(0, 0, 0, 0);
-            to.setHours(0, 0, 0, 0);
+            const from = parseLocalDate(this.customFromDate)!;
+            const to = parseLocalDate(this.customToDate)!;
             const ms = to.getTime() - from.getTime();
             return Math.max(1, Math.round(ms / (24 * 60 * 60 * 1000)) + 1);
         }
@@ -469,17 +467,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     /** True cuando el rango personalizado está completo y es válido. */
     get hasCustomRange(): boolean {
         if (!this.customFromDate || !this.customToDate) return false;
-        const from = new Date(this.customFromDate);
-        const to = new Date(this.customToDate);
-        return !isNaN(from.getTime()) && !isNaN(to.getTime()) && from.getTime() <= to.getTime();
+        const from = parseLocalDate(this.customFromDate);
+        const to = parseLocalDate(this.customToDate);
+        return !!from && !!to && from.getTime() <= to.getTime();
     }
 
     /** Fecha final del rango activo (rango custom o "hoy" si preset). */
     private get _periodEnd(): Date {
         if (this.hasCustomRange) {
-            const d = new Date(this.customToDate);
-            d.setHours(0, 0, 0, 0);
-            return d;
+            // Los inputs son `type="date"`, así que llegan sin hora: hay que
+            // construirlas en local o el eje del chart se etiqueta un día
+            // antes y la ventana de KPIs cuenta el día equivocado.
+            return parseLocalDate(this.customToDate)!;
         }
         const d = new Date();
         d.setHours(0, 0, 0, 0);

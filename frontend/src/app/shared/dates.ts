@@ -14,6 +14,16 @@
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * `true` si la cadena es una fecha sin hora.
+ *
+ * Sirve para distinguir un evento de día completo: Google Calendar manda
+ * `start.date` en vez de `start.dateTime`, y ese valor llega tal cual.
+ */
+export function isDateOnly(value: string | null | undefined): boolean {
+    return value != null && DATE_ONLY.test(String(value).trim());
+}
+
 /** `Date` en hora local, o `null` si no hay fecha que sacar. */
 export function parseLocalDate(value: string | null | undefined): Date | null {
     if (value == null) return null;

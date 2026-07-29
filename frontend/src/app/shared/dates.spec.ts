@@ -1,4 +1,4 @@
-import { parseLocalDate } from './dates';
+import { isDateOnly, parseLocalDate } from './dates';
 
 describe('parseLocalDate', () => {
     it('devuelve el día que dice la cadena, no el anterior', () => {
@@ -38,5 +38,24 @@ describe('parseLocalDate', () => {
     it('con hora incluida sí describe un instante y se convierte a local', () => {
         const d = parseLocalDate('2026-07-28T15:30:00Z')!;
         expect(d.getTime()).toBe(Date.UTC(2026, 6, 28, 15, 30));
+    });
+});
+
+describe('isDateOnly', () => {
+    it('reconoce el evento de día completo de Google', () => {
+        // Google manda `start.date` en vez de `start.dateTime` cuando el
+        // evento dura todo el día, y ese valor llega crudo al frontend.
+        expect(isDateOnly('2026-07-28')).toBe(true);
+    });
+
+    it('no confunde un evento con hora', () => {
+        expect(isDateOnly('2026-07-28T09:00:00-05:00')).toBe(false);
+        expect(isDateOnly('2026-07-28T09:00:00Z')).toBe(false);
+    });
+
+    it('no se traga basura ni vacíos', () => {
+        expect(isDateOnly('')).toBe(false);
+        expect(isDateOnly(null)).toBe(false);
+        expect(isDateOnly('No especificada')).toBe(false);
     });
 });

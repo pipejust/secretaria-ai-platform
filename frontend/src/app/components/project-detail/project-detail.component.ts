@@ -10,6 +10,7 @@ import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { UserChipComponent } from '../shared/user-chip/user-chip.component';
 import { UserDirectoryService } from '../../services/user-directory.service';
+import { parseLocalDate } from '../../shared/dates';
 
 interface ProjectDetail {
     id: number;
@@ -137,10 +138,14 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
 
     formatDate(d: string | null | undefined): string {
         if (!d) return '—';
-        let val: any = d;
-        if (typeof val === 'string' && !isNaN(Number(val))) val = Number(val);
-        const dt = new Date(val);
-        if (isNaN(dt.getTime())) return String(d);
+        // Esta función sirve tres orígenes: `due_date` (fecha sin hora),
+        // fechas de sesión (ISO con hora) y el epoch en milisegundos que
+        // deja una subida manual sin fecha. `parseLocalDate` cubre los dos
+        // primeros; el epoch hay que seguir convirtiéndolo aparte.
+        const dt = (typeof d === 'string' && !isNaN(Number(d)))
+            ? new Date(Number(d))
+            : parseLocalDate(d);
+        if (!dt || isNaN(dt.getTime())) return String(d);
         return dt.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
