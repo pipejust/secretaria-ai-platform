@@ -103,10 +103,19 @@ _SIN_RESPONSABLE = {
 
 
 def _tiene_responsable(item: ActionItem) -> bool:
-    if (item.owner_email or "").strip():
-        return True
+    """¿La tarea tiene un responsable identificable?
+
+    El marcador se cuela también en el correo —hay 14 filas con
+    `owner_email = "Por asignar"`— así que se mira el nombre primero: si
+    es un marcador, no hay dueño por mucho que el otro campo esté lleno.
+    """
     nombre = (item.owner_name or "").strip().lower()
-    return bool(nombre) and nombre not in _SIN_RESPONSABLE
+    if nombre in _SIN_RESPONSABLE:
+        return False
+    correo = (item.owner_email or "").strip().lower()
+    if correo and correo not in _SIN_RESPONSABLE:
+        return True
+    return bool(nombre)
 
 
 def _es_del_proyecto(
