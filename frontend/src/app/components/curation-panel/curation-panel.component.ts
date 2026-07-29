@@ -10,6 +10,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
+import { isExactIsoDate } from '../../shared/due-date';
 
 interface ActionItem {
   id?: number;
@@ -538,7 +539,15 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     if (task.description != null) body.append('description', task.description);
     if (task.owner_name != null) body.append('owner_name', task.owner_name);
     if (task.owner_email != null) body.append('owner_email', task.owner_email);
-    if (task.due_date != null) body.append('due_date', task.due_date);
+    // Este PUT se dispara al salir de CUALQUIER campo de la tarea, y manda
+    // todos. El `<input type="date">` no emite evento cuando el navegador
+    // rechaza el valor que le llega, así que un due_date que no sea fecha
+    // se queda en el modelo, se ve vacío en pantalla, y tumbaría con 422 la
+    // edición de un campo que el usuario ni tocó. Si no es fecha, no lo
+    // mandamos: el backend deja el suyo intacto.
+    if (task.due_date != null && (isExactIsoDate(task.due_date) || !task.due_date.trim())) {
+        body.append('due_date', task.due_date);
+    }
 
     this.http.put(`${environment.apiUrl}/api/sessions/action_items/${task.id}`, body, { headers: this.authService.getAuthHeaders() }).subscribe({
       next: () => this.showSaveMessage(this.translate.instant('curation.toast_task_updated')),

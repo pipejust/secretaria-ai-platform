@@ -11,6 +11,7 @@ import { ToastService } from '../../services/toast.service';
 import { environment } from '../../../environments/environment';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { LanguageService } from '../../services/language.service';
+import { isRealDueDate } from '../../shared/due-date';
 
 interface CalAccount {
     id: number;
@@ -43,27 +44,6 @@ interface PendingTask {
     is_approved: boolean;
     project_name: string;
     bucket: 'vencido' | 'proximo' | 'pendiente' | 'sin_fecha' | 'completado' | 'cancelado' | 'bloqueado';
-}
-
-// `due_date` es texto libre en la base de datos y arrastró frases del
-// extractor viejo («No especificada»). Una tarea entra al calendario sólo
-// si su fecha es de verdad, con el mismo criterio que usa el backend
-// (backend/date_utils.py) para que ambos lados cuenten lo mismo.
-const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/;
-
-function isRealDueDate(value: string | null | undefined): boolean {
-    if (!value) return false;
-    const head = String(value).trim().slice(0, 10);
-    if (!ISO_DATE_PREFIX.test(head)) return false;
-    // Descarta días que no existen («2026-02-31»). Comparamos componentes en
-    // hora local: `toISOString()` pasaría por UTC y en zonas UTC+ devolvería
-    // el día anterior, tumbando fechas perfectamente válidas.
-    const [y, m, day] = head.split('-').map(Number);
-    const d = new Date(y, m - 1, day);
-    // `new Date(y, ...)` mapea los años 0-99 a 1900+y, así que «0099-01-01»
-    // se rechazaría aquí y el backend sí la acepta. setFullYear lo corrige.
-    d.setFullYear(y);
-    return d.getFullYear() === y && d.getMonth() === m - 1 && d.getDate() === day;
 }
 
 interface DayCell {
