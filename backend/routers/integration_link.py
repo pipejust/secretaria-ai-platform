@@ -189,29 +189,48 @@ def link_preview(
             continue
 
         toks = name_tokens(rp.display_name or rp.full_name)
-        por_nombre = [c for c in contacts if len(toks & name_tokens(c.name)) >= 2]
-        distintos = {" ".join(sorted(name_tokens(c.name))) for c in por_nombre}
-        if len(distintos) > 1:
-            ambiguos.append({
-                "tipo": "persona", "external_ref": rp.external_ref,
-                "remoto": rp.display_name or rp.full_name,
-                "candidatos": [
-                    {"nombre": c.name, "correo": c.email} for c in por_nombre
-                ],
-                "motivo": "Varias personas encajan con ese nombre — elige tú.",
-            })
-        elif por_nombre:
+        fuertes = [c for c in contacts if len(toks & name_tokens(c.name)) >= 2]
+        debiles = [c for c in contacts if len(toks & name_tokens(c.name)) == 1]
+
+        def distintas(cs: list) -> set[str]:
+            return {" ".join(sorted(name_tokens(c.name))) for c in cs}
+
+        if len(distintas(fuertes)) > 1:
+            candidatos = fuertes
+            motivo = "Varias personas encajan con ese nombre — elige tú."
+        elif fuertes:
             enlaces.append({
                 "tipo": "persona", "external_ref": rp.external_ref,
                 "remoto": rp.display_name or rp.full_name,
-                "acten": [c.name for c in por_nombre], "criterio": "nombre",
+                "acten": [c.name for c in fuertes], "criterio": "nombre",
             })
+            continue
+        elif debiles:
+            # Coincidencia parcial (típicamente solo el apellido). NO se
+            # crea a ciegas: «Cortés Burgos» con dos hermanos Cortés daría
+            # de alta un tercero que no existe. Decide un humano.
+            candidatos = debiles
+            motivo = (
+                "Solo coincide parcialmente (apellido). Confirma si es una "
+                "de estas personas o alguien nuevo — crear a ciegas duplicaría."
+            )
         else:
             faltantes.append({
                 "tipo": "persona", "external_ref": rp.external_ref,
                 "remoto": rp.display_name or rp.full_name,
                 "correo": rp.work_email,
             })
+            continue
+
+        ambiguos.append({
+            "tipo": "persona", "external_ref": rp.external_ref,
+            "remoto": rp.display_name or rp.full_name,
+            "candidatos": [
+                {"nombre": c.name, "correo": c.email, "external_ref": c.external_ref}
+                for c in candidatos
+            ],
+            "motivo": motivo,
+        })
 
     for rpr in payload.projects:
         ya = [p for p in projects if (p.external_ref or "") == rpr.external_ref]
