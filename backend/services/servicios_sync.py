@@ -286,6 +286,39 @@ def sync_employees(
     ).all())
     users = list(db.exec(select(User).where(User.tenant_id == tenant_id)).all())
 
+    # Proyectos cuya lista de integrantes manda ella sola.
+    #
+    # Sin esto las dos mitades del sync se pelean: `sync_projects` retira a
+    # quien ya no es integrante y, un instante después, el emparejador de
+    # empleados vuelve a enlazarlo porque el correo coincide. La retirada
+    # aparecía en el informe y no servía de nada.
+    #
+    # Solo cuenta cuando la lista **trae gente**. Con `members: []` no se
+    # sabe si es «no queda nadie» o «no lo informamos», y quitar acceso por
+    # una ambigüedad es el error caro.
+    autoritativos: set[int] = set()
+    try:
+        for pr in client.projects(status="active"):
+            if not (pr.get("members") or []):
+                continue
+            ref = (pr.get("id") or "").strip()
+            for p in db.exec(
+                select(Project)
+                .where(Project.tenant_id == tenant_id)
+                .where(Project.external_ref == ref)
+            ).all():
+                autoritativos.add(p.id)
+    except Exception as exc:  # noqa: BLE001
+        # Si el catálogo no responde, se enlaza como antes: mejor de más
+        # que dejar a alguien sin sus actas por un fallo de red.
+        rep.errors.append(f"catálogo de proyectos para membresía: {exc}")
+
+    if autoritativos:
+        contacts = [
+            c for c in contacts
+            if c.project_id not in autoritativos or (c.external_ref or "").strip()
+        ]
+
     touched: set[int] = set()
 
     for emp in remote:
