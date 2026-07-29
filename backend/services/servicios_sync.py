@@ -323,14 +323,20 @@ def sync_employees(
             # En pantalla va `display_name` («Felipe Cortés»), no el legal
             # («Andrés Felipe Cortés Burgos»), que es para contratos.
             shown = emp.get("display_name") or emp.get("full_name")
-            if hasattr(obj, "name") and shown:
-                obj.name = shown
-            if hasattr(obj, "full_name") and shown:
-                obj.full_name = shown
-            if hasattr(obj, "role") and emp.get("position"):
-                obj.role = emp["position"]
-            if hasattr(obj, "position") and emp.get("position"):
-                obj.position = emp["position"]
+            position = emp.get("position")
+            # Explícito por tipo: `ProjectContact.role` es texto, pero
+            # `User.role` es una RELACIÓN al modelo Role — asignarle una
+            # cadena rompe el mapeo de SQLAlchemy.
+            if isinstance(obj, ProjectContact):
+                if shown:
+                    obj.name = shown
+                if position:
+                    obj.role = position
+            elif isinstance(obj, User):
+                if shown:
+                    obj.full_name = shown
+                if position:
+                    obj.position = position
             # El CORREO NO se pisa: en cada proyecto la persona puede
             # figurar con un correo distinto (el del cliente), y eso es
             # deliberado. Solo se rellena si está vacío.
