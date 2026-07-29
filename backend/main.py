@@ -331,6 +331,9 @@ app.include_router(integration_pairing.router)
 from routers import kanban
 app.include_router(kanban.router)
 
+from routers import integration_v1_docs
+app.include_router(integration_v1_docs.router)
+
 
 @app.get("/")
 def read_root():
