@@ -50,6 +50,17 @@ def norm_text(v: Optional[str]) -> str:
     return " ".join(s.split())
 
 
+def norm_project(v: Optional[str]) -> str:
+    """Nombre de proyecto comparable: quita sufijos entre paréntesis.
+
+    «Softnexus (interno)» y «Softnexus» son el mismo proyecto — el
+    paréntesis es una aclaración humana, no parte del nombre.
+    """
+    import re
+    s = re.sub(r"\([^)]*\)", " ", v or "")
+    return norm_text(s)
+
+
 def norm_id(v: Optional[str]) -> str:
     """Cédula: solo dígitos."""
     return "".join(c for c in (v or "") if c.isdigit())
@@ -162,6 +173,7 @@ class SyncReport:
     projects_seen: int = 0
     projects_linked: list[dict] = field(default_factory=list)
     projects_unmatched: list[str] = field(default_factory=list)
+    contacts_created: list[dict] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
     def bump(self, key: str) -> None:
@@ -183,7 +195,8 @@ class SyncReport:
             "proyectos": {
                 "remotos": self.projects_seen,
                 "enlazados": self.projects_linked,
-                "sin_pareja": self.projects_unmatched,
+                "creados_en_acten": self.projects_unmatched,
+                "contactos_creados": self.contacts_created,
             },
             "errores": self.errors,
         }
@@ -348,9 +361,14 @@ def sync_projects(
     rep = report or SyncReport(dry_run=dry_run)
     remote = client.projects(status="active")
     rep.projects_seen = len(remote)
+    # Directorio indexado por UUID: se usa al crear fichas de integrantes.
+    try:
+        emp_by_uuid = {(e.get("id") or "").strip(): e for e in client.employees(status="all")}
+    except Exception:
+        emp_by_uuid = {}
 
     locals_ = list(db.exec(select(Project).where(Project.tenant_id == tenant_id)).all())
-    by_norm = {norm_text(p.name): p for p in locals_}
+    by_norm = {norm_project(p.name): p for p in locals_}
 
     for pr in remote:
         uuid = (pr.get("id") or "").strip()
@@ -361,11 +379,28 @@ def sync_projects(
                 local = p
                 break
         if local is None:
-            local = by_norm.get(norm_text(name))
+            local = by_norm.get(norm_project(name))
 
         if local is None:
+            # Ellos son el maestro de proyectos: lo que exista allá y no
+            # aquí se ESPEJA. Un proyecto sin integrantes todavía no es un
+            # error — se poblará después y hay que recogerlo entonces.
             rep.projects_unmatched.append(name)
-            continue
+            if not dry_run:
+                local = Project(
+                    tenant_id=tenant_id,
+                    name=name,
+                    description=pr.get("client_name") or "",
+                    external_ref=uuid,
+                    managed_externally=True,
+                    is_active=(pr.get("status") or "active") == "active",
+                )
+                db.add(local)
+                db.commit()
+                db.refresh(local)
+                locals_.append(local)
+            else:
+                continue
 
         miembros = pr.get("members") or []
         rep.projects_linked.append({
@@ -376,21 +411,40 @@ def sync_projects(
             local.external_ref = uuid
             local.managed_externally = True
             db.add(local)
-            # Correo POR PROYECTO: la misma persona puede participar con el
-            # correo del cliente. Se prefiere `members[].email`; si viene
-            # vacío, el contacto conserva el que ya tenía.
+            # Integrantes: crear la ficha si falta y aplicar el correo POR
+            # PROYECTO (`members[].email`), que puede ser el del cliente.
+            # Si viene vacío, se conserva/cae al corporativo.
             for m in miembros:
                 emp_uuid = (m.get("employee_id") or "").strip()
-                m_email = (m.get("email") or "").strip()
-                if not emp_uuid or not m_email:
+                if not emp_uuid:
                     continue
-                for c in db.exec(
+                m_email = (m.get("email") or "").strip()
+                existentes = list(db.exec(
                     select(ProjectContact)
                     .where(ProjectContact.project_id == local.id)
                     .where(ProjectContact.external_ref == emp_uuid)
-                ).all():
-                    c.email = m_email
-                    db.add(c)
+                ).all())
+                if existentes:
+                    if m_email:
+                        for c in existentes:
+                            c.email = m_email
+                            db.add(c)
+                    continue
+                # No existe la ficha en este proyecto → crearla con los
+                # datos del directorio (ellos mandan sobre la identidad).
+                emp = emp_by_uuid.get(emp_uuid) or {}
+                db.add(ProjectContact(
+                    project_id=local.id,
+                    name=emp.get("display_name") or emp.get("full_name") or "",
+                    email=m_email or emp.get("work_email") or "",
+                    role=m.get("role") or emp.get("position") or "",
+                    entity=pr.get("client_name") or "",
+                    external_ref=emp_uuid,
+                ))
+                rep.contacts_created.append({
+                    "proyecto": local.name,
+                    "persona": emp.get("display_name") or emp.get("full_name") or emp_uuid,
+                })
 
     if not dry_run:
         db.commit()
