@@ -22,7 +22,7 @@ lance nada a mano**.
 | `PATCH`/`POST /tasks` + máquina de estados | ✅ | `cancelled → done` responde `409` |
 | **`POST /ask` en v1** | ✅ **nuevo** | Respuesta con citas reales, recortada al empleado |
 | **`GET /sessions/{id}/document`** | ✅ **nuevo** | PDF de 8 páginas y DOCX válidos; `format=txt` → `422` |
-| **`GET /calendar/events`** | ✅ **nuevo** | Responde `200`; hoy sin datos (ver aviso abajo) |
+| **`GET /calendar/events`** | ✅ **nuevo** | **737 elementos**: tareas con fecha + reuniones + agendas |
 | **Sync automática** | ✅ **nuevo** | Cada 15 min + completa a las 03:20 |
 | Sincronización PULL | ✅ | **7 personas y 6 proyectos enlazados por UUID** |
 | Asistente de enlace bidireccional | ✅ | Clasifica *enlaza* / *ambiguo* / *crear* |
@@ -118,15 +118,14 @@ Acten no bloquea ninguna tarea suya.
 **De ellos:** la interfaz (reuniones, detalle, tareas, Kanban, Ask) — el
 mayor esfuerzo real, y ya no espera nada nuestro.
 
-**Conjunto:** cerrar quién crea en el asistente de enlace — ver §16.
+**Conjunto:** ~~cerrar quién crea en el asistente~~ ✅ resuelto: es
+bidireccional y una sola ejecución cubre los dos lados — ver §16.
 
-**Aviso honesto sobre el calendario.** `GET /calendar/events` responde
-`200` y está probado, pero hoy devuelve `{"items": [], "total": 0}`:
-**no hay ninguna cuenta de Google/Microsoft conectada** en el despliegue
-(0 cuentas, 0 eventos en base). El endpoint no está en blanco por un
-fallo — está esperando a que alguien conecte una agenda en Acten. Si su
-interfaz lo va a pintar, conviene saberlo antes de depurar una lista
-vacía.
+**Corrección sobre el calendario (30-jul, mismo día).** Lo dimos por
+vacío. Era un fallo nuestro de alcance: devolvíamos solo las agendas
+OAuth —que sí están vacías— cuando el calendario de Acten se arma sobre
+todo con **tareas con fecha** y **reuniones**. Corregido: **737
+elementos**, cada uno con `kind: task | session | event`. Ver §6.
 
 ### ⚠️ Nota de seguridad (hallazgo suyo, ya corregido)
 
@@ -411,39 +410,63 @@ Probado en producción: `200`, `application/pdf`, 8 páginas · DOCX
 `Microsoft OOXML` válido.
 
 ### `GET /api/v1/calendar/events`
-✅ **Implementado.** Eventos de agenda sincronizados desde Google o
-Microsoft, con el vínculo al acta cuando ya llegó.
+✅ **Implementado.** Alcance **`calendar:read`** — ya añadido a su clave,
+**es la misma clave, el valor no cambió**.
 
-Query: `project_external_id`, `date_from`, `date_to`, `page`, `limit`
-(default 50, máx 200). Alcance: **`calendar:read`** — ya añadido a su
-clave, **es la misma clave, no cambia de valor**.
+> **Corrección sobre lo que dijimos antes.** Lo dimos por «vacío hasta que
+> alguien conecte una agenda». Era falso: el calendario de Acten se arma
+> sobre todo con **tareas que tienen fecha de vencimiento** y con las
+> **reuniones**. Las agendas de Google/Microsoft son el tercer
+> ingrediente, y ésas sí están vacías. Devolvíamos solo ese tercio.
+> Corregido: hoy responde con **737 elementos reales**.
+
+Cada elemento trae `kind`: `task` · `session` · `event`.
+
+Query: `project_external_id`, `date_from`, `date_to`, `include`
+(`tasks,sessions,events` — coma; por defecto los tres), `page`, `limit`
+(default 50, máx 200).
 
 ```json
 {
   "items": [{
-    "id": 91,
-    "title": "Colpensiones - Seguimiento API",
-    "start_at": "2026-07-30T15:00:00Z",
-    "end_at": "2026-07-30T16:00:00Z",
-    "meeting_url": "https://meet.google.com/...",
+    "kind": "task",
+    "id": 4821,
+    "title": "Importar repositorio de FC para trabajar en Mi Boleta",
+    "start_at": "2026-07-15",
+    "end_at": "2026-07-15",
+    "all_day": true,
+    "status": "pending",
+    "priority": "media",
+    "owner": {"employee_external_id": "3f2b1c9a-...", "name": "Danny Vera"},
     "project_external_id": "10864d68-bcb4-44b4-9cec-8ee910714b05",
-    "session_id": 653,
-    "attendees": [{"email": "...", "name": "..."}]
+    "session_id": 560,
+    "meeting_url": null,
+    "attendees": []
   }],
-  "total": 12, "page": 1, "limit": 50
+  "total": 737, "page": 1, "limit": 50
 }
 ```
 
-`session_id` es el puente: `null` mientras la reunión no tenga acta, y el
-id del acta en cuanto llega. Sirve para pintar «acta disponible» sin
-cruzar nada del lado de ustedes.
+* `all_day` es `true` cuando la tarea no tiene hora; con hora, `start_at`
+  llega como `YYYY-MM-DDTHH:MM`.
+* `session_id` es el puente al acta. En `kind: "event"` vale `null`
+  mientras la reunión no tenga acta.
+* **`due_date` es texto libre y arrastra basura histórica** («No
+  especificada», 9 tareas de 888). Se filtran: solo pasa lo que es una
+  fecha de verdad. Si les llega algo que no sea `YYYY-MM-DD`, es un fallo
+  nuestro, avísennos.
 
-**Visibilidad:** la persona ve su propia agenda **y** los eventos de los
-proyectos donde es miembro.
+**Diferencia de visibilidad que conviene tener clara.** En Acten, un
+administrador ve en su calendario **las tareas de todo el tenant**. Por la
+API v1 con `X-On-Behalf-Of` se recorta **a los proyectos donde la persona
+es miembro** — que es lo acordado para su plataforma. No es una
+inconsistencia: son dos públicos distintos. Si en algún momento quieren la
+vista completa de administrador, se resuelve con un alcance aparte; hoy no
+existe.
 
-> ⚠️ **Hoy devuelve lista vacía.** No hay cuentas de calendario
-> conectadas en el despliegue. El endpoint funciona; los datos aparecen
-> cuando alguien conecte Google o Microsoft desde Acten.
+> Las agendas OAuth (`kind: "event"`) siguen sin datos: **0 cuentas
+> conectadas**. Aparecerán solas en cuanto alguien conecte Google o
+> Microsoft desde Acten, sin cambios de su lado.
 
 ### `GET /api/v1/tasks`
 Query: `project_external_id`, `owner_external_id`, `status`, `updated_since`
@@ -663,7 +686,7 @@ El secreto es **distinto de la API Key**.
 | 7 | Webhooks salientes + HMAC | ✅ **hecho** — y acotados al tenant integrado |
 | 8 | `X-On-Behalf-Of` → permisos | ✅ **hecho** |
 | 9 | **Sync periódica automática** | ✅ **hecho** — 15 min + completa 03:20 |
-| 10 | **`GET /calendar/events`** | ✅ **hecho** — sin datos hasta conectar una agenda |
+| 10 | **`GET /calendar/events`** | ✅ **hecho** — tareas + reuniones + agendas, con `kind` |
 | — | ~~Invitar bot~~ | ❌ **no aplica**: el empleado lo dispara, Acten captura |
 
 ### Plataforma de Servicios (RRHH)
@@ -720,7 +743,8 @@ negocia, no se asume.
 | 2 | ~~API Key de Acten para su proxy~~ | ✅ **entregada** — con `sessions:read`, `tasks:read`, `tasks:write`, `ask:query` y ahora `calendar:read` |
 | 3 | ~~Implementación del lado Acten~~ | ✅ **terminada** — nada nuestro bloquea |
 | 11 | ~~Sync periódica~~ | ✅ automática cada 15 min + completa 03:20 |
-| 12 | Agenda conectada (Google/Microsoft) | ⏸ el endpoint existe; faltan cuentas conectadas |
+| 12 | Agenda conectada (Google/Microsoft) | ⏸ solo afecta a `kind: "event"`; tareas y reuniones ya llegan |
+| 13 | ~~Quién crea en el asistente~~ | ✅ **bidireccional en una ejecución** — ver §16 |
 | 4 | 0 proyectos en producción de RRHH | ⏸ solo afecta producción; QA ya tiene datos |
 | 5 | UI en Angular (tareas + Kanban) | 🔨 de su lado, arranca cuando tengan la clave |
 | 6 | ~~Permisos por sesión~~ | ✅ miembro de proyecto ve las reuniones de ese proyecto |
@@ -837,28 +861,53 @@ nada existente.
 
 ---
 
-## 16. Asistente de enlace — quién crea
+## 16. Asistente de enlace — bidireccional, en una sola ejecución
 
-Su propuesta: **crea quien lanza el asistente**, en un solo sentido por
-ejecución. **De acuerdo, y es lo correcto.**
+**Decidido: el asistente es bidireccional.** Una ejecución resuelve los
+dos lados. La versión anterior de esta sección aceptaba «una ejecución =
+un sentido»; se queda corta y obligaba a dar de alta a mano la otra
+mitad.
 
-El razonamiento es sólido: si ambos lados crean a la vez, la idempotencia
-no salva nada, porque cada uno daría de alta por su cuenta **antes** de
-ver lo del otro. La llave `external_ref` solo evita duplicados *después*
-de que exista el enlace, no durante una carrera entre dos procesos.
+### Por qué no hay carrera
 
-### Regla acordada
+El riesgo que planteaban era real pero está mal ubicado: **la carrera
+aparece si dos asistentes corren a la vez**, no si uno solo hace las dos
+cosas. Una ejecución la orquesta **un solo lado**, de forma secuencial:
+lee ambos directorios, propone, y al confirmar aplica primero aquí y
+después allá. No hay dos procesos decidiendo a ciegas.
 
-> **Una ejecución = un sentido.** Quien pulsa *Siguiente* ve las dos
-> listas, confirma y las altas salen de ahí. El otro lado nunca crea por
-> iniciativa propia durante esa ejecución.
+> **La regla que sí hace falta:** no lancen el asistente por los dos lados
+> al mismo tiempo. Con uno a la vez, `external_ref` basta.
 
-Acten ya expone lo necesario para ambos sentidos:
+### Qué devuelve ahora `POST /api/v1/link/preview`
+
+| Lista | Qué es |
+|---|---|
+| `enlaces` | Coincidencia clara — se aplica |
+| `ambiguos` | Varios encajan — **decide un humano** |
+| `faltantes` | Están allá y no aquí → crear **en Acten** |
+| **`faltantes_en_servicios`** | 🆕 Están aquí y no allá → crear **en Servicios** |
+
+`resumen` trae `a_crear_en_acten` y **`a_crear_en_servicios`**.
+
+Las personas de `faltantes_en_servicios` vienen **agrupadas por persona
+real** con todos sus correos, igual que `/directory/people`: las tres
+fichas de Felipe son una sola alta, no tres. Los proyectos traen su
+conteo de `sesiones`, para que sepan cuáles tienen historial de verdad y
+cuáles no vale la pena crear.
+
+### Cómo se aplica cada sentido
 
 | Sentido | Cómo |
 |---|---|
-| Lanzan desde Servicios → crean en Acten | `POST /api/v1/link/directory/projects` y `/people` (idempotentes) |
-| Lanzan desde Acten → crean en Servicios | Acten lee su directorio y llama a los `POST` simétricos que ustedes expongan |
+| Crear **en Acten** | `POST /api/v1/link/directory/projects` y `/people` — idempotentes |
+| Crear **en Servicios** | Con `faltantes_en_servicios`, ustedes dan de alta allá dentro de la misma ejecución |
+
+**Si algún día quieren lanzarlo desde Acten**, necesitamos de su lado
+`POST` de empleados y proyectos y los alcances `employees:write` /
+`projects:write` — nuestra clave hoy solo lee. No corre prisa: mientras
+la interfaz viva en Servicios, quien lanza es ustedes y con lo que hay
+basta.
 
 **Y en ambos sentidos vale la misma regla de oro:** ante coincidencia
 parcial de nombre no se crea nada — se devuelven los candidatos y decide
