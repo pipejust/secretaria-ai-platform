@@ -380,6 +380,39 @@ idénticos** y ustedes no se enteran.
 
 ## 6. Endpoints de lectura (lo que pinta la UI de RRHH)
 
+### `POST /api/v1/sync/projects` — un proyecto nuevo, al instante
+
+Llámenlo justo después de crear, renombrar o reactivar un proyecto y
+aparece en Acten **en esa misma llamada**. Alcance `sync:write`, ya en su
+clave.
+
+```json
+{
+  "external_id": "6336c09f-fa59-457d-b2ee-b83da406e54f",
+  "name": "Mi Boleta",
+  "client_name": "First Class",
+  "status": "active",
+  "members": [{"employee_id": "...", "email": "...", "role": "..."}]
+}
+```
+
+* **Con cuerpo** → se espeja ese proyecto con los datos que mandan; no
+  hace falta que su API esté disponible para leerlo de vuelta.
+* **Sin cuerpo** → resincroniza el catálogo entero.
+
+**Idempotente**: llamarlo dos veces con el mismo `external_id` no
+duplica. **Nunca archiva**: mandar un proyecto no dice nada sobre los
+demás.
+
+Probado en producción: alta → `creado`; segunda llamada → `creado: []`;
+cambio de nombre → `renombrado: [{de, a}]`; y los otros nueve proyectos
+intactos.
+
+> **Sigue habiendo red por debajo.** Acten tira del catálogo de proyectos
+> **cada 3 minutos** (una sola petición) y hace la sincronización completa
+> cada 15. Si no llaman a este endpoint, un proyecto nuevo aparece igual;
+> solo tarda un poco más.
+
 ### `GET /api/v1/sessions`
 Query: `project_external_id`, `updated_since`, `status`, `page`, `limit`, `search`
 ```json
