@@ -93,6 +93,22 @@ def _miembros_por_proyecto(
     return fuera
 
 
+# Marcadores que el extractor deja cuando la reunión no dijo responsable.
+# No son personas, así que la pregunta «¿es del proyecto?» no aplica.
+_SIN_RESPONSABLE = {
+    "por asignar", "sin asignar", "no asignado", "sin responsable",
+    "por definir", "pendiente", "todos", "equipo", "n/a", "na", "-",
+    "unassigned", "tbd",
+}
+
+
+def _tiene_responsable(item: ActionItem) -> bool:
+    if (item.owner_email or "").strip():
+        return True
+    nombre = (item.owner_name or "").strip().lower()
+    return bool(nombre) and nombre not in _SIN_RESPONSABLE
+
+
 def _es_del_proyecto(
     item: ActionItem, miembros: Optional[tuple[set[str], list[set[str]]]],
 ) -> bool:
@@ -267,7 +283,14 @@ def list_pendientes(
     for item in items:
         proj_id = session_to_project.get(item.session_id)
         proj_name = project_names.get(proj_id, "General") if proj_id else "General"
-        en_proyecto = _es_del_proyecto(item, miembros.get(proj_id)) if proj_id else None
+        # Sin proyecto o sin responsable, la pregunta no tiene sentido y se
+        # deja en `None`: así el interruptor no esconde las tareas que
+        # están esperando dueño, que son justo las que hay que ver.
+        en_proyecto = (
+            _es_del_proyecto(item, miembros.get(proj_id))
+            if (proj_id and _tiene_responsable(item))
+            else None
+        )
         if externos is False and en_proyecto is False:
             continue
         record = _serialize(
