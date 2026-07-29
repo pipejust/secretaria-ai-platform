@@ -463,10 +463,11 @@ Query: `project_external_id`, `date_from`, `date_to`, `include`
   llega como `YYYY-MM-DDTHH:MM`.
 * `session_id` es el puente al acta. En `kind: "event"` vale `null`
   mientras la reunión no tenga acta.
-* **`due_date` es texto libre y arrastra basura histórica** («No
-  especificada», 9 tareas de 888). Se filtran: solo pasa lo que es una
-  fecha de verdad. Si les llega algo que no sea `YYYY-MM-DD`, es un fallo
-  nuestro, avísennos.
+* **`due_date` es `YYYY-MM-DD` o no existe.** La columna es de texto y
+  arrastró basura del extractor viejo («No especificada»); esas filas ya se
+  limpiaron a `null` y ahora la validación corre en cada escritura, así que
+  no pueden volver. El filtro de salida se mantiene igual por si acaso. Si
+  les llega algo que no sea `YYYY-MM-DD`, es un fallo nuestro, avísennos.
 
 **Diferencia de visibilidad que conviene tener clara.** En Acten, un
 administrador ve en su calendario **las tareas de todo el tenant**. Por la
@@ -566,6 +567,8 @@ Al pasar a `done`, Acten sella `completed_at` automáticamente.
 
 **Validación:** si `owner_external_id` no corresponde a un empleado
 sincronizado (§4), responde `422` — no se acepta un responsable fantasma.
+`due_date` responde `422` si no es `YYYY-MM-DD`; para dejar la tarea sin
+fecha, mándenlo como `null` u omítanlo. Aplica igual en el `PATCH`.
 
 ### Autenticación de su servidor contra Acten
 
