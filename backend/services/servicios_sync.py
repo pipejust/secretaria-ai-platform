@@ -174,6 +174,7 @@ class SyncReport:
     projects_linked: list[dict] = field(default_factory=list)
     projects_unmatched: list[str] = field(default_factory=list)
     contacts_created: list[dict] = field(default_factory=list)
+    contactos_fundidos: list[dict] = field(default_factory=list)
     projects_renamed: list[dict] = field(default_factory=list)
     projects_archived: list[dict] = field(default_factory=list)
     # Fichas que dejan de conceder acceso porque la persona ya no figura
@@ -207,6 +208,7 @@ class SyncReport:
                 "renombrados": self.projects_renamed,
                 "archivados": self.projects_archived,
                 "contactos_creados": self.contacts_created,
+                "contactos_fundidos": self.contactos_fundidos,
             },
             "errores": self.errors,
         }
@@ -649,6 +651,63 @@ def sync_un_proyecto(
     }
 
 
+def dedupe_contactos(db: Session, tenant_id: int, *, dry_run: bool = False) -> list[dict]:
+    """Funde las fichas repetidas de la misma persona en un proyecto.
+
+    Aparecen sin que nadie las cree por duplicado: una ficha vieja escrita
+    a mano y otra que trajo la sincronización acaban siendo la misma
+    persona, y el emparejador enlaza **las dos** al mismo UUID. En la
+    pantalla de Colpensiones salían dos «Christian Muñoz».
+
+    La que se queda es la que más información tiene, y **hereda lo que
+    solo tenía la otra** antes de borrarla: si la vieja llevaba el correo
+    y la nueva el UUID, el resultado se queda con los dos.
+    """
+    def puntua(c: ProjectContact) -> tuple:
+        return (
+            bool((c.external_ref or "").strip()),
+            bool((c.email or "").strip()),
+            bool((c.entity or "").strip()),
+            bool((c.role or "").strip()),
+            c.id or 0,
+        )
+
+    proyectos = {
+        p.id for p in db.exec(
+            select(Project).where(Project.tenant_id == tenant_id)
+        ).all()
+    }
+    grupos: dict[tuple, list[ProjectContact]] = {}
+    for c in db.exec(select(ProjectContact)).all():
+        if c.project_id in proyectos:
+            grupos.setdefault(
+                (c.project_id, (c.name or "").strip().lower()), [],
+            ).append(c)
+
+    fundidas: list[dict] = []
+    for (pid, _), fichas in grupos.items():
+        if len(fichas) < 2:
+            continue
+        fichas.sort(key=puntua, reverse=True)
+        queda, sobran = fichas[0], fichas[1:]
+        for extra in sobran:
+            fundidas.append({
+                "proyecto_id": pid, "persona": extra.name,
+                "eliminada": extra.id, "conservada": queda.id,
+            })
+            if dry_run:
+                continue
+            for campo in ("email", "role", "entity", "external_ref", "phone"):
+                if not (getattr(queda, campo) or "").strip() and (getattr(extra, campo) or "").strip():
+                    setattr(queda, campo, getattr(extra, campo))
+            db.delete(extra)
+        if not dry_run:
+            db.add(queda)
+    if fundidas and not dry_run:
+        db.commit()
+    return fundidas
+
+
 def run_full_sync(
     db: Session, tenant_id: int, *, dry_run: bool = True,
     client: Optional[ServiciosClient] = None,
@@ -661,6 +720,9 @@ def run_full_sync(
         rep.errors.append(f"proyectos: {exc}")
     try:
         sync_employees(db, tenant_id, c, dry_run=dry_run, report=rep)
+        # Después de enlazar, no antes: el emparejador es justo lo que
+        # deja dos fichas apuntando a la misma persona.
+        rep.contactos_fundidos = dedupe_contactos(db, tenant_id, dry_run=dry_run)
     except Exception as exc:  # noqa: BLE001
         rep.errors.append(f"empleados: {exc}")
     return rep.as_dict()
