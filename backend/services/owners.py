@@ -23,9 +23,17 @@ from typing import Any, Optional
 SIN_RESPONSABLE = frozenset({
     "por asignar", "sin asignar", "no asignado", "sin responsable",
     "por definir", "sin definir", "pendiente", "todos", "equipo",
+    # Estos aparecieron en producción **después** de escribir la lista:
+    # seis tareas decían «No especificado» y se contaban como si fueran
+    # una persona con ese nombre. El extractor inventa variantes nuevas,
+    # así que la lista se amplía cuando los datos enseñan una.
+    "no especificado", "no especificada", "no proporcionado",
+    "no proporcionada", "no definido", "no definida", "sin asignar aún",
+    "desconocido", "desconocida", "varios", "n.a.", "ninguno",
     "n/a", "na", "-", "--", "?",
     "unassigned", "tbd", "to be assigned", "nobody", "none", "team",
-    "per assignar", "sense assignar",
+    "not specified", "not provided", "unknown",
+    "per assignar", "sense assignar", "no especificat",
 })
 
 
