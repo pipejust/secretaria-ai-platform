@@ -63,12 +63,27 @@ def acten_people(
         .where(Project.tenant_id == ctx.tenant.id)
     ).all()
 
+    # Primero por UUID, y las fichas sueltas se pegan a la persona cuyo
+    # nombre coincide. Sin ese segundo paso, quien tiene una ficha
+    # enlazada y otra sin enlazar sale **dos veces**: le pasaba a William
+    # Aragon desde que se le retiró la membresía del proyecto interno, y
+    # el asistente lo habría ofrecido como un alta nueva.
+    por_nombre: dict[str, str] = {}
+    for c, _ in rows:
+        ref = (c.external_ref or "").strip()
+        if ref:
+            n = " ".join(sorted(name_tokens(c.name)))
+            if n:
+                por_nombre.setdefault(n, ref)
+
     personas: dict[str, dict] = {}
     for c, p in rows:
-        # Clave: el UUID si ya está enlazado; si no, el nombre normalizado.
-        key = (c.external_ref or "").strip() or "n:" + " ".join(sorted(name_tokens(c.name)))
+        ref = (c.external_ref or "").strip()
+        if not ref:
+            ref = por_nombre.get(" ".join(sorted(name_tokens(c.name))), "")
+        key = ref or "n:" + " ".join(sorted(name_tokens(c.name)))
         e = personas.setdefault(key, {
-            "external_ref": c.external_ref,
+            "external_ref": ref or None,
             "nombre": c.name or "",
             "correos": [],
             "proyectos": [],
