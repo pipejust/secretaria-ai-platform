@@ -802,6 +802,14 @@ def list_calendar_events(
         "tasks,sessions,events",
         description="Qué pintar: coma entre 'tasks', 'sessions' y 'events'.",
     ),
+    include_closed: bool = Query(
+        False,
+        description=(
+            "Pintar también las tareas hechas o canceladas. Por defecto "
+            "no: un calendario lleno de trabajo terminado no deja ver el "
+            "que queda."
+        ),
+    ),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=MAX_LIMIT),
     db: Session = Depends(get_session),
@@ -845,6 +853,11 @@ def list_calendar_events(
                 tq = tq.where(MeetingSession.project_id == -1)
             else:
                 tq = tq.where(MeetingSession.project_id.in_(vis))
+        if not include_closed:
+            # Mismo criterio que el calendario de Acten, que trae su
+            # propio interruptor apagado por defecto. Sin esto, cerrar el
+            # trabajo atrasado no despeja nada: las tarjetas siguen ahí.
+            tq = tq.where(ActionItem.status.notin_(("done", "cancelled")))
         if date_from:
             tq = tq.where(ActionItem.due_date >= date_from[:10])
         if date_to:
