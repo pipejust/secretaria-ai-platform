@@ -85,6 +85,38 @@ def _resolve_project(
     return proj
 
 
+def _indice_personas(db: Session, tenant_id: int) -> dict[str, str]:
+    """nombre canónico normalizado → UUID de empleado.
+
+    Se calcula una vez por petición y se guarda en la sesión de base:
+    resolverlo por tarea recorría todos los contactos del tenant en cada
+    fila, y una página de 200 tareas hacía 200 recorridos idénticos.
+    """
+    clave = f"_idx_personas_{tenant_id}"
+    if clave in db.info:
+        return db.info[clave]
+
+    from services.alias_personas import cargar, normalizar
+
+    try:
+        tabla = cargar(db, tenant_id)
+    except Exception:  # noqa: BLE001
+        tabla = {}
+    idx: dict[str, str] = {}
+    for c in db.exec(
+        select(ProjectContact)
+        .join(Project, Project.id == ProjectContact.project_id)
+        .where(Project.tenant_id == tenant_id)
+        .where(ProjectContact.external_ref.is_not(None))
+    ).all():
+        n = normalizar(c.name)
+        bueno = normalizar(tabla.get(n, (c.name or "", ""))[0]) or n
+        if bueno:
+            idx.setdefault(bueno, c.external_ref)
+    db.info[clave] = idx
+    return idx
+
+
 def _owner_block(db: Session, item: ActionItem) -> Optional[dict[str, Any]]:
     """Bloque `owner`, o **`None` si la tarea no tiene dueño**.
 
@@ -100,6 +132,8 @@ def _owner_block(db: Session, item: ActionItem) -> Optional[dict[str, Any]]:
         return None
 
     correo = limpiar(item.owner_email)
+    nombre = limpiar(item.owner_name) or ""
+
     ext = None
     if correo:
         row = db.exec(
@@ -108,10 +142,30 @@ def _owner_block(db: Session, item: ActionItem) -> Optional[dict[str, Any]]:
             .where(ProjectContact.external_ref.is_not(None))
         ).first()
         ext = row[0] if isinstance(row, tuple) else row
+
+    if not ext and nombre:
+        # **También por nombre.** Antes solo por correo, y la mayoría de
+        # las tareas no lo traen: el nombre lo dice la transcripción, el
+        # correo casi nunca. Sin esto, decenas de tareas de gente de la
+        # casa llegaban sin `employee_external_id` y la otra plataforma
+        # las pintaba como de alguien ajeno.
+        from services.alias_personas import cargar as _cargar, normalizar as _norm
+
+        try:
+            tabla = _cargar(db, item.tenant_id)
+        except Exception:  # noqa: BLE001
+            tabla = {}
+        objetivo = _norm(tabla.get(_norm(nombre), (nombre, ""))[0]) or _norm(nombre)
+        ext = _indice_personas(db, item.tenant_id).get(objetivo)
+
     return {
         "employee_external_id": ext,
-        "name": limpiar(item.owner_name) or "",
+        "name": nombre,
         "email": correo or "",
+        # ¿Es de la casa? Distinto de «está en este proyecto»: quien
+        # trabaja aquí no es un extraño aunque no figure como integrante
+        # de ese proyecto concreto.
+        "is_staff": bool(ext),
     }
 
 

@@ -76,20 +76,33 @@ def _miembros_por_proyecto(
     from models import ProjectContact
     from services.servicios_sync import name_tokens, norm_email
 
+    from services.alias_personas import cargar, normalizar
+
+    try:
+        tabla = cargar(db, tenant_id)
+    except Exception:  # noqa: BLE001
+        tabla = {}
+
     filas = db.exec(
         select(ProjectContact, Project.id)
         .join(Project, Project.id == ProjectContact.project_id)
         .where(Project.tenant_id == tenant_id)
     ).all()
-    fuera: Dict[int, tuple[set[str], list[set[str]]]] = {}
+    fuera: Dict[int, tuple[set[str], list[set[str]], set[str]]] = {}
     for contacto, pid in filas:
-        correos, nombres = fuera.setdefault(pid, (set(), []))
+        correos, nombres, canonicos = fuera.setdefault(pid, (set(), [], set()))
         em = norm_email(contacto.email)
         if em:
             correos.add(em)
         toks = name_tokens(contacto.name)
         if toks:
             nombres.append(toks)
+        n = normalizar(contacto.name)
+        # Se guardan las dos formas: la de la ficha y la canónica, para
+        # que dé igual cuál de las dos traiga la tarea.
+        if n:
+            canonicos.add(n)
+            canonicos.add(normalizar(tabla.get(n, (contacto.name or "", ""))[0]))
     return fuera
 
 
@@ -106,7 +119,7 @@ def _tiene_responsable(item: ActionItem) -> bool:
 
 
 def _es_del_proyecto(
-    item: ActionItem, miembros: Optional[tuple[set[str], list[set[str]]]],
+    item: ActionItem, miembros: Optional[tuple[set[str], list[set[str]], set[str]]],
 ) -> bool:
     """¿El responsable de la tarea es integrante del proyecto?
 
@@ -129,9 +142,17 @@ def _es_del_proyecto(
         return False
     from services.servicios_sync import name_tokens, norm_email
 
-    correos, nombres = miembros
+    correos, nombres, canonicos = miembros
     em = norm_email(item.owner_email)
     if em and em in correos:
+        return True
+
+    # Por nombre canónico: la ficha del directorio puede llamarse de otra
+    # forma que la transcripción («Maximus Decimus Meridius Toro» frente a
+    # «Juan Diego Toro»), y sin esto un compañero salía como ajeno a su
+    # propio proyecto.
+    from services.alias_personas import normalizar as _norm
+    if _norm(item.owner_name) in canonicos:
         return True
 
     toks = name_tokens(item.owner_name)
