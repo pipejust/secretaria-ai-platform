@@ -75,8 +75,13 @@ def registrar(
 ) -> Optional[PersonAlias]:
     """Añade un alias. Idempotente."""
     clave = normalizar(alias)
-    if not clave or clave == normalizar(canonical_name):
+    if not clave:
         return None
+    # Se guarda **también** cuando el alias normaliza igual que el nombre
+    # bueno. Parece inútil y no lo es: «César Ruano» y «Cesar Ruano»
+    # normalizan igual, así que sin esta fila no había ninguna entrada
+    # para esa persona y su nombre nunca se unificaba — seguían saliendo
+    # dos filas, una con tilde y otra sin ella.
     ya = db.exec(
         select(PersonAlias)
         .where(PersonAlias.tenant_id == tenant_id)
