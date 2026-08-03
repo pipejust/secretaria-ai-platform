@@ -32,11 +32,23 @@ def normalizar(nombre: Optional[str]) -> str:
 
 
 def cargar(db: Session, tenant_id: int) -> dict[str, tuple[str, str]]:
-    """alias normalizado → (nombre bueno, correo bueno)."""
+    """alias normalizado → (nombre bueno, correo bueno).
+
+    Incluye también el **nombre bueno apuntando a sí mismo**. Parece
+    redundante y no lo es: sin esa entrada, «juan diego toro» en
+    minúsculas y sin correo se queda tal cual —normaliza igual que el
+    canónico, así que nunca hubo alias que lo cubriera— y sigue abriendo
+    su propia fila.
+    """
     filas = db.exec(
         select(PersonAlias).where(PersonAlias.tenant_id == tenant_id)
     ).all()
-    return {f.alias: (f.canonical_name, f.canonical_email or "") for f in filas}
+    tabla = {f.alias: (f.canonical_name, f.canonical_email or "") for f in filas}
+    for f in filas:
+        tabla.setdefault(
+            normalizar(f.canonical_name), (f.canonical_name, f.canonical_email or ""),
+        )
+    return tabla
 
 
 def canonizar(
