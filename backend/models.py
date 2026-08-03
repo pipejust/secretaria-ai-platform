@@ -509,6 +509,27 @@ class SessionPermission(SQLModel, table=True):
     granted_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
+class PersonAlias(SQLModel, table=True):
+    """Otra forma de escribir el nombre de alguien que ya conocemos.
+
+    La transcripción oye lo que oye: la misma persona sale como «Juan
+    Diego Toro», «JDiego Toro», «Juan Toro» y «TON618 Toro» —su apodo de
+    la videollamada— y cada variante abría su propio carril en el
+    tablero y su propia fila en los informes.
+
+    Se guarda en base y no en el código para que corregir una grafía
+    nueva no exija un despliegue: aparecen constantemente.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    # Nombre tal como aparece, normalizado (sin tildes, en minúsculas).
+    alias: str = Field(index=True)
+    canonical_name: str
+    canonical_email: str = Field(default="")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
 class IntegrationPairing(SQLModel, table=True):
     """Código de emparejamiento de un solo uso para conectar una plataforma.
 

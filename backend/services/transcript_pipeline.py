@@ -47,6 +47,20 @@ from services.llm_groq import GroqLLMService
 
 logger = logging.getLogger(__name__)
 
+_ALIAS_CACHE: dict[int, dict] = {}
+
+
+def _alias_nombre(db, tenant_id: int, nombre: str, correo: str) -> tuple[str, str]:
+    """(nombre, correo) con los alias aplicados. Cachea por tenant: la
+    tabla se consultaría una vez por tarea, y son decenas por sesión."""
+    try:
+        from services.alias_personas import cargar, canonizar
+        if tenant_id not in _ALIAS_CACHE:
+            _ALIAS_CACHE[tenant_id] = cargar(db, tenant_id)
+        return canonizar(_ALIAS_CACHE[tenant_id], nombre, correo)
+    except Exception:  # noqa: BLE001
+        return (nombre or "").strip(), (correo or "").strip()
+
 # ---- Configuración de reintentos ---------------------------------------
 # 3 intentos con backoff exponencial + jitter. Total de espera en el peor
 # caso: ~2 + ~4 = 6 s. Suficiente para superar timeouts puntuales o rate
@@ -578,9 +592,35 @@ async def process_session_with_ai(
         _merged.append(a)
         if c:
             _seen_canon.add(c)
+    # Alias conocidos: la misma persona llega escrita de varias formas
+    # («JDiego Toro», «TON618 Toro») y cada una abría su propia entrada.
+    # Se unifican **después** del merge, para que también se limpie lo que
+    # ya estaba guardado, y se funden las que quedan iguales.
+    try:
+        from services.alias_personas import cargar as _cargar_alias, canonizar as _canon
+        _tabla = _cargar_alias(db, session_obj.tenant_id)
+        if _tabla:
+            _unificados: list[dict] = []
+            _vistos: set[str] = set()
+            for e in _merged:
+                if not isinstance(e, dict):
+                    continue
+                nm, em = _canon(_tabla, e.get("name"), e.get("email"))
+                clave = _canonical_speaker_name(nm)
+                if clave and clave in _vistos:
+                    continue
+                if clave:
+                    _vistos.add(clave)
+                _unificados.append({**e, "name": nm, "email": em or e.get("email") or ""})
+            _merged = _unificados
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("alias de personas no aplicados en %s: %s", session_id, exc)
+
     session_obj.processed_attendees = json.dumps(_merged, ensure_ascii=False)
     db.add(session_obj)
     db.commit()
+
+    _ALIAS_CACHE.pop(session_obj.tenant_id, None)
 
     # ---------- 5. OpenAI → action_items (CRÍTICO, con retry) ----------
     # Pasamos también las secciones ya procesadas (decisions, agreements,
@@ -732,6 +772,12 @@ async def process_session_with_ai(
         _pc = _partial_contact(owner_name)
         if _pc and (_pc.get("name") or "").strip():
             owner_name = _pc["name"].strip()
+
+        # Mismo registro de alias que los asistentes: sin esto la tarea
+        # queda a nombre del apodo y no aparece en el carril de esa persona.
+        owner_name, owner_email = _alias_nombre(
+            db, session_obj.tenant_id, owner_name, owner_email,
+        )
 
         db.add(
             ActionItem(

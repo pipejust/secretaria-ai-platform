@@ -201,6 +201,7 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE project ADD COLUMN IF NOT EXISTS external_ref TEXT",
             # Emparejamiento por código: ver models.IntegrationPairing.
             "CREATE INDEX IF NOT EXISTS idx_pairing_hash ON integrationpairing(code_hash)",
+            "CREATE INDEX IF NOT EXISTS idx_alias_tenant ON personalias(tenant_id, alias)",
             "CREATE INDEX IF NOT EXISTS idx_outbound_tenant ON outboundintegration(tenant_id)",
             "ALTER TABLE project ADD COLUMN IF NOT EXISTS managed_externally BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE projectcontact ADD COLUMN IF NOT EXISTS external_ref TEXT",
