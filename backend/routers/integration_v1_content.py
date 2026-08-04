@@ -177,6 +177,15 @@ async def despachar_a_plataformas(
 # CURACIÓN — corregir lo que sacó la IA
 # ══════════════════════════════════════════════════════════════════════
 
+class ParticipanteIn(BaseModel):
+    """Un asistente. Solo hace falta el nombre."""
+
+    name: str = Field(min_length=1)
+    role: Optional[str] = None
+    entity: Optional[str] = None
+    email: Optional[str] = None
+
+
 class ActaPatch(BaseModel):
     """Campos del acta. Solo se toca lo que venga; el resto no se roza.
 
@@ -194,6 +203,38 @@ class ActaPatch(BaseModel):
     language: Optional[str] = None
     status: Optional[str] = None
     project_external_id: Optional[str] = None
+    date: Optional[str] = None
+    # **Reemplaza** la lista entera, no añade. Es lo que hace falta para
+    # una pantalla de curación: quien corrige quita a quien no estuvo, y
+    # con una semántica de «añadir» eso sería imposible.
+    participants: Optional[list[ParticipanteIn]] = None
+
+
+def _fecha_valida(v: str) -> str:
+    """Devuelve la fecha normalizada o lanza `422`.
+
+    Se acepta `YYYY-MM-DD` y la forma completa con hora. Las sesiones
+    guardan el instante con zona (`2026-08-04T14:49:36+00:00`), así que
+    una fecha suelta se completa a medianoche en vez de rechazarla: quien
+    corrige un acta escribe el día, no el segundo.
+    """
+    from datetime import datetime as _dt
+
+    texto = (v or "").strip()
+    if not texto:
+        raise HTTPException(422, "La fecha viene vacía.")
+    try:
+        if len(texto) == 10:
+            _dt.strptime(texto, "%Y-%m-%d")
+            return f"{texto}T00:00:00+00:00"
+        _dt.fromisoformat(texto.replace("Z", "+00:00"))
+        return texto
+    except ValueError:
+        raise HTTPException(
+            422,
+            f"Fecha no reconocida: {texto!r}. Usa YYYY-MM-DD o ISO-8601 "
+            f"completo (2026-08-04T14:49:36+00:00).",
+        )
 
 
 @router.patch("/sessions/{session_id}")
@@ -229,6 +270,38 @@ def editar_acta(
                 )
             s.project_id = proj.id
 
+    if payload.date is not None:
+        s.date = _fecha_valida(payload.date)
+
+    if payload.participants is not None:
+        # Se pasan por el registro de alias: si llega «JDiego Toro» se
+        # guarda «Juan Diego Toro», que es como aparece en el resto de la
+        # plataforma. Y se funden los que resulten iguales.
+        from services.alias_personas import cargar, canonizar, normalizar
+
+        try:
+            tabla = cargar(db, ctx.tenant.id)
+        except Exception:  # noqa: BLE001
+            tabla = {}
+        limpios: list[dict[str, str]] = []
+        vistos: set[str] = set()
+        for p in payload.participants:
+            nombre, correo = canonizar(tabla, p.name, p.email)
+            nombre = (nombre or "").strip()
+            if not nombre:
+                continue
+            clave = normalizar(nombre)
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+            limpios.append({
+                "name": nombre,
+                "role": (p.role or "").strip() or "—",
+                "entity": (p.entity or "").strip() or "—",
+                "email": (correo or "").strip(),
+            })
+        s.processed_attendees = json.dumps(limpios, ensure_ascii=False)
+
     campos = {
         "title": "title",
         "summary": "raw_summary",
@@ -246,6 +319,10 @@ def editar_acta(
             tocados.append(entrada)
     if payload.project_external_id is not None:
         tocados.append("project_external_id")
+    if payload.date is not None:
+        tocados.append("date")
+    if payload.participants is not None:
+        tocados.append("participants")
 
     if not tocados:
         raise HTTPException(422, "No se envió ningún campo que cambiar.")
@@ -253,7 +330,17 @@ def editar_acta(
     db.add(s)
     db.commit()
     db.refresh(s)
-    return {"id": s.id, "actualizados": tocados}
+
+    try:
+        asistentes = json.loads(s.processed_attendees or "[]")
+    except (ValueError, TypeError):
+        asistentes = []
+    return {
+        "id": s.id,
+        "actualizados": tocados,
+        "date": s.date,
+        "participants": asistentes,
+    }
 
 
 @router.post("/sessions/{session_id}/regenerate-tasks")
