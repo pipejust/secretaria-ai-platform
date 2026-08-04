@@ -421,10 +421,17 @@ async def process_session_with_ai(
 
     # ---------- 1. Project matching nivel 1 (literal) ----------
     matched_project_id = session_obj.project_id
-    projects = db.exec(select(Project)).all()
+    # **Solo los proyectos de esta empresa.** Sin el filtro, una sesión de
+    # un cliente podía acabar colgada del proyecto de otro: pasó cinco
+    # veces con un «ANH» que era de otra compañía.
+    projects = db.exec(
+        select(Project).where(Project.tenant_id == session_obj.tenant_id)
+    ).all()
     if auto_match_project and not matched_project_id:
-        matched_project_id = _match_project_by_text(
-            projects, session_obj.title or "", transcript
+        from services.project_matcher import emparejar
+        matched_project_id = emparejar(
+            projects, session_obj.title or "", transcript,
+            session_obj.raw_summary or "",
         )
 
     project_contacts: list[dict] = []
@@ -456,6 +463,8 @@ async def process_session_with_ai(
 
     # ---------- 3. Project matching nivel 2 (Groq deduce por contexto) ----------
     if auto_match_project and not matched_project_id:
+        # `projects` ya viene filtrado por empresa; el modelo no debe ver
+        # siquiera los nombres de los proyectos de otro cliente.
         proj_dict_list = [
             {"id": p.id, "name": p.name, "description": p.description}
             for p in projects
@@ -472,6 +481,12 @@ async def process_session_with_ai(
             logger.warning(
                 "Groq deduce_project falló para sesión %s (no bloquea): %s",
                 session_id, exc,
+            )
+            deduced_id = None
+        if deduced_id and deduced_id not in {p.id for p in projects}:
+            logger.warning(
+                "deduce_project devolvió el proyecto %s, que no es de esta "
+                "empresa — se descarta", deduced_id,
             )
             deduced_id = None
         if deduced_id:
