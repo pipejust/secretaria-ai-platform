@@ -17,7 +17,9 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
-from models import ActionItem, MeetingSession, Project, Role, Tenant, User
+from models import (
+    ActionItem, MeetingSession, Project, ProjectContact, Role, Tenant, User,
+)
 from routers.auth import get_current_tenant, get_current_user
 
 logger = logging.getLogger(__name__)
@@ -116,6 +118,55 @@ def _tiene_responsable(item: ActionItem) -> bool:
     from services.owners import tiene_responsable
 
     return tiene_responsable(item.owner_name, item.owner_email)
+
+
+def _plantilla(db: Session, tenant_id: int) -> tuple[set[str], set[str]]:
+    """Quién trabaja en la empresa: (correos, nombres canónicos).
+
+    Se considera de la casa a quien tiene ficha **enlazada al directorio
+    de empleados** en cualquier proyecto. Es la única marca fiable de que
+    alguien es compañero y no un contacto del cliente.
+    """
+    from services.alias_personas import cargar, normalizar
+
+    try:
+        tabla = cargar(db, tenant_id)
+    except Exception:  # noqa: BLE001
+        tabla = {}
+    correos: set[str] = set()
+    nombres: set[str] = set()
+    for c in db.exec(
+        select(ProjectContact)
+        .join(Project, Project.id == ProjectContact.project_id)
+        .where(Project.tenant_id == tenant_id)
+        .where(ProjectContact.external_ref.is_not(None))
+    ).all():
+        if (c.email or "").strip():
+            correos.add(c.email.strip().lower())
+        n = normalizar(c.name)
+        if n:
+            nombres.add(n)
+            nombres.add(normalizar(tabla.get(n, (c.name or "", ""))[0]))
+    # Los alias apuntan al nombre bueno de gente de la casa; si el
+    # canónico ya está, todas sus grafías cuentan.
+    for alias, (bueno, correo) in tabla.items():
+        if normalizar(bueno) in nombres:
+            nombres.add(alias)
+            if correo:
+                correos.add(correo.lower())
+    return correos, nombres
+
+
+def _es_de_la_casa(
+    item: ActionItem, plantilla: tuple[set[str], set[str]],
+) -> bool:
+    from services.alias_personas import normalizar
+
+    correos, nombres = plantilla
+    em = (item.owner_email or "").strip().lower()
+    if em and em in correos:
+        return True
+    return normalizar(item.owner_name) in nombres
 
 
 def _es_del_proyecto(
@@ -295,6 +346,7 @@ def list_pendientes(
             i.owner_email = u["email"]
     tenant_name = tenant.name or ""
     miembros = _miembros_por_proyecto(db, tenant.id)
+    plantilla = _plantilla(db, tenant.id)
 
     out: List[Dict[str, Any]] = []
     for item in items:
@@ -303,16 +355,25 @@ def list_pendientes(
         # Sin proyecto o sin responsable, la pregunta no tiene sentido y se
         # deja en `None`: así el interruptor no esconde las tareas que
         # están esperando dueño, que son justo las que hay que ver.
-        en_proyecto = (
-            _es_del_proyecto(item, miembros.get(proj_id))
-            if (proj_id and _tiene_responsable(item))
-            else None
-        )
+        # Un compañero **nunca** es «ajeno». Puede no figurar como
+        # integrante de ese proyecto concreto —el catálogo de la otra
+        # plataforma no siempre los lista— pero trabaja aquí, y esconder
+        # su tarea con el interruptor de «gente ajena» era justo lo
+        # contrario de lo que ese interruptor promete.
+        en_proyecto = None
+        if proj_id and _tiene_responsable(item):
+            en_proyecto = (
+                _es_del_proyecto(item, miembros.get(proj_id))
+                or _es_de_la_casa(item, plantilla)
+            )
         if externos is False and en_proyecto is False:
             continue
         record = _serialize(
             item, proj_name, now, user_meta=user_meta, tenant_name=tenant_name,
             owner_in_project=en_proyecto,
+        )
+        record["owner_is_staff"] = (
+            _es_de_la_casa(item, plantilla) if _tiene_responsable(item) else None
         )
 
         if bucket:
