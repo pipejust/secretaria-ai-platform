@@ -891,21 +891,26 @@ async def regenerate_fields_from_transcript(
 
     # NO sobrescribimos raw_summary: ese viene de Fireflies y es editable manualmente.
 
+    # El modelo puede colar un NUL, y Postgres rechaza la fila entera: así
+    # se perdieron los campos **y**, de rebote, las tareas de una sesión,
+    # porque el paso siguiente encontró la transacción ya muerta.
+    from services.texto_seguro import limpiar_texto
+
     language = _unwrap_ai_field(structured_data.get("language"))
     if language is not None:
-        session_obj.language = str(language)
+        session_obj.language = limpiar_texto(str(language))
 
     decisions = _unwrap_ai_field(structured_data.get("decisions"))
     if decisions is not None:
-        session_obj.processed_decisions = str(decisions)
+        session_obj.processed_decisions = limpiar_texto(str(decisions))
 
     risks = _unwrap_ai_field(structured_data.get("risks"))
     if risks is not None:
-        session_obj.processed_risks = str(risks)
+        session_obj.processed_risks = limpiar_texto(str(risks))
 
     agreements = _unwrap_ai_field(structured_data.get("agreements"))
     if agreements is not None:
-        session_obj.processed_agreements = str(agreements)
+        session_obj.processed_agreements = limpiar_texto(str(agreements))
 
     import json
     attendees = _unwrap_ai_field(structured_data.get("attendees"))

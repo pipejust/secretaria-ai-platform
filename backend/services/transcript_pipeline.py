@@ -631,7 +631,10 @@ async def process_session_with_ai(
     except Exception as exc:  # noqa: BLE001
         logger.warning("alias de personas no aplicados en %s: %s", session_id, exc)
 
-    session_obj.processed_attendees = json.dumps(_merged, ensure_ascii=False)
+    from services.texto_seguro import limpiar_texto
+    session_obj.processed_attendees = limpiar_texto(
+        json.dumps(_merged, ensure_ascii=False)
+    )
     db.add(session_obj)
     db.commit()
 
