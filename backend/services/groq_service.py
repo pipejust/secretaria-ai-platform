@@ -9,6 +9,8 @@ import httpx
 
 from config import settings
 
+import services.groq_models as _modelos
+
 logger = logging.getLogger(__name__)
 
 
@@ -419,7 +421,7 @@ class OpenAIService:
             '"alta|media|baja"}]}. No incluyas texto fuera del JSON.'
         )
         body = {
-            "model": "llama-3.3-70b-versatile",
+            "model": _modelos.MODELO_PRINCIPAL,
             "messages": [
                 {"role": "system", "content": "Eres un extractor de tareas. Respondes SOLO JSON."},
                 {"role": "user", "content": groq_prompt},

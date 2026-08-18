@@ -24,14 +24,18 @@ import httpx
 
 from config import settings
 
+import services.groq_models as _modelos
+
 logger = logging.getLogger(__name__)
 
 
 class GroqLLMService:
     BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
     AUDIO_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
-    MODEL = "llama-3.3-70b-versatile"           # 128k context, 32k output, JSON mode
-    WHISPER_MODEL = "whisper-large-v3-turbo"    # Multilingual, ~10x más rápido que whisper-1 de OpenAI
+    # Los identificadores viven en `services/groq_models.py`: estaban
+    # repetidos en cinco ficheros y el apagado de Llama rompió los cinco.
+    MODEL = _modelos.MODELO_PRINCIPAL
+    WHISPER_MODEL = _modelos.MODELO_VOZ          # no afectado por la deprecación
 
     def __init__(self) -> None:
         if not settings.groq_api_key:

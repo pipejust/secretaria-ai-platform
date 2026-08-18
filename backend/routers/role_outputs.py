@@ -103,7 +103,8 @@ async def generate_output(
         if not settings.groq_api_key:
             raise HTTPException(503, "GROQ_API_KEY no configurado.")
         url = GROQ_URL
-        model = "llama-3.3-70b-versatile"
+        from services.groq_models import MODELO_PRINCIPAL
+        model = MODELO_PRINCIPAL
         headers = {"Authorization": f"Bearer {settings.groq_api_key}",
                    "Content-Type": "application/json"}
     else:

@@ -11,7 +11,8 @@ Pipeline:
    pasan al LLM los chunks suficientemente cercanos a la pregunta. Esto
    evita la contaminación de contexto que mezclaba decisiones/tareas de
    reuniones no relacionadas.
-4. Construir contexto con los chunks filtrados. Llamar Groq llama-3.3-70b
+4. Construir contexto con los chunks filtrados. Llamar Groq (ver
+   `services/groq_models.py`)
    pidiendo JSON estricto donde cada decisión/tarea CITA explícitamente
    las sesiones origen (`source_sessions`).
 5. Devolver answer + citations (solo de sesiones que pasaron el filtro).
@@ -45,7 +46,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/ask", tags=["Ask Notiva (RAG)"])
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+from services.groq_models import MODELO_PRINCIPAL, MODELO_RAPIDO
+
+GROQ_MODEL = MODELO_PRINCIPAL
 
 # ──────────────────────────────────────────────────────────────────────────
 # Estrategia de filtrado de relevancia (evita contaminación de contexto).
@@ -505,7 +508,7 @@ _DOMAIN_SYNONYMS = {
 }
 
 
-QUERY_ANALYZER_MODEL = "llama-3.1-8b-instant"
+QUERY_ANALYZER_MODEL = MODELO_RAPIDO
 
 
 async def _llm_analyze_query(
