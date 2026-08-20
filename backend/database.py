@@ -261,6 +261,30 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE calendaraccount ADD COLUMN IF NOT EXISTS last_synced_at VARCHAR(64)",
             # Dos cuentas del mismo proveedor por persona: la llave lleva el
             # correo. Sin él, conectar la personal borraba la del trabajo.
+            #
+            # Antes de crear la llave hay que quitar las copias exactas que
+            # pudiera haber dejado el código viejo, que no la tenía. Son
+            # redundantes de verdad: misma persona, mismo proveedor, mismo
+            # correo — la aplicación anterior solo usaba una de ellas
+            # (`.first()`) y las demás no las miraba nadie. Se conserva la
+            # más reciente, que es la del último permiso concedido, y sus
+            # calendarios se reapuntan a ella en vez de quedar huérfanos.
+            """UPDATE calendar SET account_id = v.quedarse
+                 FROM (SELECT id, MAX(id) OVER (
+                         PARTITION BY user_id, provider, account_email) AS quedarse
+                       FROM calendaraccount) v
+                WHERE calendar.account_id = v.id AND v.id <> v.quedarse""",
+            # Y lo mismo con los eventos de la tabla vieja, que cuelgan de
+            # la cuenta: sin reapuntarlos, la clave foránea impide borrar
+            # la copia y el índice no se llega a crear nunca.
+            """UPDATE calendarevent SET calendar_account_id = v.quedarse
+                 FROM (SELECT id, MAX(id) OVER (
+                         PARTITION BY user_id, provider, account_email) AS quedarse
+                       FROM calendaraccount) v
+                WHERE calendarevent.calendar_account_id = v.id AND v.id <> v.quedarse""",
+            """DELETE FROM calendaraccount a USING calendaraccount b
+                WHERE a.user_id = b.user_id AND a.provider = b.provider
+                  AND a.account_email = b.account_email AND a.id < b.id""",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_calendaraccount_por_correo "
             "ON calendaraccount(user_id, provider, account_email)",
             "CREATE INDEX IF NOT EXISTS idx_calendar_tenant   ON calendar(tenant_id)",
@@ -273,15 +297,22 @@ def _apply_lightweight_migrations() -> None:
 
     from sqlalchemy import text
 
-    with engine.begin() as conn:
-        for stmt in statements:
-            try:
+    # **Cada sentencia en su propia transacción.** Antes iban todas dentro
+    # de un `engine.begin()` único, y eso en Postgres significa que la
+    # primera que falla aborta la transacción entera: las siguientes
+    # contestan «current transaction is aborted» y se saltan **en
+    # silencio**, apuntadas como avisos que nadie lee. Una sola fila
+    # duplicada dejaba sin crear todos los índices de más abajo, y el
+    # síntoma aparecía semanas después como una consulta lenta.
+    for stmt in statements:
+        try:
+            with engine.begin() as conn:
                 conn.execute(text(stmt))
-            except Exception as exc:  # noqa: BLE001
-                msg = str(exc).lower()
-                if "duplicate column" in msg or "already exists" in msg:
-                    continue
-                logger.warning("Migración ignorada (%s): %s", stmt, exc)
+        except Exception as exc:  # noqa: BLE001
+            msg = str(exc).lower()
+            if "duplicate column" in msg or "already exists" in msg:
+                continue
+            logger.warning("Migración ignorada (%s): %s", stmt, exc)
 
     # Backfill multi-tenant + cambio de uniques (solo Postgres real)
     if not _is_sqlite:
