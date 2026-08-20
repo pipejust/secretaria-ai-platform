@@ -15,14 +15,7 @@ import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { PreferencesService, UiPrefs, DEFAULT_PREFS } from '../../services/preferences.service';
 import { environment } from '../../../environments/environment';
-
-interface OAuthCfg {
-  client_id: string;
-  client_secret: string;
-  redirect_uri: string;
-  tenant?: string;       // sólo Microsoft
-  isActive?: boolean;
-}
+import { CalendarsService, TarjetaProveedor } from '../../services/calendars.service';
 
 interface PairStatus {
   conectada: boolean;
@@ -31,11 +24,6 @@ interface PairStatus {
   recibe_eventos: boolean;
   codigo_pendiente: boolean;
   codigo_expira_el: string | null;
-}
-
-interface OAuthStatus {
-  ready: boolean;
-  source: 'tenant' | 'env' | null;
 }
 
 /** Las secciones Documents / Security / Audit se removieron por
@@ -86,16 +74,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // siempre escribimos AMBOS para que cron/back tradicional siga leyendo.
   autoCurationSettings: { isEnabled: boolean; timeoutMinutes: number; timeoutHours: number } =
     { isEnabled: false, timeoutMinutes: 60, timeoutHours: 1 };
-  googleCalendarSettings: OAuthCfg = {
-    client_id: '', client_secret: '', redirect_uri: '', isActive: true,
-  };
-  microsoftCalendarSettings: OAuthCfg = {
-    client_id: '', client_secret: '', redirect_uri: '', tenant: 'common', isActive: true,
-  };
-  oauthStatus: { google: OAuthStatus; microsoft: OAuthStatus } = {
-    google:    { ready: false, source: null },
-    microsoft: { ready: false, source: null },
-  };
+  // ── Calendarios ────────────────────────────────────────────────────
+  // Las credenciales son de la aplicación, no de la persona: se registran
+  // una vez y después cada quien conecta su cuenta con dos clics.
+  //
+  // El secreto se escribe aparte de la tarjeta (`calSecretos`) porque la
+  // pantalla NUNCA lo recibe en claro —solo la pista `abcd…wxyz`—, y
+  // guardarlo en blanco no debe borrar el que ya hay: quien vuelve aquí a
+  // cambiar el ID de cliente no tiene el secreto delante.
+  calProviders: TarjetaProveedor[] = [];
+  calSecretos: Record<string, string> = {};
+  calGuardando = '';
+  calProbando = '';
+  calResultado: Record<string, { ok: boolean; detalle: string }> = {};
 
   // ============================================================
   // Preferencias UX (localStorage)
@@ -199,6 +190,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private preferences: PreferencesService,
     private route: ActivatedRoute,
     private translate: TranslateService,
+    private calendarsApi: CalendarsService,
   ) {
     // Deep-link: si entran con `?section=task-sync` (p.ej. desde el modal
     // de Proyectos > Auto-Curación), abrimos esa sección directamente.
@@ -312,27 +304,70 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return `${m}:${String(sec).padStart(2, '0')}`;
   }
 
-  get defaultGoogleRedirect(): string {
-    return `${environment.apiUrl}/api/calendar/google/callback`;
-  }
-  get defaultMicrosoftRedirect(): string {
-    return `${environment.apiUrl}/api/calendar/microsoft/callback`;
+  // ── Calendarios: cargar, guardar y comprobar ──────────────────────
+
+  cargarProveedoresCalendario(): void {
+    this.calendarsApi.proveedores().subscribe({
+      next: r => {
+        this.calProviders = r.proveedores;
+        // La dirección de retorno se enseña ya escrita: si se deja
+        // adivinar, casi nadie acierta con la barra final.
+        for (const p of this.calProviders) {
+          if (!p.redirect_uri) { p.redirect_uri = p.redirect_sugerido; }
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => { /* la tarjeta se queda vacía y lo dice en pantalla */ },
+    });
   }
 
-  useDefaultRedirect(provider: 'google' | 'microsoft'): void {
-    if (provider === 'google') this.googleCalendarSettings.redirect_uri = this.defaultGoogleRedirect;
-    else this.microsoftCalendarSettings.redirect_uri = this.defaultMicrosoftRedirect;
+  guardarProveedor(p: TarjetaProveedor): void {
+    this.calGuardando = p.provider;
+    const secreto = (this.calSecretos[p.provider] || '').trim();
+    this.calendarsApi.guardarProveedor(p.provider, {
+      client_id: p.client_id, redirect_uri: p.redirect_uri,
+      tenant: p.tenant, data_center: p.data_center,
+      ...(secreto ? { client_secret: secreto } : {}),
+    }).subscribe({
+      next: est => {
+        this.calGuardando = '';
+        this.calSecretos[p.provider] = '';
+        Object.assign(p, est, { redirect_sugerido: p.redirect_sugerido, scopes: p.scopes });
+        this.toast.success(`${p.etiqueta}: credenciales guardadas.`);
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        this.calGuardando = '';
+        this.toast.error(e?.error?.detail ?? 'No se pudieron guardar las credenciales.');
+        this.cdr.detectChanges();
+      },
+    });
   }
 
-  loadOauthStatus(): void {
-    this.http.get<{google: OAuthStatus; microsoft: OAuthStatus}>(
-      `${environment.apiUrl}/api/calendar/oauth_config_status`,
-      { headers: this.auth.getAuthHeaders() })
-      .subscribe({
-        next: (s) => { this.oauthStatus = s; this.cdr.detectChanges(); },
-        error: () => { /* silencioso */ },
-      });
+  /** Pregunta al proveedor si reconoce la aplicación, sin conectar nada. */
+  comprobarProveedor(p: TarjetaProveedor): void {
+    this.calProbando = p.provider;
+    this.calendarsApi.comprobarProveedor(p.provider).subscribe({
+      next: r => {
+        this.calProbando = '';
+        this.calResultado[p.provider] = r;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.calProbando = '';
+        this.calResultado[p.provider] = { ok: false, detalle: 'No se pudo comprobar.' };
+        this.cdr.detectChanges();
+      },
+    });
   }
+
+  copiar(texto: string): void {
+    navigator.clipboard?.writeText(texto)
+      .then(() => this.toast.success('Copiado.'))
+      .catch(() => { /* sin portapapeles: el campo se puede seleccionar a mano */ });
+  }
+
+  trackByProvider(_i: number, p: TarjetaProveedor): string { return p.provider; }
 
   // -----------------------------------------------------------------
   // "Compartido vs per-user" — switches del owner del tenant
@@ -465,7 +500,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     });
 
-    this.loadOauthStatus();
+    this.cargarProveedoresCalendario();
     this.loadShareSettings();
     this.loadPairStatus();
 
@@ -489,12 +524,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 this.autoCurationSettings.timeoutHours =
                     Math.max(1 / 60, Number(data.autoCuration.timeoutMinutes) / 60);
             }
-        }
-        if (data.google_calendar) {
-            this.googleCalendarSettings = { ...this.googleCalendarSettings, ...data.google_calendar };
-        }
-        if (data.microsoft_calendar) {
-            this.microsoftCalendarSettings = { ...this.microsoftCalendarSettings, ...data.microsoft_calendar };
         }
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -535,8 +564,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
       azure: this.azureSettings,
       clickup: this.clickupSettings,
       autoCuration: this.autoCurationSettings,
-      google_calendar: this.googleCalendarSettings,
-      microsoft_calendar: this.microsoftCalendarSettings,
+      // Los calendarios NO van aquí: sus credenciales se guardan por su
+      // propio endpoint, que cifra el secreto. Mandarlas en este payload
+      // las reescribiría en claro y pisaría lo cifrado.
     };
 
     this.settingsService.saveSettings(payload).subscribe({
@@ -544,7 +574,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.isSaving = false;
         this.successMessage = this.translate.instant('settings.msg_config_saved');
         this.toast.success(this.successMessage);
-        this.loadOauthStatus();
+        this.cargarProveedoresCalendario();
         this.cdr.detectChanges();
         setTimeout(() => {
           this.successMessage = '';

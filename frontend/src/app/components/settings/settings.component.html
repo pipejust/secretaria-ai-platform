@@ -220,17 +220,25 @@
             <!-- ============= INTEGRACIONES ============= -->
             <ng-container *ngIf="!isLoading && activeSection === 'integrations'">
 
+                <!-- ══════════════════════════════════════════════════════════
+                     Calendarios — las credenciales son de la aplicación, no
+                     de la persona. Se registra una vez y después cada quien
+                     conecta su cuenta con dos clics desde el calendario.
+                     ══════════════════════════════════════════════════════════ -->
                 <article class="st-card">
                     <header class="st-card-head">
                         <div>
-                            <h2 class="st-card-title">{{ 'settings.calendar_integrations' | translate }}</h2>
-                            <p class="st-card-sub">{{ 'settings.oauth_credentials' | translate }}</p>
+                            <h2 class="st-card-title">Calendarios</h2>
+                            <p class="st-card-sub">
+                                Que nadie teclee claves no significa que no haya credenciales:
+                                significa que son de la aplicación. Se registra una vez aquí y
+                                después cada persona conecta su cuenta desde el calendario.
+                            </p>
                         </div>
                     </header>
                     <div class="st-card-body st-stack">
 
-                        <!-- Google Calendar -->
-                        <div class="st-integration">
+                        <div class="st-integration" *ngFor="let p of calProviders; trackBy: trackByProvider">
                             <div class="st-integration-head">
                                 <div class="st-integration-name">
                                     <span class="st-int-icon" data-color="blue">
@@ -242,110 +250,100 @@
                                             <line x1="3" y1="10" x2="21" y2="10"></line>
                                         </svg>
                                     </span>
-                                    <strong>Google Calendar</strong>
+                                    <strong>{{ p.etiqueta }}</strong>
                                 </div>
-                                <span class="st-pill" [attr.data-tone]="oauthStatus.google.ready ? 'green' : 'gray'">
-                                    {{ (oauthStatus.google.ready ? 'settings.configured' : 'settings.not_configured') | translate }}
+                                <span class="st-pill" [attr.data-tone]="p.configurado ? 'green' : 'gray'">
+                                    {{ p.configurado ? 'Listo' : 'Sin configurar' }}
                                 </span>
                             </div>
+
                             <div class="st-grid st-grid-2">
-                                <label class="st-field"><span class="st-field-label">Client ID</span>
-                                    <input type="text" class="st-input" [(ngModel)]="googleCalendarSettings.client_id"
+                                <label class="st-field"><span class="st-field-label">ID de cliente</span>
+                                    <input type="text" class="st-input" [(ngModel)]="p.client_id"
+                                           [name]="p.provider + '_cid'"
                                            placeholder="xxx.apps.googleusercontent.com" /></label>
 
                                 <label class="st-field">
-                                    <span class="st-field-label">Client Secret</span>
+                                    <span class="st-field-label">Secreto de cliente</span>
                                     <div class="st-pw-wrap">
-                                        <input [type]="isPwVisible('google_secret') ? 'text' : 'password'"
-                                               class="st-input" [(ngModel)]="googleCalendarSettings.client_secret"
-                                               placeholder="••••••••" />
-                                        <button type="button" class="st-pw-toggle"
-                                                (click)="togglePassword('google_secret')"
-                                                [attr.aria-label]="(isPwVisible('google_secret') ? 'common.hide' : 'common.show') | translate">
-                                            <svg *ngIf="!isPwVisible('google_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                <circle cx="12" cy="12" r="3"></circle>
-                                            </svg>
-                                            <svg *ngIf="isPwVisible('google_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                                                <line x1="1" y1="1" x2="23" y2="23"></line>
-                                            </svg>
+                                        <input [type]="isPwVisible(p.provider) ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="calSecretos[p.provider]"
+                                               [name]="p.provider + '_sec'"
+                                               [placeholder]="p.client_secret_pista || '••••••••'" />
+                                        <button type="button" class="st-pw-toggle" (click)="togglePassword(p.provider)"
+                                                [attr.aria-label]="isPwVisible(p.provider) ? 'Ocultar' : 'Mostrar'">
+                                            {{ isPwVisible(p.provider) ? '×' : '•' }}
                                         </button>
                                     </div>
+                                    <span class="st-field-hint" *ngIf="p.configurado">
+                                        Ya hay uno guardado ({{ p.client_secret_pista }}). Déjalo en
+                                        blanco para no cambiarlo.
+                                    </span>
                                 </label>
 
                                 <label class="st-field st-field-wide">
-                                    <span class="st-field-label">Redirect URI</span>
+                                    <span class="st-field-label">Dirección de retorno</span>
                                     <div class="st-input-with-action">
-                                        <input type="text" class="st-input"
-                                               [(ngModel)]="googleCalendarSettings.redirect_uri"
-                                               [placeholder]="defaultGoogleRedirect" />
-                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('google')">{{ 'common.use_default' | translate }}</button>
+                                        <input type="text" class="st-input" [(ngModel)]="p.redirect_uri"
+                                               [name]="p.provider + '_redir'" [placeholder]="p.redirect_sugerido" />
+                                        <button type="button" class="st-btn-link"
+                                                (click)="p.redirect_uri = p.redirect_sugerido">usar la sugerida</button>
+                                        <button type="button" class="st-btn-link"
+                                                (click)="copiar(p.redirect_sugerido)">copiar</button>
                                     </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Microsoft 365 -->
-                        <div class="st-integration">
-                            <div class="st-integration-head">
-                                <div class="st-integration-name">
-                                    <span class="st-int-icon" data-color="violet">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="3" y="3" width="7" height="7"></rect>
-                                            <rect x="14" y="3" width="7" height="7"></rect>
-                                            <rect x="14" y="14" width="7" height="7"></rect>
-                                            <rect x="3" y="14" width="7" height="7"></rect>
-                                        </svg>
+                                    <span class="st-field-hint">
+                                        Tiene que coincidir carácter por carácter con la que se pegue en la
+                                        consola del proveedor —la barra final incluida—, o devuelve
+                                        <code>redirect_uri_mismatch</code> y no hay forma de saberlo antes de probar.
                                     </span>
-                                    <strong>Microsoft 365</strong>
-                                </div>
-                                <span class="st-pill" [attr.data-tone]="oauthStatus.microsoft.ready ? 'green' : 'gray'">
-                                    {{ (oauthStatus.microsoft.ready ? 'settings.configured' : 'settings.not_configured') | translate }}
-                                </span>
-                            </div>
-                            <div class="st-grid st-grid-2">
-                                <label class="st-field"><span class="st-field-label">Client ID</span>
-                                    <input type="text" class="st-input" [(ngModel)]="microsoftCalendarSettings.client_id" /></label>
-
-                                <label class="st-field">
-                                    <span class="st-field-label">Client Secret</span>
-                                    <div class="st-pw-wrap">
-                                        <input [type]="isPwVisible('ms_secret') ? 'text' : 'password'"
-                                               class="st-input" [(ngModel)]="microsoftCalendarSettings.client_secret" placeholder="••••••••" />
-                                        <button type="button" class="st-pw-toggle"
-                                                (click)="togglePassword('ms_secret')"
-                                                [attr.aria-label]="(isPwVisible('ms_secret') ? 'common.hide' : 'common.show') | translate">
-                                            <svg *ngIf="!isPwVisible('ms_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                <circle cx="12" cy="12" r="3"></circle>
-                                            </svg>
-                                            <svg *ngIf="isPwVisible('ms_secret')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                                                <line x1="1" y1="1" x2="23" y2="23"></line>
-                                            </svg>
-                                        </button>
-                                    </div>
                                 </label>
 
-                                <label class="st-field"><span class="st-field-label">Tenant</span>
-                                    <input type="text" class="st-input" [(ngModel)]="microsoftCalendarSettings.tenant"
-                                           placeholder="common" /></label>
-                                <label class="st-field"><span class="st-field-label">Redirect URI</span>
-                                    <div class="st-input-with-action">
-                                        <input type="text" class="st-input"
-                                               [(ngModel)]="microsoftCalendarSettings.redirect_uri"
-                                               [placeholder]="defaultMicrosoftRedirect" />
-                                        <button type="button" class="st-btn-link" (click)="useDefaultRedirect('microsoft')">{{ 'common.use_default' | translate }}</button>
-                                    </div>
+                                <label class="st-field" *ngIf="p.provider === 'microsoft'">
+                                    <span class="st-field-label">Directorio (inquilino)</span>
+                                    <input type="text" class="st-input" [(ngModel)]="p.tenant"
+                                           name="ms_tenant" placeholder="common" />
+                                    <span class="st-field-hint">
+                                        En blanco acepta cuentas de cualquier sitio; con el Id. de directorio
+                                        se cierra a la gente de la empresa.
+                                    </span>
+                                </label>
+
+                                <label class="st-field" *ngIf="p.usa_centros">
+                                    <span class="st-field-label">Centro de datos</span>
+                                    <select class="st-input" [(ngModel)]="p.data_center" name="zoho_dc">
+                                        <option value="com">zoho.com</option>
+                                        <option value="eu">zoho.eu</option>
+                                        <option value="in">zoho.in</option>
+                                        <option value="com.au">zoho.com.au</option>
+                                        <option value="jp">zoho.jp</option>
+                                        <option value="com.cn">zoho.com.cn</option>
+                                        <option value="ca">zohocloud.ca</option>
+                                    </select>
+                                    <span class="st-field-hint">
+                                        No es cosmético: los tokens de un centro no valen en otro.
+                                    </span>
                                 </label>
                             </div>
+
+                            <div class="st-integration-actions">
+                                <button type="button" class="st-btn st-btn-primary"
+                                        (click)="guardarProveedor(p)" [disabled]="calGuardando === p.provider">
+                                    {{ calGuardando === p.provider ? 'Guardando…' : 'Guardar' }}
+                                </button>
+                                <button type="button" class="st-btn" (click)="comprobarProveedor(p)"
+                                        [disabled]="!p.configurado || calProbando === p.provider">
+                                    {{ calProbando === p.provider ? 'Comprobando…' : 'Comprobar credenciales' }}
+                                </button>
+                                <span class="st-check-result" *ngIf="calResultado[p.provider] as r"
+                                      [attr.data-ok]="r.ok">{{ r.detalle }}</span>
+                            </div>
+
+                            <p class="st-field-hint st-scopes">Permisos que se piden: <code>{{ p.scopes }}</code></p>
                         </div>
+
+                        <p class="st-field-hint" *ngIf="!calProviders.length">
+                            Cargando la configuración de calendarios…
+                        </p>
                     </div>
                 </article>
 

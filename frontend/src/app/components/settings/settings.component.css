@@ -771,3 +771,59 @@ select.st-input::-ms-expand { display: none; }
 .pair-linked { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
 .pair-linked-name { margin: 0; font-weight: 600; }
 .pair-linked-meta { margin: 0 0 .7rem; font-size: .82rem; color: var(--color-text-muted, #64748b); }
+
+/* ============================================================
+   Calendarios — las tres tarjetas de proveedor
+   ============================================================ */
+
+/* La letra pequeña de un campo: por qué importa, o qué pasa si se
+   deja en blanco. Va debajo del control, no en un tooltip: lo que
+   solo se ve al pasar el ratón no lo lee quien está rellenando. */
+.st-field-hint {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--st-text-soft);
+}
+.st-field-hint code {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    background: var(--st-grey-soft);
+    border-radius: 3px;
+    padding: 1px 4px;
+}
+
+.st-integration-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+/* El veredicto de «Comprobar credenciales». Verde y rojo, porque la
+   diferencia entre «reconoce la aplicación» y «no la reconoce» es
+   justo lo que se vino a averiguar. */
+.st-check-result {
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--st-border);
+    color: var(--st-text-soft);
+    max-width: 52ch;
+}
+.st-check-result[data-ok="true"] {
+    color: var(--st-green, #047857);
+    border-color: currentColor;
+    background: var(--st-green-bg, rgba(16, 185, 129, .08));
+}
+.st-check-result[data-ok="false"] {
+    color: var(--st-red, #b91c1c);
+    border-color: currentColor;
+    background: var(--st-red-bg, rgba(239, 68, 68, .08));
+}
+
+.st-scopes {
+    margin: 10px 0 0;
+    word-break: break-all;
+}

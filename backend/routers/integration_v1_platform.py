@@ -453,7 +453,7 @@ def leer_state(state: str) -> Optional[dict]:
 
 @router.post("/calendar/connect")
 def calendar_connect(
-    provider: str = Query(..., pattern="^(google|microsoft)$"),
+    provider: str = Query(..., pattern="^(google|microsoft|zoho)$"),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("calendar:write")),
 ):
@@ -465,24 +465,29 @@ def calendar_connect(
     enlace que alguien reenvía por chat y termina conectando la agenda
     equivocada.
     """
-    from routers.calendar import _load_oauth_cfg
-    from services.calendar_service import google_oauth_url, microsoft_oauth_url
+    # Va contra el módulo de calendarios nuevo: los permisos que pide
+    # incluyen escritura, el `state` lleva a dónde volver y la cuenta se
+    # guarda con su correo (así caben la del trabajo y la personal).
+    from routers.calendars import _firmar_state
+    from services import calendar_config, calendar_google, calendar_microsoft, calendar_zoho
 
     user = _actor(ctx, db)
-    state = firmar_state(user.id, ctx.tenant.id, provider)
-    cfg = _load_oauth_cfg(provider, ctx.tenant.id, db)
-    constructor = google_oauth_url if provider == "google" else microsoft_oauth_url
+    state = _firmar_state(user, provider, "/admin/calendar")
+    cfg = calendar_config.cargar(db, ctx.tenant.id, provider)
+    modulo = {"google": calendar_google, "microsoft": calendar_microsoft,
+              "zoho": calendar_zoho}[provider]
     try:
-        url = constructor(state, cfg=cfg)
-    except RuntimeError as exc:
+        url = modulo.url_autorizacion(cfg, state)
+    except Exception as exc:  # noqa: BLE001
         raise HTTPException(
             503,
-            f"El OAuth de {provider} no está configurado en Acten: {exc}",
+            f"{provider} no está dado de alta en Acten: {exc}. Se configura en "
+            "Configuración → Integraciones → Calendarios.",
         )
     return {
         "auth_url": url,
         "provider": provider,
-        "expira_en_min": CONNECT_TTL_MIN,
+        "expira_en_min": 10,
         "empleado": user.email,
     }
 
@@ -537,7 +542,7 @@ async def calendar_sync(
     Normalmente no hace falta llamarla: Acten sincroniza por su cuenta.
     Está para el botón «actualizar ahora» de su interfaz.
     """
-    from routers.calendar import sync_now
+    from services import calendar_sync as _sync
 
     user = _actor(ctx, db)
-    return await sync_now(current_user=user, db=db)
+    return await _sync.sincronizar_todo_de(db, user)

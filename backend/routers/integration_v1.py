@@ -1036,6 +1036,89 @@ def list_calendar_events(
             "attendees": attendees,
         })
 
+    # ── El módulo de calendarios ────────────────────────────────────────
+    # Lo de arriba es la tabla del Sprint 03, que ya no se escribe. Los
+    # eventos nuevos —los creados en Acten y los traídos de Google,
+    # Microsoft, Zoho o un .ics— viven en `calendarentry` y
+    # `externalevent`, colgando de un calendario. Sin esto, quien consuma
+    # este endpoint vería una agenda a medias y no tendría cómo saberlo.
+    from models import Calendar as _Cal, CalendarEntry as _Entrada
+    from models import ExternalEvent as _Externo
+
+    cals = {
+        c.id: c for c in db.exec(
+            select(_Cal).where(_Cal.tenant_id == ctx.tenant.id)).all()
+    }
+    if cals:
+        mios = (
+            {c.id for c in cals.values() if c.owner_user_id == (
+                ctx.acting_user.id if ctx.acting_user else -1)}
+            if ctx.on_behalf_of else set(cals)
+        )
+        vis = set(ctx.visible_project_ids or [])
+
+        qe = select(_Entrada).where(_Entrada.tenant_id == ctx.tenant.id)
+        if date_from:
+            qe = qe.where(_Entrada.start_at >= date_from)
+        if date_to:
+            qe = qe.where(_Entrada.start_at <= date_to)
+        for e in db.exec(qe).all():
+            cal = cals.get(e.calendar_id)
+            if not cal:
+                continue
+            if ctx.on_behalf_of and e.calendar_id not in mios and e.project_id not in vis:
+                continue
+            if project_external_id:
+                proj = _resolve_project(db, ctx.tenant.id, project_external_id)
+                if e.project_id != proj.id:
+                    continue
+            items.append({
+                "kind": "event",
+                "id": f"cal-{e.id}",
+                "title": e.title or "",
+                "start_at": e.start_at,
+                "end_at": e.end_at,
+                "all_day": e.all_day,
+                "status": None,
+                "calendar": cal.key,
+                "calendar_name": cal.name,
+                "project_external_id": (
+                    proj_refs.get(e.project_id) if e.project_id else None
+                ),
+                "session_id": e.session_id,
+                "meeting_url": e.meeting_url,
+                "attendees": [],
+            })
+
+        # Lo traído de fuera va aparte y se marca: no es nuestro, no se
+        # edita desde aquí, y quien lo consuma tiene que poder distinguirlo.
+        if not project_external_id:
+            qx = select(_Externo).where(_Externo.calendar_id.in_(list(mios) or [-1]))
+            if date_from:
+                qx = qx.where(_Externo.start_at >= date_from)
+            if date_to:
+                qx = qx.where(_Externo.start_at <= date_to)
+            for x in db.exec(qx).all():
+                if x.cancelled:
+                    continue
+                cal = cals.get(x.calendar_id)
+                items.append({
+                    "kind": "external_event",
+                    "id": f"ext-{x.id}",
+                    "title": x.title or "",
+                    "start_at": x.start_at,
+                    "end_at": x.end_at,
+                    "all_day": x.all_day,
+                    "status": None,
+                    "calendar": cal.key if cal else None,
+                    "calendar_name": cal.name if cal else None,
+                    "origin": cal.origin if cal else None,
+                    "project_external_id": None,
+                    "session_id": None,
+                    "meeting_url": x.url or None,
+                    "attendees": [],
+                })
+
     items.sort(key=lambda x: x["start_at"] or "", reverse=True)
     return _paginar(items, page, limit)
 

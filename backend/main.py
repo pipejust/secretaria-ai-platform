@@ -288,8 +288,11 @@ from routers import reports
 app.include_router(reports.router)
 from routers import ask
 app.include_router(ask.router)
-from routers import calendar as calendar_router  # Sprint 03
-app.include_router(calendar_router.router)
+# El router del Sprint 03 (`/api/calendar`) queda desmontado: lo reemplaza
+# entero el módulo de abajo. Pedía permisos de solo lectura, no sabía de
+# calendarios ni de permisos, y solo admitía una cuenta por proveedor y
+# persona. El archivo se conserva como referencia de lo que había; nada
+# lo importa ya.
 
 # El módulo de calendarios: la lista con permisos, los eventos propios y
 # los traídos de Google/Microsoft/Zoho, y la suscripción por .ics. El
