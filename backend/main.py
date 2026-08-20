@@ -290,6 +290,13 @@ from routers import ask
 app.include_router(ask.router)
 from routers import calendar as calendar_router  # Sprint 03
 app.include_router(calendar_router.router)
+
+# El módulo de calendarios: la lista con permisos, los eventos propios y
+# los traídos de Google/Microsoft/Zoho, y la suscripción por .ics. El
+# router de arriba (`/api/calendar`) es el anterior y solo queda vivo
+# para lo que aún lo consume; lo nuevo cuelga de /api/v1/calendars.
+from routers import calendars as calendars_v2  # noqa: E402
+app.include_router(calendars_v2.router)
 from routers import role_outputs  # Sprint 04
 app.include_router(role_outputs.router)
 from routers import collab  # Sprint 07

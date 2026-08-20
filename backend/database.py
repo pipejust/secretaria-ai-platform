@@ -84,6 +84,12 @@ def _apply_lightweight_migrations() -> None:
             'ALTER TABLE role ADD COLUMN updated_at TEXT',
             # Landing CMS (sqlite dev)
             "ALTER TABLE tenant ADD COLUMN landing_content_json TEXT NOT NULL DEFAULT '{}'",
+            # Calendarios (sqlite dev) — mismas columnas nuevas de cuentas.
+            "ALTER TABLE calendaraccount ADD COLUMN tenant_id INTEGER",
+            "ALTER TABLE calendaraccount ADD COLUMN data_center TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE calendaraccount ADD COLUMN status TEXT NOT NULL DEFAULT 'ok'",
+            "ALTER TABLE calendaraccount ADD COLUMN last_error TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE calendaraccount ADD COLUMN last_synced_at TEXT",
         ]
     else:
         statements = [
@@ -242,6 +248,27 @@ def _apply_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS idx_tenant_owner ON tenant(owner_user_id)",
             "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS share_integrations BOOLEAN NOT NULL DEFAULT TRUE",
             "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS share_routings BOOLEAN NOT NULL DEFAULT FALSE",
+            # ============================================================
+            # Calendarios — el módulo nuevo (calendar, calendarshare,
+            # calendarpref, calendarentry, externalevent los crea
+            # metadata.create_all). Aquí solo lo que toca a la tabla vieja
+            # de cuentas y los índices que SQLModel no genera.
+            # ============================================================
+            'ALTER TABLE calendaraccount ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES tenant(id)',
+            "ALTER TABLE calendaraccount ADD COLUMN IF NOT EXISTS data_center VARCHAR(16) NOT NULL DEFAULT ''",
+            "ALTER TABLE calendaraccount ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'ok'",
+            "ALTER TABLE calendaraccount ADD COLUMN IF NOT EXISTS last_error TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE calendaraccount ADD COLUMN IF NOT EXISTS last_synced_at VARCHAR(64)",
+            # Dos cuentas del mismo proveedor por persona: la llave lleva el
+            # correo. Sin él, conectar la personal borraba la del trabajo.
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_calendaraccount_por_correo "
+            "ON calendaraccount(user_id, provider, account_email)",
+            "CREATE INDEX IF NOT EXISTS idx_calendar_tenant   ON calendar(tenant_id)",
+            "CREATE INDEX IF NOT EXISTS idx_calendar_owner    ON calendar(owner_user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_calshare_cal      ON calendarshare(calendar_id)",
+            "CREATE INDEX IF NOT EXISTS idx_calpref_user      ON calendarpref(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_calentry_rango    ON calendarentry(calendar_id, start_at)",
+            "CREATE INDEX IF NOT EXISTS idx_extevent_rango    ON externalevent(calendar_id, start_at)",
         ]
 
     from sqlalchemy import text

@@ -932,6 +932,44 @@ def sync_servicios_proyectos() -> None:
         logger.exception("sync de proyectos falló (se reintenta luego): %s", exc)
 
 
+def refrescar_calendarios() -> None:
+    """Relee cada 30 minutos los calendarios conectados y los suscritos.
+
+    Lo que se cree directamente en Google o en Outlook tarda como mucho
+    media hora en verse aquí. Google y Graph ofrecen avisos por webhook
+    que lo evitarían, pero piden una URL pública verificada y renovar la
+    suscripción cada pocos días; con este volumen, sondear cuesta menos
+    que mantener eso.
+
+    Un calendario que falla no para a los demás: su motivo queda en
+    `sync_error` y se enseña en la propia lista.
+    """
+    import asyncio
+
+    from models import Calendar
+    from services import calendar_sync
+
+    try:
+        with Session(engine) as db:
+            cals = db.exec(
+                select(Calendar).where(
+                    Calendar.origin.in_(["google", "microsoft", "zoho", "suscrito"]))
+            ).all()
+            if not cals:
+                return
+            hechos, fallos = 0, 0
+            for cal in cals:
+                try:
+                    asyncio.run(calendar_sync.sincronizar_calendario(db, cal))
+                    hechos += 1
+                except Exception as exc:  # noqa: BLE001
+                    fallos += 1
+                    logger.info("Calendario «%s» no se pudo releer: %s", cal.name, exc)
+            logger.info("Calendarios releídos: %s ok, %s con error.", hechos, fallos)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("El refresco de calendarios falló entero: %s", exc)
+
+
 # Catálogo de proyectos cada 3 min: un proyecto nuevo aparece casi de
 # inmediato aunque nadie nos avise. Es 1 petición, 20 a la hora.
 scheduler.add_job(
@@ -949,13 +987,21 @@ scheduler.add_job(
     sync_servicios_directory, "cron", hour=3, minute=20, max_instances=1,
     coalesce=True, id="servicios_sync_diaria",
 )
+# Calendarios de fuera cada 30 min. Es el sondeo del que habla el módulo:
+# media hora es el retraso máximo con el que se ve aquí lo que alguien
+# creó directamente en Google o en Outlook.
+scheduler.add_job(
+    refrescar_calendarios, "interval", minutes=30, max_instances=1,
+    coalesce=True, id="calendarios_refresco",
+)
 
 
 def start_cron() -> None:
     scheduler.start()
     logger.info(
         "Cron iniciado: envío automático cada 1 min + overdue check cada 1h "
-        "+ proyectos cada 3 min + sync Servicios cada 15 min."
+        "+ proyectos cada 3 min + sync Servicios cada 15 min "
+        "+ calendarios de fuera cada 30 min."
     )
 
 

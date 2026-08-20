@@ -584,22 +584,210 @@ class OutboundIntegration(SQLModel, table=True):
 
 
 class CalendarAccount(SQLModel, table=True):
-    """Sprint 03 — credenciales OAuth de un usuario para Google/Microsoft."""
+    """Una cuenta de fuera conectada: Google, Microsoft o Zoho.
+
+    La llave es **(user_id, provider, account_email)**, y no
+    `(user_id, provider)` como estaba antes. Con la llave vieja una
+    persona no podía tener conectada la cuenta del trabajo y la personal
+    a la vez: la segunda conexión pisaba la primera en silencio, y quien
+    lo hacía veía desaparecer los calendarios que acababa de enganchar.
+    """
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "provider", "account_email",
+            name="uq_calendaraccount_por_correo",
+        ),
+    )
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: Optional[int] = Field(default=None, foreign_key="tenant.id", index=True)
     user_id: int = Field(foreign_key="user.id", index=True)
-    provider: str = Field(index=True, description="'google' | 'microsoft'")
-    account_email: str
-    access_token: str = Field(description="Cifrar en producción; plaintext en dev.")
-    refresh_token: Optional[str] = Field(default=None)
+    provider: str = Field(index=True, description="'google' | 'microsoft' | 'zoho'")
+    account_email: str = Field(
+        default="",
+        description=(
+            "Con qué cuenta se entró. Vacío cuando se conectó sin el permiso "
+            "`openid`: entonces hay que reconectar, no se puede averiguar después."
+        ),
+    )
+    access_token: str = Field(default="", description="Cifrado con Fernet.")
+    refresh_token: Optional[str] = Field(default=None, description="Cifrado con Fernet.")
     token_expires_at: Optional[str] = Field(default=None)
     scopes: str = Field(default="")
+    data_center: str = Field(
+        default="",
+        description=(
+            "Solo Zoho: 'com', 'eu', 'in', 'com.au'... Los tokens de un centro "
+            "no valen en otro, así que el dominio es parte de la credencial."
+        ),
+    )
+    status: str = Field(
+        default="ok",
+        description="ok | revoked | error — se enseña en la lista de calendarios.",
+    )
+    last_error: str = Field(default="")
+    last_synced_at: Optional[str] = Field(default=None)
     is_active: bool = Field(default=True)
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
+class Calendar(SQLModel, table=True):
+    """Un calendario guardado: propio, de equipo, de proyecto, suscrito o conectado.
+
+    Un calendario no es una vista, es una pertenencia: cada cosa que se
+    pinta pertenece a exactamente uno, y por eso se puede apagar sin
+    perder nada.
+
+    Los **derivados** —sesiones, tareas, festivos— no tienen fila aquí a
+    propósito: se calculan de otros datos, y tener una tabla con ellos
+    sería duplicar la fuente y garantizar que un día no coincidan. De
+    ellos solo se guarda la preferencia de cada quien, colgada de su
+    clave de texto (`sys:sesiones`).
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(index=True, unique=True, description="uuid; la clave pública.")
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    name: str
+    description: str = Field(default="")
+    color: str = Field(default="#6366f1")
+    origin: str = Field(
+        default="propio",
+        description="propio | equipo | proyecto | suscrito | google | microsoft | zoho",
+    )
+    timezone: str = Field(default="America/Bogota")
+
+    owner_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id", index=True)
+    is_default: bool = Field(default=False, description="Dónde caen los eventos si nadie eligió.")
+    read_only: bool = Field(
+        default=False,
+        description=(
+            "Lo dice el proveedor, no nosotros: el accessRole de Google o el "
+            "canEdit de Microsoft. Dejar escribir donde la persona solo lee "
+            "daría el evento por bueno aquí y fallaría al llegar allá."
+        ),
+    )
+
+    ics_url: str = Field(default="", description="La dirección, si es suscrito.")
+    account_id: Optional[int] = Field(
+        default=None, foreign_key="calendaraccount.id", index=True)
+    external_id: str = Field(default="", description="Cómo lo llama el otro lado.")
+    sync_token: str = Field(default="", description="ETag o syncToken: pedir solo lo que cambió.")
+    last_synced_at: Optional[str] = Field(default=None)
+    sync_error: str = Field(default="")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class CalendarShare(SQLModel, table=True):
+    """Con quién se comparte un calendario y hasta dónde.
+
+    `user_id` en blanco significa *toda la empresa*.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    calendar_id: int = Field(foreign_key="calendar.id", index=True)
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    permission: str = Field(
+        default="ver", description="ocupado | ver | editar | gestionar")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class CalendarPref(SQLModel, table=True):
+    """La casilla y el color, que son de quien mira.
+
+    Guardarlos en el calendario haría que apagar los festivos se los
+    apagara a todo el mundo. Cuelgan de `calendar_key`, que vale tanto
+    para un uuid como para `sys:...`, y por eso los derivados salen en la
+    lista sin necesitar tabla propia.
+    """
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "calendar_key", name="uq_calendarpref_por_usuario"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    calendar_key: str = Field(index=True)
+    visible: bool = Field(default=True)
+    color: str = Field(default="")
+    position: int = Field(default=0)
+
+
+class CalendarEntry(SQLModel, table=True):
+    """Un evento creado en Acten. Puede tener copia en un calendario de fuera.
+
+    `external_uid` guarda el nombre que le da el otro lado. Esa pareja
+    sostiene tres cosas: editarlo aquí lo cambia allá en vez de crear un
+    segundo, al releer el calendario la copia que viene de fuera se
+    descarta —si no, saldría por duplicado—, y borrarlo aquí lo borra
+    allá en vez de dejar la hora ocupada para siempre.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    calendar_id: int = Field(foreign_key="calendar.id", index=True)
+    title: str
+    description: str = Field(default="")
+    location: str = Field(default="")
+    start_at: str = Field(index=True)
+    end_at: str = Field(default="")
+    all_day: bool = Field(default=False)
+    meeting_url: str = Field(default="")
+    attendees_json: str = Field(default="[]")
+
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id", index=True)
+    session_id: Optional[int] = Field(default=None, foreign_key="meetingsession.id")
+    created_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+
+    external_uid: str = Field(default="", index=True)
+    external_error: str = Field(
+        default="",
+        description=(
+            "Por qué el proveedor rechazó el evento. Se enseña: un evento que "
+            "aquí se ve normal y allá no existe manda a la gente a una hora "
+            "que para el resto está libre."
+        ),
+    )
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    updated_at: Optional[str] = Field(default=None)
+
+
+class ExternalEvent(SQLModel, table=True):
+    """Lo traído de fuera, en caché. Aparte de lo propio, a propósito.
+
+    Mezclarlo con `calendarentry` haría que editar aquí pareciera
+    posible, y al desconectar la cuenta quedarían huérfanos eventos que
+    ya no existen en ningún sitio. Se pinta igual y se va entero cuando
+    se va su calendario.
+    """
+
+    __table_args__ = (
+        UniqueConstraint("calendar_id", "external_uid", name="uq_externalevent_por_calendario"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    calendar_id: int = Field(foreign_key="calendar.id", index=True)
+    external_uid: str = Field(index=True)
+    title: str = Field(default="")
+    description: str = Field(default="")
+    location: str = Field(default="")
+    start_at: str = Field(default="", index=True)
+    end_at: str = Field(default="")
+    all_day: bool = Field(default=False)
+    url: str = Field(default="")
+    cancelled: bool = Field(default=False)
+    updated_at: Optional[str] = Field(default=None)
+
+
 class CalendarEvent(SQLModel, table=True):
-    """Sprint 03 — evento sincronizado desde Google/Microsoft."""
+    """Legado del Sprint 03 — eventos de Google/Microsoft del calendario viejo.
+
+    Lo reemplaza `ExternalEvent`, que cuelga de un calendario y no de una
+    cuenta. Se mantiene la tabla porque `/api/v1/calendar/events` la lee
+    y hay integraciones consumiéndola; no se escribe nada nuevo aquí.
+    """
 
     id: Optional[int] = Field(default=None, primary_key=True)
     calendar_account_id: int = Field(foreign_key="calendaraccount.id", index=True)
