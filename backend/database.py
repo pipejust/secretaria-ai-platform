@@ -319,6 +319,39 @@ def _apply_lightweight_migrations() -> None:
         _ensure_default_tenant_and_backfill()
 
 
+def _asegurar_tenant_default() -> int:
+    """El id del tenant «acten», creándolo si no está.
+
+    La fila se inserta **con el modelo**, no con un INSERT escrito a mano.
+    El de antes enumeraba las columnas una por una, y esa lista se quedó
+    congelada en el momento en que se escribió: cada columna NOT NULL que
+    se añadió después al modelo —`landing_content_json`,
+    `share_integrations`, `share_routings`— quedaba fuera. En una base ya
+    existente no se notaba, porque el tenant ya estaba; en una **recién
+    creada** el arranque moría con «null value in column ... violates
+    not-null constraint» y la instalación no levantaba.
+
+    Dejándoselo al modelo, los valores por defecto los pone él y añadir
+    una columna mañana no vuelve a romper el arranque.
+    """
+    from sqlmodel import Session, select
+
+    from models import Tenant
+
+    with Session(engine) as db:
+        t = db.exec(
+            select(Tenant).where(Tenant.slug == DEFAULT_TENANT_SLUG)
+        ).first()
+        if t:
+            return t.id
+        t = Tenant(slug=DEFAULT_TENANT_SLUG, name=DEFAULT_TENANT_NAME)
+        db.add(t)
+        db.commit()
+        db.refresh(t)
+        logger.info("Tenant default creado: %s (id=%s)", DEFAULT_TENANT_SLUG, t.id)
+        return t.id
+
+
 def _ensure_default_tenant_and_backfill() -> None:
     """Crea el tenant 'acten' por defecto y asigna a él todos los registros
     legacy que aún no tengan `tenant_id`. También promociona la antigua
@@ -329,25 +362,10 @@ def _ensure_default_tenant_and_backfill() -> None:
     """
     from sqlalchemy import text
 
-    with engine.begin() as conn:
-        # 1) Asegurar el tenant default. La tabla la creó create_all.
-        row = conn.execute(
-            text("SELECT id FROM tenant WHERE slug = :s"),
-            {"s": DEFAULT_TENANT_SLUG},
-        ).first()
-        if row:
-            tenant_id = row[0]
-        else:
-            res = conn.execute(
-                text(
-                    "INSERT INTO tenant (slug, name, branding_json, is_active, created_at) "
-                    "VALUES (:s, :n, '{}', TRUE, NOW()::text) RETURNING id"
-                ),
-                {"s": DEFAULT_TENANT_SLUG, "n": DEFAULT_TENANT_NAME},
-            )
-            tenant_id = res.scalar_one()
-            logger.info("Tenant default creado: %s (id=%s)", DEFAULT_TENANT_SLUG, tenant_id)
+    # 1) Asegurar el tenant default. La tabla la creó create_all.
+    tenant_id = _asegurar_tenant_default()
 
+    with engine.begin() as conn:
         # 2) Backfill: cualquier fila con tenant_id IS NULL → tenant default.
         #    Listo en orden topológico para no romper FK durante el ALTER NOT NULL.
         backfill_tables = [
