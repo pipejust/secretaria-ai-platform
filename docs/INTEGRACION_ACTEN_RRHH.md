@@ -624,7 +624,18 @@ Probado en producción: `200`, `application/pdf`, 8 páginas · DOCX
 > ingrediente, y ésas sí están vacías. Devolvíamos solo ese tercio.
 > Corregido: hoy responde con **737 elementos reales**.
 
-Cada elemento trae `kind`: `task` · `session` · `event`.
+Cada elemento trae `kind`: `task` · `session` · `event` ·
+`external_event`.
+
+**`external_event` es nuevo (20-ago)** y conviene distinguirlo: es lo
+traído de una agenda de fuera —Google, Microsoft, Zoho o un `.ics`
+suscrito—. No es nuestro, no se edita desde Acten y desaparece entero si
+se desconecta la cuenta. Trae además `origin` con de dónde vino.
+
+Los `event` ahora incluyen también los creados dentro de Acten, y todos
+—`event` y `external_event`— traen `calendar` (la clave del calendario al
+que pertenecen) y `calendar_name`. Si pintan una agenda, agrupar por ahí
+es lo que permite encender y apagar cada calendario por separado.
 
 Query: `project_external_id`, `date_from`, `date_to`, `include`
 (`tasks,sessions,events` — coma; por defecto los tres), `page`, `limit`
@@ -1227,23 +1238,50 @@ para el botón «reenviar» de cuando alguien corrigió las tareas después.
 
 | Endpoint | Alcance |
 |---|---|
-| `POST /api/v1/calendar/connect?provider=google\|microsoft` | `calendar:write` |
+| `POST /api/v1/calendar/connect?provider=google\|microsoft\|zoho` | `calendar:write` |
 | `GET /api/v1/calendar/accounts` · `DELETE .../accounts/{id}` | `calendar:read` / `write` |
 | `POST /api/v1/calendar/sync` | `calendar:write` |
 
 `connect` devuelve `auth_url`: ábranla en una pestaña. El OAuth vuelve a
-Acten, que valida un **`state` firmado de 15 minutos** y guarda la cuenta
+Acten, que valida un **`state` firmado de 10 minutos** y guarda la cuenta
 a nombre de esa persona.
 
 > **Por qué el `state` firmado.** El callback de OAuth exigía sesión de
 > Acten, que sus empleados no tienen. Sin esto habría que pedirles que se
 > registren en Acten solo para enganchar su calendario — justo lo que la
-> integración viene a evitar. El enlace caduca a los 15 minutos: uno
-> eterno acaba reenviado por chat y conectando la agenda equivocada.
+> integración viene a evitar. El enlace caduca: uno eterno acaba
+> reenviado por chat y conectando la agenda equivocada.
 
-> ⚠️ **Requisito pendiente:** hace falta dar de alta una aplicación OAuth
-> de Google y otra de Microsoft. Hoy no existen y `connect` responde
-> `503` diciéndolo. No afecta al resto del calendario.
+**Qué cambió (20-ago).** Detrás de estos tres endpoints hay ahora un
+módulo de calendarios completo, y eso les afecta en cuatro cosas:
+
+1. **`zoho` es un proveedor válido**, además de `google` y `microsoft`.
+2. **Los permisos que se piden incluyen escritura** (`calendar.events` en
+   Google, `Calendars.ReadWrite` en Microsoft). Antes eran de solo
+   lectura: un evento creado desde Acten no llegaba a la agenda de nadie.
+3. **Caben varias cuentas del mismo proveedor por persona.** La llave
+   pasó a ser (persona, proveedor, **correo**). Con la anterior, conectar
+   la cuenta personal pisaba en silencio la del trabajo.
+4. **Al desconectar una cuenta de Microsoft, la respuesta trae
+   `revocar_manual`.** Microsoft no ofrece llamada para retirar el
+   permiso; si no lo enseñan en su pantalla, la persona se queda creyendo
+   que ya no tenemos acceso.
+
+> ⚠️ **Requisito pendiente, sin cambios:** hace falta dar de alta una
+> aplicación OAuth de Google y otra de Microsoft. Hoy no existen y
+> `connect` responde `503` diciéndolo. Se dan de alta en Acten, en
+> **Configuración → Integraciones → Calendarios**, y ahí mismo está la
+> dirección de retorno exacta que hay que pegar en la consola del
+> proveedor —con un botón para copiarla, porque si no coincide carácter
+> por carácter devuelve `redirect_uri_mismatch` y eso no se puede saber
+> antes de probar—. No afecta al resto del calendario.
+
+> **Si no quieren tocar consolas de Google ni de Microsoft**, hay un
+> camino sin credenciales: suscribirse a la dirección `.ics` que publica
+> cada calendario. Es solo lectura y se refresca cada media hora, pero
+> funciona hoy y es la única vía para iCloud —Apple no tiene OAuth de
+> calendario; «Iniciar sesión con Apple» identifica a la persona, no da
+> acceso a su agenda—.
 
 ### 17.4 El acta
 
