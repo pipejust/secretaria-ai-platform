@@ -25,6 +25,7 @@ import httpx
 from config import settings
 
 import services.groq_models as _modelos
+from services.llm_keys import clave_groq
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +38,20 @@ class GroqLLMService:
     MODEL = _modelos.MODELO_PRINCIPAL
     WHISPER_MODEL = _modelos.MODELO_VOZ          # no afectado por la deprecación
 
-    def __init__(self) -> None:
-        if not settings.groq_api_key:
+    def __init__(self, tenant_id: Optional[int] = None) -> None:
+        """`tenant_id` decide qué llave se usa.
+
+        Cada empresa puede tener la suya, puesta desde Configuración. Sin
+        `tenant_id` se cae en la del entorno —nunca en la de otra empresa,
+        que sería gastar contra la cuenta de quien no pidió nada—.
+        """
+        self.tenant_id = tenant_id
+        self.api_key = clave_groq(tenant_id)
+        if not self.api_key:
             logger.warning(
-                "GROQ_API_KEY no configurada. GroqLLMService devolverá vacíos."
+                "Sin llave de Groq (ni en la empresa ni en el entorno). "
+                "GroqLLMService devolverá vacíos."
             )
-        self.api_key = settings.groq_api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -61,7 +70,7 @@ class GroqLLMService:
         Devuelve solo el texto transcrito.
         """
         if not self.api_key:
-            raise RuntimeError("GROQ_API_KEY no configurada; no se puede transcribir.")
+            raise RuntimeError("Sin llave de Groq: no se puede transcribir.")
 
         files = {"file": (filename, file_bytes)}
         data: dict[str, Any] = {
@@ -147,7 +156,7 @@ class GroqLLMService:
         if not transcript or not transcript.strip():
             return self._empty_payload()
 
-        if not settings.groq_api_key:
+        if not self.api_key:
             return self._empty_payload()
 
         contacts_block = ""
@@ -223,7 +232,7 @@ Transcripción:
         """Decide a qué proyecto pertenece la reunión. Devuelve project_id o None."""
         if not projects or not summary_or_transcript:
             return None
-        if not settings.groq_api_key:
+        if not self.api_key:
             return None
 
         snippet = summary_or_transcript[:6000]
@@ -269,9 +278,9 @@ Transcripción:
         """
         if not transcript or not transcript.strip():
             return ""
-        if not settings.groq_api_key:
+        if not self.api_key:
             logger.warning(
-                "generate_summary_from_transcript: GROQ_API_KEY no configurada."
+                "generate_summary_from_transcript: sin llave de Groq."
             )
             return ""
 
@@ -369,7 +378,7 @@ Transcripción:
         """
         if not dirty_summary or not dirty_summary.strip():
             return ""
-        if not settings.groq_api_key:
+        if not self.api_key:
             return dirty_summary
 
         lang_name = self._resolve_output_lang_name(target_lang)

@@ -23,7 +23,7 @@ from sqlmodel import Session, select
 from models import Calendar, CalendarAccount, CalendarEntry, ExternalEvent, User
 from services import calendar_config, calendar_google, calendar_ics
 from services import calendar_microsoft, calendar_zoho
-from services.calendar_crypto import cifrar, descifrar
+from services.cifrado import cifrar, descifrar
 
 logger = logging.getLogger(__name__)
 

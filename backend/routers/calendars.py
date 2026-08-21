@@ -29,7 +29,7 @@ from services import (
     calendar_check, calendar_config, calendar_google, calendar_ics,
     calendar_microsoft, calendar_sync, calendar_write, calendars as svc,
 )
-from services.calendar_crypto import cifrar
+from services.cifrado import cifrar
 from services.calendar_providers import (
     PROVEEDORES, conocido, etiqueta, zoho_servidor_valido,
 )
@@ -686,7 +686,7 @@ async def desconectar(
     if not cuenta or cuenta.user_id != user.id:
         raise HTTPException(404, "Esa cuenta no es tuya.")
 
-    from services.calendar_crypto import descifrar
+    from services.cifrado import descifrar
     cfg = calendar_config.cargar(db, user.tenant_id, cuenta.provider)
     revocado = False
     try:

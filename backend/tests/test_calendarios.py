@@ -282,7 +282,7 @@ def test_el_centro_de_datos_de_zoho_se_valida_por_lista_exacta():
 # ── Cifrado ────────────────────────────────────────────────────────────
 
 def test_lo_guardado_antes_del_cifrado_se_sigue_leyendo():
-    from services.calendar_crypto import cifrar, descifrar
+    from services.cifrado import cifrar, descifrar
     c = cifrar("refresh-token")
     assert c.startswith("fer1:") and descifrar(c) == "refresh-token"
     assert cifrar(c) == c, "no debe cifrar dos veces"

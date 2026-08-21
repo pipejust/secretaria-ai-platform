@@ -455,7 +455,7 @@ async def refetch_summary_for_session(
         if len(transcript) > 50:
             try:
                 from services.llm_groq import GroqLLMService
-                groq = GroqLLMService()
+                groq = GroqLLMService(tenant_id=session.tenant_id)
                 # Preferimos el idioma del tenant (consistente con el resto
                 # del pipeline) sobre `session.language`, que refleja el
                 # idioma detectado en la transcripción y puede divergir.
@@ -485,7 +485,7 @@ async def refetch_summary_for_session(
     if clean_with_groq:
         try:
             from services.llm_groq import GroqLLMService
-            groq = GroqLLMService()
+            groq = GroqLLMService(tenant_id=session.tenant_id)
             cleaned = await groq.clean_native_summary(
                 summary, target_lang=tenant_lang,
             )

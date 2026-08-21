@@ -21,7 +21,7 @@ from typing import Optional
 from sqlmodel import Session, select
 
 from models import IntegrationSetting
-from services.calendar_crypto import cifrar, descifrar, enmascarar
+from services.cifrado import cifrar, descifrar, enmascarar
 from services.calendar_providers import CLAVE_CONFIG, PROVEEDORES
 
 logger = logging.getLogger(__name__)

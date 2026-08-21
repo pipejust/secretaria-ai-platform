@@ -849,7 +849,9 @@ async def process_transcript_background(
             # asteriscos, elimina referencias tipo [Fuente: ...]). Si Groq
             # falla, NO perdemos el summary original — preferimos mostrarlo
             # crudo a perderlo.
-            groq = GroqLLMService()
+            # La llave de Groq es la de la empresa dueña de la sesión.
+            _ses = db.get(MeetingSession, session_id)
+            groq = GroqLLMService(tenant_id=getattr(_ses, "tenant_id", None))
             summary_clean_error = ""
             if raw_summary:
                 try:

@@ -26,6 +26,8 @@ from routers.auth import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Outputs role-específicos"])
 
+from services.llm_keys import clave_groq
+
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
@@ -100,12 +102,16 @@ async def generate_output(
 
     # Selección de LLM
     if provider == "groq":
-        if not settings.groq_api_key:
-            raise HTTPException(503, "GROQ_API_KEY no configurado.")
+        if not clave_groq(current_user.tenant_id):
+            raise HTTPException(
+                503,
+                "Sin llave de Groq. Un administrador la pone en "
+                "Configuración → Integraciones → Motor de IA.",
+            )
         url = GROQ_URL
         from services.groq_models import MODELO_PRINCIPAL
         model = MODELO_PRINCIPAL
-        headers = {"Authorization": f"Bearer {settings.groq_api_key}",
+        headers = {"Authorization": f"Bearer {clave_groq(current_user.tenant_id)}",
                    "Content-Type": "application/json"}
     else:
         if not settings.openai_api_key:

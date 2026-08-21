@@ -300,6 +300,10 @@ app.include_router(ask.router)
 # para lo que aún lo consume; lo nuevo cuelga de /api/v1/calendars.
 from routers import calendars as calendars_v2  # noqa: E402
 app.include_router(calendars_v2.router)
+
+# La llave del motor de IA, editable por el administrador de cada empresa.
+from routers import ai_keys  # noqa: E402
+app.include_router(ai_keys.router)
 from routers import role_outputs  # Sprint 04
 app.include_router(role_outputs.router)
 from routers import collab  # Sprint 07

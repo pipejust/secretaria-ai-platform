@@ -16,6 +16,7 @@ import { AuthService } from '../../services/auth.service';
 import { PreferencesService, UiPrefs, DEFAULT_PREFS } from '../../services/preferences.service';
 import { environment } from '../../../environments/environment';
 import { CalendarsService, TarjetaProveedor } from '../../services/calendars.service';
+import { AiKeysService, LlaveIa } from '../../services/ai-keys.service';
 
 interface PairStatus {
   conectada: boolean;
@@ -82,6 +83,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // pantalla NUNCA lo recibe en claro —solo la pista `abcd…wxyz`—, y
   // guardarlo en blanco no debe borrar el que ya hay: quien vuelve aquí a
   // cambiar el ID de cliente no tiene el secreto delante.
+  // ── Motor de IA ────────────────────────────────────────────────────
+  // Igual que las credenciales de calendario: la pantalla nunca recibe la
+  // llave en claro, solo la pista. Se escribe aparte para que guardar en
+  // blanco no borre la que ya hay.
+  iaLlaves: LlaveIa[] = [];
+  iaSecretos: Record<string, string> = {};
+  iaGuardando = '';
+  iaProbando = '';
+  iaResultado: Record<string, { ok: boolean; detalle: string }> = {};
+
   calProviders: TarjetaProveedor[] = [];
   calSecretos: Record<string, string> = {};
   calGuardando = '';
@@ -191,6 +202,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private translate: TranslateService,
     private calendarsApi: CalendarsService,
+    private aiKeys: AiKeysService,
   ) {
     // Deep-link: si entran con `?section=task-sync` (p.ej. desde el modal
     // de Proyectos > Auto-Curación), abrimos esa sección directamente.
@@ -369,6 +381,72 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   trackByProvider(_i: number, p: TarjetaProveedor): string { return p.provider; }
 
+  trackByLlave(_i: number, k: LlaveIa): string { return k.proveedor; }
+
+  // ── Motor de IA: cargar, guardar, comprobar y quitar ───────────────
+
+  cargarLlavesIa(): void {
+    this.aiKeys.listar().subscribe({
+      next: r => { this.iaLlaves = r.proveedores; this.cdr.detectChanges(); },
+      error: () => { /* la tarjeta se queda vacía; no bloquea el resto */ },
+    });
+  }
+
+  guardarLlaveIa(k: LlaveIa): void {
+    const valor = (this.iaSecretos[k.proveedor] || '').trim();
+    if (!valor) {
+      this.toast.error('Escribe la llave antes de guardar.');
+      return;
+    }
+    this.iaGuardando = k.proveedor;
+    this.aiKeys.guardar(k.proveedor, valor).subscribe({
+      next: est => {
+        this.iaGuardando = '';
+        this.iaSecretos[k.proveedor] = '';
+        Object.assign(k, est);
+        this.iaResultado[k.proveedor] = { ok: true, detalle: 'Llave guardada.' };
+        this.toast.success(`${k.etiqueta}: llave guardada.`);
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        this.iaGuardando = '';
+        this.toast.error(e?.error?.detail ?? 'No se pudo guardar la llave.');
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  /** Volver a la llave del servidor: se borra la de la empresa. */
+  borrarLlaveIa(k: LlaveIa): void {
+    if (!confirm(`¿Quitar la llave propia de ${k.etiqueta}? Se volverá a usar la del servidor.`)) {
+      return;
+    }
+    this.aiKeys.guardar(k.proveedor, '').subscribe({
+      next: est => {
+        Object.assign(k, est);
+        this.iaResultado[k.proveedor] = { ok: true, detalle: 'Se usa la llave del servidor.' };
+        this.cdr.detectChanges();
+      },
+      error: () => this.toast.error('No se pudo quitar la llave.'),
+    });
+  }
+
+  comprobarLlaveIa(k: LlaveIa): void {
+    this.iaProbando = k.proveedor;
+    this.aiKeys.comprobar(k.proveedor).subscribe({
+      next: r => {
+        this.iaProbando = '';
+        this.iaResultado[k.proveedor] = r;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.iaProbando = '';
+        this.iaResultado[k.proveedor] = { ok: false, detalle: 'No se pudo comprobar.' };
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   // -----------------------------------------------------------------
   // "Compartido vs per-user" — switches del owner del tenant
   // -----------------------------------------------------------------
@@ -501,6 +579,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     });
 
     this.cargarProveedoresCalendario();
+    this.cargarLlavesIa();
     this.loadShareSettings();
     this.loadPairStatus();
 

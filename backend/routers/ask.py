@@ -47,6 +47,7 @@ router = APIRouter(prefix="/api/ask", tags=["Ask Notiva (RAG)"])
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 from services.groq_models import MODELO_PRINCIPAL, MODELO_RAPIDO
+from services.llm_keys import clave_groq
 
 GROQ_MODEL = MODELO_PRINCIPAL
 
@@ -515,6 +516,7 @@ async def _llm_analyze_query(
     q: str,
     project_names: list[str],
     prior_turns: Optional[list] = None,
+    api_key: str = "",
 ) -> dict:
     """ETAPA DE COMPRENSIÓN DE QUERY (query understanding).
 
@@ -536,7 +538,7 @@ async def _llm_analyze_query(
 
     Fail-safe: ante cualquier error/timeout devuelve {} y el pipeline
     sigue con las heurísticas existentes. Cero riesgo de regresión."""
-    if not settings.groq_api_key or not q or len(q) < 8:
+    if not api_key or not q or len(q) < 8:
         return {}
     projs = ", ".join(project_names[:15]) if project_names else "—"
     # Contexto conversacional: si la pregunta es un SEGUIMIENTO ambiguo
@@ -596,7 +598,7 @@ async def _llm_analyze_query(
         "response_format": {"type": "json_object"},
     }
     headers = {
-        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
     try:
@@ -2110,8 +2112,12 @@ async def ask(
 ):
     if not settings.openai_api_key:
         raise HTTPException(503, "OPENAI_API_KEY no configurada (necesaria para embeddings).")
-    if not settings.groq_api_key:
-        raise HTTPException(503, "GROQ_API_KEY no configurada (necesaria para el LLM de respuesta).")
+    if not clave_groq(tenant.id):
+        raise HTTPException(
+            503,
+            "Sin llave de Groq. Un administrador la pone en "
+            "Configuración → Integraciones → Motor de IA.",
+        )
 
     q = (payload.question or "").strip()
     if len(q) < 3:
@@ -2151,7 +2157,8 @@ async def ask(
             # información entre clientes).
             tenant_id=tenant.id,
         ),
-        _llm_analyze_query(q, _proj_names, prior_turns=payload.prior_turns),
+        _llm_analyze_query(q, _proj_names, prior_turns=payload.prior_turns,
+                           api_key=clave_groq(tenant.id)),
     )
     llm_entities: list[str] = (query_analysis or {}).get("entities") or []
     llm_search_terms: list[str] = (query_analysis or {}).get("search_terms") or []
@@ -3373,7 +3380,7 @@ async def ask(
         "response_format": {"type": "json_object"},
     }
     headers = {
-        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Authorization": f"Bearer {clave_groq(tenant.id)}",
         "Content-Type": "application/json",
     }
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -3662,8 +3669,12 @@ async def extract_image(
       · El texto devuelto se trunca a 4000 chars (antes de inyectar al
         prompt) — suficiente para el caso de uso, evita explotar tokens.
     """
-    if not settings.groq_api_key:
-        raise HTTPException(503, "GROQ_API_KEY no configurada (necesaria para OCR).")
+    if not clave_groq(tenant.id):
+        raise HTTPException(
+            503,
+            "Sin llave de Groq (necesaria para leer imágenes). Un administrador "
+            "la pone en Configuración → Integraciones → Motor de IA.",
+        )
 
     allowed_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
     if file.content_type not in allowed_types:
@@ -3705,7 +3716,7 @@ async def extract_image(
         "max_tokens": 1500,
     }
     headers = {
-        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Authorization": f"Bearer {clave_groq(tenant.id)}",
         "Content-Type": "application/json",
     }
     async with httpx.AsyncClient(timeout=60.0) as client:

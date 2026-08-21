@@ -221,6 +221,87 @@
             <ng-container *ngIf="!isLoading && activeSection === 'integrations'">
 
                 <!-- ══════════════════════════════════════════════════════════
+                     Motor de IA — la llave que paga el procesamiento.
+                     Antes solo salía de una variable de entorno: cambiarla
+                     obligaba a entrar al servidor y reiniciar.
+                     ══════════════════════════════════════════════════════════ -->
+                <article class="st-card">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">Motor de IA</h2>
+                            <p class="st-card-sub">
+                                La llave con la que se procesan las reuniones y se responden
+                                las preguntas. Si pones la de tu empresa, el consumo se
+                                factura a tu cuenta y no se mezcla con el de nadie más.
+                            </p>
+                        </div>
+                    </header>
+                    <div class="st-card-body st-stack">
+                        <div class="st-integration" *ngFor="let k of iaLlaves; trackBy: trackByLlave">
+                            <div class="st-integration-head">
+                                <div class="st-integration-name">
+                                    <span class="st-int-icon" data-color="violet">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                                        </svg>
+                                    </span>
+                                    <strong>{{ k.etiqueta }}</strong>
+                                </div>
+                                <span class="st-pill"
+                                      [attr.data-tone]="k.origen === 'empresa' ? 'green' : (k.configurada ? 'blue' : 'gray')">
+                                    {{ k.origen === 'empresa' ? 'Llave propia'
+                                       : (k.configurada ? 'Usando la del servidor' : 'Sin configurar') }}
+                                </span>
+                            </div>
+
+                            <div class="st-grid st-grid-2">
+                                <label class="st-field st-field-wide">
+                                    <span class="st-field-label">API key</span>
+                                    <div class="st-pw-wrap">
+                                        <input [type]="isPwVisible('ia_' + k.proveedor) ? 'text' : 'password'"
+                                               class="st-input" [(ngModel)]="iaSecretos[k.proveedor]"
+                                               [placeholder]="k.pista || 'gsk_…'" />
+                                        <button type="button" class="st-pw-toggle"
+                                                (click)="togglePassword('ia_' + k.proveedor)"
+                                                [attr.aria-label]="isPwVisible('ia_' + k.proveedor) ? 'Ocultar' : 'Mostrar'">
+                                            {{ isPwVisible('ia_' + k.proveedor) ? '×' : '•' }}
+                                        </button>
+                                    </div>
+                                    <span class="st-field-hint" *ngIf="k.origen === 'empresa'">
+                                        Ya hay una guardada ({{ k.pista }}). Déjalo en blanco para no
+                                        cambiarla; bórrala con el botón de abajo para volver a la del servidor.
+                                    </span>
+                                    <span class="st-field-hint" *ngIf="k.origen === 'entorno'">
+                                        Ahora mismo se usa la llave del servidor, compartida con las
+                                        demás empresas de esta instalación. Pon la tuya para separar el gasto.
+                                    </span>
+                                    <span class="st-field-hint" *ngIf="!k.configurada">
+                                        No hay ninguna llave: el procesamiento de reuniones y las
+                                        preguntas no funcionarán hasta que pongas una.
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="st-integration-actions">
+                                <button type="button" class="st-btn st-btn-primary"
+                                        (click)="guardarLlaveIa(k)" [disabled]="iaGuardando === k.proveedor">
+                                    {{ iaGuardando === k.proveedor ? 'Guardando…' : 'Guardar' }}
+                                </button>
+                                <button type="button" class="st-btn" (click)="comprobarLlaveIa(k)"
+                                        [disabled]="!k.configurada || iaProbando === k.proveedor">
+                                    {{ iaProbando === k.proveedor ? 'Comprobando…' : 'Comprobar llave' }}
+                                </button>
+                                <button type="button" class="st-btn" *ngIf="k.origen === 'empresa'"
+                                        (click)="borrarLlaveIa(k)">Usar la del servidor</button>
+                                <span class="st-check-result" *ngIf="iaResultado[k.proveedor] as r"
+                                      [attr.data-ok]="r.ok">{{ r.detalle }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- ══════════════════════════════════════════════════════════
                      Calendarios — las credenciales son de la aplicación, no
                      de la persona. Se registra una vez y después cada quien
                      conecta su cuenta con dos clics desde el calendario.

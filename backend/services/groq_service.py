@@ -10,6 +10,7 @@ import httpx
 from config import settings
 
 import services.groq_models as _modelos
+from services.llm_keys import clave_groq
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,7 @@ class OpenAIService:
         agreements: str = "",
         summary: str = "",
         output_language: str = "es",
+        tenant_id: Optional[int] = None,
     ) -> dict:
         """
         Envía el transcript a Groq pidiendo EXCLUSIVAMENTE action_items.
@@ -352,7 +354,8 @@ class OpenAIService:
                     "fallback Groq.",
                     getattr(response, "status_code", "n/a"),
                 )
-                groq_result = await self._groq_tasks_fallback(client, prompt)
+                groq_result = await self._groq_tasks_fallback(
+                    client, prompt, tenant_id=tenant_id)
                 if groq_result is not None:
                     return groq_result
                 # Si Groq también falla, propagamos el error original.
@@ -400,7 +403,10 @@ class OpenAIService:
                 # Retornamos dict vacío en vez de raise para evitar romper la UI si falla
                 return {"action_items": []}
 
-    async def _groq_tasks_fallback(self, client: httpx.AsyncClient, prompt: str) -> Optional[dict]:
+    async def _groq_tasks_fallback(
+        self, client: httpx.AsyncClient, prompt: str,
+        tenant_id: Optional[int] = None,
+    ) -> Optional[dict]:
         """Fallback de extracción de tareas usando Groq (API compatible
         OpenAI) cuando OpenAI está caído / rate-limited. Devuelve el dict
         con 'action_items' o None si Groq tampoco responde.
@@ -408,8 +414,9 @@ class OpenAIService:
         Groq no soporta json_schema strict, así que usamos json_object y
         pedimos el esquema en el prompt. El parser downstream ya es
         tolerante a varias formas del payload."""
-        if not settings.groq_api_key:
-            logger.warning("GROQ_API_KEY ausente — no hay fallback de tareas.")
+        api_key = clave_groq(tenant_id)
+        if not api_key:
+            logger.warning("Sin llave de Groq — no hay respaldo de tareas.")
             return None
         groq_url = "https://api.groq.com/openai/v1/chat/completions"
         groq_prompt = (
@@ -431,7 +438,7 @@ class OpenAIService:
             "max_tokens": 8000,
         }
         headers = {
-            "Authorization": f"Bearer {settings.groq_api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         for attempt in range(3):

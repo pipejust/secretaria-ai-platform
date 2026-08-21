@@ -399,7 +399,8 @@ async def process_session_with_ai(
     db.add(session_obj)
     db.commit()
 
-    groq = GroqLLMService()
+    # La llave es de la empresa dueña de la sesión, no una global.
+    groq = GroqLLMService(tenant_id=getattr(session_obj, "tenant_id", None))
     openai = OpenAIService()
 
     # ---------- 0. Idioma de output del tenant ----------
@@ -657,6 +658,7 @@ async def process_session_with_ai(
                 agreements=session_obj.processed_agreements or "",
                 summary=session_obj.raw_summary or "",
                 output_language=tenant_lang,
+                tenant_id=getattr(session_obj, "tenant_id", None),
             ),
         )
     except Exception as exc:  # noqa: BLE001

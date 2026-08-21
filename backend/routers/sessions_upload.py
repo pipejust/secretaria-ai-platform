@@ -731,6 +731,7 @@ async def regenerate_tasks_from_transcript(
             agreements=session_obj.processed_agreements or "",
             summary=session_obj.raw_summary or "",
             output_language=tenant_lang,
+            tenant_id=getattr(session_obj, "tenant_id", None),
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error conectando con la IA (OpenAI): {str(e)}")
@@ -1189,14 +1190,14 @@ async def upload_manual_session(
             except RuntimeError as exc:
                 raise HTTPException(status_code=422, detail=str(exc))
             from services.llm_groq import GroqLLMService
-            raw_transcript = await GroqLLMService().transcribe_audio(audio_bytes, fname)
+            raw_transcript = await GroqLLMService(tenant_id=tenant.id).transcribe_audio(audio_bytes, fname)
         elif file and file.filename:
             content = await file.read()
             if file.filename.lower().endswith(
                 ('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm', '.flac', '.ogg')
             ):
                 from services.llm_groq import GroqLLMService
-                groq = GroqLLMService()
+                groq = GroqLLMService(tenant_id=tenant.id)
                 raw_transcript = await groq.transcribe_audio(content, file.filename)
             else:
                 raw_transcript = content.decode('utf-8', errors='ignore')

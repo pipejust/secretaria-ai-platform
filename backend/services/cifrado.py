@@ -1,4 +1,7 @@
-"""Cifrado de lo que no puede estar en claro en la base: tokens y secretos.
+"""Cifrado de lo que no puede estar en claro en la base: tokens y llaves.
+
+Lo usan los calendarios (el permiso revocable de cada cuenta conectada) y
+las llaves de los motores de IA que un administrador pega en pantalla.
 
 Lo que se guarda de cada persona es un permiso revocable —el
 `refresh_token`—, no su contraseña. Aun así vive en una tabla que se
