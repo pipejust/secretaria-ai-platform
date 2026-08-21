@@ -692,6 +692,12 @@
                             <h2 class="st-card-title">{{ 'common.email' | translate }}</h2>
                             <p class="st-card-sub">{{ 'settings.smtp_provider_sub' | translate }}</p>
                         </div>
+                        <!-- Sin llave no sale ningún correo. Antes la pantalla se
+                             veía igual con llave y sin ella, así que cuatro empresas
+                             llevaban meses sin enviar nada sin saberlo. -->
+                        <span class="st-pill" [attr.data-tone]="smtpSettings.apiKey ? 'green' : 'red'">
+                            {{ smtpSettings.apiKey ? 'Envío activo' : 'Sin llave: no se envían correos' }}
+                        </span>
                     </header>
                     <div class="st-card-body">
                         <div class="st-grid st-grid-3">
@@ -721,6 +727,10 @@
                                         <svg *ngIf="isPwVisible('smtp_key')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                                     </button>
                                 </div>
+                                <span class="st-field-hint" *ngIf="!smtpSettings.apiKey" style="color: var(--st-red, #b91c1c)">
+                                    Sin esta llave los correos no se envían: ni avisos de tareas ni
+                                    actas. La da tu proveedor de envío (Resend).
+                                </span>
                             </label>
                             <label class="st-field">
                                 <span class="st-field-label">{{ 'settings.sender_email' | translate }}</span>

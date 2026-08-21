@@ -14,6 +14,11 @@ from services import branding_service
 # `except` que casi nunca salta, así que el NameError no se había visto.
 logger = logging.getLogger(__name__)
 
+
+def _es_desarrollo() -> bool:
+    """Dónde está corriendo esto. En producción no se simula nada."""
+    return os.getenv("ENVIRONMENT", "").lower() in ("dev", "development", "test", "local")
+
 # Resend se configura SIEMPRE desde /admin/settings (UI) →
 # IntegrationSetting('smtp').config_json.{apiKey, senderEmail}.
 # Sin DB, no se envían correos: se imprime el HTML en consola (modo dev).
@@ -226,15 +231,29 @@ class EmailService:
                 raise e
         
 
-        else:
-            # Modo Desarrollo: Simular envío e imprimir HTML en consola
-            print(f"--- [SIM] SIMULACIÓN DE ENVÍO DE EMAIL ---")
+        # Sin llave no hay envío. Lo que se hace a partir de aquí depende
+        # de dónde corra esto, y la diferencia importa:
+        #
+        # En desarrollo, imprimir el correo en consola es útil y no engaña
+        # a nadie. En producción **daba el envío por bueno**: devolvía
+        # `True`, el llamador marcaba la tarea como notificada y nadie se
+        # enteraba de que el correo no había salido. Cuatro empresas
+        # llevaban así, con el SMTP «configurado» pero sin llave.
+        if _es_desarrollo():
+            print("--- [SIM] SIMULACIÓN DE ENVÍO DE EMAIL ---")
             print(f"To: {to_email}")
             print(f"Subject: {subject}")
-            print(f"Body (HTML):")
+            print("Body (HTML):")
             print(html_content)
             print("---------------------------------------")
             return True
+
+        logger.error(
+            "Correo NO enviado a %s («%s»): la empresa %s no tiene llave de "
+            "envío configurada. Se pone en Configuración → Correo electrónico.",
+            to_email, subject, self.tenant_id,
+        )
+        return False
 
     async def send_action_item_email(
         self, 
@@ -264,7 +283,7 @@ class EmailService:
             current_year=2026,
             brand=self.branding,
         )
-        await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content, attachments=attachments)
+        return await self._send_html_email(to_email, f"Nueva tarea asignada: {task_title}", html_content, attachments=attachments)
 
     async def send_action_items_batch_email(
         self,
@@ -372,7 +391,7 @@ class EmailService:
             current_year=2026,
             brand=self.branding,
         )
-        await self._send_html_email(to_email, f"Tienes {task_count} nueva{plural} tarea{plural} asignada{plural} en: {project_name}", html_content, attachments=attachments)
+        return await self._send_html_email(to_email, f"Tienes {task_count} nueva{plural} tarea{plural} asignada{plural} en: {project_name}", html_content, attachments=attachments)
 
     async def send_session_received_email(
         self,
@@ -423,7 +442,7 @@ class EmailService:
             current_year=2026,
             brand=self.branding,
         )
-        await self._send_html_email(to_email, subject, html_content)
+        return await self._send_html_email(to_email, subject, html_content)
 
     async def send_auto_dispatch_blocked_email(
         self,
@@ -458,7 +477,7 @@ class EmailService:
             current_year=2026,
             brand=self.branding,
         )
-        await self._send_html_email(to_email, subject, html_content)
+        return await self._send_html_email(to_email, subject, html_content)
 
     async def send_auto_dispatch_done_email(
         self,
@@ -488,7 +507,7 @@ class EmailService:
             current_year=2026,
             brand=self.branding,
         )
-        await self._send_html_email(to_email, subject, html_content)
+        return await self._send_html_email(to_email, subject, html_content)
 
     async def send_welcome_email(
         self,
@@ -515,7 +534,7 @@ class EmailService:
             brand=self.branding,
         )
         company = self.branding.get("company_name") or self.branding.get("platform_name") or "Acten"
-        await self._send_html_email(to_email, f"¡Bienvenido a {company}!", html_content)
+        return await self._send_html_email(to_email, f"¡Bienvenido a {company}!", html_content)
 
     async def send_two_factor_code_email(
         self,
@@ -543,7 +562,7 @@ class EmailService:
             subject = f"Código para activar 2FA en {company}"
         else:
             subject = f"Código de verificación · {company}"
-        await self._send_html_email(to_email, subject, html_content)
+        return await self._send_html_email(to_email, subject, html_content)
 
     async def send_forgot_password_email(self, to_email: str, user_name: str, reset_token: str):
         # Bug histórico: faltaba cargar el template — el render usaba `template`
@@ -558,4 +577,4 @@ class EmailService:
             brand=self.branding,
         )
         company = self.branding.get("company_name") or self.branding.get("platform_name") or "Acten"
-        await self._send_html_email(to_email, f"Restablecer Contraseña - {company}", html_content)
+        return await self._send_html_email(to_email, f"Restablecer Contraseña - {company}", html_content)

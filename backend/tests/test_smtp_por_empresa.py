@@ -112,3 +112,56 @@ def test_la_migracion_cifra_lo_que_estaba_en_claro(
     cifrado.cifrar_secretos_pendientes()
     db_session.refresh(fila)
     assert fila.config_json == antes
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sin llave, un correo no puede darse por enviado
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_en_produccion_sin_llave_el_envio_falla(
+    empresa_con_smtp, db_session: Session, monkeypatch):
+    """El caso que dejó a cuatro empresas sin correo y sin enterarse.
+
+    La empresa tiene SMTP «configurado» —proveedor y remitente— pero sin
+    llave. Antes se imprimía el correo en el log y se devolvía `True`: el
+    llamador marcaba la tarea como notificada y nadie sabía que no había
+    salido.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    db_session.add(IntegrationSetting(
+        tenant_id=empresa_con_smtp.id, provider_name="smtp", is_active=True,
+        config_json=json.dumps({"provider": "Resend",
+                                "senderEmail": "no-reply@empresa.com"})))
+    db_session.commit()
+
+    svc = EmailService(db=db_session, tenant_id=empresa_con_smtp.id)
+    assert svc.api_key is None
+
+    salio = await svc._send_html_email("alguien@empresa.com", "Prueba", "<p>hola</p>")
+    assert salio is False, "un correo sin llave no puede darse por enviado"
+
+
+@pytest.mark.asyncio
+async def test_en_desarrollo_se_sigue_simulando(
+    empresa_con_smtp, db_session: Session, monkeypatch):
+    """En local, imprimir el correo es útil y no engaña a nadie."""
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    svc = EmailService(db=db_session, tenant_id=empresa_con_smtp.id)
+
+    assert await svc._send_html_email("yo@local", "Prueba", "<p>hola</p>") is True
+
+
+@pytest.mark.asyncio
+async def test_los_metodos_publicos_devuelven_si_salio(
+    empresa_con_smtp, db_session: Session, monkeypatch):
+    """Sin esto el resultado no llegaba a nadie: los ocho lo descartaban."""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    svc = EmailService(db=db_session, tenant_id=empresa_con_smtp.id)
+
+    salio = await svc.send_action_item_email(
+        to_email="alguien@empresa.com", owner_name="Alguien",
+        task_title="Tarea", task_description="Descripción",
+        project_name="Proyecto",
+    )
+    assert salio is False

@@ -188,7 +188,7 @@ async def _send_auto_dispatch_blocked_notice(
         sent_any = False
         for email, name in recipients:
             try:
-                await email_svc.send_auto_dispatch_blocked_email(
+                enviado = await email_svc.send_auto_dispatch_blocked_email(
                     to_email=email,
                     admin_name=name,
                     session_title=ms.title or "Sin título",
@@ -198,7 +198,11 @@ async def _send_auto_dispatch_blocked_notice(
                     missing_participants=missing_participants,
                     timeout_minutes=timeout_minutes,
                 )
-                sent_any = True
+                # Solo cuenta como enviado si de verdad salió. Antes bastaba
+                # con que no reventara, así que un correo que nunca se mandó
+                # —empresa sin llave— marcaba el aviso como ya dado y no se
+                # volvía a intentar.
+                sent_any = sent_any or bool(enviado)
             except Exception:
                 logger.exception(
                     "Falló auto_dispatch_blocked_email para %s sesión %s",
