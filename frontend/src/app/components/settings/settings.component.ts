@@ -416,15 +416,17 @@ export class SettingsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Volver a la llave del servidor: se borra la de la empresa. */
+  /** Quitar la llave. Sin ella esta empresa se queda sin IA, y se avisa. */
   borrarLlaveIa(k: LlaveIa): void {
-    if (!confirm(`¿Quitar la llave propia de ${k.etiqueta}? Se volverá a usar la del servidor.`)) {
+    if (!confirm(
+      `¿Quitar la llave de ${k.etiqueta}?\n\nEsta empresa dejará de procesar ` +
+      `reuniones y de responder preguntas hasta que pongas otra.`)) {
       return;
     }
     this.aiKeys.guardar(k.proveedor, '').subscribe({
       next: est => {
         Object.assign(k, est);
-        this.iaResultado[k.proveedor] = { ok: true, detalle: 'Se usa la llave del servidor.' };
+        this.iaResultado[k.proveedor] = { ok: false, detalle: 'Sin llave: la IA queda desactivada para esta empresa.' };
         this.cdr.detectChanges();
       },
       error: () => this.toast.error('No se pudo quitar la llave.'),

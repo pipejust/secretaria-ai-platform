@@ -53,8 +53,7 @@ def dos_empresas(test_engine, monkeypatch, db_session: Session):
     return creados
 
 
-def test_la_llave_de_una_empresa_no_se_usa_para_otra(client, dos_empresas, monkeypatch):
-    monkeypatch.setattr(llm_keys.settings, "groq_api_key", "")
+def test_la_llave_de_una_empresa_no_se_usa_para_otra(client, dos_empresas):
     (id_a, cab_a), (id_b, _) = dos_empresas["llave-a"], dos_empresas["llave-b"]
 
     client.put("/api/v1/ai/proveedores/groq",
@@ -86,8 +85,15 @@ def test_no_sale_en_claro_ni_por_la_api_ni_en_la_base(client, dos_empresas, db_s
     assert json.loads(fila.config_json)["api_key"].startswith("fer1:")
 
 
-def test_borrarla_devuelve_el_respaldo_del_entorno(client, dos_empresas, monkeypatch):
-    monkeypatch.setattr(llm_keys.settings, "groq_api_key", "gsk_del_entorno")
+def test_borrarla_deja_la_empresa_sin_llave(client, dos_empresas, monkeypatch):
+    """Ya no hay respaldo del entorno: quitarla deja a la empresa sin IA.
+
+    Es la consecuencia buscada. Mientras existía el respaldo, una empresa
+    sin llave parecía funcionar y estaba gastando contra una cuenta
+    compartida que nadie había elegido.
+    """
+    # Aunque el entorno traiga una, no debe usarse.
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_del_entorno_que_ya_no_vale")
     id_a, cab_a = dos_empresas["llave-a"]
 
     client.put("/api/v1/ai/proveedores/groq",
@@ -96,8 +102,21 @@ def test_borrarla_devuelve_el_respaldo_del_entorno(client, dos_empresas, monkeyp
 
     r = client.put("/api/v1/ai/proveedores/groq", json={"api_key": ""}, headers=cab_a)
     assert r.status_code == 200
-    assert r.json()["origen"] == "entorno"
-    assert llm_keys.clave_groq(id_a) == "gsk_del_entorno"
+    assert r.json()["origen"] == ""
+    assert r.json()["configurada"] is False
+    assert llm_keys.clave_groq(id_a) == ""
+
+
+def test_el_entorno_ya_no_se_lee(client, dos_empresas, monkeypatch):
+    """`GROQ_API_KEY` dejó de tener efecto, incluso si sigue puesta."""
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_del_entorno_que_ya_no_vale")
+    # El módulo ya ni siquiera importa la configuración del entorno.
+    assert not hasattr(llm_keys, "settings")
+    id_a, _ = dos_empresas["llave-a"]
+
+    assert llm_keys.clave_groq(id_a) == ""
+    # Y sin empresa tampoco: nunca se hereda nada.
+    assert llm_keys.clave_groq(None) == ""
 
 
 def test_solo_administradores(client, dos_empresas, db_session, test_engine):

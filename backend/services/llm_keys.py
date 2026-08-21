@@ -1,20 +1,22 @@
-"""Las llaves de los motores de IA: de la base primero, del entorno si no.
+"""Las llaves de los motores de IA. Solo de la base, y solo por empresa.
 
-Hasta ahora la llave de Groq solo salía de `GROQ_API_KEY`. Eso obliga a
-entrar al servidor y reiniciar el contenedor para cambiarla, y hace que
-todas las empresas compartan la misma —que es exactamente lo que impide
-saber de dónde sale cada peso de la factura—.
+La llave sale **únicamente** de lo que un administrador guardó para su
+empresa, cifrado en `integrationsetting`. `GROQ_API_KEY` ya no se lee.
 
-Ahora cada empresa puede poner la suya desde Configuración. El orden es:
+El respaldo del entorno existió mientras se migraba y se quitó a
+propósito: era una llave compartida por todas las empresas de la
+instalación, y mientras estuviera ahí el consumo seguía llegando
+mezclado en una sola factura sin forma de separarlo. Además hacía que
+una empresa sin llave pareciera funcionar, escondiendo que estaba
+gastando contra la cuenta de otro.
 
-1. La que el administrador guardó para **esa empresa**, cifrada en
-   `integrationsetting`.
-2. Si no hay, la del entorno, que sigue sirviendo de respaldo para toda
-   la instalación.
+Consecuencia asumida: **una empresa sin llave no tiene IA**. El
+procesamiento y las preguntas devuelven 503 diciendo dónde ponerla, que
+es preferible a gastar en silencio contra una cuenta ajena.
 
-**Nunca se cae en la llave de otra empresa.** Sin `tenant_id` se usa
-directamente la del entorno: usar la del primer tenant que apareciera
-haría que una empresa gastara contra la cuenta de otra.
+**Nunca se hereda la llave de otra empresa.** Sin `tenant_id` no hay
+llave: usar la del primer tenant que apareciera sería exactamente el
+gasto cruzado que esto viene a eliminar.
 """
 
 from __future__ import annotations
@@ -26,7 +28,6 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from config import settings
 from database import engine
 from models import IntegrationSetting
 from services.cifrado import cifrar, descifrar, enmascarar
@@ -35,17 +36,13 @@ logger = logging.getLogger(__name__)
 
 # Nombre de la fila en `integrationsetting` (per-tenant: user_id IS NULL).
 PROVEEDORES = {
-    "groq": {"clave": "groq", "etiqueta": "Groq", "env": "groq_api_key"},
+    "groq": {"clave": "groq", "etiqueta": "Groq"},
 }
 
 # La llave se pide en cada llamada al LLM. Sin caché eso es una consulta
 # por llamada; con TTL corto, un cambio en pantalla se nota enseguida.
 _CACHE_SEGUNDOS = 60
 _cache: dict[tuple[str, Optional[int]], tuple[float, str]] = {}
-
-
-def _del_entorno(proveedor: str) -> str:
-    return getattr(settings, PROVEEDORES[proveedor]["env"], "") or ""
 
 
 def _fila(db: Session, tenant_id: int, proveedor: str) -> Optional[IntegrationSetting]:
@@ -62,26 +59,33 @@ def clave(proveedor: str, tenant_id: Optional[int] = None) -> str:
     if proveedor not in PROVEEDORES:
         raise ValueError(f"Proveedor desconocido: {proveedor}")
     if tenant_id is None:
-        return _del_entorno(proveedor)
+        # Sin empresa no hay llave. Antes se caía en la del entorno; eso
+        # es lo que permitía que un camino sin tenant gastara contra una
+        # cuenta que nadie eligió.
+        return ""
 
     ahora = time.time()
     guardada = _cache.get((proveedor, tenant_id))
     if guardada and ahora - guardada[0] < _CACHE_SEGUNDOS:
         return guardada[1]
 
-    valor = ""
     try:
         with Session(engine) as db:
             fila = _fila(db, tenant_id, proveedor)
+            valor = ""
             if fila and fila.is_active:
                 datos = json.loads(fila.config_json or "{}")
                 valor = descifrar(datos.get("api_key", "") or "")
     except Exception as exc:  # noqa: BLE001
-        # Que la base falle no puede dejar sin IA a quien tenía la llave en
-        # el entorno: se avisa y se sigue con el respaldo.
-        logger.warning("No se pudo leer la llave de %s en la base: %s", proveedor, exc)
+        # Si la base falla no hay de dónde sacarla: se avisa fuerte, porque
+        # el síntoma que verá la gente —«sin llave»— no apunta a la base.
+        #
+        # Y **no se guarda en caché**: cachear el vacío convertiría un
+        # tropiezo de un segundo en un minuto entero sin IA, y el reintento
+        # siguiente lo habría resuelto solo.
+        logger.error("No se pudo leer la llave de %s en la base: %s", proveedor, exc)
+        return _cache.get((proveedor, tenant_id), (0.0, ""))[1]
 
-    valor = valor or _del_entorno(proveedor)
     _cache[(proveedor, tenant_id)] = (ahora, valor)
     return valor
 
@@ -91,7 +95,7 @@ def clave_groq(tenant_id: Optional[int] = None) -> str:
 
 
 def guardar(db: Session, tenant_id: int, proveedor: str, api_key: str) -> dict:
-    """Guarda la llave cifrada. Vacía = borra la de la empresa y vuelve al entorno."""
+    """Guarda la llave cifrada. Vacía la borra, y la empresa se queda sin IA."""
     if proveedor not in PROVEEDORES:
         raise ValueError(f"Proveedor desconocido: {proveedor}")
     fila = _fila(db, tenant_id, proveedor)
@@ -126,13 +130,10 @@ def estado(db: Session, tenant_id: int, proveedor: str) -> dict:
             propia = descifrar(json.loads(fila.config_json or "{}").get("api_key", ""))
         except (json.JSONDecodeError, TypeError):
             propia = ""
-    del_entorno = _del_entorno(proveedor)
     return {
         "proveedor": proveedor,
         "etiqueta": PROVEEDORES[proveedor]["etiqueta"],
-        "configurada": bool(propia or del_entorno),
-        "origen": "empresa" if propia else ("entorno" if del_entorno else ""),
-        "pista": enmascarar(propia or del_entorno),
-        # Para que se entienda por qué sigue funcionando sin haber puesto nada.
-        "hay_respaldo_de_entorno": bool(del_entorno),
+        "configurada": bool(propia),
+        "origen": "empresa" if propia else "",
+        "pista": enmascarar(propia),
     }
