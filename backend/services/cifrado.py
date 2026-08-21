@@ -79,3 +79,64 @@ def enmascarar(valor: str) -> str:
     if len(valor) <= 8:
         return "••••"
     return f"{valor[:4]}…{valor[-4:]}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Migración de lo que quedó guardado en claro
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Qué campo de qué proveedor es un secreto. Añadir aquí un par convierte
+# también sus filas viejas la próxima vez que arranque la aplicación.
+SECRETOS_GUARDADOS = [
+    ("smtp", "apiKey"),
+]
+
+
+def cifrar_secretos_pendientes() -> int:
+    """Cifra las filas de `integrationsetting` que aún tengan el valor en claro.
+
+    Sin esto, una llave guardada antes de que existiera el cifrado seguiría
+    legible en la base hasta que alguien volviera a pulsar «Guardar» en esa
+    pantalla —es decir, quizá nunca—.
+
+    Es idempotente: lo ya cifrado lleva marca y se salta. Devuelve cuántas
+    filas convirtió.
+    """
+    import json
+
+    from sqlmodel import Session, select
+
+    from database import engine
+    from models import IntegrationSetting
+
+    convertidas = 0
+    try:
+        with Session(engine) as db:
+            for proveedor, campo in SECRETOS_GUARDADOS:
+                filas = db.exec(
+                    select(IntegrationSetting).where(
+                        IntegrationSetting.provider_name == proveedor)
+                ).all()
+                for fila in filas:
+                    try:
+                        cfg = json.loads(fila.config_json or "{}")
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                    valor = cfg.get(campo)
+                    if not valor or valor.startswith(_MARCA):
+                        continue
+                    cfg[campo] = cifrar(valor)
+                    fila.config_json = json.dumps(cfg)
+                    db.add(fila)
+                    convertidas += 1
+            if convertidas:
+                db.commit()
+                logger.info(
+                    "Cifradas %s credenciales que estaban en claro en la base.",
+                    convertidas,
+                )
+    except Exception as exc:  # noqa: BLE001
+        # Que esto falle no puede impedir el arranque: lo que hay sigue
+        # leyéndose igual, solo que sin cifrar.
+        logger.warning("No se pudieron cifrar las credenciales pendientes: %s", exc)
+    return convertidas

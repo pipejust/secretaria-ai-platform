@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import IntegrationSetting, PER_USER_INTEGRATION_PROVIDERS, Tenant, User
+from services.cifrado import cifrar, descifrar
 from routers.auth import get_current_tenant, get_current_user, require_admin
 
 logger = logging.getLogger(__name__)
@@ -168,7 +169,13 @@ def get_all_settings(
             # de un provider per-user, NO las exponemos aquí.
             continue
         try:
-            result[s.provider_name] = json.loads(s.config_json)
+            cfg = json.loads(s.config_json)
+            # La llave del SMTP vive cifrada; el administrador la ve como
+            # la escribió. Lo guardado en claro antes pasa tal cual, así
+            # que no hubo que reescribir ninguna fila a mano.
+            if s.provider_name == "smtp" and cfg.get("apiKey"):
+                cfg["apiKey"] = descifrar(cfg["apiKey"])
+            result[s.provider_name] = cfg
         except (json.JSONDecodeError, TypeError):
             logger.warning(
                 "config_json inválido en IntegrationSetting %s", s.provider_name
@@ -221,6 +228,15 @@ def save_settings(
             if existing is None
             else config_obj.get("isActive", existing.is_active)
         )
+
+        # La llave del SMTP se guarda cifrada. Estaba en claro en la base:
+        # cualquiera con acceso de lectura —un backup, una consola— veía la
+        # API key de Resend de cada empresa.
+        #
+        # `cifrar` es idempotente: volver a guardar algo ya cifrado no lo
+        # cifra dos veces.
+        if provider_name == "smtp" and config_obj.get("apiKey"):
+            config_obj = {**config_obj, "apiKey": cifrar(config_obj["apiKey"])}
 
         # Para Fireflies: el `webhook_token` SOLO lo genera el servidor.
         # Nunca aceptamos el valor que envía el cliente — eso permitiría a un

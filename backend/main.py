@@ -162,6 +162,15 @@ def api_favicon() -> Response:
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
+
+    # Convierte a cifrado lo que quedó guardado en claro antes de que el
+    # cifrado existiera. Idempotente y barato: en una base ya convertida
+    # no escribe nada.
+    try:
+        from services.cifrado import cifrar_secretos_pendientes
+        cifrar_secretos_pendientes()
+    except Exception:  # noqa: BLE001
+        logger.exception("El cifrado de credenciales pendientes falló (no bloquea).")
     
     # Restablecer reuniones atascadas de corridas anteriores
     from sqlmodel import Session, select

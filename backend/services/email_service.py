@@ -5,7 +5,14 @@ from typing import Optional
 from jinja2 import Environment, FileSystemLoader
 from sqlmodel import Session, select
 from models import IntegrationSetting
+import logging
+
+from services.cifrado import descifrar
 from services import branding_service
+
+# Este módulo ya usaba `logger` sin definirlo: la línea vivía dentro de un
+# `except` que casi nunca salta, así que el NameError no se había visto.
+logger = logging.getLogger(__name__)
 
 # Resend se configura SIEMPRE desde /admin/settings (UI) →
 # IntegrationSetting('smtp').config_json.{apiKey, senderEmail}.
@@ -153,14 +160,17 @@ class EmailService:
         self.branding = dict(branding_service.DEFAULT_BRANDING)
 
         if db:
-            # Resuelve tenant: el explícito o, si no vino, el default ('acten').
-            from database import DEFAULT_TENANT_SLUG
-            from models import Tenant
+            # **Sin empresa no se manda nada.** Antes, si no llegaba el
+            # tenant, se caía en el de por defecto: el correo salía con la
+            # cuenta de Resend y el remitente de OTRA empresa, y quien lo
+            # recibía veía una marca que no era la suya. Un envío sin dueño
+            # es un error de programación, no algo que se deba adivinar.
             tid = self.tenant_id
             if tid is None:
-                t = db.exec(select(Tenant).where(Tenant.slug == DEFAULT_TENANT_SLUG)).first()
-                tid = t.id if t else None
-                self.tenant_id = tid
+                logger.error(
+                    "EmailService sin tenant_id: no se envía. Quien llama debe "
+                    "pasar la empresa dueña del envío."
+                )
 
             if tid is not None:
                 smtp_query = select(IntegrationSetting).where(
@@ -171,7 +181,7 @@ class EmailService:
                     try:
                         config = json.loads(setting.config_json)
                         if config.get("apiKey"):
-                            self.api_key = config.get("apiKey")
+                            self.api_key = descifrar(config.get("apiKey"))
                         if config.get("senderEmail"):
                             self.from_email = config.get("senderEmail")
                     except Exception as e:
