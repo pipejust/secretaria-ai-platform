@@ -208,3 +208,29 @@ def test_el_directorio_se_pregunta_una_sola_vez(db_session, monkeypatch):
     for _ in range(5):
         assert task_events._empleado("id-natalia")["display_name"] == "Natalia Gaviria"
     assert len(llamadas) == 1, f"se preguntó {len(llamadas)} veces"
+
+
+def test_una_tarea_nacida_de_una_reunion_lleva_su_linea(tarea, db_session, monkeypatch):
+    """El principio del historial.
+
+    Sin esto, una tarea extraída de una reunión aparece con la lista vacía
+    hasta que alguien la mueve: se ve de dónde salió el movimiento, pero
+    no de dónde salió la tarea.
+    """
+    enviados = []
+    monkeypatch.setattr(
+        "services.webhook_sender.send_event_bg",
+        lambda tipo, cuerpo, **k: enviados.append((tipo, cuerpo)))
+    _, _, item = tarea
+
+    task_events.registrar(
+        db_session, item, None, task_events.actor_ia(),
+        kind="created", extra={"session_id": item.session_id})
+
+    tipo, cuerpo = enviados[0]
+    assert tipo == "task.created"
+    # `ai` y no `user`: no hubo nadie tecleando, y colgárselo a una persona
+    # sería exactamente lo que el actor viene a evitar.
+    assert cuerpo["actor"]["kind"] == "ai"
+    assert cuerpo["actor"]["id"] is None
+    assert cuerpo["session_id"] == item.session_id

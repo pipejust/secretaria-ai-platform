@@ -120,6 +120,19 @@ def actor_de_integracion(db: Session, ctx: Any) -> dict:
             "employee_external_id": externo}
 
 
+def actor_ia(motivo: str = "") -> dict:
+    """Lo extrajo el modelo de una transcripción, no lo escribió nadie.
+
+    Va aparte de `system` porque no es lo mismo: una tarea que nació de lo
+    que se dijo en una reunión tiene un origen que se puede ir a leer, y
+    quien mira el historial merece saber que ahí no hubo una persona
+    tecleando.
+    """
+    return {"kind": "ai", "id": None,
+            "name": motivo or "Acten · extraída de la reunión",
+            "employee_external_id": ""}
+
+
 def actor_sistema(motivo: str = "") -> dict:
     """El cron, el pipeline de IA, una migración. Nunca una persona."""
     return {"kind": "system", "id": None,

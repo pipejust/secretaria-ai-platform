@@ -44,6 +44,7 @@ from date_utils import normalize_due_date
 from models import ActionItem, MeetingSession, Project, ProjectContact
 from services.groq_service import OpenAIService
 from services.llm_groq import GroqLLMService
+from services import task_events
 
 logger = logging.getLogger(__name__)
 
@@ -747,6 +748,8 @@ async def process_session_with_ai(
         return (c.get("email") or "").strip().lower() if c else ""
 
     created_tasks = 0
+    # Las que nacen en esta pasada, para darles su línea después del commit.
+    nacidas: list[ActionItem] = []
     for item_data in tasks_payload.get("action_items", []) or []:
         if isinstance(item_data, str):
             title_v = "Tarea Detectada"
@@ -799,22 +802,41 @@ async def process_session_with_ai(
             db, session_obj.tenant_id, owner_name, owner_email,
         )
 
-        db.add(
-            ActionItem(
-                tenant_id=session_obj.tenant_id,
-                session_id=session_id,
-                owner_name=owner_name,
-                owner_email=owner_email,
-                title=title_v or "Tarea sin título",
-                description=description,
-                due_date=due_date,
-                due_time=due_time,
-                priority=priority,
-                is_approved=False,
-            )
+        nueva = ActionItem(
+            tenant_id=session_obj.tenant_id,
+            session_id=session_id,
+            owner_name=owner_name,
+            owner_email=owner_email,
+            title=title_v or "Tarea sin título",
+            description=description,
+            due_date=due_date,
+            due_time=due_time,
+            priority=priority,
+            is_approved=False,
         )
+        db.add(nueva)
+        nacidas.append(nueva)
         created_tasks += 1
     db.commit()
+
+    # La línea de nacimiento. Sin esto, una tarea que sale de una reunión
+    # aparece en el historial de la otra plataforma con la lista vacía
+    # hasta que alguien la mueve: se ve de dónde salió el movimiento, pero
+    # no de dónde salió la tarea.
+    #
+    # Se manda aunque el pipeline haya tenido errores: la tarea existe y se
+    # está enseñando, así que ocultar su origen sería justo la
+    # inconsistencia que el historial viene a quitar.
+    for nueva in nacidas:
+        try:
+            task_events.registrar(
+                db, nueva, None, task_events.actor_ia(),
+                kind="created",
+                extra={"session_id": session_id},
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("task.created de la tarea %s no enviado: %s",
+                           getattr(nueva, "id", "?"), exc)
 
     # ---------- 5b. Notificar al owner si tiene cuenta en el workspace ----
     # Releemos las tareas recién creadas y disparamos una notif por cada
