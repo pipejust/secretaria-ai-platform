@@ -42,7 +42,11 @@ MAX_ATTEMPTS = 3
 # reintentar más allá de esa ventana.
 MAX_RETRY_WINDOW_S = 240
 
-EVENTS = ("session.processed", "session.failed", "task.created", "task.updated")
+EVENTS = (
+    "session.processed", "session.failed",
+    "task.created", "task.updated", "task.deleted",
+    "comment.created",
+)
 
 
 def _config(tenant_id: Optional[int] = None) -> tuple[str, str, str]:

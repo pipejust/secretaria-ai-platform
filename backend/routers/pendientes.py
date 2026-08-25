@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
+from services import task_events
 from models import (
     ActionItem, MeetingSession, Project, ProjectContact, Role, Tenant, User,
 )
@@ -458,6 +459,9 @@ def update_status(
     payload: StatusUpdate,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    # Quién mueve la tarea. Sin esto el historial no puede decirlo,
+    # que es justo lo que se le pregunta.
+    current_user: User = Depends(get_current_user),
 ):
     if payload.status not in VALID_STATUSES:
         raise HTTPException(
@@ -468,6 +472,7 @@ def update_status(
     # Aislamiento: 404 si el item es de otra empresa.
     if not item or item.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Action item no encontrado")
+    antes = task_events.instantanea(item)
     item.status = payload.status
     item.completed_at = (
         datetime.now().isoformat() if payload.status == "done" else None
@@ -480,13 +485,11 @@ def update_status(
     # El cambio hecho desde Acten también avisa a Servicios: si no, su
     # tablero mostraría un estado viejo hasta el siguiente refresco manual.
     try:
-        from services.webhook_sender import send_event_bg
-        send_event_bg("task.updated", {
-            "task_id": item.id,
-            "status": item.status,
-            "source": "acten",
-        }, tenant_id=item.tenant_id)
+        task_events.registrar(
+            db, item, antes,
+            task_events.actor_de_usuario(db, current_user),
+        )
     except Exception as exc:  # noqa: BLE001
-        logger.warning("webhook task.updated (%s) no enviado: %s", item.id, exc)
+        logger.warning("historial de la tarea %s no registrado: %s", item.id, exc)
 
     return {"id": item.id, "status": item.status, "completed_at": item.completed_at}

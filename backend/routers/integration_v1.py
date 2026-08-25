@@ -24,6 +24,7 @@ from database import get_session
 from date_utils import is_valid_due_date, normalize_due_date
 from models import ActionItem, MeetingSession, Project, ProjectContact
 from services.api_key_auth import IntegrationContext, require_scopes
+from services import task_events
 
 logger = logging.getLogger(__name__)
 
@@ -426,6 +427,10 @@ def patch_task(
     if visible is not None and item.session_id not in visible:
         raise HTTPException(404, "Tarea no encontrada.")
 
+    # La foto de antes: sin ella el evento solo puede decir cómo quedó,
+    # no qué cambió — y eso es lo que hace inútil un historial.
+    antes = task_events.instantanea(item)
+
     data = payload.model_dump(exclude_unset=True)
 
     if "status" in data and data["status"] is not None:
@@ -484,13 +489,18 @@ def patch_task(
     out = _serialize_task(db, item, proj_refs, {item.session_id: s.project_id if s else None})
 
     # Aviso a Servicios. Best-effort: si falla, la tarea ya quedó guardada.
-    from services.webhook_sender import send_event_bg
-    send_event_bg("task.updated", {
-        "task_id": item.id,
-        "status": item.status,
-        "project_external_id": out.get("project_external_id"),
-        "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
-    }, tenant_id=ctx.tenant.id)
+    task_events.registrar(
+        db, item, antes,
+        # Si vino `X-On-Behalf-Of`, el actor es esa persona: es quien apretó
+        # el botón al otro lado. Sin él, la clave — marcada como
+        # `integration` para que nadie la lea como una persona.
+        task_events.actor_de_integracion(db, ctx),
+        extra={
+            "project_external_id": out.get("project_external_id"),
+            "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
+            "task": out,
+        },
+    )
     return out
 
 
@@ -633,15 +643,20 @@ def delete_task(
     s2 = db.get(MeetingSession, item.session_id)
     out = _serialize_task(db, item, proj_refs, {item.session_id: s2.project_id if s2 else None})
 
+    # Se registra ANTES de borrar: después la tarea ya no existe y con ella
+    # se iría el dato de quién la borró, que es el que se pregunta.
+    task_events.registrar(
+        db, item, None,
+        task_events.actor_de_integracion(db, ctx),
+        kind="deleted",
+        extra={
+            "project_external_id": out.get("project_external_id"),
+            "task": out,
+        },
+    )
+
     db.delete(item)
     db.commit()
-
-    from services.webhook_sender import send_event_bg
-    send_event_bg("task.updated", {
-        "task_id": task_id,
-        "status": "deleted",
-        "project_external_id": out.get("project_external_id"),
-    }, tenant_id=ctx.tenant.id)
     return {"status": "borrada", "id": task_id}
 
 
@@ -713,15 +728,55 @@ def create_task(
     s2 = db.get(MeetingSession, item.session_id)
     out = _serialize_task(db, item, proj_refs, {item.session_id: s2.project_id if s2 else None})
 
-    from services.webhook_sender import send_event_bg
-    send_event_bg("task.created", {
-        "task_id": item.id,
-        "session_id": item.session_id,
-        "project_external_id": out.get("project_external_id"),
-        "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
-        "origin": "manual",
-    }, tenant_id=ctx.tenant.id)
+    task_events.registrar(
+        db, item, None,
+        task_events.actor_de_integracion(db, ctx),
+        kind="created",
+        extra={
+            "project_external_id": out.get("project_external_id"),
+            "owner_external_id": (out.get("owner") or {}).get("employee_external_id"),
+            "task": out,
+        },
+    )
     return out
+
+
+@router.get("/tasks/{task_id}/history")
+def task_history(
+    task_id: int,
+    limit: int = Query(200, ge=1, le=500),
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("tasks:read")),
+):
+    """Quién tocó esta tarea, qué cambió y cuándo.
+
+    Existe además del webhook por dos motivos. Uno: se puede pedir al abrir
+    la ficha, sin depender de haber estado escuchando. Dos: **deja rellenar
+    hacia atrás** — con el webhook, lo que pasó antes de conectarse no se
+    recupera nunca.
+
+    Cada entrada trae `changes` con `from` y `to` por campo, que es lo que
+    distingue «lo cambió» de «así estaba». Un historial que confunde las
+    dos cosas es peor que no tenerlo.
+
+    Salvedad honesta: sólo hay historial **desde que esto se desplegó**. Lo
+    anterior no se puede reconstruir porque el autor nunca se guardó; no
+    devolvemos filas inventadas para rellenar el hueco.
+    """
+    item = db.get(ActionItem, task_id)
+    if not item or item.tenant_id != ctx.tenant.id:
+        raise HTTPException(404, "Tarea no encontrada.")
+    visible = _visible_session_ids(db, ctx)
+    if visible is not None and item.session_id not in visible:
+        raise HTTPException(404, "Tarea no encontrada.")
+
+    from services import task_events as _te
+
+    return {
+        "task_id": task_id,
+        "events": _te.historial(db, task_id, ctx.tenant.id, limite=limit),
+        "desde": _te.DESDE_CUANDO,
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════

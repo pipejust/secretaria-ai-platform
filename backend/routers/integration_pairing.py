@@ -316,7 +316,11 @@ def canjear(
             "X-On-Behalf-Of": "UUID del empleado, sacado de su sesión — nunca del navegador",
         },
         "eventos": {
-            "recibiran": ["session.processed", "session.failed", "task.created", "task.updated"],
+            "recibiran": [
+                "session.processed", "session.failed",
+                "task.created", "task.updated", "task.deleted",
+                "comment.created",
+            ],
             "url": integ.webhook_url or None,
             "firma": "HMAC-SHA256 sobre '{timestamp}.{cuerpo crudo}', cabecera X-Acten-Signature",
             "ventana_seg": 300,

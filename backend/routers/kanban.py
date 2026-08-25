@@ -29,6 +29,7 @@ from sqlmodel import Session, select
 from database import get_session
 from models import ActionItem, MeetingSession, Project, Tenant, User
 from routers.auth import get_current_tenant, get_current_user
+from services import task_events
 
 logger = logging.getLogger(__name__)
 
@@ -325,12 +326,12 @@ def mover(
     # La plataforma conectada tiene que enterarse: si no, su tablero
     # muestra el estado viejo hasta que alguien recargue.
     try:
-        from services.webhook_sender import send_event_bg
-        send_event_bg("task.updated", {
-            "task_id": item.id, "status": item.status, "source": "acten",
-        }, tenant_id=item.tenant_id)
+        task_events.registrar(
+            db, item, antes,
+            task_events.actor_de_usuario(db, user),
+        )
     except Exception as exc:  # noqa: BLE001
-        logger.warning("webhook task.updated (%s) no enviado: %s", item.id, exc)
+        logger.warning("historial de la tarea %s no registrado: %s", item.id, exc)
 
     return {"id": item.id, "columna": item.status, "orden": item.kanban_order}
 

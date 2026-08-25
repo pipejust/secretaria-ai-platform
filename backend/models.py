@@ -805,6 +805,56 @@ class CalendarEvent(SQLModel, table=True):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
+class TaskEvent(SQLModel, table=True):
+    """Quién tocó una tarea, qué cambió y cuándo.
+
+    Existe porque el evento `task.updated` solo podía decir «la tarea 1664
+    quedó en pending». Quien lo recibe no sabía **quién** lo hizo, **desde
+    qué valor** venía, ni si `status` era lo que cambió o solo el estado
+    actual viajando de acompañamiento. Un historial que no distingue «lo
+    cambió» de «así estaba» es peor que no tener historial.
+
+    El actor ya existía en memoria en el momento del cambio —la sesión del
+    usuario, o el empleado que llega en `X-On-Behalf-Of`— pero no se
+    guardaba en ningún sitio. Esta tabla es ese sitio.
+
+    `occurred_at` es cuándo pasó, no cuándo se envió el webhook: con
+    reintentos, la hora de la cabecera llega desordenada.
+    """
+
+    __table_args__ = (
+        UniqueConstraint("event_id", name="uq_taskevent_event_id"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    # **Sin clave foránea a propósito.** El historial tiene que sobrevivir
+    # al borrado de la tarea: si se fuera con ella, «quién la borró» sería
+    # justo la línea que desaparece.
+    task_id: int = Field(index=True)
+    event_id: str = Field(index=True, description="uuid; el mismo que viaja en el webhook.")
+    kind: str = Field(
+        default="updated",
+        description="created | updated | deleted | comment",
+    )
+    occurred_at: str = Field(index=True)
+
+    # Quién. `actor_kind` evita atribuirle a una persona lo que hizo una
+    # automatización: el cron y el pipeline de IA también mueven tareas.
+    actor_kind: str = Field(default="user", description="user | integration | system | ai")
+    actor_user_id: Optional[int] = Field(default=None, foreign_key="user.id", index=True)
+    actor_name: str = Field(default="")
+    actor_external_id: str = Field(
+        default="",
+        description="El employee_external_id del directorio, si se conoce.",
+    )
+
+    # Qué. `{"status": {"from": "done", "to": "pending"}}`
+    changes_json: str = Field(default="{}")
+    # Para los comentarios, el texto que se escribió.
+    body: str = Field(default="")
+
+
 class AuditLog(SQLModel, table=True):
     """Sprint 08 — audit log para SOC 2 / GDPR compliance. Per-tenant."""
 

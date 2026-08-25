@@ -221,6 +221,25 @@ def create_comment(
         body=body, parent_comment_id=payload.parent_comment_id,
     )
     db.add(c); db.commit(); db.refresh(c)
+
+    # Un comentario sobre una tarea entra en su historial: es donde se
+    # busca. Los de otras secciones —decisiones, riesgos— no cuelgan de
+    # ninguna tarea y no se mandan.
+    if payload.section == "task" and payload.ref_id:
+        try:
+            from models import ActionItem as _AI
+            from services import task_events as _te
+
+            tarea = db.get(_AI, payload.ref_id)
+            if tarea:
+                _te.registrar(
+                    db, tarea, None, _te.actor_de_usuario(db, user),
+                    kind="comment", body=body,
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("comment.created de la tarea %s no enviado: %s",
+                           payload.ref_id, exc)
+
     return {"id": c.id, "created_at": c.created_at}
 
 

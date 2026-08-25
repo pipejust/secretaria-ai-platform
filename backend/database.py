@@ -293,6 +293,9 @@ def _apply_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS idx_calpref_user      ON calendarpref(user_id)",
             "CREATE INDEX IF NOT EXISTS idx_calentry_rango    ON calendarentry(calendar_id, start_at)",
             "CREATE INDEX IF NOT EXISTS idx_extevent_rango    ON externalevent(calendar_id, start_at)",
+            # Historial por tarea: quién la movió y qué cambió.
+            "CREATE INDEX IF NOT EXISTS idx_taskevent_tarea   ON taskevent(task_id, occurred_at)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_taskevent_event_id ON taskevent(event_id)",
         ]
 
     from sqlalchemy import text
