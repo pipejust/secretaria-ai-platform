@@ -115,6 +115,31 @@ class ServiciosClient:
             p["updated_since"] = updated_since
         return self._get("/api/v1/api/employees", p).get("items", []) or []
 
+    def employee(self, employee_id: str, timeout: float = 4.0) -> Optional[dict]:
+        """La ficha de una persona por su id. `None` si no está o no responde.
+
+        Va **sin reintentos y con timeout corto** a propósito: esto se llama
+        dentro de la petición que está guardando una tarea, y los reintentos
+        con espera exponencial del `_get` general añadirían segundos a un
+        cambio que el usuario está esperando. Si falla, se sigue sin nombre;
+        no se retrasa el guardado por una etiqueta.
+        """
+        if not self.configured or not employee_id:
+            return None
+        try:
+            with httpx.Client(timeout=timeout) as c:
+                r = c.get(
+                    f"{self.base_url}/api/v1/api/employees/{employee_id}",
+                    headers={"X-API-Key": self.api_key},
+                )
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:  # noqa: BLE001
+            logger.info("No se pudo pedir el empleado %s: %s", employee_id, exc)
+            return None
+
     def projects(self, status: str = "active") -> list[dict]:
         return self._get("/api/v1/api/projects", {"status": status}).get("items", []) or []
 

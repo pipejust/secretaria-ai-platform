@@ -144,3 +144,67 @@ def test_el_webhook_lleva_actor_cambios_y_hora(tarea, db_session, monkeypatch):
     # Se mantiene lo que ya consumían, para no romperles nada.
     assert cuerpo["status"] == "pending"
     assert cuerpo["task_id"] == item.id
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El empleado que todavía no tiene cuenta en Acten
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_un_empleado_sin_cuenta_firma_con_su_nombre(db_session, monkeypatch):
+    """Cinco de sus once empleados no tienen usuario aquí.
+
+    Cuando uno de ellos mueve una tarea desde la otra plataforma, el
+    cambio es suyo. Firmarlo como «la integración» sería perder justo el
+    dato que el historial viene a dar.
+    """
+    task_events._CACHE_EMPLEADOS.clear()
+    monkeypatch.setattr(
+        task_events, "_empleado",
+        lambda eid: {"id": eid, "display_name": "Miguel Campo",
+                     "full_name": "Miguel Ángel Campo Díaz"})
+
+    class Ctx:
+        acting_user = None
+        on_behalf_of = "id-de-miguel"
+        api_key = type("K", (), {"name": "Altum"})()
+
+    actor = task_events.actor_de_integracion(db_session, Ctx())
+    assert actor["kind"] == "user"
+    assert actor["name"] == "Miguel Campo"        # el de pantalla, no el legal
+    assert actor["employee_external_id"] == "id-de-miguel"
+    assert actor["sin_cuenta_en_acten"] is True
+    assert actor["id"] is None, "no se crea cuenta por un evento entrante"
+
+
+def test_si_el_directorio_no_contesta_no_se_inventa_el_nombre(db_session, monkeypatch):
+    task_events._CACHE_EMPLEADOS.clear()
+    monkeypatch.setattr(task_events, "_empleado", lambda eid: None)
+
+    class Ctx:
+        acting_user = None
+        on_behalf_of = "id-desconocido"
+        api_key = type("K", (), {"name": "Altum"})()
+
+    actor = task_events.actor_de_integracion(db_session, Ctx())
+    assert actor["kind"] == "integration"
+    assert actor["name"] == "Altum"
+    # El id se conserva igual: sirve para enlazar después.
+    assert actor["employee_external_id"] == "id-desconocido"
+
+
+def test_el_directorio_se_pregunta_una_sola_vez(db_session, monkeypatch):
+    """Sin caché, cada movimiento de tarea añadiría una llamada de red."""
+    task_events._CACHE_EMPLEADOS.clear()
+    llamadas = []
+
+    class ClienteFalso:
+        configured = True
+        def employee(self, eid, timeout=4.0):
+            llamadas.append(eid)
+            return {"id": eid, "display_name": "Natalia Gaviria"}
+
+    monkeypatch.setattr("services.servicios_sync.ServiciosClient", ClienteFalso)
+
+    for _ in range(5):
+        assert task_events._empleado("id-natalia")["display_name"] == "Natalia Gaviria"
+    assert len(llamadas) == 1, f"se preguntó {len(llamadas)} veces"

@@ -90,9 +90,34 @@ def actor_de_integracion(db: Session, ctx: Any) -> dict:
         # Llegó por una clave, pero lo hizo una persona identificada.
         datos["via"] = "integration"
         return datos
+
+    # Llegó un empleado que no tiene cuenta en Acten. Es una persona real
+    # —está moviendo la tarea desde la otra plataforma—, así que se le
+    # pregunta el nombre a su directorio en vez de firmar el cambio como
+    # «la integración». Cinco de sus once empleados están en este caso.
+    #
+    # No se crea ninguna cuenta: para decir quién fue basta el nombre, y
+    # dar de alta usuarios por un evento entrante sería conceder acceso a
+    # quien nunca lo pidió.
+    externo = (getattr(ctx, "on_behalf_of", "") or "").strip()
+    if externo:
+        ficha = _empleado(externo)
+        if ficha:
+            return {
+                "kind": "user",
+                "id": None,
+                "name": (ficha.get("display_name") or ficha.get("full_name")
+                         or "").strip() or externo,
+                "employee_external_id": externo,
+                "via": "integration",
+                # Sin cuenta aquí: quien lo pinte sabe que el nombre viene
+                # del directorio y no de un usuario de Acten.
+                "sin_cuenta_en_acten": True,
+            }
+
     nombre = getattr(getattr(ctx, "api_key", None), "name", "") or "Integración"
     return {"kind": "integration", "id": None, "name": nombre,
-            "employee_external_id": ""}
+            "employee_external_id": externo}
 
 
 def actor_sistema(motivo: str = "") -> dict:
@@ -132,6 +157,32 @@ def _external_id(db: Session, user: User) -> str:
         return valor or ""
     except Exception:  # noqa: BLE001 — el enlace es opcional
         return ""
+
+
+# Las fichas del directorio se piden una vez y se recuerdan: el nombre de
+# una persona no cambia entre dos clics, y sin caché cada movimiento de
+# tarea sumaría una llamada de red a la petición que el usuario espera.
+_CACHE_EMPLEADOS: dict[str, tuple[float, dict]] = {}
+_CACHE_TTL = 3600.0
+
+
+def _empleado(employee_id: str) -> Optional[dict]:
+    import time
+
+    guardado = _CACHE_EMPLEADOS.get(employee_id)
+    if guardado and time.time() - guardado[0] < _CACHE_TTL:
+        return guardado[1] or None
+    try:
+        from services.servicios_sync import ServiciosClient
+
+        ficha = ServiciosClient().employee(employee_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.info("Directorio no consultable para %s: %s", employee_id, exc)
+        return None
+    # Se recuerda incluso el «no está», para no repetir la llamada por cada
+    # cambio de un id que su directorio no conoce.
+    _CACHE_EMPLEADOS[employee_id] = (time.time(), ficha or {})
+    return ficha
 
 
 # ─────────────────────────────────────────────────────────────────────────────
