@@ -263,3 +263,21 @@ def test_confirmed_name_preserves_manual_curation(control):
         ).status_code
         == 422
     )
+
+
+def test_mail_policy_is_admin_only_and_forwarded_to_bot(control):
+    client, _, calls = control
+    body = {"allowed_senders": ["ana@example.test"], "recording_authorized": True,
+            "timezone": "Europe/Madrid"}
+    denied = client.put("/api/owned-bot/mail-policy", headers={"X-Test-User": "2"}, json=body)
+    assert denied.status_code == 403
+    invalid = client.put("/api/owned-bot/mail-policy", json={**body, "timezone": "Marte/Base"})
+    assert invalid.status_code == 422
+    invalid = client.put("/api/owned-bot/mail-policy", json={**body, "allowed_senders": ["ana"]})
+    assert invalid.status_code == 422
+    response = client.put("/api/owned-bot/mail-policy", json=body)
+    assert response.status_code == 200
+    forwarded = [c for c in calls if c.url.path == "/v1/mail-policy"]
+    assert forwarded[-1].method == "PUT" and json.loads(forwarded[-1].content) == body
+    assert client.get("/api/owned-bot/mail-policy").status_code == 200
+    assert client.get("/api/owned-bot/mail-policy", headers={"X-Test-User": "3"}).status_code == 403

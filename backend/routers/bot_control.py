@@ -458,6 +458,46 @@ async def finish(
     )
 
 
+class MailPolicy(BaseModel):
+    """Política de invitaciones por correo de la empresa; vive en el bot."""
+
+    model_config = ConfigDict(extra="forbid")
+    allowed_senders: list[str] = PField(min_length=1, max_length=50)
+    recording_authorized: bool = False
+    timezone: str = PField(default="America/Bogota", max_length=64)
+
+    @model_validator(mode="after")
+    def addresses(self):
+        from zoneinfo import ZoneInfo
+
+        for item in self.allowed_senders:
+            if not re.fullmatch(r"[^@\s]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+", item.strip()):
+                raise ValueError(f"Remitente no válido: {item[:80]}")
+        try:
+            ZoneInfo(self.timezone)
+        except Exception as exc:
+            raise ValueError("Zona horaria desconocida") from exc
+        return self
+
+
+@router.get("/mail-policy")
+async def read_mail_policy(
+    user: User = Depends(require_admin), db: Session = Depends(get_session)
+):
+    return await bot_call(db, user.tenant_id, "GET", "/v1/mail-policy")
+
+
+@router.put("/mail-policy")
+async def write_mail_policy(
+    body: MailPolicy,
+    user: User = Depends(require_admin),
+    db: Session = Depends(get_session),
+):
+    return await bot_call(
+        db, user.tenant_id, "PUT", "/v1/mail-policy", body=body.model_dump()
+    )
+
+
 @router.get("/email-receipts")
 async def emails(
     user: User = Depends(require_admin), db: Session = Depends(get_session)

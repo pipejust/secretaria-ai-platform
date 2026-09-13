@@ -55,6 +55,9 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   names: Record<string, string> = {};
   serviceUrl = '';
   serviceKey = '';
+  policySenders = '';
+  policyTimezone = 'America/Bogota';
+  policyAuthorized = false;
   elapsed = '00:00';
   recorder = new BrowserRecording(
     (id, seq, blob) => firstValueFrom(this.http.put(`${this.base}/recordings/${id}/chunks/${seq}`, blob)),
@@ -73,6 +76,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
       } catch (e: any) {
         this.error = e?.error?.detail ?? 'No se pudo cargar la configuración del bot.';
       }
+      await this.loadMailPolicy();
     }
     this.timer = setInterval(() => {
       if (this.recorder.active && this.recorder.meta)
@@ -194,6 +198,34 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     await this.action(async () => {
       await firstValueFrom(this.http.put(`${this.base}/config`, { service_url: this.serviceUrl, client_key: this.serviceKey }));
       this.serviceKey = ''; this.notice = 'Configuración guardada.'; await this.refresh();
+    });
+  }
+  private async loadMailPolicy(): Promise<void> {
+    // Sin conexión al bot no hay política que leer; el error ya se mostró arriba.
+    if (!this.serviceUrl) return;
+    try {
+      const policy = (await this.get<any>('/mail-policy')).policy;
+      if (policy) {
+        this.policySenders = (policy.allowed_senders ?? []).join('\n');
+        this.policyTimezone = policy.timezone || 'America/Bogota';
+        this.policyAuthorized = !!policy.recording_authorized;
+      }
+    } catch (e: any) {
+      this.error = e?.error?.detail ?? 'No se pudo cargar la política de invitaciones por correo.';
+    }
+    this.cd.markForCheck();
+  }
+  async saveMailPolicy(): Promise<void> {
+    await this.action(async () => {
+      const senders = this.policySenders.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+      await firstValueFrom(this.http.put(`${this.base}/mail-policy`, {
+        allowed_senders: senders, recording_authorized: this.policyAuthorized,
+        timezone: this.policyTimezone.trim() || 'America/Bogota',
+      }));
+      this.notice = this.policyAuthorized
+        ? 'Invitaciones por correo activadas para los remitentes indicados.'
+        : 'Remitentes guardados. Marca la autorización para que el bot entre a las reuniones invitadas por correo.';
+      await this.refresh();
     });
   }
   async loadEmails(): Promise<void> {

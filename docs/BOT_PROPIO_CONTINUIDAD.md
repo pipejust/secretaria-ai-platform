@@ -51,3 +51,10 @@ Prueba real: evento firmado → 202, buzón `completed`, sesión con proyecto, 2
 - Pantalla del bot sin i18n completa ni servicio HTTP dedicado; polling silencia errores; colores fijos.
 - `npm audit` de la dependencia de pruebas: 40 avisos pendientes de revisión.
 - Reuniones reales exigen `SKRIBBY_API_KEY`, `SONIOX_API_KEY` y `MAILBOXES_JSON` en Coolify (app del bot). Memoria del servidor: ~2 GB disponibles.
+
+## Invitaciones por correo: buzón compartido (13 de septiembre de 2026)
+
+- El bot lee **un solo buzón IMAP** (`MAILBOX_JSON` en Coolify, app del bot). Cada empresa recibe la dirección `<cliente>@<dominio>` (p. ej. `softnexus@reuniones.acten.app`); el dominio necesita un catch-all en el proveedor de correo hacia ese buzón.
+- La política por empresa (remitentes autorizados, autorización de grabación, zona horaria) se guarda en el bot y se administra desde `/admin/meeting-bot` → «Conexión del bot · Administración» → «Invitaciones por correo». Endpoints Acten: `GET/PUT /api/owned-bot/mail-policy` (admin), proxy de `/v1/mail-policy` del bot.
+- `capabilities.invitation_email` muestra la dirección; `mail_enabled` solo es verdadero con política autorizada. Sin `MAILBOX_JSON` en el bot, la tarjeta lo indica y el resto de entradas (enlace, grabación web) siguen funcionando.
+- Alta de una empresa nueva: crear su clave en `BOT_CLIENTS_JSON` (identificador en minúsculas, válido como local-part) y `ACTEN_TARGETS_JSON`, guardar la conexión en su pantalla y fijar la política. Nada más que tocar en DNS ni en correo.

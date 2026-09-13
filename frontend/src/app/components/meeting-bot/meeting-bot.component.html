@@ -11,7 +11,8 @@
   <section class="entry-grid" aria-label="Formas de capturar una reunión">
     <article class="panel"><span class="number">01</span><h2>Invitar por correo</h2><p>Añade esta dirección como asistente del evento de calendario. Recibe cambios, cancelaciones y reuniones recurrentes.</p>
       <a class="email" *ngIf="caps.mail_enabled" [href]="'mailto:' + caps.invitation_email">{{ caps.invitation_email }}</a>
-      <p class="muted" *ngIf="!caps.mail_enabled">El administrador debe configurar el buzón de invitaciones.</p>
+      <p class="muted" *ngIf="!caps.mail_enabled && caps.invitation_email">La dirección {{ caps.invitation_email }} existe, pero el administrador aún no ha autorizado las invitaciones por correo.</p>
+      <p class="muted" *ngIf="!caps.mail_enabled && !caps.invitation_email">El servicio del bot no tiene buzón de invitaciones.</p>
       <p class="muted">Los remitentes autorizados también pueden enviar un correo con un único enlace para entrar en ese momento.</p>
       <button *ngIf="isAdmin && caps.mail_enabled" class="secondary" (click)="loadEmails()" [disabled]="busy">Ver recepción de invitaciones</button>
       <ul *ngIf="receipts.length"><li *ngFor="let receipt of receipts">{{ receipt.created_at * 1000 | date:'short' }} · {{ receipt.state }} <small>{{ receipt.error }}</small></li></ul>
@@ -45,5 +46,13 @@
     <h3>Transcripción con tiempos</h3><div class="filters"><label>Buscar<input [(ngModel)]="search" placeholder="Buscar en la conversación"></label><label>Voz<select [(ngModel)]="speakerFilter"><option value="">Todas las voces</option><option *ngFor="let speaker of result.speakers" [value]="speaker.speaker_id">{{ speaker.speaker_name || 'Voz ' + speaker.speaker_id }}</option></select></label></div>
     <div class="transcript"><article class="segment" *ngFor="let segment of segments" [class.current]="audioTime >= segment.start && audioTime < segment.end"><button class="timestamp" (click)="seek(player, segment.start)" [disabled]="!audioUrl">{{ time(segment.start) }}</button><div><strong>{{ segment.speaker_name || (segment.speaker_id !== null ? 'Voz ' + segment.speaker_id : 'Voz sin identificar') }}</strong><p>{{ segment.text }}</p></div></article></div>
   </section>
-  <details class="panel" *ngIf="isAdmin"><summary>Conexión del bot · Administración</summary><p>Conecta el servicio de captura de esta empresa. La clave se guarda cifrada en el servidor de Acten.</p><label>Origen del servicio<input [(ngModel)]="serviceUrl" type="url" placeholder="https://bot.tu-dominio.com"></label><label>Clave de la empresa<input [(ngModel)]="serviceKey" type="password" autocomplete="new-password" placeholder="Dejar vacía para conservar la clave guardada"></label><button (click)="saveConfig()" [disabled]="busy || !serviceUrl">Guardar conexión</button></details>
+  <details class="panel" *ngIf="isAdmin"><summary>Conexión del bot · Administración</summary><p>Conecta el servicio de captura de esta empresa. La clave se guarda cifrada en el servidor de Acten.</p><label>Origen del servicio<input [(ngModel)]="serviceUrl" type="url" placeholder="https://bot.tu-dominio.com"></label><label>Clave de la empresa<input [(ngModel)]="serviceKey" type="password" autocomplete="new-password" placeholder="Dejar vacía para conservar la clave guardada"></label><button (click)="saveConfig()" [disabled]="busy || !serviceUrl">Guardar conexión</button>
+    <h3>Invitaciones por correo</h3>
+    <p *ngIf="caps.invitation_email">Dirección de esta empresa: <strong>{{ caps.invitation_email }}</strong>. Solo se aceptan invitaciones de los remitentes autorizados, y solo si su correo pasa la verificación DMARC.</p>
+    <p class="muted" *ngIf="!caps.invitation_email">El servicio del bot no tiene buzón compartido configurado; las invitaciones por correo no están disponibles.</p>
+    <label>Remitentes autorizados<textarea [(ngModel)]="policySenders" rows="4" placeholder="una dirección por línea" [disabled]="!caps.invitation_email"></textarea></label>
+    <label>Zona horaria de los calendarios<input [(ngModel)]="policyTimezone" maxlength="64" placeholder="America/Bogota" [disabled]="!caps.invitation_email"></label>
+    <label class="consent wide"><input type="checkbox" [(ngModel)]="policyAuthorized" [disabled]="!caps.invitation_email">Autorizo al bot a grabar las reuniones a las que se le invite por correo desde estos remitentes.</label>
+    <button (click)="saveMailPolicy()" [disabled]="busy || !caps.invitation_email || !policySenders.trim()">Guardar invitaciones por correo</button>
+  </details>
 </main>
