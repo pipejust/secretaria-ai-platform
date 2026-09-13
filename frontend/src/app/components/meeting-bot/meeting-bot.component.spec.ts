@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { vi } from 'vitest';
 import { AuthService } from '../../services/auth.service';
 import { MeetingBotComponent } from './meeting-bot.component';
@@ -9,9 +10,17 @@ import { MeetingBotComponent } from './meeting-bot.component';
 describe('Meeting bot screen', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [MeetingBotComponent], providers: [
-      provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+      provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideTranslateService(),
       { provide: AuthService, useValue: { currentUserValue: { tenant_id: 1, id: 2, role: 'admin' } } },
     ] }).compileComponents();
+    // Sin loader HTTP en el TestBed: se registran a mano las claves que
+    // los tests comprueban en pantalla, con el texto en español real.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('es', { meeting_bot: {
+      entry_email_title: 'Invitar por correo', entry_live_title: 'Añadir en vivo', entry_web_title: 'Grabar desde la web',
+      error_confirm_authorization: 'Confirma que puedes grabar esta reunión.',
+    } });
+    translate.use('es');
   });
   it('renders the three capture paths and prevents leaving an active recording', async () => {
     const fixture = TestBed.createComponent(MeetingBotComponent);

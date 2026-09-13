@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, OnDestroy, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
@@ -10,13 +11,14 @@ import { BrowserRecording, RecordingMeta } from './browser-recording';
 
 @Component({
   selector: 'app-meeting-bot', standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslateModule],
   templateUrl: './meeting-bot.component.html', styleUrl: './meeting-bot.component.css',
 })
 export class MeetingBotComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private cd = inject(ChangeDetectorRef);
+  private translate = inject(TranslateService);
   private base = environment.apiUrl + '/api/owned-bot';
   private timer?: ReturnType<typeof setInterval>;
   private refreshing = false;
@@ -74,7 +76,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
       try {
         this.serviceUrl = (await this.get<any>('/config')).service_url;
       } catch (e: any) {
-        this.error = e?.error?.detail ?? 'No se pudo cargar la configuración del bot.';
+        this.error = e?.error?.detail ?? this.translate.instant('meeting_bot.error_load_config');
       }
       await this.loadMailPolicy();
     }
@@ -89,7 +91,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     if (this.recorder.active || this.busy || this.pending.length) { event.preventDefault(); event.returnValue = ''; }
   }
   canLeave(): boolean {
-    if (this.recorder.active || this.busy) { this.error = 'Detén y guarda la grabación antes de salir de esta pantalla.'; return false; }
+    if (this.recorder.active || this.busy) { this.error = this.translate.instant('meeting_bot.error_leave_recording'); return false; }
     return true;
   }
   private get<T>(path: string): Promise<T> { return firstValueFrom(this.http.get<T>(this.base + path)); }
@@ -104,11 +106,11 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   }
   async loadPending(): Promise<void> {
     try { this.pending = await this.recorder.journal.list(this.owner); }
-    catch { this.error = 'El almacenamiento local no está disponible. Actívalo antes de grabar.'; }
+    catch { this.error = this.translate.instant('meeting_bot.error_local_storage'); }
     this.cd.markForCheck();
   }
   private payload(): any {
-    return { external_id: 'web:' + crypto.randomUUID(), title: this.title.trim() || 'Reunión',
+    return { external_id: 'web:' + crypto.randomUUID(), title: this.title.trim() || this.translate.instant('meeting_bot.default_title'),
       language: this.language, vocabulary: this.vocabulary.split(',').map(s => s.trim()).filter(Boolean),
       recording_authorized: this.authorized, max_duration_minutes: 480 };
   }
@@ -131,15 +133,15 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     finally { this.busy = false; await this.loadPending(); this.cd.markForCheck(); }
   }
   async join(): Promise<void> {
-    if (!this.authorized) { this.error = 'Confirma que puedes grabar esta reunión.'; return; }
+    if (!this.authorized) { this.error = this.translate.instant('meeting_bot.error_confirm_authorization'); return; }
     await this.action(async () => {
       await this.startCapture('meeting', { ...this.payload(), meeting_url: this.meetingUrl });
-      this.notice = 'Entrada solicitada. Admite a «Asistente Acten» si aparece en la sala de espera.';
+      this.notice = this.translate.instant('meeting_bot.notice_join_requested');
       await this.refresh();
     });
   }
   async record(): Promise<void> {
-    if (!this.authorized) { this.error = 'Confirma que puedes grabar esta reunión.'; return; }
+    if (!this.authorized) { this.error = this.translate.instant('meeting_bot.error_confirm_authorization'); return; }
     await this.action(async () => {
       try {
         const mime = await this.recorder.prepare(this.systemAudio);
@@ -147,15 +149,15 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
         const remote: any = await this.startCapture('browser', payload);
         await this.recorder.begin({ id: remote.id, owner: this.owner, title: payload.title,
           mime, count: 0, bytes: 0, createdAt: Date.now(), interrupted: false });
-        this.notice = this.systemAudio ? 'Grabando el audio compartido y tu micrófono.' : 'Grabando únicamente lo que oye tu micrófono.';
+        this.notice = this.translate.instant(this.systemAudio ? 'meeting_bot.notice_recording_system' : 'meeting_bot.notice_recording_mic');
       } catch (error) { this.recorder.release(); throw error; }
     });
   }
   async stopRecording(): Promise<void> {
-    await this.action(async () => { await this.recorder.stop(); this.notice = 'Audio guardado. Se está preparando la transcripción y el resumen.'; await this.refresh(); });
+    await this.action(async () => { await this.recorder.stop(); this.notice = this.translate.instant('meeting_bot.notice_audio_saved'); await this.refresh(); });
   }
   async recover(meta: RecordingMeta): Promise<void> {
-    await this.action(async () => { await this.recorder.recover(meta); this.notice = 'Audio recuperado y enviado. La sesión indicará que la captura fue interrumpida.'; await this.refresh(); });
+    await this.action(async () => { await this.recorder.recover(meta); this.notice = this.translate.instant('meeting_bot.notice_recovered'); await this.refresh(); });
   }
   async discardEmpty(meta: RecordingMeta): Promise<void> {
     if (meta.count || this.recorder.active) return;
@@ -166,10 +168,10 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
       } catch (e: any) {
         // El registro local se descarta igual —no hay audio—, pero se dice
         // que el servidor no confirmó, por si hay que limpiarlo a mano.
-        this.error = e?.error?.detail ?? 'El servidor no confirmó el descarte; el registro local se eliminó.';
+        this.error = e?.error?.detail ?? this.translate.instant('meeting_bot.error_discard_unconfirmed');
       }
       await this.recorder.journal.completed(meta.id);
-      this.notice = 'Solicitud sin audio descartada.';
+      this.notice = this.translate.instant('meeting_bot.notice_discarded');
     });
   }
   async stopBot(id: string): Promise<void> {
@@ -191,13 +193,13 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     await this.action(async () => {
       const answer: any = await firstValueFrom(this.http.put(`${this.base}/meetings/${this.selected}/speakers/${encodeURIComponent(speaker.speaker_id)}`, { display_name: this.names[speaker.speaker_id] }));
       this.result = await this.get<any>(`/meetings/${this.selected}/result`);
-      this.notice = answer.transcript_preserved ? 'Nombre confirmado. Se conservó la transcripción editada de Acten.' : 'Nombre confirmado. El resumen existente no se regenera automáticamente.';
+      this.notice = this.translate.instant(answer.transcript_preserved ? 'meeting_bot.notice_name_confirmed_preserved' : 'meeting_bot.notice_name_confirmed');
     });
   }
   async saveConfig(): Promise<void> {
     await this.action(async () => {
       await firstValueFrom(this.http.put(`${this.base}/config`, { service_url: this.serviceUrl, client_key: this.serviceKey }));
-      this.serviceKey = ''; this.notice = 'Configuración guardada.'; await this.refresh();
+      this.serviceKey = ''; this.notice = this.translate.instant('meeting_bot.notice_config_saved'); await this.refresh();
     });
   }
   private async loadMailPolicy(): Promise<void> {
@@ -211,7 +213,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
         this.policyAuthorized = !!policy.recording_authorized;
       }
     } catch (e: any) {
-      this.error = e?.error?.detail ?? 'No se pudo cargar la política de invitaciones por correo.';
+      this.error = e?.error?.detail ?? this.translate.instant('meeting_bot.error_load_mail_policy');
     }
     this.cd.markForCheck();
   }
@@ -222,9 +224,9 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
         allowed_senders: senders, recording_authorized: this.policyAuthorized,
         timezone: this.policyTimezone.trim() || 'America/Bogota',
       }));
-      this.notice = this.policyAuthorized
-        ? 'Invitaciones por correo activadas para los remitentes indicados.'
-        : 'Remitentes guardados. Marca la autorización para que el bot entre a las reuniones invitadas por correo.';
+      this.notice = this.translate.instant(this.policyAuthorized
+        ? 'meeting_bot.notice_mail_policy_enabled'
+        : 'meeting_bot.notice_senders_saved');
       await this.refresh();
     });
   }
@@ -234,8 +236,9 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   seek(audio: HTMLAudioElement, seconds: number): void {
     if (!this.audioUrl) return;
     audio.currentTime = Math.max(0, seconds);
-    void audio.play().catch(() => { this.error = 'Pulsa reproducir; si el enlace venció, vuelve a abrir el resultado.'; });
+    void audio.play().catch(() => { this.error = this.translate.instant('meeting_bot.error_play'); });
   }
+  audioFailed(): void { this.error = this.translate.instant('meeting_bot.audio_error'); }
   get segments(): any[] {
     return (this.result?.transcript ?? []).filter((s: any) =>
       (!this.speakerFilter || s.speaker_id === this.speakerFilter) &&
@@ -247,16 +250,13 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
       String(Math.floor(value / 60) % 60).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
   }
   state(value: string): string {
-    const names: Record<string, string> = { scheduled: 'Programada', queued: 'En cola', dispatching: 'Entrando',
-      recording: 'Grabando', capturing: 'En la reunión', uploading: 'Recibiendo audio', transcribing: 'Transcribiendo',
-      audio_assembling: 'Uniendo audio', audio_ready: 'Audio guardado', audio_uploading: 'Enviando audio',
-      audio_submitting: 'Preparando transcripción', audio_transcribing: 'Transcribiendo', analyzing: 'Preparando resumen',
-      delivering: 'Enviando a Acten', completed: 'Completada', cancelled: 'Cancelada', failed: 'Fallida',
-      needs_attention: 'Requiere revisión', dispatch_unknown: 'Entrada pendiente de verificar', audio_dispatch_unknown: 'Transcripción pendiente de verificar' };
-    return names[value] || value;
+    const known = ['scheduled', 'queued', 'dispatching', 'recording', 'capturing', 'uploading', 'transcribing',
+      'audio_assembling', 'audio_ready', 'audio_uploading', 'audio_submitting', 'audio_transcribing', 'analyzing',
+      'delivering', 'completed', 'cancelled', 'failed', 'needs_attention', 'dispatch_unknown', 'audio_dispatch_unknown'];
+    return known.includes(value) ? this.translate.instant('meeting_bot.state_' + value) : value;
   }
   message(error: any): string {
     const detail = error?.error?.detail;
-    return typeof detail === 'string' ? detail : error?.status ? `No se completó la operación (${error.status}). Revisa la configuración o el estado de la sesión.` : error?.message || 'No se completó la operación';
+    return typeof detail === 'string' ? detail : error?.status ? this.translate.instant('meeting_bot.error_operation_status', { status: error.status }) : error?.message || this.translate.instant('meeting_bot.error_operation');
   }
 }
