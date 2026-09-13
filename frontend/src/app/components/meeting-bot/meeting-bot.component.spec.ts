@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { vi } from 'vitest';
 import { AuthService } from '../../services/auth.service';
+import { MeetingResult } from '../../services/meeting-bot.service';
 import { MeetingBotComponent } from './meeting-bot.component';
 
 describe('Meeting bot screen', () => {
@@ -43,7 +44,7 @@ describe('Meeting bot screen', () => {
   });
   it('filters transcript by voice including zero without guessing names', () => {
     const page = TestBed.createComponent(MeetingBotComponent).componentInstance;
-    page.result = { transcript: [{ text: 'Piloto aprobado', speaker_id: '0' }, { text: 'Gracias', speaker_id: '1' }] };
+    page.result = { transcript: [{ text: 'Piloto aprobado', speaker_id: '0' }, { text: 'Gracias', speaker_id: '1' }] } as MeetingResult;
     page.speakerFilter = '0';
     expect(page.segments).toHaveLength(1);
     page.search = 'rechazado';

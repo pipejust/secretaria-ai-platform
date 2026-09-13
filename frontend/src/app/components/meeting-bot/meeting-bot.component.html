@@ -10,22 +10,22 @@
   </section>
   <section class="entry-grid" [attr.aria-label]="'meeting_bot.entry_grid_aria' | translate">
     <article class="panel"><span class="number">01</span><h2>{{ 'meeting_bot.entry_email_title' | translate }}</h2><p>{{ 'meeting_bot.entry_email_text' | translate }}</p>
-      <a class="email" *ngIf="caps.mail_enabled" [href]="'mailto:' + caps.invitation_email">{{ caps.invitation_email }}</a>
-      <p class="muted" *ngIf="!caps.mail_enabled && caps.invitation_email">{{ 'meeting_bot.address_exists' | translate:{ email: caps.invitation_email } }}</p>
-      <p class="muted" *ngIf="!caps.mail_enabled && !caps.invitation_email">{{ 'meeting_bot.no_mailbox' | translate }}</p>
+      <a class="email" *ngIf="caps?.mail_enabled" [href]="'mailto:' + caps?.invitation_email">{{ caps?.invitation_email }}</a>
+      <p class="muted" *ngIf="!caps?.mail_enabled && caps?.invitation_email">{{ 'meeting_bot.address_exists' | translate:{ email: caps?.invitation_email } }}</p>
+      <p class="muted" *ngIf="!caps?.mail_enabled && !caps?.invitation_email">{{ 'meeting_bot.no_mailbox' | translate }}</p>
       <p class="muted">{{ 'meeting_bot.single_link_hint' | translate }}</p>
-      <button *ngIf="isAdmin && caps.mail_enabled" class="secondary" (click)="loadEmails()" [disabled]="busy">{{ 'meeting_bot.view_receipts' | translate }}</button>
+      <button *ngIf="isAdmin && caps?.mail_enabled" class="secondary" (click)="loadEmails()" [disabled]="busy">{{ 'meeting_bot.view_receipts' | translate }}</button>
       <ul *ngIf="receipts.length"><li *ngFor="let receipt of receipts">{{ receipt.created_at * 1000 | date:'short' }} · {{ receipt.state }} <small>{{ receipt.error }}</small></li></ul>
     </article>
     <article class="panel"><span class="number">02</span><h2>{{ 'meeting_bot.entry_live_title' | translate }}</h2><p>{{ 'meeting_bot.entry_live_text' | translate }}</p>
       <label>{{ 'meeting_bot.meeting_url_label' | translate }}<input type="url" [(ngModel)]="meetingUrl" [placeholder]="'meeting_bot.meeting_url_placeholder' | translate" maxlength="4096"></label>
-      <button (click)="join()" [disabled]="busy || !authorized || !caps.meetings_ready || !meetingUrl">{{ 'meeting_bot.join_button' | translate }}</button>
+      <button (click)="join()" [disabled]="busy || !authorized || !caps?.meetings_ready || !meetingUrl">{{ 'meeting_bot.join_button' | translate }}</button>
       <p class="muted">{{ 'meeting_bot.waiting_room_hint' | translate }}</p>
     </article>
     <article class="panel" [class.live]="recorder.active"><span class="number">03</span><h2>{{ 'meeting_bot.entry_web_title' | translate }}</h2><p>{{ 'meeting_bot.entry_web_text' | translate }}</p>
       <label>{{ 'meeting_bot.audio_source_label' | translate }}<select [(ngModel)]="systemAudio" [disabled]="busy || recorder.active"><option [ngValue]="true">{{ 'meeting_bot.audio_source_system' | translate }}</option><option [ngValue]="false">{{ 'meeting_bot.audio_source_mic' | translate }}</option></select></label>
       <p class="muted">{{ 'meeting_bot.shared_audio_hint' | translate }}</p>
-      <button *ngIf="!recorder.active" (click)="record()" [disabled]="busy || !authorized || !caps.browser_ready || pending.length > 0">{{ 'meeting_bot.start_recording' | translate }}</button>
+      <button *ngIf="!recorder.active" (click)="record()" [disabled]="busy || !authorized || !caps?.browser_ready || pending.length > 0">{{ 'meeting_bot.start_recording' | translate }}</button>
       <button *ngIf="recorder.active" class="stop" (click)="stopRecording()" [disabled]="busy">● {{ elapsed }} · {{ 'meeting_bot.stop_and_save' | translate }}</button>
       <p class="muted" *ngIf="recorder.active">{{ 'meeting_bot.chunks_hint' | translate }}</p>
     </article>
@@ -48,11 +48,11 @@
   </section>
   <details class="panel" *ngIf="isAdmin"><summary>{{ 'meeting_bot.admin_summary' | translate }}</summary><p>{{ 'meeting_bot.admin_text' | translate }}</p><label>{{ 'meeting_bot.service_url_label' | translate }}<input [(ngModel)]="serviceUrl" type="url" [placeholder]="'meeting_bot.service_url_placeholder' | translate"></label><label>{{ 'meeting_bot.service_key_label' | translate }}<input [(ngModel)]="serviceKey" type="password" autocomplete="new-password" [placeholder]="'meeting_bot.service_key_placeholder' | translate"></label><button (click)="saveConfig()" [disabled]="busy || !serviceUrl">{{ 'meeting_bot.save_connection' | translate }}</button>
     <h3>{{ 'meeting_bot.mail_invitations_heading' | translate }}</h3>
-    <p *ngIf="caps.invitation_email">{{ 'meeting_bot.company_address_prefix' | translate }} <strong>{{ caps.invitation_email }}</strong>. {{ 'meeting_bot.company_address_rules' | translate }}</p>
-    <p class="muted" *ngIf="!caps.invitation_email">{{ 'meeting_bot.no_shared_mailbox' | translate }}</p>
-    <label>{{ 'meeting_bot.senders_label' | translate }}<textarea [(ngModel)]="policySenders" rows="4" [placeholder]="'meeting_bot.senders_placeholder' | translate" [disabled]="!caps.invitation_email"></textarea></label>
-    <label>{{ 'meeting_bot.timezone_label' | translate }}<input [(ngModel)]="policyTimezone" maxlength="64" [placeholder]="'meeting_bot.timezone_placeholder' | translate" [disabled]="!caps.invitation_email"></label>
-    <label class="consent wide"><input type="checkbox" [(ngModel)]="policyAuthorized" [disabled]="!caps.invitation_email">{{ 'meeting_bot.policy_consent' | translate }}</label>
-    <button (click)="saveMailPolicy()" [disabled]="busy || !caps.invitation_email || !policySenders.trim()">{{ 'meeting_bot.save_mail_policy' | translate }}</button>
+    <p *ngIf="caps?.invitation_email">{{ 'meeting_bot.company_address_prefix' | translate }} <strong>{{ caps?.invitation_email }}</strong>. {{ 'meeting_bot.company_address_rules' | translate }}</p>
+    <p class="muted" *ngIf="!caps?.invitation_email">{{ 'meeting_bot.no_shared_mailbox' | translate }}</p>
+    <label>{{ 'meeting_bot.senders_label' | translate }}<textarea [(ngModel)]="policySenders" rows="4" [placeholder]="'meeting_bot.senders_placeholder' | translate" [disabled]="!caps?.invitation_email"></textarea></label>
+    <label>{{ 'meeting_bot.timezone_label' | translate }}<input [(ngModel)]="policyTimezone" maxlength="64" [placeholder]="'meeting_bot.timezone_placeholder' | translate" [disabled]="!caps?.invitation_email"></label>
+    <label class="consent wide"><input type="checkbox" [(ngModel)]="policyAuthorized" [disabled]="!caps?.invitation_email">{{ 'meeting_bot.policy_consent' | translate }}</label>
+    <button (click)="saveMailPolicy()" [disabled]="busy || !caps?.invitation_email || !policySenders.trim()">{{ 'meeting_bot.save_mail_policy' | translate }}</button>
   </details>
 </main>

@@ -58,3 +58,8 @@ Prueba real: evento firmado → 202, buzón `completed`, sesión con proyecto, 2
 - La política por empresa (remitentes autorizados, autorización de grabación, zona horaria) se guarda en el bot y se administra desde `/admin/meeting-bot` → «Conexión del bot · Administración» → «Invitaciones por correo». Endpoints Acten: `GET/PUT /api/owned-bot/mail-policy` (admin), proxy de `/v1/mail-policy` del bot.
 - `capabilities.invitation_email` muestra la dirección; `mail_enabled` solo es verdadero con política autorizada. Sin `MAILBOX_JSON` en el bot, la tarjeta lo indica y el resto de entradas (enlace, grabación web) siguen funcionando.
 - Alta de una empresa nueva: crear su clave en `BOT_CLIENTS_JSON` (identificador en minúsculas, válido como local-part) y `ACTEN_TARGETS_JSON`, guardar la conexión en su pantalla y fijar la política. Nada más que tocar en DNS ni en correo.
+
+## Pantalla y alta de empresas (13 de septiembre de 2026, tarde)
+
+- La pantalla `meeting-bot` usa `services/meeting-bot.service.ts` (tipos `BotCapabilities`, `BotMeeting`, `MeetingResult`, `MailPolicyState`, …); sin `any`. Textos en es/en/ca (`meeting_bot.*`).
+- Alta de una empresa nueva en el bot sin redeploy: dentro del contenedor `api` del bot, `python -m conversacionalbot.manage add-client --id <slug> --acten-url https://api.acten.app/api/v1/bot/meetings --acten-tenant-id <id> --acten-api-key-file <archivo>`; la clave de servicio que imprime se pega en `/admin/meeting-bot` → Administración. Detalle en `conversacionalbot/docs/CONTINUIDAD.md` («Alta de empresas sin redeploy»).
