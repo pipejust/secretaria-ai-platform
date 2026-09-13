@@ -16,6 +16,16 @@ const PER_USER_PROVIDERS = new Set<string>([
 
 /** Estado de los switches `share_*` del tenant. Espejo del payload
  *  devuelto por GET/PUT /api/settings/share del backend. */
+export type MeetingSource = 'fireflies' | 'owned_bot' | 'both';
+
+export interface MeetingSourceState {
+    source: MeetingSource;
+    label: string;
+    options: { value: MeetingSource; label: string }[];
+    accepts_fireflies: boolean;
+    accepts_owned_bot: boolean;
+}
+
 export interface ShareSettings {
     owner_user_id: number | null;
     is_owner: boolean;
@@ -98,6 +108,17 @@ export class SettingsService {
     /** Lee el estado de los 2 switches share_* + si el caller es owner.
      *  Cualquier user autenticado puede leerlo — la UI lo usa para
      *  decidir si renderiza modo editar o modo read-only. */
+    /** Por dónde entran las reuniones de la empresa: Fireflies, bot propio o ambos. */
+    getMeetingSource(): Observable<MeetingSourceState> {
+        return this.http.get<MeetingSourceState>(`${this.tenantUrl}/meeting-source`,
+            { headers: this.authService.getAuthHeaders() });
+    }
+
+    updateMeetingSource(source: MeetingSource): Observable<MeetingSourceState> {
+        return this.http.put<MeetingSourceState>(`${this.tenantUrl}/meeting-source`, { source },
+            { headers: this.authService.getAuthHeaders() });
+    }
+
     getShareSettings(): Observable<ShareSettings> {
         const headers = this.authService.getAuthHeaders();
         return this.http.get<ShareSettings>(this.shareUrl, { headers });

@@ -280,7 +280,13 @@ def _login_success_payload(user: User, tenant: Tenant, request: Optional[Request
     return {
         "access_token": _issue_access_token(user, tenant),
         "token_type": "bearer",
-        "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+        "tenant": {
+            "id": tenant.id, "slug": tenant.slug, "name": tenant.name,
+            # Qué entrada de reuniones usa la empresa. El menú lateral lo
+            # necesita para enseñar «Bot de reuniones» solo a quien lo tiene
+            # activo, y ya hace esta llamada al cargar: no hace falta otra.
+            "meeting_source": getattr(tenant, "meeting_source", None) or "fireflies",
+        },
         # Si True, el frontend debe redirigir a /change-password obligatorio
         # antes de mostrar el dashboard. El endpoint POST /auth/me/change-
         # password-forced se encarga de validar y limpiar el flag.
@@ -332,7 +338,10 @@ def login_for_access_token(
             "two_factor_required": True,
             "method": user.two_factor_method or "email",
             "email_masked": f"{masked}@{user.email.split('@')[-1]}",
-            "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+            "tenant": {
+            "id": tenant.id, "slug": tenant.slug, "name": tenant.name,
+            "meeting_source": getattr(tenant, "meeting_source", None) or "fireflies",
+        },
         }
 
     return _login_success_payload(user, tenant, request, db)
@@ -669,7 +678,10 @@ def _serialize_user_profile(user: User, tenant: Tenant) -> dict:
         "created_at": user.created_at,
         "updated_at": user.updated_at,
         "last_login_at": user.last_login_at,
-        "tenant": {"id": tenant.id, "slug": tenant.slug, "name": tenant.name},
+        "tenant": {
+            "id": tenant.id, "slug": tenant.slug, "name": tenant.name,
+            "meeting_source": getattr(tenant, "meeting_source", None) or "fireflies",
+        },
         "notifications": {
             "email_enabled":           user.notif_email_enabled,
             "push_enabled":            user.notif_push_enabled,

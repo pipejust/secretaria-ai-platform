@@ -17,6 +17,7 @@ import { PreferencesService, UiPrefs, DEFAULT_PREFS } from '../../services/prefe
 import { environment } from '../../../environments/environment';
 import { CalendarsService, TarjetaProveedor } from '../../services/calendars.service';
 import { AiKeysService, LlaveIa } from '../../services/ai-keys.service';
+import { MeetingSource, MeetingSourceState } from '../../services/settings.service';
 
 interface PairStatus {
   conectada: boolean;
@@ -87,6 +88,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // Igual que las credenciales de calendario: la pantalla nunca recibe la
   // llave en claro, solo la pista. Se escribe aparte para que guardar en
   // blanco no borre la que ya hay.
+  // ── Origen de las reuniones ────────────────────────────────────────
+  // Fireflies, el bot propio o ambos. Decide qué entrada se acepta y qué
+  // pantalla se enseña. Se guarda en la ficha de la empresa, no como
+  // credencial: es una decisión, no una llave.
+  meetingSource: MeetingSourceState | null = null;
+  meetingSourceGuardando = false;
+
   iaLlaves: LlaveIa[] = [];
   iaSecretos: Record<string, string> = {};
   iaGuardando = '';
@@ -385,6 +393,33 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // ── Motor de IA: cargar, guardar, comprobar y quitar ───────────────
 
+  cargarOrigenReuniones(): void {
+    this.settingsService.getMeetingSource().subscribe({
+      next: r => { this.meetingSource = r; this.cdr.detectChanges(); },
+      error: () => { /* la tarjeta no se pinta; el resto sigue */ },
+    });
+  }
+
+  cambiarOrigenReuniones(valor: MeetingSource): void {
+    if (!this.meetingSource || this.meetingSource.source === valor) { return; }
+    this.meetingSourceGuardando = true;
+    this.settingsService.updateMeetingSource(valor).subscribe({
+      next: r => {
+        this.meetingSource = r;
+        this.meetingSourceGuardando = false;
+        this.toast.success(`Origen de reuniones: ${r.label}.`);
+        // El menú lateral lee la fuente del perfil: hay que refrescarlo.
+        this.auth.refreshCurrentUser();
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        this.meetingSourceGuardando = false;
+        this.toast.error(e?.error?.detail ?? 'No se pudo cambiar el origen de las reuniones.');
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   cargarLlavesIa(): void {
     this.aiKeys.listar().subscribe({
       next: r => { this.iaLlaves = r.proveedores; this.cdr.detectChanges(); },
@@ -582,6 +617,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     this.cargarProveedoresCalendario();
     this.cargarLlavesIa();
+    this.cargarOrigenReuniones();
     this.loadShareSettings();
     this.loadPairStatus();
 

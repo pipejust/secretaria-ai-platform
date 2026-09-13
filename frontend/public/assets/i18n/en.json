@@ -295,6 +295,7 @@
     }
   },
   "sidebar": {
+    "meeting_bot": "Meeting bot",
     "main_section": "Main",
     "admin_section": "Admin",
     "super_section": "Super admin",
@@ -1549,6 +1550,13 @@
     "platforms": "Management platforms"
   },
   "settings": {
+    "meeting_source_title": "Meeting source",
+    "meeting_source_sub": "Where this company's meetings come in from. With both inputs active and the same meeting recorded by both, it would come in twice.",
+    "meeting_source_fireflies": "Fireflies records and transcribes; Acten receives the result via webhook.",
+    "meeting_source_owned_bot": "Acten's own bot joins Meet, Teams or Zoom, or records from the browser. Transcription and analysis are billed to your own account.",
+    "meeting_source_both": "Both inputs are accepted. Useful while migrating; avoid recording the same meeting with both.",
+    "meeting_source_fireflies_off": "Fireflies webhooks arriving for this company will be ignored until you re-enable it here.",
+    "meeting_source_bot_where": "The bot is managed from",
     "title": "Settings",
     "subtitle": "General system and company settings.",
     "general": "General",

@@ -50,6 +50,12 @@ class Tenant(SQLModel, table=True):
     # Idioma por defecto del tenant — se usa como fallback cuando un usuario
     # no tiene preferencia setteada. Valores soportados: es | ca | en.
     default_language: str = Field(default="es", max_length=4, description="Idioma fallback del tenant.")
+    # Por dónde entran las reuniones de esta empresa: `fireflies`, el bot
+    # propio (`owned_bot`) o `both`. Decide qué entrada se acepta y qué
+    # pantalla se enseña. Con las dos activas y la misma reunión grabada
+    # por ambos, entraría duplicada: por eso el valor por defecto es una
+    # sola fuente, la que ya estaba.
+    meeting_source: str = Field(default="fireflies", max_length=16)
 
     # ============================================================
     # Modelo "compartido vs per-user" para Integraciones y Routings

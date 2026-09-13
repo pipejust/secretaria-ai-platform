@@ -221,6 +221,46 @@
             <ng-container *ngIf="!isLoading && activeSection === 'integrations'">
 
                 <!-- ══════════════════════════════════════════════════════════
+                     Origen de las reuniones — por dónde entran: Fireflies,
+                     el bot propio de Acten, o ambos. Con las dos activas y la
+                     misma reunión grabada por los dos, entraría duplicada.
+                     ══════════════════════════════════════════════════════════ -->
+                <article class="st-card" *ngIf="meetingSource as ms">
+                    <header class="st-card-head">
+                        <div>
+                            <h2 class="st-card-title">{{ 'settings.meeting_source_title' | translate }}</h2>
+                            <p class="st-card-sub">{{ 'settings.meeting_source_sub' | translate }}</p>
+                        </div>
+                        <span class="st-pill" data-tone="blue">{{ ms.label }}</span>
+                    </header>
+                    <div class="st-card-body">
+                        <div class="st-source-options" role="radiogroup"
+                             [attr.aria-label]="'settings.meeting_source_title' | translate">
+                            <label class="st-source-option" *ngFor="let o of ms.options"
+                                   [class.is-active]="o.value === ms.source">
+                                <input type="radio" name="meeting_source" [value]="o.value"
+                                       [checked]="o.value === ms.source"
+                                       [disabled]="meetingSourceGuardando"
+                                       (change)="cambiarOrigenReuniones(o.value)" />
+                                <span class="st-source-name">{{ o.label }}</span>
+                                <span class="st-source-hint" [ngSwitch]="o.value">
+                                    <ng-container *ngSwitchCase="'fireflies'">{{ 'settings.meeting_source_fireflies' | translate }}</ng-container>
+                                    <ng-container *ngSwitchCase="'owned_bot'">{{ 'settings.meeting_source_owned_bot' | translate }}</ng-container>
+                                    <ng-container *ngSwitchCase="'both'">{{ 'settings.meeting_source_both' | translate }}</ng-container>
+                                </span>
+                            </label>
+                        </div>
+                        <p class="st-field-hint" *ngIf="!ms.accepts_fireflies">
+                            {{ 'settings.meeting_source_fireflies_off' | translate }}
+                        </p>
+                        <p class="st-field-hint" *ngIf="ms.accepts_owned_bot">
+                            {{ 'settings.meeting_source_bot_where' | translate }}
+                            <a routerLink="/admin/meeting-bot">{{ 'sidebar.meeting_bot' | translate }}</a>.
+                        </p>
+                    </div>
+                </article>
+
+                <!-- ══════════════════════════════════════════════════════════
                      Motor de IA — la llave que paga el procesamiento.
                      Antes solo salía de una variable de entorno: cambiarla
                      obligaba a entrar al servidor y reiniciar.

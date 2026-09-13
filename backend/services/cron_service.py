@@ -654,7 +654,7 @@ def check_pending_summaries() -> None:
         ages = []
         summary_window_hours = _PAID_SUMMARY_RETRY_WINDOW_MINUTES / 60.0
         for ms in candidates:
-            if (ms.fireflies_id or "").startswith("manual_"):
+            if (ms.fireflies_id or "").startswith(("manual_", "MANUAL-", "BOT-")):
                 continue
             age_h = _hours_since_iso(ms.created_at)
             if age_h is None:
@@ -997,6 +997,14 @@ scheduler.add_job(
 scheduler.add_job(
     refrescar_calendarios, "interval", minutes=30, max_instances=1,
     coalesce=True, id="calendarios_refresco",
+)
+
+
+from services.bot_ingest import process_bot_inbox
+
+scheduler.add_job(
+    process_bot_inbox, "interval", seconds=30,
+    id="owned_bot_inbox", max_instances=1, coalesce=True,
 )
 
 

@@ -273,7 +273,11 @@ def list_sessions(
             "project_external_id": proj_refs.get(s.project_id) if s.project_id else None,
             "status": s.status,
             "language": s.language or None,
-            "origin": "manual" if (not ff or ff.startswith("MANUAL-")) else "web",
+            "origin": (
+                "manual" if (not ff or ff.startswith("MANUAL-"))
+                else "bot" if ff.startswith("BOT-")
+                else "web"
+            ),
             "duration_min": max(1, round(palabras / 150)) if palabras else None,
             "duration_is_estimate": True,
             "counts": {"tasks": n_tasks},

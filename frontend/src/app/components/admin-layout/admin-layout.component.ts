@@ -21,7 +21,7 @@ interface CurrentUser {
     role?: string | null;
     is_superadmin?: boolean;
     avatar_url?: string | null;
-    tenant?: { id: number; slug: string; name: string };
+    tenant?: { id: number; slug: string; name: string; meeting_source?: string };
 }
 
 @Component({
@@ -71,6 +71,14 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
      *  `canSee(module)` para mostrar/ocultar items del menú lateral. */
     private readonly perms = inject(PermissionsService);
     canSee(module: string): boolean { return this.perms.canSeeModule(module); }
+
+    /** «Bot de reuniones» solo se enseña a quien lo tiene como entrada.
+     *  Una empresa que sigue en Fireflies no debe ver una pantalla que,
+     *  al usarla, le devolvería 409. */
+    usaBotPropio(): boolean {
+        const fuente = this.user?.tenant?.meeting_source ?? 'fireflies';
+        return fuente === 'owned_bot' || fuente === 'both';
+    }
     can(module: string, action: 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'export' = 'view'): boolean {
         return this.perms.can(module, action);
     }

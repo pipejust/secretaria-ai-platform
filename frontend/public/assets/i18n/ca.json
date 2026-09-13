@@ -295,6 +295,7 @@
     }
   },
   "sidebar": {
+    "meeting_bot": "Bot de reunions",
     "main_section": "Principal",
     "admin_section": "Administració",
     "super_section": "Super admin",
@@ -1549,6 +1550,13 @@
     "platforms": "Plataformes de gestió"
   },
   "settings": {
+    "meeting_source_title": "Origen de les reunions",
+    "meeting_source_sub": "Per on entren les reunions d'aquesta empresa. Amb les dues entrades actives i la mateixa reunió gravada per totes dues, entraria duplicada.",
+    "meeting_source_fireflies": "Fireflies grava i transcriu; Acten rep el resultat per webhook.",
+    "meeting_source_owned_bot": "El bot propi d'Acten entra a Meet, Teams o Zoom, o grava des del navegador. La transcripció i l'anàlisi les paga el teu propi compte.",
+    "meeting_source_both": "S'accepten les dues entrades. Útil mentre migres; evita gravar la mateixa reunió amb totes dues.",
+    "meeting_source_fireflies_off": "Els webhooks de Fireflies que arribin per a aquesta empresa s'ignoraran fins que el tornis a activar aquí.",
+    "meeting_source_bot_where": "El bot es gestiona des de",
     "title": "Configuració",
     "subtitle": "Paràmetres generals del sistema i la teva empresa.",
     "general": "General",

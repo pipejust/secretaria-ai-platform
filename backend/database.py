@@ -90,6 +90,7 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE calendaraccount ADD COLUMN status TEXT NOT NULL DEFAULT 'ok'",
             "ALTER TABLE calendaraccount ADD COLUMN last_error TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE calendaraccount ADD COLUMN last_synced_at TEXT",
+            "ALTER TABLE tenant ADD COLUMN meeting_source TEXT NOT NULL DEFAULT 'fireflies'",
         ]
     else:
         statements = [
@@ -296,6 +297,8 @@ def _apply_lightweight_migrations() -> None:
             # Historial por tarea: quién la movió y qué cambió.
             "CREATE INDEX IF NOT EXISTS idx_taskevent_tarea   ON taskevent(task_id, occurred_at)",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_taskevent_event_id ON taskevent(event_id)",
+            # Origen de reuniones por empresa: Fireflies, bot propio o ambos.
+            "ALTER TABLE tenant ADD COLUMN IF NOT EXISTS meeting_source VARCHAR(16) NOT NULL DEFAULT 'fireflies'",
         ]
 
     from sqlalchemy import text

@@ -1,0 +1,341 @@
+{
+  "$defs": {
+    "CaptureData": {
+      "additionalProperties": false,
+      "properties": {
+        "external_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "External Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "date": {
+          "format": "date-time",
+          "title": "Date",
+          "type": "string"
+        },
+        "date_source": {
+          "enum": [
+            "scheduled_start",
+            "bot_requested_at"
+          ],
+          "title": "Date Source",
+          "type": "string"
+        },
+        "language_hint": {
+          "title": "Language Hint",
+          "type": "string"
+        },
+        "timebase": {
+          "const": "seconds_from_recording_start",
+          "title": "Timebase",
+          "type": "string"
+        },
+        "transcript": {
+          "items": {
+            "$ref": "#/$defs/SourceSegment"
+          },
+          "maxItems": 100000,
+          "minItems": 1,
+          "title": "Transcript",
+          "type": "array"
+        },
+        "summary": {
+          "items": {
+            "$ref": "#/$defs/SourceClaim"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Summary",
+          "type": "array"
+        },
+        "key_points": {
+          "items": {
+            "$ref": "#/$defs/SourceClaim"
+          },
+          "title": "Key Points",
+          "type": "array"
+        },
+        "timeline": {
+          "items": {
+            "$ref": "#/$defs/SourceChapter"
+          },
+          "title": "Timeline",
+          "type": "array"
+        },
+        "participants": {
+          "items": {},
+          "title": "Participants",
+          "type": "array"
+        },
+        "recording": {
+          "additionalProperties": true,
+          "title": "Recording",
+          "type": "object"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "provenance": {
+          "additionalProperties": true,
+          "title": "Provenance",
+          "type": "object"
+        },
+        "key_moments": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Key Moments",
+          "type": "array"
+        },
+        "speaker_timeline": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Speaker Timeline",
+          "type": "array"
+        },
+        "speakers": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Speakers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "external_id",
+        "title",
+        "date",
+        "date_source",
+        "language_hint",
+        "timebase",
+        "transcript",
+        "summary",
+        "key_points",
+        "timeline",
+        "participants",
+        "recording",
+        "warnings",
+        "provenance"
+      ],
+      "title": "CaptureData",
+      "type": "object"
+    },
+    "SourceChapter": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "number"
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "evidence_ids",
+        "start",
+        "end"
+      ],
+      "title": "SourceChapter",
+      "type": "object"
+    },
+    "SourceClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "text",
+        "evidence_ids"
+      ],
+      "title": "SourceClaim",
+      "type": "object"
+    },
+    "SourceSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0,
+          "title": "End",
+          "type": "number"
+        },
+        "text": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "speaker_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Speaker Id"
+        },
+        "speaker_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Speaker Name"
+        },
+        "identity_source": {
+          "default": "unknown",
+          "title": "Identity Source",
+          "type": "string"
+        },
+        "person_external_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Person External Id"
+        },
+        "potential_speaker_names": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Potential Speaker Names",
+          "type": "array"
+        },
+        "tokens": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Tokens",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "start",
+        "end",
+        "text",
+        "speaker_id",
+        "speaker_name"
+      ],
+      "title": "SourceSegment",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "acten.bot.v1",
+      "default": "acten.bot.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "type": {
+      "const": "meeting.completed",
+      "default": "meeting.completed",
+      "title": "Type",
+      "type": "string"
+    },
+    "meeting_id": {
+      "format": "uuid",
+      "title": "Meeting Id",
+      "type": "string"
+    },
+    "tenant_id": {
+      "exclusiveMinimum": 0,
+      "title": "Tenant Id",
+      "type": "integer"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "data": {
+      "$ref": "#/$defs/CaptureData"
+    }
+  },
+  "required": [
+    "id",
+    "meeting_id",
+    "tenant_id",
+    "occurred_at",
+    "data"
+  ],
+  "title": "ActenBotEvent",
+  "type": "object"
+}

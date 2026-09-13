@@ -295,6 +295,7 @@
     }
   },
   "sidebar": {
+    "meeting_bot": "Bot de reuniones",
     "main_section": "Principal",
     "admin_section": "Administración",
     "super_section": "Super admin",
@@ -1549,6 +1550,13 @@
     "platforms": "Plataformas de gestión"
   },
   "settings": {
+    "meeting_source_title": "Origen de las reuniones",
+    "meeting_source_sub": "Por dónde entran las reuniones de esta empresa. Con las dos entradas activas y la misma reunión grabada por ambas, entraría duplicada.",
+    "meeting_source_fireflies": "Fireflies graba y transcribe; Acten recibe el resultado por webhook.",
+    "meeting_source_owned_bot": "El bot propio de Acten entra a Meet, Teams o Zoom, o graba desde el navegador. La transcripción y el análisis los paga tu propia cuenta.",
+    "meeting_source_both": "Se aceptan las dos entradas. Útil mientras migras; evita grabar la misma reunión con ambos.",
+    "meeting_source_fireflies_off": "Los webhooks de Fireflies que lleguen para esta empresa se ignorarán hasta que vuelvas a activarlo aquí.",
+    "meeting_source_bot_where": "El bot se maneja desde",
     "title": "Configuración",
     "subtitle": "Parámetros generales del sistema y tu empresa.",
     "general": "General",

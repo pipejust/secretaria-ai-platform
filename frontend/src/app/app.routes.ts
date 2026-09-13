@@ -89,6 +89,13 @@ export const routes: Routes = [
                 data: { titleKey: 'route_titles.dashboard', description: 'Resumen ejecutivo en tiempo real: métricas, actividad, riesgos y tareas prioritarias.', robots: 'noindex, nofollow' }
             },
             {
+                path: 'meeting-bot',
+                loadComponent: () => import('./components/meeting-bot/meeting-bot.component').then(m => m.MeetingBotComponent),
+                canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
+                title: 'Bot de reuniones | Acten',
+                data: { description: 'Invita al bot, graba desde la web y consulta cada momento de la reunión.', robots: 'noindex, nofollow' },
+            },
+            {
                 path: 'meetings',
                 loadComponent: () => import('./components/meetings-list/meetings-list.component').then(m => m.MeetingsListComponent),
                 title: 'Reuniones | Acten',

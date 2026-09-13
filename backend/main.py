@@ -272,6 +272,11 @@ def on_shutdown():
     stop_cron()
 
 app.include_router(fireflies.router)
+from routers import bot_ingest
+app.include_router(bot_ingest.router)
+from routers import bot_control
+app.include_router(bot_control.router)
+app.include_router(bot_control.audio_router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(templates.router)

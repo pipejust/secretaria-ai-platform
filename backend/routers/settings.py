@@ -524,3 +524,46 @@ def update_share_settings(
         "share_integrations": bool(tenant.share_integrations),
         "share_routings": bool(tenant.share_routings),
     }
+
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Origen de las reuniones: Fireflies, bot propio o ambos
+# ═══════════════════════════════════════════════════════════════════════
+
+class MeetingSourceIn(BaseModel):
+    source: str
+
+
+@router.get("/meeting-source")
+def get_meeting_source(
+    _admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+    session: Session = Depends(get_session),
+):
+    """Por dónde entran las reuniones de esta empresa, y las opciones."""
+    from services import meeting_source
+
+    return meeting_source.estado(session, tenant.id)
+
+
+@router.put("/meeting-source")
+def put_meeting_source(
+    body: MeetingSourceIn,
+    _admin: User = Depends(require_admin),
+    tenant: Tenant = Depends(get_current_tenant),
+    session: Session = Depends(get_session),
+):
+    """Cambia la fuente. Es decisión de la empresa: solo un administrador.
+
+    Cambiarla no borra nada: las sesiones ya recibidas por la otra entrada
+    siguen ahí. Solo decide qué se acepta a partir de ahora.
+    """
+    from services import meeting_source
+
+    try:
+        meeting_source.cambiar(session, tenant.id, (body.source or "").strip().lower())
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    logger.info("Empresa %s cambió el origen de reuniones a %s", tenant.id, body.source)
+    return meeting_source.estado(session, tenant.id)

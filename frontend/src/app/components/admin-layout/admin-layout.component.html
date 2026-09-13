@@ -52,6 +52,12 @@
                         <span class="nav-text" *ngIf="!isCollapsed">{{ "sidebar.meetings" | translate }}</span>
                     </a>
                 </li>
+                <li *ngIf="user && canSee('reuniones') && usaBotPropio()">
+                    <a routerLink="/admin/meeting-bot" routerLinkActive="active" [title]="'sidebar.meeting_bot' | translate">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg>
+                        <span class="nav-text" *ngIf="!isCollapsed">{{ 'sidebar.meeting_bot' | translate }}</span>
+                    </a>
+                </li>
                 <!-- Solo visible para roles con permiso real sobre Proyectos -->
                 <li *ngIf="canSee('proyectos')">
                     <a routerLink="/admin/projects" routerLinkActive="active">

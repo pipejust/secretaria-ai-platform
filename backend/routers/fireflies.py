@@ -36,6 +36,13 @@ from services.webhook_security import verify_fireflies_webhook
 
 logger = logging.getLogger(__name__)
 
+def _no_es_de_fireflies(fireflies_id: str) -> bool:
+    """Sesiones subidas a mano o traídas por el bot propio reutilizan el campo
+    `fireflies_id` con un prefijo. Pedirlas a Fireflies devolvería un id
+    inválido y dejaría la sesión en `processing` con una tarea equivocada."""
+    return (fireflies_id or "").startswith(("MANUAL-", "manual_", "BOT-"))
+
+
 router = APIRouter(
     prefix="/api/webhook/fireflies",
     tags=["Webhooks Fireflies"],
@@ -1064,6 +1071,24 @@ async def receive_fireflies_webhook(
     """
     tenant_id = await verify_fireflies_webhook(request, db)
 
+    # Si la empresa eligió el bot propio, este webhook ya no es su entrada.
+    # Se contesta 200 con «ignorado» y no 4xx: Fireflies reintenta los
+    # errores, y aquí no hay nada que reintentar. Sin este corte, una
+    # empresa que pasó al bot seguiría recibiendo cada reunión dos veces
+    # mientras no apagara el webhook en Fireflies — que nadie apaga.
+    from services import meeting_source as _fuente
+
+    if not _fuente.admite(db, tenant_id, _fuente.FIREFLIES):
+        logger.info(
+            "Webhook de Fireflies ignorado: la empresa %s usa %s.",
+            tenant_id, _fuente.fuente_de(db, tenant_id),
+        )
+        return {
+            "status": "ignored",
+            "reason": "meeting_source",
+            "message": _fuente.mensaje_rechazo(_fuente.FIREFLIES),
+        }
+
     raw_body = await request.body()
     try:
         payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
@@ -1217,10 +1242,10 @@ async def retry_session_pipeline(
     db.commit()
 
     if rehydrate_from_fireflies:
-        if not session_obj.fireflies_id:
+        if not session_obj.fireflies_id or _no_es_de_fireflies(session_obj.fireflies_id):
             raise HTTPException(
                 status_code=400,
-                detail="La sesión no tiene fireflies_id; no se puede rehidratar.",
+                detail="Esta sesión no viene de Fireflies; no se puede rehidratar desde allí.",
             )
         # Reusamos exactamente el mismo flujo del webhook (background task)
         # con un payload que preserva el título actual (para no clobbearlo
@@ -1314,10 +1339,10 @@ async def refetch_session_summary(
     session_obj = db.get(MeetingSession, session_id)
     if not session_obj or session_obj.tenant_id != tenant.id:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
-    if not session_obj.fireflies_id:
+    if not session_obj.fireflies_id or _no_es_de_fireflies(session_obj.fireflies_id):
         raise HTTPException(
             status_code=400,
-            detail="La sesión no tiene fireflies_id; no se puede refetchear.",
+            detail="Esta sesión no viene de Fireflies; su resumen no se pide allí.",
         )
 
     api_key = get_fireflies_api_key(db, tenant.id)

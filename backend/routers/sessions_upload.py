@@ -385,7 +385,7 @@ async def fetch_summary(
     svc = FirefliesService(api_key=get_fireflies_api_key(db, session_obj.tenant_id))
     force_groq = False
     
-    if session_obj.fireflies_id and session_obj.fireflies_id.startswith("MANUAL-"):
+    if session_obj.fireflies_id and session_obj.fireflies_id.startswith(("MANUAL-", "manual_", "BOT-")):
         force_groq = True
     else:
         try:

@@ -827,3 +827,36 @@ select.st-input::-ms-expand { display: none; }
     margin: 10px 0 0;
     word-break: break-all;
 }
+
+
+/* ============================================================
+   Origen de las reuniones — tres opciones excluyentes
+   ============================================================ */
+.st-source-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+.st-source-option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    row-gap: 4px;
+    align-items: start;
+    padding: 12px 14px;
+    border: 1px solid var(--st-border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+.st-source-option:hover { border-color: var(--st-text-soft); }
+/* La elegida no se distingue solo por el radio: cambia el borde y el
+   fondo, para que se vea desde lejos cuál manda. */
+.st-source-option.is-active {
+    border-color: var(--st-blue);
+    background: var(--st-blue-bg);
+}
+.st-source-option input { grid-row: 1 / span 2; margin-top: 3px; accent-color: var(--st-blue); }
+.st-source-name { font-size: 13.5px; font-weight: 700; }
+.st-source-hint { grid-column: 2; font-size: 12px; line-height: 1.45; color: var(--st-text-soft); }

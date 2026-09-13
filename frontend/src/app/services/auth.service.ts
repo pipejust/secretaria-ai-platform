@@ -21,6 +21,17 @@ export class AuthService {
         return localStorage.getItem('access_token');
     }
 
+    /** Vuelve a pedir el perfil y lo publica. Lo usan las pantallas que
+     *  cambian algo que el menú lateral lee del perfil —el origen de las
+     *  reuniones—, para que no haga falta recargar la página. */
+    refreshCurrentUser(): void {
+        if (!this.token) { return; }
+        this.http.get<any>(`${this.apiUrl}/me`, { headers: this.getAuthHeaders() }).subscribe({
+            next: (user) => this.currentUserSubject.next(user),
+            error: () => { /* el perfil anterior sigue siendo válido */ },
+        });
+    }
+
     get currentUserValue(): any {
         return this.currentUserSubject.value;
     }

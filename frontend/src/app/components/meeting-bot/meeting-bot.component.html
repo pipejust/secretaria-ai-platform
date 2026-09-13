@@ -1,0 +1,49 @@
+<main class="bot-page">
+  <header><div><p class="eyebrow">ASISTENTE DE REUNIONES</p><h1>Tu bot de Acten</h1><p>Captura una conversación y vuelve a cada decisión, voz y momento.</p></div><a routerLink="/admin/meetings">Ver sesiones de Acten →</a></header>
+  <p class="alert error" role="alert" *ngIf="error">{{ error }}</p>
+  <p class="alert notice" role="status" *ngIf="notice">{{ notice }}</p>
+  <section class="setup panel" aria-label="Datos de la reunión">
+    <label>Título<input [(ngModel)]="title" maxlength="300" placeholder="Reunión de seguimiento" [disabled]="recorder.active"></label>
+    <label>Idioma<select [(ngModel)]="language" [disabled]="recorder.active"><option value="es">Español</option><option value="en">English</option><option value="ca">Català</option></select></label>
+    <label class="wide">Vocabulario del equipo<input [(ngModel)]="vocabulary" placeholder="Nombres, siglas y términos separados por comas" [disabled]="recorder.active" maxlength="5000"></label>
+    <label class="consent wide"><input type="checkbox" [(ngModel)]="authorized" [disabled]="recorder.active">Tengo autorización para grabar y he informado a las personas participantes.</label>
+  </section>
+  <section class="entry-grid" aria-label="Formas de capturar una reunión">
+    <article class="panel"><span class="number">01</span><h2>Invitar por correo</h2><p>Añade esta dirección como asistente del evento de calendario. Recibe cambios, cancelaciones y reuniones recurrentes.</p>
+      <a class="email" *ngIf="caps.mail_enabled" [href]="'mailto:' + caps.invitation_email">{{ caps.invitation_email }}</a>
+      <p class="muted" *ngIf="!caps.mail_enabled">El administrador debe configurar el buzón de invitaciones.</p>
+      <p class="muted">Los remitentes autorizados también pueden enviar un correo con un único enlace para entrar en ese momento.</p>
+      <button *ngIf="isAdmin && caps.mail_enabled" class="secondary" (click)="loadEmails()" [disabled]="busy">Ver recepción de invitaciones</button>
+      <ul *ngIf="receipts.length"><li *ngFor="let receipt of receipts">{{ receipt.created_at * 1000 | date:'short' }} · {{ receipt.state }} <small>{{ receipt.error }}</small></li></ul>
+    </article>
+    <article class="panel"><span class="number">02</span><h2>Añadir en vivo</h2><p>Pega el enlace de Google Meet, Microsoft Teams o Zoom. El bot solicitará entrar a la reunión.</p>
+      <label>Enlace de reunión<input type="url" [(ngModel)]="meetingUrl" placeholder="https://meet.google.com/…" maxlength="4096"></label>
+      <button (click)="join()" [disabled]="busy || !authorized || !caps.meetings_ready || !meetingUrl">Añadir bot ahora</button>
+      <p class="muted">La sala de espera y las políticas de la reunión pueden requerir que el organizador lo admita.</p>
+    </article>
+    <article class="panel" [class.live]="recorder.active"><span class="number">03</span><h2>Grabar desde la web</h2><p>Graba sin añadir un participante. Mantén abierta esta pantalla mientras dure la sesión.</p>
+      <label>Fuente de audio<select [(ngModel)]="systemAudio" [disabled]="busy || recorder.active"><option [ngValue]="true">Pestaña o sistema + micrófono</option><option [ngValue]="false">Solo micrófono</option></select></label>
+      <p class="muted">Para audio compartido, selecciona una pestaña y activa «Compartir audio». La disponibilidad depende del navegador y del sistema. Usa auriculares para evitar eco.</p>
+      <button *ngIf="!recorder.active" (click)="record()" [disabled]="busy || !authorized || !caps.browser_ready || pending.length > 0">Comenzar grabación</button>
+      <button *ngIf="recorder.active" class="stop" (click)="stopRecording()" [disabled]="busy">● {{ elapsed }} · Detener y guardar</button>
+      <p class="muted" *ngIf="recorder.active">Audio enviado por fragmentos. Máximo 8 horas por grabación.</p>
+    </article>
+  </section>
+  <section class="panel recovery" *ngIf="pending.length && !recorder.active"><h2>Audio pendiente en este navegador</h2><p>Recupera el audio conservado antes de cerrar o borrar los datos del navegador. Una interrupción no reinicia la captura del micrófono.</p><div *ngFor="let item of pending"><span>{{ item.title }} · {{ item.count }} fragmentos</span><button class="secondary" (click)="recover(item)" [disabled]="busy || item.count === 0">Recuperar y enviar</button><button *ngIf="!item.count" class="secondary" (click)="discardEmpty(item)" [disabled]="busy">Descartar solicitud vacía</button></div></section>
+  <section class="panel"><div class="section-heading"><h2>Capturas recientes</h2><button class="secondary" (click)="refresh()" [disabled]="busy">Actualizar</button></div>
+    <p class="muted" *ngIf="!meetings.length">Tus reuniones aparecerán aquí al invitarlas o iniciar una captura.</p>
+    <div class="meeting" *ngFor="let item of meetings"><div><strong>{{ item.title || item.external_id }}</strong><p>{{ item.source === 'browser' ? 'Grabación web' : 'Bot de reunión' }} <span *ngIf="item.join_at">· {{ item.join_at | date:'short' }}</span></p><small class="error" *ngIf="item.error_code">{{ item.error_code }}</small></div><span class="badge">{{ state(item.state) }}</span><button *ngIf="item.state === 'completed' || item.state === 'delivering'" class="secondary" (click)="open(item)" [disabled]="busy">Abrir resultado</button><button *ngIf="item.source !== 'browser' && ['scheduled','queued','capturing','recording','dispatching','joining'].includes(item.state)" class="secondary" (click)="stopBot(item.id)" [disabled]="busy">Detener</button></div>
+  </section>
+  <section class="panel result" *ngIf="result" aria-label="Resultado de la reunión"><h2>{{ result.title || 'Resultado de la reunión' }}</h2>
+    <p class="alert notice" *ngIf="result.warnings?.includes('review_capture_stop_reason_for_completeness')">Revisa el cierre de esta captura: podría faltar parte de la conversación.</p>
+    <audio #player controls [src]="audioUrl" (timeupdate)="audioTime = player.currentTime" (error)="error = 'No se pudo reproducir el audio. Vuelve a abrir el resultado para renovar el enlace.'" [hidden]="!audioUrl" preload="metadata"></audio>
+    <h3>Resumen</h3><p *ngFor="let point of result.summary">{{ point.text }}</p>
+    <h3>Momentos clave</h3><div class="moments"><button class="moment secondary" *ngFor="let moment of result.key_moments" (click)="seek(player, moment.start)" [disabled]="!audioUrl"><time>{{ time(moment.start) }}</time>{{ moment.text }}</button></div>
+    <h3>Temas a lo largo de la reunión</h3><div class="moments"><button class="moment secondary" *ngFor="let moment of result.timeline" (click)="seek(player, moment.start)" [disabled]="!audioUrl"><time>{{ time(moment.start) }}</time>{{ moment.topic || moment.title || moment.text }}</button></div>
+    <h3>Quién habla</h3><p class="muted">Una voz separada no identifica por sí sola a una persona. Confirma los nombres después de escuchar. El tiempo mostrado suma los intervalos transcritos de cada voz.</p>
+    <div class="speakers"><div class="speaker" *ngFor="let speaker of result.speakers"><strong>{{ speaker.speaker_name || 'Voz ' + speaker.speaker_id }}</strong><small>{{ speaker.identity_source === 'human_confirmed' ? 'Confirmado por una persona' : speaker.identity_source === 'meeting_metadata' ? 'Nombre obtenido de la reunión' : 'Identidad sin confirmar' }} · {{ time(speaker.segment_duration_seconds || 0) }}</small><label>Nombre confirmado<input [(ngModel)]="names[speaker.speaker_id]" maxlength="200"></label><button class="secondary" (click)="label(speaker)" [disabled]="busy || !names[speaker.speaker_id]?.trim() || !result.acten_session_id">Guardar nombre</button></div></div>
+    <h3>Transcripción con tiempos</h3><div class="filters"><label>Buscar<input [(ngModel)]="search" placeholder="Buscar en la conversación"></label><label>Voz<select [(ngModel)]="speakerFilter"><option value="">Todas las voces</option><option *ngFor="let speaker of result.speakers" [value]="speaker.speaker_id">{{ speaker.speaker_name || 'Voz ' + speaker.speaker_id }}</option></select></label></div>
+    <div class="transcript"><article class="segment" *ngFor="let segment of segments" [class.current]="audioTime >= segment.start && audioTime < segment.end"><button class="timestamp" (click)="seek(player, segment.start)" [disabled]="!audioUrl">{{ time(segment.start) }}</button><div><strong>{{ segment.speaker_name || (segment.speaker_id !== null ? 'Voz ' + segment.speaker_id : 'Voz sin identificar') }}</strong><p>{{ segment.text }}</p></div></article></div>
+  </section>
+  <details class="panel" *ngIf="isAdmin"><summary>Conexión del bot · Administración</summary><p>Conecta el servicio de captura de esta empresa. La clave se guarda cifrada en el servidor de Acten.</p><label>Origen del servicio<input [(ngModel)]="serviceUrl" type="url" placeholder="https://bot.tu-dominio.com"></label><label>Clave de la empresa<input [(ngModel)]="serviceKey" type="password" autocomplete="new-password" placeholder="Dejar vacía para conservar la clave guardada"></label><button (click)="saveConfig()" [disabled]="busy || !serviceUrl">Guardar conexión</button></details>
+</main>
