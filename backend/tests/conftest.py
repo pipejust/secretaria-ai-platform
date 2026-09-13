@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
@@ -37,6 +38,13 @@ def test_engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    # SQLite ignora las claves foráneas salvo que se pida; sin esto las
+    # pruebas dejaban pasar borrados huérfanos que PostgreSQL rechaza.
+    @event.listens_for(engine, "connect")
+    def _fk_on(conn, _record):
+        conn.execute("PRAGMA foreign_keys=ON")
+
     SQLModel.metadata.create_all(engine)
     yield engine
 

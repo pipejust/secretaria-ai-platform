@@ -1290,9 +1290,13 @@ async def list_incomplete_sessions(
         .order_by(MeetingSession.id.desc())
     )
     rows = db.exec(q).all()
+    # Las sesiones del bot propio y las subidas a mano no se pueden volver a
+    # pedir a Fireflies: su reintento vive en el buzón del bot (/bot/meetings/
+    # {uuid}/retry) o en la subida manual, no aquí.
     incomplete_rows = [
         s for s in rows
-        if (s.processing_error or "") or not (s.processing_completed_at or "")
+        if not _no_es_de_fireflies(s.fireflies_id)
+        and ((s.processing_error or "") or not (s.processing_completed_at or ""))
     ]
     incomplete = []
     for s in incomplete_rows:
