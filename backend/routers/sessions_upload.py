@@ -3,6 +3,8 @@ from fastapi.responses import Response
 from sqlmodel import Session, select
 from models import MeetingSession, ActionItem, IntegrationSetting, Routing, Tenant, User
 from database import get_session
+from services.billing_catalog import F_DOCUMENTS
+from services.entitlements import require_feature
 from date_utils import is_valid_due_date, normalize_due_date
 from config import settings
 from routers.auth import get_current_tenant, get_current_user, require_admin, require_session_writer
@@ -1741,6 +1743,7 @@ def export_document(
     format: str,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _plan: User = Depends(require_feature(F_DOCUMENTS)),
 ):
     """Generate and return a document with the meeting details (tenant-scoped)."""
     from models import ActionItem, Template

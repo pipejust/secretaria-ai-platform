@@ -563,6 +563,8 @@ def put_meeting_source(
 
     try:
         meeting_source.cambiar(session, tenant.id, (body.source or "").strip().lower())
+    except PermissionError as exc:
+        raise HTTPException(402, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     logger.info("Empresa %s cambió el origen de reuniones a %s", tenant.id, body.source)

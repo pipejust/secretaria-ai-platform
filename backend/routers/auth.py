@@ -166,6 +166,22 @@ def get_tenant_from_request(
     return _resolve_tenant(db, x_tenant_slug or tenant)
 
 
+
+def _entitlements_de(db, tenant_id):
+    """Plan y funciones de la empresa para que el front oculte lo no incluido."""
+    from services import entitlements  # importación tardía: entitlements importa este módulo
+
+    try:
+        if db is None:
+            import database
+
+            with Session(database.engine) as propia:
+                return entitlements.de_empresa(propia, tenant_id).dict()
+        return entitlements.de_empresa(db, tenant_id).dict()
+    except Exception:  # noqa: BLE001 — /auth/me nunca debe caer por facturación
+        return {"plan": None, "status": "unknown", "features": [], "addons": []}
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_session),
@@ -286,6 +302,7 @@ def _login_success_payload(user: User, tenant: Tenant, request: Optional[Request
             # necesita para enseñar «Bot de reuniones» solo a quien lo tiene
             # activo, y ya hace esta llamada al cargar: no hace falta otra.
             "meeting_source": getattr(tenant, "meeting_source", None) or "fireflies",
+            "entitlements": _entitlements_de(db, tenant.id),
         },
         # Si True, el frontend debe redirigir a /change-password obligatorio
         # antes de mostrar el dashboard. El endpoint POST /auth/me/change-
@@ -341,6 +358,7 @@ def login_for_access_token(
             "tenant": {
             "id": tenant.id, "slug": tenant.slug, "name": tenant.name,
             "meeting_source": getattr(tenant, "meeting_source", None) or "fireflies",
+            "entitlements": _entitlements_de(db, tenant.id),
         },
         }
 
@@ -681,6 +699,7 @@ def _serialize_user_profile(user: User, tenant: Tenant) -> dict:
         "tenant": {
             "id": tenant.id, "slug": tenant.slug, "name": tenant.name,
             "meeting_source": getattr(tenant, "meeting_source", None) or "fireflies",
+            "entitlements": _entitlements_de(None, tenant.id),
         },
         "notifications": {
             "email_enabled":           user.notif_email_enabled,

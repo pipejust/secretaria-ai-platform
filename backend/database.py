@@ -47,6 +47,21 @@ def create_db_and_tables() -> None:
     """
     SQLModel.metadata.create_all(engine)
     _apply_lightweight_migrations()
+    _sembrar_facturacion()
+
+
+def _sembrar_facturacion() -> None:
+    """Catálogo de planes y suscripción para las empresas anteriores a él."""
+    from services.billing_catalog import asegurar_suscripciones_existentes, sembrar_catalogo
+
+    try:
+        with Session(engine) as db:
+            sembrar_catalogo(db)
+            creadas = asegurar_suscripciones_existentes(db)
+            if creadas:
+                logger.info("Suscripción Business manual asignada a %s empresas.", creadas)
+    except Exception:  # noqa: BLE001
+        logger.exception("No se pudo sembrar el catálogo de facturación.")
 
 
 DEFAULT_TENANT_SLUG = "acten"

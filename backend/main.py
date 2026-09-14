@@ -277,6 +277,10 @@ app.include_router(bot_ingest.router)
 from routers import bot_control
 app.include_router(bot_control.router)
 app.include_router(bot_control.audio_router)
+
+from routers import billing
+app.include_router(billing.router)
+app.include_router(billing.webhook_router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(templates.router)

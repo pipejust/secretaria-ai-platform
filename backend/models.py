@@ -1109,3 +1109,77 @@ class ContactMessage(SQLModel, table=True):
     email_error: str = Field(default="", max_length=400)
 
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), index=True)
+
+
+# ============================================================
+# Suscripciones — catálogo, suscripción por empresa y pagos (Wompi)
+# ============================================================
+# El landing muestra los planes como texto (landing_content_json); aquí
+# viven los planes como datos: qué habilita cada uno y cuánto cuesta en
+# COP, que es la única moneda que cobra Wompi. Un superadministrador
+# edita el catálogo y asigna planes a mano; el resto pasa por checkout.
+
+
+class Plan(SQLModel, table=True):
+    key: str = Field(primary_key=True, max_length=32)  # starter | business | enterprise
+    name: str = Field(max_length=80)
+    price_usd_cents: int = Field(default=0)
+    price_cop_cents: int = Field(default=0)
+    interval: str = Field(default="month", max_length=16)
+    features_json: str = Field(default="[]")  # claves de services.entitlements.FEATURES
+    meetings_per_month: Optional[int] = Field(default=None)  # None = ilimitado
+    users_included: Optional[int] = Field(default=None)
+    is_public: bool = Field(default=True)  # se puede contratar por checkout
+    sort_order: int = Field(default=0)
+    is_active: bool = Field(default=True)
+
+
+class AddOn(SQLModel, table=True):
+    key: str = Field(primary_key=True, max_length=32)
+    name: str = Field(max_length=80)
+    price_usd_cents: int = Field(default=0)
+    price_cop_cents: int = Field(default=0)
+    features_json: str = Field(default="[]")
+    requires_json: str = Field(default="[]")  # claves de otros add-ons o features
+    is_active: bool = Field(default=True)
+    sort_order: int = Field(default=0)
+
+
+class Subscription(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", unique=True, index=True)
+    plan_key: str = Field(foreign_key="plan.key", max_length=32)
+    addons_json: str = Field(default="[]")
+    # trialing | active | past_due | cancelled | expired
+    status: str = Field(default="active", max_length=16)
+    # manual: la asigna un superadministrador (contratos, cortesías).
+    # wompi: la renueva un pago aprobado.
+    billing_mode: str = Field(default="manual", max_length=16)
+    current_period_start: Optional[str] = Field(default=None)
+    current_period_end: Optional[str] = Field(default=None)  # None = sin vencimiento
+    cancel_at_period_end: bool = Field(default=False)
+    customer_email: Optional[str] = Field(default=None, max_length=320)
+    wompi_payment_source_id: Optional[int] = Field(default=None)  # cobro automático (v2)
+    notes: str = Field(default="")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
+class Payment(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    reference: str = Field(unique=True, index=True, max_length=64)
+    plan_key: str = Field(max_length=32)
+    addons_json: str = Field(default="[]")
+    months: int = Field(default=1)
+    amount_in_cents: int
+    currency: str = Field(default="COP", max_length=8)
+    # pending | approved | declined | voided | error
+    status: str = Field(default="pending", max_length=16)
+    wompi_transaction_id: Optional[str] = Field(default=None, index=True, max_length=64)
+    payment_method: Optional[str] = Field(default=None, max_length=32)
+    customer_email: Optional[str] = Field(default=None, max_length=320)
+    created_by: Optional[int] = Field(default=None, foreign_key="user.id")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    approved_at: Optional[str] = Field(default=None)
+    raw_event_json: str = Field(default="{}")

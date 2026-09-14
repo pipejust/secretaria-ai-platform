@@ -36,12 +36,15 @@ from models import (
 from routers.auth import get_current_tenant, require_admin, require_session_writer
 from services.bot_contract import ActenBotEvent
 from services.bot_ingest import BotInbox
+from services.billing_catalog import F_OWNED_BOT
 from services.cifrado import cifrar, descifrar
+from services.entitlements import require_feature
 
 router = APIRouter(
     prefix="/api/owned-bot",
     tags=["Controles del bot"],
-    dependencies=[Depends(get_current_tenant)],
+    # El bot propio es una opción del plan: sin ella, 402 en toda la pantalla.
+    dependencies=[Depends(get_current_tenant), Depends(require_feature(F_OWNED_BOT))],
 )
 audio_router = APIRouter(prefix="/api/owned-bot", tags=["Audio del bot"])
 logger = logging.getLogger(__name__)

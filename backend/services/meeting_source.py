@@ -36,15 +36,42 @@ def fuente_de(db: Session, tenant_id: int) -> str:
     return valor if valor in FUENTES else FIREFLIES
 
 
+def permitidas(db: Session, tenant_id: int) -> set[str]:
+    """Fuentes que la suscripción de la empresa le deja usar.
+
+    La empresa dueña de la plataforma no se limita. Para el resto manda el
+    plan: sin `meetings.fireflies` no hay Fireflies; sin
+    `meetings.owned_bot` no hay bot propio. La opción «Ambos» exige las dos.
+    """
+    from services import billing_catalog as cat
+    from services import entitlements
+
+    t = db.get(Tenant, tenant_id)
+    if t and t.slug == "acten":
+        return {FIREFLIES, OWNED_BOT, BOTH}
+    e = entitlements.de_empresa(db, tenant_id)
+    out: set[str] = set()
+    if e.tiene(cat.F_FIREFLIES):
+        out.add(FIREFLIES)
+    if e.tiene(cat.F_OWNED_BOT):
+        out.add(OWNED_BOT)
+    if {FIREFLIES, OWNED_BOT} <= out:
+        out.add(BOTH)
+    return out
+
+
 def admite(db: Session, tenant_id: int, fuente: str) -> bool:
     """¿Esta empresa acepta reuniones que lleguen por `fuente`?
 
     Es lo que consultan las entradas antes de crear una sesión. Rechazar
     aquí —y no más adelante— evita que una empresa que eligió el bot siga
     recibiendo duplicados por el webhook de Fireflies que nunca apagó.
+    Además de la elección de la empresa, la fuente tiene que estar en su
+    plan: un plan vencido apaga la entrada aunque siga marcada.
     """
     actual = fuente_de(db, tenant_id)
-    return actual == BOTH or actual == fuente
+    elegida = actual == BOTH or actual == fuente
+    return elegida and fuente in permitidas(db, tenant_id)
 
 
 def cambiar(db: Session, tenant_id: int, fuente: str) -> str:
@@ -53,6 +80,11 @@ def cambiar(db: Session, tenant_id: int, fuente: str) -> str:
     t = db.get(Tenant, tenant_id)
     if not t:
         raise ValueError("Empresa no encontrada")
+    if fuente not in permitidas(db, tenant_id):
+        raise PermissionError(
+            f"El plan de la empresa no incluye «{ETIQUETAS[fuente]}». "
+            "Contrátalo en Suscripción o pide a Acten que lo active."
+        )
     t.meeting_source = fuente
     db.add(t)
     db.commit()
@@ -61,10 +93,14 @@ def cambiar(db: Session, tenant_id: int, fuente: str) -> str:
 
 def estado(db: Session, tenant_id: int) -> dict:
     actual = fuente_de(db, tenant_id)
+    libres = permitidas(db, tenant_id)
     return {
         "source": actual,
         "label": ETIQUETAS[actual],
-        "options": [{"value": f, "label": ETIQUETAS[f]} for f in FUENTES],
+        "options": [
+            {"value": f, "label": ETIQUETAS[f], "available": f in libres} for f in FUENTES
+        ],
+        "allowed": sorted(libres),
         "accepts_fireflies": admite(db, tenant_id, FIREFLIES),
         "accepts_owned_bot": admite(db, tenant_id, OWNED_BOT),
     }

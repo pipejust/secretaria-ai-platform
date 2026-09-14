@@ -36,6 +36,8 @@ from sqlmodel import Session, select
 
 from config import settings
 from database import get_session
+from services.billing_catalog import F_ASK
+from services.entitlements import require_feature
 from date_utils import normalize_due_date
 from models import ActionItem as ActionItemRow, AskHistory, MeetingSession, Tenant, User
 from routers.auth import get_current_tenant, get_current_user
@@ -2107,6 +2109,7 @@ def _coerce_int_list(raw) -> list[int]:
 async def ask(
     payload: AskRequest,
     db: Session = Depends(get_session),
+    _plan: User = Depends(require_feature(F_ASK)),
     user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):

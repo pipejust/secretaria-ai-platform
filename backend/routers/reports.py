@@ -17,6 +17,8 @@ from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from database import get_session
+from services.billing_catalog import F_REPORTS
+from services.entitlements import require_feature
 from models import ActionItem, MeetingSession, Project, Tenant
 from routers.auth import get_current_tenant
 
@@ -517,6 +519,7 @@ def get_report_data(
 def get_report_pdf(
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
+    _plan: User = Depends(require_feature(F_REPORTS)),
     period: str = Query("week"),
     ref: Optional[str] = Query(None),
     project_id: Optional[int] = Query(None),
