@@ -21,7 +21,10 @@ export type MeetingSource = 'fireflies' | 'owned_bot' | 'both';
 export interface MeetingSourceState {
     source: MeetingSource;
     label: string;
-    options: { value: MeetingSource; label: string }[];
+    /** `available:false` = la fuente no está en el plan de la empresa. */
+    options: { value: MeetingSource; label: string; available: boolean }[];
+    /** Fuentes que el plan permite elegir. */
+    allowed: MeetingSource[];
     accepts_fireflies: boolean;
     accepts_owned_bot: boolean;
 }

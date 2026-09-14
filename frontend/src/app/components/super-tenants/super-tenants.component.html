@@ -419,6 +419,14 @@
                 </div>
             </footer>
         </section>
+
+        <!-- Suscripciones: llaves de Wompi y catálogo (solo superadmin) -->
+        <ng-container *ngIf="isSuperAdmin">
+            <app-wompi-config-panel></app-wompi-config-panel>
+            <app-catalog-editor></app-catalog-editor>
+            <!-- Plataforma: bucket del vídeo de reuniones (bot propio). -->
+            <app-media-storage-panel></app-media-storage-panel>
+        </ng-container>
     </main>
 
     <!-- ============================================================
@@ -487,6 +495,8 @@
                 </button>
             </div>
         </article>
+
+        <app-tenant-subscription-editor *ngIf="isSuperAdmin" [tenantId]="s.id"></app-tenant-subscription-editor>
 
         <article class="tn-card">
             <header class="tn-card-head"><h3>{{ 'tenants.tenant_summary' | translate }}</h3></header>

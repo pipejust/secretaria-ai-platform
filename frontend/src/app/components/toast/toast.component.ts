@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -8,7 +9,7 @@ import { Toast, ToastService } from '../../services/toast.service';
 @Component({
     selector: 'app-toast',
     standalone: true,
-    imports: [CommonModule, TranslateModule],
+    imports: [CommonModule, RouterModule, TranslateModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './toast.component.html',
     styleUrls: ['./toast.component.css'],

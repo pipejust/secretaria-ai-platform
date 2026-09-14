@@ -14,6 +14,10 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { LanguageService } from '../../services/language.service';
+import { Entitlements } from '../../services/billing.service';
+
+const MS_PER_DAY = 86_400_000;
+const F_OWNED_BOT = 'meetings.owned_bot';
 
 interface CurrentUser {
     email?: string;
@@ -21,7 +25,7 @@ interface CurrentUser {
     role?: string | null;
     is_superadmin?: boolean;
     avatar_url?: string | null;
-    tenant?: { id: number; slug: string; name: string; meeting_source?: string };
+    tenant?: { id: number; slug: string; name: string; meeting_source?: string; entitlements?: Entitlements };
 }
 
 @Component({
@@ -77,7 +81,30 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
      *  al usarla, le devolvería 409. */
     usaBotPropio(): boolean {
         const fuente = this.user?.tenant?.meeting_source ?? 'fireflies';
-        return fuente === 'owned_bot' || fuente === 'both';
+        return (fuente === 'owned_bot' || fuente === 'both') && this.planIncluye(F_OWNED_BOT);
+    }
+
+    /** Suscripción de la empresa, tal como la devuelve /auth/me. Si el
+     *  backend aún no la manda, no bloqueamos nada. */
+    get entitlements(): Entitlements | null { return this.user?.tenant?.entitlements ?? null; }
+
+    planIncluye(feature: string): boolean {
+        const e = this.entitlements;
+        return e ? e.features.includes(feature) : true;
+    }
+
+    /** Aviso discreto sobre el contenido: pago pendiente o prueba en curso. */
+    get planBanner(): 'past_due' | 'trialing' | null {
+        const status = this.entitlements?.status;
+        return status === 'past_due' || status === 'trialing' ? status : null;
+    }
+
+    get trialDaysLeft(): number {
+        const iso = this.entitlements?.trial_ends;
+        if (!iso) return 0;
+        const end = new Date(iso).getTime();
+        if (isNaN(end)) return 0;
+        return Math.max(0, Math.ceil((end - Date.now()) / MS_PER_DAY));
     }
     can(module: string, action: 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'export' = 'view'): boolean {
         return this.perms.can(module, action);

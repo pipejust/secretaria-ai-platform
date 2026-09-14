@@ -230,6 +230,16 @@
                         <span class="nav-text" *ngIf="!isCollapsed">{{ 'sidebar.brand' | translate }}</span>
                     </a>
                 </li>
+                <li *ngIf="isAdmin || isSuperAdmin">
+                    <a routerLink="/admin/billing" routerLinkActive="active" [title]="'admin_layout.subscription_title' | translate">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                            <line x1="1" y1="10" x2="23" y2="10"></line>
+                        </svg>
+                        <span class="nav-text" *ngIf="!isCollapsed">{{ 'sidebar.subscription' | translate }}</span>
+                    </a>
+                </li>
                 <li *ngIf="canSee('configuracion')">
                     <a routerLink="/admin/settings" routerLinkActive="active">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -468,6 +478,13 @@
                 </div>
             </div>
         </header>
+
+        <!-- Aviso de suscripción: pago pendiente (con gracia) o periodo de prueba. -->
+        <div class="plan-banner" *ngIf="planBanner as pb" [attr.data-kind]="pb" role="status">
+            <span *ngIf="pb === 'past_due'">{{ 'admin_layout.plan_banner_past_due' | translate }}</span>
+            <span *ngIf="pb === 'trialing'">{{ 'admin_layout.plan_banner_trial' | translate:{ days: trialDaysLeft } }}</span>
+            <a routerLink="/admin/billing" *ngIf="isAdmin || isSuperAdmin">{{ 'sidebar.subscription' | translate }} →</a>
+        </div>
 
         <div class="content-area" (click)="closeProfileDropdown()">
             <router-outlet></router-outlet>

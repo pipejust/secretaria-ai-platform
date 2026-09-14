@@ -8,6 +8,10 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { PasswordInputComponent } from '../shared/password-input/password-input.component';
+import { MediaStoragePanelComponent } from './media-storage-panel.component';
+import { TenantSubscriptionEditorComponent } from './tenant-subscription-editor.component';
+import { WompiConfigPanelComponent } from './wompi-config-panel.component';
+import { CatalogEditorComponent } from './catalog-editor.component';
 
 interface TenantOut {
     id: number;
@@ -72,7 +76,11 @@ const MAX_BRAND_FILE_BYTES = 2 * 1024 * 1024;
 @Component({
     selector: 'app-super-tenants',
     standalone: true,
-    imports: [CommonModule, FormsModule, PasswordInputComponent, TranslateModule],
+    imports: [
+        MediaStoragePanelComponent,
+        CommonModule, FormsModule, PasswordInputComponent, TranslateModule,
+        TenantSubscriptionEditorComponent, WompiConfigPanelComponent, CatalogEditorComponent,
+    ],
     templateUrl: './super-tenants.component.html',
     styleUrls: ['./super-tenants.component.css'],
 })
@@ -86,6 +94,9 @@ export class SuperTenantsComponent implements OnInit, OnDestroy {
 
     tenants: TenantOut[] = [];
     loading = false;
+
+    /** Los paneles de suscripción/Wompi/catálogo solo existen para superadmin. */
+    get isSuperAdmin(): boolean { return !!this.auth.currentUserValue?.is_superadmin; }
     errorMsg = '';
     successMsg = '';
 

@@ -1,0 +1,61 @@
+<article class="ba-card">
+    <header class="ba-head">
+        <div>
+            <h3>{{ 'tenants.billing_title' | translate }}</h3>
+            <p class="ba-sub">{{ 'tenants.billing_sub' | translate }}</p>
+        </div>
+        <span class="ba-pill" *ngIf="row as r" [attr.data-tone]="statusTone(r.status)">
+            {{ ('billing.status_short.' + r.status) | translate }}
+            · {{ (r.billing_mode === 'wompi' ? 'billing.mode_wompi' : 'billing.mode_manual') | translate }}
+        </span>
+    </header>
+
+    <p class="ba-error" *ngIf="error">{{ error }}</p>
+    <p class="ba-empty" *ngIf="loading && !error">{{ 'common.loading' | translate }}</p>
+
+    <ng-container *ngIf="!loading && catalog">
+        <div class="ba-grid">
+            <div class="ba-field">
+                <label for="ba-plan">{{ 'tenants.billing_plan' | translate }}</label>
+                <select id="ba-plan" [(ngModel)]="form.plan_key" name="plan_key">
+                    <option *ngFor="let p of plans" [value]="p.key">
+                        {{ p.name }}<ng-container *ngIf="!p.is_public"> · {{ 'tenants.billing_private' | translate }}</ng-container>
+                    </option>
+                </select>
+            </div>
+            <div class="ba-field">
+                <label for="ba-status">{{ 'tenants.billing_status' | translate }}</label>
+                <select id="ba-status" [(ngModel)]="form.status" name="status">
+                    <option value="active">{{ 'tenants.billing_status_active' | translate }}</option>
+                    <option value="cancelled">{{ 'tenants.billing_status_cancelled' | translate }}</option>
+                </select>
+            </div>
+            <div class="ba-field">
+                <label for="ba-period-end">{{ 'tenants.billing_period_end' | translate }}</label>
+                <input id="ba-period-end" type="date" [(ngModel)]="form.period_end" name="period_end" />
+                <p class="ba-hint">{{ 'tenants.billing_period_end_hint' | translate }}</p>
+            </div>
+        </div>
+
+        <div class="ba-field">
+            <label>{{ 'tenants.billing_addons' | translate }}</label>
+            <div class="ba-checks">
+                <label class="ba-check" *ngFor="let a of addons" [class.is-on]="isAddonOn(a.key)">
+                    <input type="checkbox" [checked]="isAddonOn(a.key)" (change)="toggleAddon(a.key)" />
+                    {{ a.name }}
+                </label>
+            </div>
+        </div>
+
+        <div class="ba-field">
+            <label for="ba-notes">{{ 'tenants.billing_notes' | translate }}</label>
+            <textarea id="ba-notes" [(ngModel)]="form.notes" name="notes" maxlength="2000"></textarea>
+        </div>
+
+        <div class="ba-actions">
+            <button type="button" class="ba-btn ba-btn--primary" (click)="save()" [disabled]="saving || !form.plan_key">
+                {{ (saving ? 'common.saving' : 'tenants.billing_save') | translate }}
+            </button>
+        </div>
+    </ng-container>
+</article>

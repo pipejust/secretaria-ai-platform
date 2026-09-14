@@ -70,10 +70,28 @@
 .toast--warning .toast__icon { background: #f59e0b; }
 .toast--info .toast__icon    { background: #3b82f6; }
 
+.toast__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
 .toast__message {
     margin: 0;
     word-break: break-word;
 }
+
+.toast__action {
+    align-self: flex-start;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+}
+
+.toast__action:hover { color: #1e40af; }
 
 .toast__close {
     border: 0;

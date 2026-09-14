@@ -1,0 +1,60 @@
+<article class="ba-card">
+    <header class="ba-head">
+        <div>
+            <h3>{{ 'tenants.wompi_title' | translate }}</h3>
+            <p class="ba-sub">{{ 'tenants.wompi_sub' | translate }}</p>
+        </div>
+        <span class="ba-pill" *ngIf="state as s" [attr.data-tone]="s.configured ? 'green' : 'amber'">
+            {{ (s.configured ? 'tenants.wompi_configured' : 'tenants.wompi_not_configured') | translate }}
+            · {{ (s.environment === 'production' ? 'tenants.wompi_production' : 'tenants.wompi_sandbox') | translate }}
+        </span>
+    </header>
+
+    <p class="ba-error" *ngIf="error">{{ error }}</p>
+    <p class="ba-empty" *ngIf="loading && !error">{{ 'common.loading' | translate }}</p>
+
+    <form *ngIf="!loading && state as s" (ngSubmit)="save()" autocomplete="off">
+        <div class="ba-grid">
+            <div class="ba-field">
+                <label for="wp-env">{{ 'tenants.wompi_environment' | translate }}</label>
+                <select id="wp-env" name="environment" [(ngModel)]="form.environment">
+                    <option value="sandbox">{{ 'tenants.wompi_sandbox' | translate }}</option>
+                    <option value="production">{{ 'tenants.wompi_production' | translate }}</option>
+                </select>
+            </div>
+            <div class="ba-field">
+                <label for="wp-public">{{ 'tenants.wompi_public_key' | translate }}</label>
+                <input id="wp-public" type="text" name="public_key" [(ngModel)]="form.public_key" maxlength="120" placeholder="pub_test_… / pub_prod_…" />
+            </div>
+        </div>
+        <div class="ba-grid">
+            <div class="ba-field">
+                <label for="wp-private">
+                    {{ 'tenants.wompi_private_key' | translate }}
+                    <span class="ba-pill" [attr.data-tone]="s.has_private_key ? 'green' : 'gray'">{{ (s.has_private_key ? 'tenants.wompi_set' : 'tenants.wompi_missing') | translate }}</span>
+                </label>
+                <input id="wp-private" type="password" name="private_key" [(ngModel)]="form.private_key" maxlength="120" autocomplete="new-password" />
+            </div>
+            <div class="ba-field">
+                <label for="wp-events">
+                    {{ 'tenants.wompi_events_secret' | translate }}
+                    <span class="ba-pill" [attr.data-tone]="s.has_events_secret ? 'green' : 'gray'">{{ (s.has_events_secret ? 'tenants.wompi_set' : 'tenants.wompi_missing') | translate }}</span>
+                </label>
+                <input id="wp-events" type="password" name="events_secret" [(ngModel)]="form.events_secret" maxlength="120" autocomplete="new-password" />
+            </div>
+            <div class="ba-field">
+                <label for="wp-integrity">
+                    {{ 'tenants.wompi_integrity_secret' | translate }}
+                    <span class="ba-pill" [attr.data-tone]="s.has_integrity_secret ? 'green' : 'gray'">{{ (s.has_integrity_secret ? 'tenants.wompi_set' : 'tenants.wompi_missing') | translate }}</span>
+                </label>
+                <input id="wp-integrity" type="password" name="integrity_secret" [(ngModel)]="form.integrity_secret" maxlength="120" autocomplete="new-password" />
+            </div>
+        </div>
+        <p class="ba-hint">{{ 'tenants.wompi_keep_hint' | translate }}</p>
+        <div class="ba-actions">
+            <button type="submit" class="ba-btn ba-btn--primary" [disabled]="!canSave">
+                {{ (saving ? 'common.saving' : 'tenants.wompi_save') | translate }}
+            </button>
+        </div>
+    </form>
+</article>

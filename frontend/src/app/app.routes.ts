@@ -9,6 +9,7 @@ import { RolesComponent } from './components/roles/roles.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { authGuard } from './guards/auth.guard';
+import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
     {
@@ -136,6 +137,13 @@ export const routes: Routes = [
                 component: SettingsComponent,
                 title: 'Configuraciones Generales | Acten',
                 data: { titleKey: 'route_titles.settings', description: 'Configura las credenciales de API (Fireflies, Resend) y establece la conexión con plataformas de gestión de tareas externas.', robots: 'noindex, nofollow' }
+            },
+            {
+                path: 'billing',
+                loadComponent: () => import('./components/billing/billing.component').then(m => m.BillingComponent),
+                canActivate: [adminGuard],
+                title: 'Suscripción | Acten',
+                data: { titleKey: 'route_titles.billing', description: 'Plan, add-ons, pagos con Wompi e historial de la suscripción de tu empresa.', robots: 'noindex, nofollow' },
             },
             {
                 path: 'branding',

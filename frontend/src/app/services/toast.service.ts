@@ -3,11 +3,18 @@ import { Observable, Subject } from 'rxjs';
 
 export type ToastKind = 'success' | 'error' | 'info' | 'warning';
 
+/** Enlace opcional al pie del toast (p. ej. «Ver suscripción»). */
+export interface ToastAction {
+    label: string;
+    link: string;
+}
+
 export interface Toast {
     id: number;
     kind: ToastKind;
     message: string;
     durationMs: number;
+    action?: ToastAction;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -17,12 +24,13 @@ export class ToastService {
 
     readonly toasts$: Observable<Toast> = this.subject.asObservable();
 
-    show(message: string, kind: ToastKind = 'info', durationMs = 4000): void {
+    show(message: string, kind: ToastKind = 'info', durationMs = 4000, action?: ToastAction): void {
         this.subject.next({
             id: ++this.nextId,
             kind,
             message,
             durationMs,
+            ...(action ? { action } : {}),
         });
     }
 
@@ -34,8 +42,8 @@ export class ToastService {
         this.show(message, 'error', durationMs);
     }
 
-    warning(message: string, durationMs = 4500): void {
-        this.show(message, 'warning', durationMs);
+    warning(message: string, durationMs = 4500, action?: ToastAction): void {
+        this.show(message, 'warning', durationMs, action);
     }
 
     info(message: string, durationMs = 4000): void {

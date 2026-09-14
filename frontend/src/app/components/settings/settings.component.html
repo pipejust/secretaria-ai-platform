@@ -237,16 +237,21 @@
                         <div class="st-source-options" role="radiogroup"
                              [attr.aria-label]="'settings.meeting_source_title' | translate">
                             <label class="st-source-option" *ngFor="let o of ms.options"
-                                   [class.is-active]="o.value === ms.source">
+                                   [class.is-active]="o.value === ms.source"
+                                   [class.is-locked]="o.available === false">
                                 <input type="radio" name="meeting_source" [value]="o.value"
                                        [checked]="o.value === ms.source"
-                                       [disabled]="meetingSourceGuardando"
+                                       [disabled]="meetingSourceGuardando || o.available === false"
                                        (change)="cambiarOrigenReuniones(o.value)" />
                                 <span class="st-source-name">{{ o.label }}</span>
                                 <span class="st-source-hint" [ngSwitch]="o.value">
                                     <ng-container *ngSwitchCase="'fireflies'">{{ 'settings.meeting_source_fireflies' | translate }}</ng-container>
                                     <ng-container *ngSwitchCase="'owned_bot'">{{ 'settings.meeting_source_owned_bot' | translate }}</ng-container>
                                     <ng-container *ngSwitchCase="'both'">{{ 'settings.meeting_source_both' | translate }}</ng-container>
+                                </span>
+                                <span class="st-source-locked" *ngIf="o.available === false">
+                                    {{ 'settings.meeting_source_not_included' | translate }}
+                                    · <a routerLink="/admin/billing">{{ 'settings.meeting_source_see_subscription' | translate }}</a>
                                 </span>
                             </label>
                         </div>

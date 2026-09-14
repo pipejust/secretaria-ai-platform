@@ -1,0 +1,78 @@
+<article class="ba-card">
+    <header class="ba-head">
+        <div>
+            <h3>{{ 'tenants.catalog_title' | translate }}</h3>
+            <p class="ba-sub">{{ 'tenants.catalog_sub' | translate }}</p>
+        </div>
+    </header>
+
+    <p class="ba-error" *ngIf="error">{{ error }}</p>
+    <p class="ba-empty" *ngIf="loading && !error">{{ 'common.loading' | translate }}</p>
+
+    <ng-container *ngIf="!loading">
+        <div class="ba-table-wrap">
+            <table class="ba-table" [attr.aria-label]="'tenants.catalog_plans' | translate">
+                <thead>
+                    <tr>
+                        <th>{{ 'tenants.catalog_plans' | translate }}</th>
+                        <th>{{ 'tenants.catalog_name' | translate }}</th>
+                        <th>{{ 'tenants.catalog_price_usd' | translate }}</th>
+                        <th>{{ 'tenants.catalog_price_cop' | translate }}</th>
+                        <th>{{ 'tenants.catalog_meetings' | translate }}</th>
+                        <th>{{ 'tenants.catalog_users' | translate }}</th>
+                        <th>{{ 'tenants.catalog_public' | translate }}</th>
+                        <th>{{ 'tenants.catalog_active' | translate }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let p of plans; trackBy: trackByKey">
+                        <td><span class="ba-key">{{ p.key }}</span></td>
+                        <td><input type="text" [(ngModel)]="p.name" [name]="'plan-name-' + p.key" maxlength="80" /></td>
+                        <td><input type="number" min="0" step="1" [(ngModel)]="p.price_usd" [name]="'plan-usd-' + p.key" /></td>
+                        <td><input type="number" min="0" step="1000" [(ngModel)]="p.price_cop" [name]="'plan-cop-' + p.key" /></td>
+                        <td><input type="number" min="0" step="1" [(ngModel)]="p.meetings_per_month" [name]="'plan-meet-' + p.key" [placeholder]="'billing.unlimited' | translate" /></td>
+                        <td><input type="number" min="0" step="1" [(ngModel)]="p.users_included" [name]="'plan-users-' + p.key" [placeholder]="'billing.unlimited' | translate" /></td>
+                        <td><input type="checkbox" [(ngModel)]="p.is_public" [name]="'plan-public-' + p.key" /></td>
+                        <td><input type="checkbox" [(ngModel)]="p.is_active" [name]="'plan-active-' + p.key" /></td>
+                        <td>
+                            <button type="button" class="ba-btn ba-btn--primary" (click)="savePlan(p)" [disabled]="savingKey !== null">
+                                {{ (savingKey === p.key ? 'common.saving' : 'common.save') | translate }}
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="ba-table-wrap">
+            <table class="ba-table" [attr.aria-label]="'tenants.catalog_addons' | translate">
+                <thead>
+                    <tr>
+                        <th>{{ 'tenants.catalog_addons' | translate }}</th>
+                        <th>{{ 'tenants.catalog_name' | translate }}</th>
+                        <th>{{ 'tenants.catalog_price_usd' | translate }}</th>
+                        <th>{{ 'tenants.catalog_price_cop' | translate }}</th>
+                        <th>{{ 'tenants.catalog_active' | translate }}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let a of addons; trackBy: trackByKey">
+                        <td><span class="ba-key">{{ a.key }}</span></td>
+                        <td><input type="text" [(ngModel)]="a.name" [name]="'addon-name-' + a.key" maxlength="80" /></td>
+                        <td><input type="number" min="0" step="1" [(ngModel)]="a.price_usd" [name]="'addon-usd-' + a.key" /></td>
+                        <td><input type="number" min="0" step="1000" [(ngModel)]="a.price_cop" [name]="'addon-cop-' + a.key" /></td>
+                        <td><input type="checkbox" [(ngModel)]="a.is_active" [name]="'addon-active-' + a.key" /></td>
+                        <td>
+                            <button type="button" class="ba-btn ba-btn--primary" (click)="saveAddOn(a)" [disabled]="savingKey !== null">
+                                {{ (savingKey === a.key ? 'common.saving' : 'common.save') | translate }}
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="ba-hint">{{ 'tenants.catalog_hint' | translate }}</p>
+    </ng-container>
+</article>

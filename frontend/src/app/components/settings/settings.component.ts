@@ -414,7 +414,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
       },
       error: e => {
         this.meetingSourceGuardando = false;
-        this.toast.error(e?.error?.detail ?? 'No se pudo cambiar el origen de las reuniones.');
+        const detail = e?.error?.detail;
+        const mensaje = typeof detail === 'string' ? detail : detail?.message;
+        if (e?.status === 402) {
+          // 402 = la fuente no está en el plan: no es un fallo, es un aviso.
+          this.toast.warning(
+            mensaje || this.translate.instant('settings.meeting_source_not_included'),
+            6000,
+            { label: this.translate.instant('settings.meeting_source_see_subscription'), link: '/admin/billing' },
+          );
+        } else {
+          this.toast.error(mensaje ?? 'No se pudo cambiar el origen de las reuniones.');
+        }
         this.cdr.detectChanges();
       },
     });

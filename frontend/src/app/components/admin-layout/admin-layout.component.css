@@ -1004,7 +1004,25 @@
 .content-area:has(.us-page),
 .content-area:has(.rl-page),
 .content-area:has(.tn-page),
-.content-area:has(.br-page) { padding: 0; background: var(--color-bg-base); }
+.content-area:has(.br-page),
+.content-area:has(.acten-billing) { padding: 0; background: var(--color-bg-base); }
+
+/* Aviso de suscripción entre el topbar y el contenido. Discreto: una
+   línea, sin bloquear nada. */
+.plan-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    border-bottom: 1px solid transparent;
+}
+.plan-banner[data-kind="trialing"] { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+.plan-banner[data-kind="past_due"] { background: #FFF7ED; color: #9A3412; border-color: #FED7AA; }
+.plan-banner a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Para el chat de Acten en DESKTOP queremos que la página entera entre en
    el viewport sin scroll: la lista de turns scrollea por dentro, no la

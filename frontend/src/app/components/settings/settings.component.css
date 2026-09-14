@@ -860,3 +860,9 @@ select.st-input::-ms-expand { display: none; }
 .st-source-option input { grid-row: 1 / span 2; margin-top: 3px; accent-color: var(--st-blue); }
 .st-source-name { font-size: 13.5px; font-weight: 700; }
 .st-source-hint { grid-column: 2; font-size: 12px; line-height: 1.45; color: var(--st-text-soft); }
+/* Fuente que el plan no incluye: se ve, pero no se puede elegir. */
+.st-source-option.is-locked { cursor: not-allowed; background: var(--st-grey-soft); }
+.st-source-option.is-locked .st-source-name,
+.st-source-option.is-locked .st-source-hint { opacity: 0.6; }
+.st-source-locked { grid-column: 2; font-size: 11.5px; font-weight: 600; color: var(--st-amber); }
+.st-source-locked a { color: var(--st-blue); font-weight: 700; }

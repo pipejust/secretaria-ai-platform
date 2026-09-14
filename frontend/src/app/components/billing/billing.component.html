@@ -1,0 +1,268 @@
+<div class="acten-billing">
+
+    <header class="bl-hero">
+        <div class="bl-hero-text">
+            <h1 class="bl-title">{{ 'billing.title' | translate }}</h1>
+            <p class="bl-sub">{{ 'billing.subtitle' | translate }}</p>
+        </div>
+        <button type="button" class="bl-btn bl-btn-secondary" (click)="load()" [disabled]="loading">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            {{ 'billing.refresh' | translate }}
+        </button>
+    </header>
+
+    <p class="bl-alert bl-alert-error" role="alert" *ngIf="loadError">{{ loadError }}</p>
+    <p class="bl-alert bl-alert-info" role="status" *ngIf="syncing">{{ 'billing.sync_checking' | translate }}</p>
+
+    <!-- Resultado del pago que trajo la redirección de Wompi -->
+    <article class="bl-card bl-redirect" *ngIf="redirectPayment as rp" [attr.data-status]="rp.status">
+        <header class="bl-card-head">
+            <div>
+                <h2 class="bl-card-title">{{ 'billing.redirect_result_title' | translate }}</h2>
+                <p class="bl-card-sub">{{ rp.reference }} · {{ cop(rp.amount_in_cents) }}</p>
+            </div>
+            <span class="bl-pill" [attr.data-tone]="rp.status === 'approved' ? 'green' : (rp.status === 'pending' ? 'amber' : 'red')">
+                {{ ('billing.payment_status.' + rp.status) | translate }}
+            </span>
+        </header>
+    </article>
+
+    <ng-container *ngIf="!loading && me as m">
+
+        <!-- ══════════════ Plan actual ══════════════ -->
+        <section class="bl-status" aria-labelledby="bl-status-title">
+            <article class="bl-card bl-status-plan">
+                <header class="bl-card-head">
+                    <div>
+                        <p class="bl-eyebrow">{{ 'billing.current_plan' | translate }}</p>
+                        <h2 class="bl-card-title bl-plan-name" id="bl-status-title">
+                            {{ currentPlan?.name || ('billing.no_plan' | translate) }}
+                        </h2>
+                    </div>
+                    <span class="bl-pill" [attr.data-tone]="{ trialing: 'blue', active: 'green', past_due: 'amber', expired: 'red', none: 'gray' }[status]">
+                        <ng-container [ngSwitch]="status">
+                            <ng-container *ngSwitchCase="'trialing'">{{ 'billing.status_trialing' | translate:{ days: trialDaysLeft } }}</ng-container>
+                            <ng-container *ngSwitchCase="'active'">
+                                {{ (m.entitlements.period_end ? 'billing.status_active_until' : 'billing.status_active_no_end') | translate:{ date: date(m.entitlements.period_end) } }}
+                            </ng-container>
+                            <ng-container *ngSwitchCase="'past_due'">{{ 'billing.status_past_due' | translate:{ days: graceDaysLeft } }}</ng-container>
+                            <ng-container *ngSwitchCase="'expired'">{{ 'billing.status_expired' | translate }}</ng-container>
+                            <ng-container *ngSwitchDefault>{{ 'billing.status_none' | translate }}</ng-container>
+                        </ng-container>
+                    </span>
+                </header>
+                <dl class="bl-dl">
+                    <div>
+                        <dt>{{ 'billing.mode_label' | translate }}</dt>
+                        <dd>{{ (m.entitlements.billing_mode === 'wompi' ? 'billing.mode_wompi' : 'billing.mode_manual') | translate }}</dd>
+                    </div>
+                    <div *ngIf="m.entitlements.addons.length">
+                        <dt>{{ 'billing.addons_title' | translate }}</dt>
+                        <dd>
+                            <span class="bl-chip" *ngFor="let k of m.entitlements.addons">{{ addonName(k) }}</span>
+                        </dd>
+                    </div>
+                    <div *ngIf="m.subscription?.cancel_at_period_end">
+                        <dt>{{ 'billing.cancel_title' | translate }}</dt>
+                        <dd class="bl-warn">{{ 'billing.cancel_active_notice' | translate:{ date: date(m.entitlements.period_end) } }}</dd>
+                    </div>
+                </dl>
+                <p class="bl-hint" *ngIf="status === 'past_due'">
+                    {{ 'billing.past_due_hint' | translate:{ days: graceDaysLeft } }}
+                </p>
+                <p class="bl-hint" *ngIf="status === 'expired' || status === 'none'">
+                    {{ 'billing.expired_hint' | translate }}
+                </p>
+            </article>
+
+            <article class="bl-card bl-usage">
+                <p class="bl-eyebrow">{{ 'billing.usage_title' | translate }}</p>
+                <div class="bl-meter">
+                    <div class="bl-meter-head">
+                        <span>{{ 'billing.usage_meetings' | translate }}</span>
+                        <strong>{{ m.usage.meetings_this_period }} / {{ meetingsLimit ?? ('billing.unlimited' | translate) }}</strong>
+                    </div>
+                    <div class="bl-meter-bar" *ngIf="meetingsLimit" role="progressbar" [attr.aria-valuenow]="usagePercent(m.usage.meetings_this_period, meetingsLimit)" aria-valuemin="0" aria-valuemax="100">
+                        <span [style.width.%]="usagePercent(m.usage.meetings_this_period, meetingsLimit)"
+                              [class.is-high]="usagePercent(m.usage.meetings_this_period, meetingsLimit) >= 90"></span>
+                    </div>
+                </div>
+                <div class="bl-meter">
+                    <div class="bl-meter-head">
+                        <span>{{ 'billing.usage_users' | translate }}</span>
+                        <strong>{{ m.usage.active_users }} / {{ usersLimit ?? ('billing.unlimited' | translate) }}</strong>
+                    </div>
+                    <div class="bl-meter-bar" *ngIf="usersLimit" role="progressbar" [attr.aria-valuenow]="usagePercent(m.usage.active_users, usersLimit)" aria-valuemin="0" aria-valuemax="100">
+                        <span [style.width.%]="usagePercent(m.usage.active_users, usersLimit)"
+                              [class.is-high]="usagePercent(m.usage.active_users, usersLimit) >= 90"></span>
+                    </div>
+                </div>
+                <p class="bl-hint">{{ 'billing.usage_since' | translate:{ date: date(m.usage.period_start) } }}</p>
+            </article>
+        </section>
+
+        <!-- ══════════════ Catálogo ══════════════ -->
+        <section class="bl-catalog" aria-labelledby="bl-catalog-title">
+            <div class="bl-catalog-main">
+                <div class="bl-section-head">
+                    <h2 class="bl-section-title" id="bl-catalog-title">{{ 'billing.catalog_title' | translate }}</h2>
+                    <p class="bl-card-sub">{{ 'billing.catalog_sub' | translate }}</p>
+                </div>
+
+                <div class="bl-plans" role="radiogroup" [attr.aria-label]="'billing.catalog_title' | translate">
+                    <label class="bl-plan" *ngFor="let p of plans; trackBy: trackByKey"
+                           [class.is-selected]="p.key === selectedPlanKey"
+                           [class.is-current]="p.key === m.entitlements.plan">
+                        <input type="radio" name="bl-plan" [value]="p.key" [checked]="p.key === selectedPlanKey" (change)="selectPlan(p.key)" />
+                        <span class="bl-plan-top">
+                            <span class="bl-plan-name">{{ p.name }}</span>
+                            <span class="bl-pill" data-tone="green" *ngIf="p.key === m.entitlements.plan">{{ 'billing.plan_current_badge' | translate }}</span>
+                        </span>
+                        <span class="bl-plan-price">
+                            <strong>{{ usd(p.price_usd_cents) }}</strong>
+                            <small>{{ 'billing.per_month' | translate }}</small>
+                        </span>
+                        <span class="bl-plan-cop">{{ cop(p.price_cop_cents) }} {{ 'billing.per_month' | translate }}</span>
+                        <span class="bl-plan-limits">
+                            <span>{{ 'billing.plan_meetings' | translate:{ n: p.meetings_per_month ?? ('billing.unlimited' | translate) } }}</span>
+                            <span>{{ 'billing.plan_users' | translate:{ n: p.users_included ?? ('billing.unlimited' | translate) } }}</span>
+                        </span>
+                        <ul class="bl-plan-features">
+                            <li *ngFor="let f of p.features">{{ featureLabel(f) }}</li>
+                        </ul>
+                    </label>
+                </div>
+
+                <div class="bl-section-head bl-section-head-tight">
+                    <h3 class="bl-section-title">{{ 'billing.addons_title' | translate }}</h3>
+                    <p class="bl-card-sub">{{ 'billing.addons_sub' | translate }}</p>
+                </div>
+                <div class="bl-addons">
+                    <label class="bl-addon" *ngFor="let a of addons; trackBy: trackByKey" [class.is-selected]="isAddonSelected(a.key)">
+                        <input type="checkbox" [checked]="isAddonSelected(a.key)" (change)="onToggleAddon(a.key)" />
+                        <span class="bl-addon-body">
+                            <span class="bl-addon-name">{{ a.name }}</span>
+                            <span class="bl-addon-features">{{ a.features.length ? featureLabel(a.features[0]) : '' }}</span>
+                            <span class="bl-addon-req" *ngIf="a.requires.length">
+                                {{ 'billing.requires' | translate:{ names: requiresNames(a) } }}
+                            </span>
+                            <span class="bl-addon-req" *ngIf="isAddonSelected(a.key) && dependentNames(a.key) as deps">
+                                {{ 'billing.required_by' | translate:{ names: deps } }}
+                            </span>
+                        </span>
+                        <span class="bl-addon-price">
+                            <strong>{{ usd(a.price_usd_cents) }}</strong>
+                            <small>{{ cop(a.price_cop_cents) }}</small>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Resumen + pago -->
+            <aside class="bl-summary">
+                <article class="bl-card">
+                    <h3 class="bl-card-title">{{ 'billing.summary_title' | translate }}</h3>
+                    <div class="bl-field">
+                        <label for="bl-months">{{ 'billing.months_label' | translate }}</label>
+                        <select id="bl-months" class="bl-select" [ngModel]="months" (ngModelChange)="onMonthsChange($event)">
+                            <option *ngFor="let n of monthOptions" [ngValue]="n">
+                                {{ (n === 1 ? 'billing.month_singular' : 'billing.month_plural') | translate:{ n: n } }}
+                            </option>
+                        </select>
+                    </div>
+                    <ul class="bl-lines">
+                        <li *ngIf="selectedPlan as sp">
+                            <span>{{ sp.name }}</span>
+                            <span>{{ cop(sp.price_cop_cents) }}</span>
+                        </li>
+                        <li *ngFor="let a of selectedAddonList; trackBy: trackByKey">
+                            <span>+ {{ a.name }}</span>
+                            <span>{{ cop(a.price_cop_cents) }}</span>
+                        </li>
+                        <li class="bl-lines-months">
+                            <span>× {{ (months === 1 ? 'billing.month_singular' : 'billing.month_plural') | translate:{ n: months } }}</span>
+                            <span></span>
+                        </li>
+                    </ul>
+                    <div class="bl-total">
+                        <span>{{ 'billing.total_label' | translate }}</span>
+                        <strong>{{ cop(totalCop) }}</strong>
+                    </div>
+                    <p class="bl-hint">{{ 'billing.total_hint' | translate }}</p>
+
+                    <ng-container *ngIf="m.payments_enabled; else paymentsOff">
+                        <button type="button" class="bl-btn bl-btn-primary bl-btn-block" (click)="pay()" [disabled]="!canPay">
+                            {{ (paying ? 'billing.paying' : 'billing.pay_button') | translate }}
+                        </button>
+                        <p class="bl-hint" *ngIf="selectedPlan && totalCop === 0">{{ 'billing.contact_sales' | translate }}</p>
+                    </ng-container>
+                    <ng-template #paymentsOff>
+                        <p class="bl-alert bl-alert-warn" role="status">{{ 'billing.payments_disabled' | translate }}</p>
+                    </ng-template>
+                </article>
+            </aside>
+        </section>
+
+        <!-- ══════════════ Historial de pagos ══════════════ -->
+        <section class="bl-card" aria-labelledby="bl-payments-title">
+            <header class="bl-card-head">
+                <h2 class="bl-card-title" id="bl-payments-title">{{ 'billing.payments_title' | translate }}</h2>
+            </header>
+            <p class="bl-empty" *ngIf="!payments.length">{{ 'billing.payments_empty' | translate }}</p>
+            <div class="bl-table-wrap" *ngIf="payments.length">
+                <table class="bl-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'billing.th_reference' | translate }}</th>
+                            <th>{{ 'billing.th_date' | translate }}</th>
+                            <th class="bl-num">{{ 'billing.th_amount' | translate }}</th>
+                            <th>{{ 'billing.th_status' | translate }}</th>
+                            <th>{{ 'billing.th_method' | translate }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let p of payments; trackBy: trackByReference">
+                            <td><code>{{ p.reference }}</code></td>
+                            <td>{{ date(p.approved_at || p.created_at) }}</td>
+                            <td class="bl-num">{{ cop(p.amount_in_cents) }}</td>
+                            <td>
+                                <span class="bl-pill" [attr.data-tone]="p.status === 'approved' ? 'green' : (p.status === 'pending' ? 'amber' : 'red')">
+                                    {{ ('billing.payment_status.' + p.status) | translate }}
+                                </span>
+                            </td>
+                            <td>{{ p.payment_method || '—' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ══════════════ Cancelación ══════════════ -->
+        <section class="bl-card" *ngIf="m.subscription" aria-labelledby="bl-cancel-title">
+            <header class="bl-card-head">
+                <div>
+                    <h2 class="bl-card-title" id="bl-cancel-title">{{ 'billing.cancel_title' | translate }}</h2>
+                    <p class="bl-card-sub">{{ 'billing.cancel_sub' | translate }}</p>
+                </div>
+                <button type="button" class="bl-switch" role="switch" [attr.aria-checked]="cancelAtPeriodEnd"
+                        [class.is-on]="cancelAtPeriodEnd" [disabled]="!canCancel" (click)="requestCancelToggle()"
+                        [attr.aria-label]="'billing.cancel_toggle' | translate">
+                    <span class="bl-switch-thumb"></span>
+                </button>
+            </header>
+            <div class="bl-confirm" *ngIf="cancelPrompt" role="alertdialog" aria-labelledby="bl-cancel-confirm-title">
+                <strong id="bl-cancel-confirm-title">{{ 'billing.cancel_confirm_title' | translate }}</strong>
+                <p>{{ 'billing.cancel_confirm_text' | translate:{ date: date(m.entitlements.period_end) } }}</p>
+                <div class="bl-confirm-actions">
+                    <button type="button" class="bl-btn bl-btn-secondary" (click)="dismissCancel()" [disabled]="cancelSaving">{{ 'billing.cancel_keep' | translate }}</button>
+                    <button type="button" class="bl-btn bl-btn-danger" (click)="confirmCancel()" [disabled]="cancelSaving">{{ 'billing.cancel_confirm_yes' | translate }}</button>
+                </div>
+            </div>
+        </section>
+    </ng-container>
+
+    <p class="bl-empty" *ngIf="loading">{{ 'common.loading' | translate }}</p>
+</div>

@@ -25,7 +25,10 @@
                 </svg>
             </ng-container>
         </span>
-        <p class="toast__message">{{ toast.message }}</p>
+        <div class="toast__body">
+            <p class="toast__message">{{ toast.message }}</p>
+            <a *ngIf="toast.action as action" class="toast__action" [routerLink]="action.link" (click)="dismiss(toast.id)">{{ action.label }}</a>
+        </div>
         <button
             type="button"
             class="toast__close"
