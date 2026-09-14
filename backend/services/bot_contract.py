@@ -44,6 +44,24 @@ class SourceChapter(ContractModel):
     end: float = Field(ge=0, allow_inf_nan=False)
 
 
+class Recording(BaseModel):
+    """Grabación entregada por el proveedor de captura.
+
+    Compatible con el diccionario libre anterior: todo es opcional y se
+    admiten claves extra. `kind` distingue el WebM solo audio del que trae
+    imagen; `expires_at` es la fecha en que el proveedor borra el archivo.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    url: str | None = None
+    kind: Literal["audio", "video"] = "audio"
+    format: str | None = None
+    expires_at: str | None = None
+    available_until: str | None = None
+    local_audio_path: str | None = None
+
+
 class CaptureData(ContractModel):
     external_id: str = Field(min_length=1, max_length=160)
     title: str = Field(min_length=1, max_length=300)
@@ -56,7 +74,7 @@ class CaptureData(ContractModel):
     key_points: list[SourceClaim]
     timeline: list[SourceChapter]
     participants: list[Any]
-    recording: dict[str, Any]
+    recording: Recording = Field(default_factory=Recording)
     warnings: list[str]
     provenance: dict[str, Any]
     key_moments: list[dict] = Field(default_factory=list)

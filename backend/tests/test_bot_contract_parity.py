@@ -13,7 +13,7 @@ del bot).
 import hashlib
 from pathlib import Path
 
-HUELLA = "54e22a6160e4303bd0d8451563e38ea21942c127c885f903628fb909a57f62eb"
+HUELLA = "aa3ef077cfbaca69ffa0fdf03a1a17caaaba2c8a110130b198e58d2cf541e705"
 
 
 def test_el_contrato_no_cambio_sin_avisar():

@@ -36,7 +36,7 @@ from models import (
 from routers.auth import get_current_tenant, require_admin, require_session_writer
 from services.bot_contract import ActenBotEvent
 from services.bot_ingest import BotInbox
-from services.billing_catalog import F_OWNED_BOT
+from services.billing_catalog import F_OWNED_BOT, F_VIDEO
 from services.cifrado import cifrar, descifrar
 from services.entitlements import require_feature
 
@@ -304,6 +304,10 @@ class StartCapture(BaseModel):
     max_duration_minutes: int = PField(default=480, ge=5, le=720)
     vocabulary: list[str] = PField(default_factory=list, max_length=100)
     recording_authorized: Literal[True]
+    # Vídeo además de audio (solo captura por enlace). Exige la función
+    # `meetings.video` del plan; el bot lo pide a Skribby y Acten lo copia
+    # a su bucket al recibir la reunión.
+    video: bool = False
 
 
 @router.post("/start/{kind}", status_code=202)
@@ -315,6 +319,9 @@ async def start(
 ):
     if kind == "meeting" and not body.meeting_url:
         raise HTTPException(422, "Indica el enlace de la reunión")
+    if body.video:
+        # Misma respuesta (402 con detalle) que el resto de opciones del plan.
+        require_feature(F_VIDEO)(user=user, db=db)
     row = db.exec(
         select(BotControlLink).where(
             BotControlLink.tenant_id == user.tenant_id,
@@ -339,13 +346,14 @@ async def start(
             raise HTTPException(
                 409, "Solicitud simultánea; reintenta con el mismo identificador"
             ) from exc
-    payload = body.model_dump(mode="json", exclude={"meeting_url", "mime_type"})
+    payload = body.model_dump(mode="json", exclude={"meeting_url", "mime_type", "video"})
     payload["analysis_scope"] = "base"
     if kind == "meeting":
         payload.update(
             meeting_url=body.meeting_url,
             profile="quality",
             bot_name=bot_name_of(db, user.tenant_id),
+            video=body.video,
         )
     else:
         payload["mime_type"] = body.mime_type

@@ -11,6 +11,7 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { isExactIsoDate } from '../../shared/due-date';
+import { SessionVideo } from '../../services/media-storage.service';
 
 interface ActionItem {
   id?: number;
@@ -70,6 +71,11 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   };
 
   sessionId: number | null = null;
+  /** Vídeo del bot propio (bucket de Acten). Vacío = la sesión no tiene vídeo. */
+  videoUrl = '';
+  videoError = false;
+  private videoExpiresAt = 0;
+  private videoResumeAt = 0;
   isLoading = true;
   isRegenerating = false;
   isGeneratingDoc = false;
@@ -436,6 +442,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
               // Carga los contactos del proyecto para autocompletar el
               // responsable de las tareas (nombre/correo).
               this.loadProjectContacts(this.meetingData.project_id);
+              this.loadVideo();
               // Si llegamos vía link con ?focus=..., aplicamos el scroll
               // y highlight ahora que la data y el DOM están listos.
               if (this.pendingFocus) {
@@ -1143,6 +1150,46 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   toggleTaskApproved(task: ActionItem): void {
     task.is_approved = !task.is_approved;
     this.closeTaskMenu();
+  }
+
+  /** GET /api/sessions/{id}/video devuelve una URL firmada que caduca
+   *  (`expires_in`); 404 significa simplemente que no hay vídeo. */
+  loadVideo(resumeAt = 0): void {
+    if (!this.sessionId) return;
+    const headers = this.authService.getAuthHeaders();
+    this.http.get<SessionVideo>(`${environment.apiUrl}/api/sessions/${this.sessionId}/video`, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (video) => {
+          this.videoResumeAt = resumeAt;
+          this.videoExpiresAt = Date.now() + video.expires_in * 1000;
+          this.videoUrl = video.url;
+          this.videoError = false;
+          this.cdr.detectChanges();
+        },
+        error: (err: { status?: number }) => {
+          this.videoError = err?.status !== 404 && err?.status !== undefined;
+          this.videoUrl = '';
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  /** Al pulsar play con el enlace a punto de caducar se pide otro sin perder la posición. */
+  refreshVideoIfExpired(player: HTMLVideoElement): void {
+    if (!this.videoUrl || Date.now() < this.videoExpiresAt - 30_000) return;
+    this.loadVideo(player.currentTime);
+  }
+
+  /** El navegador falló al cargar (enlace caducado, red): se renueva una vez. */
+  onVideoError(player: HTMLVideoElement): void {
+    if (!this.videoUrl) return;
+    if (Date.now() < this.videoExpiresAt) { this.videoError = true; this.cdr.detectChanges(); return; }
+    this.loadVideo(player.currentTime);
+  }
+
+  resumeVideo(player: HTMLVideoElement): void {
+    if (this.videoResumeAt > 0) { player.currentTime = this.videoResumeAt; this.videoResumeAt = 0; }
   }
 
   approveAct(format: 'word' | 'pdf' = 'word') {

@@ -19,6 +19,8 @@
     </article>
     <article class="panel"><span class="number">02</span><h2>{{ 'meeting_bot.entry_live_title' | translate }}</h2><p>{{ 'meeting_bot.entry_live_text' | translate }}</p>
       <label>{{ 'meeting_bot.meeting_url_label' | translate }}<input type="url" [(ngModel)]="meetingUrl" [placeholder]="'meeting_bot.meeting_url_placeholder' | translate" maxlength="4096"></label>
+      <label class="consent" *ngIf="canRecordVideo"><input type="checkbox" name="video" [(ngModel)]="video" [disabled]="busy">{{ 'meeting_bot.video_label' | translate }}</label>
+      <p class="muted" *ngIf="canRecordVideo && video">{{ 'meeting_bot.video_hint' | translate }}</p>
       <button (click)="join()" [disabled]="busy || !authorized || !caps?.meetings_ready || !meetingUrl">{{ 'meeting_bot.join_button' | translate }}</button>
       <p class="muted">{{ 'meeting_bot.waiting_room_hint' | translate }}</p>
     </article>

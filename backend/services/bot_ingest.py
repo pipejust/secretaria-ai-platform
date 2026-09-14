@@ -142,8 +142,12 @@ async def process_one(engine, inbox_id: int, pipeline=None) -> bool:
             success = (
                 bool(meeting.processing_completed_at) and not meeting.processing_error
             )
+            # El vídeo se copia después del acta: pesa gigas y no debe
+            # retrasar lo que la gente espera leer. Un fallo aquí queda en
+            # `error_code` pero no tumba la sesión; `/retry` lo reintenta.
+            video_error = copiar_video(db, row, meeting)
             row.state = "completed" if success else "failed"
-            row.error_code = "" if success else "acten_pipeline_incomplete"
+            row.error_code = video_error if success else "acten_pipeline_incomplete"
         except Exception:
             db.rollback()
             row = db.get(BotInbox, inbox_id)
@@ -157,6 +161,50 @@ async def process_one(engine, inbox_id: int, pipeline=None) -> bool:
         db.add(row)
         db.commit()
         return True
+
+
+def copiar_video(db: Session, row: BotInbox, meeting: MeetingSession) -> str:
+    """Copia la grabación de vídeo del bot a nuestro bucket. Devuelve un código de error o ''.
+
+    Solo si el evento trae `recording.kind == "video"`, la empresa tiene la
+    función `meetings.video` y el superadministrador configuró el bucket.
+    Nunca lanza: la sesión ya existe y el acta vale igual sin vídeo. La URL
+    de Skribby caduca (`recording.expires_at`), de ahí copiarlo a lo nuestro.
+    """
+    from services import billing_catalog, entitlements, media_storage
+
+    if meeting.recording_video_key:
+        return ""
+    try:
+        recording = ActenBotEvent.model_validate_json(row.payload).data.recording
+    except ValueError:
+        return ""
+    if recording.kind != "video" or not recording.url:
+        return ""
+    if not entitlements.tiene(db, row.tenant_id, billing_catalog.F_VIDEO):
+        logger.info(
+            "Sesión %s: el bot trajo vídeo pero la empresa %s no tiene la función; no se copia.",
+            meeting.id, row.tenant_id,
+        )
+        return ""
+    if not media_storage.configurado(db):
+        logger.warning(
+            "Sesión %s: el bot trajo vídeo pero el almacenamiento (object_storage) "
+            "no está configurado; la grabación se queda solo en el proveedor.",
+            meeting.id,
+        )
+        return ""
+    key = media_storage.clave_video(row.tenant_id, meeting.id)
+    try:
+        subida = media_storage.subir_desde_url(db, recording.url, key)
+    except media_storage.StorageError as exc:
+        logger.error("Sesión %s: no se pudo copiar el vídeo al bucket: %s", meeting.id, exc)
+        return "video_copy_failed"
+    meeting.recording_video_key = key
+    db.add(meeting)
+    db.commit()
+    logger.info("Sesión %s: vídeo copiado a %s (%s bytes)", meeting.id, key, subida["bytes"])
+    return ""
 
 
 # Cuánto puede llevar «processing» antes de darlo por interrumpido. El

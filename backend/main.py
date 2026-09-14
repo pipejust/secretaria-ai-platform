@@ -281,6 +281,8 @@ app.include_router(bot_control.audio_router)
 from routers import billing
 app.include_router(billing.router)
 app.include_router(billing.webhook_router)
+from routers import media_storage
+app.include_router(media_storage.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(templates.router)

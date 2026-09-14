@@ -52,6 +52,12 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     const rol = this.auth.currentUserValue?.role;
     return rol?.name === 'admin' || rol === 'admin';
   }
+  /** La grabación de vídeo la decide el plan: `/auth/me` trae
+   *  `tenant.entitlements.features`; sin `meetings.video` la casilla no se enseña. */
+  get canRecordVideo(): boolean {
+    const features: unknown = this.auth.currentUserValue?.tenant?.entitlements?.features;
+    return Array.isArray(features) && features.includes('meetings.video');
+  }
   caps: BotCapabilities | null = null;
   meetings: BotMeeting[] = [];
   receipts: EmailReceipt[] = [];
@@ -65,6 +71,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   vocabulary = '';
   language = 'es';
   authorized = false;
+  video = false;
   systemAudio = true;
   busy = false;
   error = '';
@@ -152,7 +159,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   async join(): Promise<void> {
     if (!this.authorized) { this.error = this.translate.instant('meeting_bot.error_confirm_authorization'); return; }
     await this.action(async () => {
-      await this.startCapture('meeting', { ...this.payload(), meeting_url: this.meetingUrl });
+      await this.startCapture('meeting', { ...this.payload(), meeting_url: this.meetingUrl, video: this.canRecordVideo && this.video });
       this.notice = this.translate.instant('meeting_bot.notice_join_requested');
       await this.refresh();
     });

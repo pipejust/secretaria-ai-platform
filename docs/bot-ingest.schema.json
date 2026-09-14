@@ -75,9 +75,7 @@
           "type": "array"
         },
         "recording": {
-          "additionalProperties": true,
-          "title": "Recording",
-          "type": "object"
+          "$ref": "#/$defs/Recording"
         },
         "warnings": {
           "items": {
@@ -128,11 +126,87 @@
         "key_points",
         "timeline",
         "participants",
-        "recording",
         "warnings",
         "provenance"
       ],
       "title": "CaptureData",
+      "type": "object"
+    },
+    "Recording": {
+      "additionalProperties": true,
+      "description": "Grabación entregada por el proveedor de captura.\n\nCompatible con el diccionario libre anterior: todo es opcional y se\nadmiten claves extra. `kind` distingue el WebM solo audio del que trae\nimagen; `expires_at` es la fecha en que el proveedor borra el archivo.",
+      "properties": {
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "kind": {
+          "default": "audio",
+          "enum": [
+            "audio",
+            "video"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        },
+        "available_until": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Available Until"
+        },
+        "local_audio_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Audio Path"
+        }
+      },
+      "title": "Recording",
       "type": "object"
     },
     "SourceChapter": {

@@ -1,0 +1,47 @@
+<section class="tn-table-card tn-storage" [attr.aria-label]="'tenants.storage_title' | translate">
+    <header class="tn-card-head tn-storage-head">
+        <div>
+            <h3>{{ 'tenants.storage_title' | translate }}</h3>
+            <p class="tn-field-hint">{{ 'tenants.storage_text' | translate }}</p>
+        </div>
+        <span class="tn-storage-status" [class.is-on]="configured">
+            {{ (configured ? 'tenants.storage_status_configured' : 'tenants.storage_status_missing') | translate }}
+        </span>
+    </header>
+
+    <div class="tn-alert tn-alert--error"   *ngIf="error"  role="alert">{{ error }}</div>
+    <div class="tn-alert tn-alert--success" *ngIf="notice" role="status">{{ notice }}</div>
+
+    <form class="tn-form" (ngSubmit)="save()" autocomplete="off">
+        <div class="tn-storage-grid">
+            <div class="tn-field">
+                <label for="storage-endpoint">{{ 'tenants.storage_endpoint' | translate }}</label>
+                <input id="storage-endpoint" name="endpoint_url" type="url" [(ngModel)]="form.endpoint_url"
+                       [placeholder]="'tenants.storage_endpoint_placeholder' | translate" maxlength="200" [disabled]="busy">
+            </div>
+            <div class="tn-field">
+                <label for="storage-region">{{ 'tenants.storage_region' | translate }}</label>
+                <input id="storage-region" name="region" [(ngModel)]="form.region" placeholder="fsn1" maxlength="64" [disabled]="busy">
+            </div>
+            <div class="tn-field">
+                <label for="storage-bucket">{{ 'tenants.storage_bucket' | translate }}</label>
+                <input id="storage-bucket" name="bucket" [(ngModel)]="form.bucket" maxlength="128" [disabled]="busy">
+            </div>
+            <div class="tn-field">
+                <label for="storage-access">{{ 'tenants.storage_access_key' | translate }}</label>
+                <input id="storage-access" name="access_key" [(ngModel)]="form.access_key" maxlength="200" [disabled]="busy" autocomplete="off">
+            </div>
+            <div class="tn-field">
+                <label for="storage-secret">{{ 'tenants.storage_secret_key' | translate }}</label>
+                <input id="storage-secret" name="secret_key" type="password" [(ngModel)]="form.secret_key" maxlength="200"
+                       [disabled]="busy" autocomplete="new-password"
+                       [placeholder]="(hasSecret ? 'tenants.storage_secret_keep' : 'tenants.storage_secret_key') | translate">
+                <small class="tn-field-hint">{{ 'tenants.storage_secret_hint' | translate }}</small>
+            </div>
+        </div>
+        <div class="tn-storage-actions">
+            <button type="submit" class="tn-cta" [disabled]="busy || !canSave">{{ 'tenants.storage_save' | translate }}</button>
+            <button type="button" class="tn-btn tn-btn--outline-blue" (click)="test()" [disabled]="busy || !configured">{{ 'tenants.storage_test' | translate }}</button>
+        </div>
+    </form>
+</section>

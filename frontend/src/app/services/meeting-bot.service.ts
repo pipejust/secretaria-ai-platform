@@ -119,6 +119,15 @@ export interface SpeakerTurn {
   segment_id: string;
 }
 
+/** Grabación del proveedor de captura; espejo de acten_contract.py `Recording`.
+ *  Skribby entrega un solo WebM: `kind` dice si trae imagen además de audio. */
+export interface RecordingInfo {
+  url?: string | null;
+  kind?: 'audio' | 'video';
+  format?: string | null;
+  expires_at?: string | null;
+}
+
 /** GET /meetings/{id}/result — espejo de schemas.py `compile_result` más
  *  `acten_session_id` que añade bot_control.py `apply_labels`. */
 export interface MeetingResult {
@@ -134,7 +143,7 @@ export interface MeetingResult {
   speaker_timeline?: SpeakerTurn[];
   transcript: TranscriptSegment[];
   timebase?: string;
-  recording?: { url?: string };
+  recording?: RecordingInfo;
   warnings?: string[];
   acten_session_id?: string | null;
 }
@@ -150,6 +159,8 @@ export interface StartCapturePayload {
   max_duration_minutes?: number;
   vocabulary?: string[];
   recording_authorized?: boolean;
+  /** Vídeo además de audio (solo captura por enlace); exige la función `meetings.video` del plan. */
+  video?: boolean;
 }
 
 /** Cuerpo de POST /recordings/{id}/finish; espejo de bot_control.py `Finish`. */

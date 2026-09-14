@@ -509,6 +509,30 @@
                               rows="8"></textarea>
                 </article>
 
+                <!-- Vídeo de la reunión (bot propio, bucket de Acten). Solo
+                     aparece cuando /api/sessions/{id}/video responde. -->
+                <article class="cp-card cp-card-video" *ngIf="videoUrl || videoError">
+                    <header class="cp-card-head">
+                        <div class="cp-card-icon cp-card-icon-blue">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                            </svg>
+                        </div>
+                        <div class="cp-card-titles">
+                            <h3>{{ 'curation.video_title' | translate }}</h3>
+                            <p class="cp-video-hint">{{ 'curation.video_hint' | translate }}</p>
+                        </div>
+                    </header>
+                    <video #videoPlayer *ngIf="videoUrl" class="cp-video" controls preload="metadata"
+                           [src]="videoUrl"
+                           (play)="refreshVideoIfExpired(videoPlayer)"
+                           (loadedmetadata)="resumeVideo(videoPlayer)"
+                           (error)="onVideoError(videoPlayer)"></video>
+                    <p class="cp-summary-empty-hint" *ngIf="videoError">{{ 'curation.video_unavailable' | translate }}</p>
+                </article>
+
                 <!-- Transcripción Original -->
                 <article class="cp-card">
                     <header class="cp-card-head">

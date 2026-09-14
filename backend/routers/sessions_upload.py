@@ -366,6 +366,30 @@ def get_session_details(
         "attendees_resolved": attendees_resolved,
     }
 
+@router.get("/{session_id}/video")
+def get_session_video(
+    session_id: int,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """URL firmada y temporal del vídeo de la reunión (bot propio).
+
+    Mismo control de acceso que el detalle: la sesión tiene que ser de la
+    empresa del usuario (404 si no, para no filtrar existencia). 404 también
+    si la sesión no tiene vídeo; 503 si el bucket dejó de estar configurado.
+    """
+    from services import media_storage
+
+    obj = _get_session_or_404(db, session_id, tenant)
+    if not obj.recording_video_key:
+        raise HTTPException(status_code=404, detail="Esta sesión no tiene vídeo")
+    try:
+        url = media_storage.url_firmada(db, obj.recording_video_key, media_storage.SEGUNDOS_URL)
+    except media_storage.StorageError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"url": url, "expires_in": media_storage.SEGUNDOS_URL}
+
+
 @router.post("/{session_id}/fetch_summary")
 async def fetch_summary(
     session_id: int,
