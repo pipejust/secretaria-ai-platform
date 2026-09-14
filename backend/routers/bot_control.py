@@ -75,10 +75,21 @@ class BotSpeakerLabel(SQLModel, table=True):
     updated_by: int = Field(foreign_key="user.id")
 
 
+DEFAULT_BOT_NAME = "Asistente Acten"
+
+
 class BotConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     service_url: str
     client_key: SecretStr = SecretStr("")
+    # Nombre con el que el bot aparece en Meet/Teams/Zoom; también se usa
+    # en las reuniones que llegan por correo (se copia a la política del bot).
+    bot_name: str = PField(default=DEFAULT_BOT_NAME, min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def clean_name(self):
+        self.bot_name = " ".join(self.bot_name.split()) or DEFAULT_BOT_NAME
+        return self
 
     @model_validator(mode="after")
     def url(self):
@@ -190,12 +201,19 @@ def get_config(user: User = Depends(require_admin), db: Session = Depends(get_se
     cfg = json.loads(row.config_json) if row else {}
     return {
         "service_url": cfg.get("service_url", ""),
+        "bot_name": cfg.get("bot_name") or DEFAULT_BOT_NAME,
         "configured": bool(row and row.is_active and cfg.get("client_key")),
     }
 
 
+def bot_name_of(db, tenant_id):
+    row = config_row(db, tenant_id)
+    cfg = json.loads(row.config_json) if row else {}
+    return cfg.get("bot_name") or DEFAULT_BOT_NAME
+
+
 @router.put("/config")
-def put_config(
+async def put_config(
     body: BotConfig,
     user: User = Depends(require_admin),
     db: Session = Depends(get_session),
@@ -228,11 +246,40 @@ def put_config(
     if not row:
         row = IntegrationSetting(tenant_id=user.tenant_id, provider_name="owned_bot")
     row.config_json = json.dumps(
-        {"service_url": body.service_url.rstrip("/"), "client_key": secret}
+        {
+            "service_url": body.service_url.rstrip("/"),
+            "client_key": secret,
+            "bot_name": body.bot_name,
+        }
     )
     row.is_active = True
     db.add(row)
     db.commit()
+    # Las invitaciones por correo las programa el bot solo; si ya hay una
+    # política guardada, se le copia el nombre nuevo. Que el bot no responda
+    # no invalida la configuración recién guardada.
+    if old.get("bot_name", DEFAULT_BOT_NAME) != body.bot_name:
+        try:
+            state = await bot_call(db, user.tenant_id, "GET", "/v1/mail-policy")
+            policy = state.get("policy") if isinstance(state, dict) else None
+            if policy:
+                await bot_call(
+                    db,
+                    user.tenant_id,
+                    "PUT",
+                    "/v1/mail-policy",
+                    body={
+                        "allowed_senders": policy["allowed_senders"],
+                        "recording_authorized": policy["recording_authorized"],
+                        "timezone": policy["timezone"],
+                        "bot_name": body.bot_name,
+                    },
+                )
+        except HTTPException as exc:
+            logger.warning(
+                "Nombre del bot guardado, pero no se pudo copiar a la política de correo: %s",
+                exc.detail,
+            )
     return {"configured": True}
 
 
@@ -293,7 +340,9 @@ async def start(
     payload["analysis_scope"] = "base"
     if kind == "meeting":
         payload.update(
-            meeting_url=body.meeting_url, profile="quality", bot_name="Asistente Acten"
+            meeting_url=body.meeting_url,
+            profile="quality",
+            bot_name=bot_name_of(db, user.tenant_id),
         )
     else:
         payload["mime_type"] = body.mime_type
@@ -494,7 +543,11 @@ async def write_mail_policy(
     db: Session = Depends(get_session),
 ):
     return await bot_call(
-        db, user.tenant_id, "PUT", "/v1/mail-policy", body=body.model_dump()
+        db,
+        user.tenant_id,
+        "PUT",
+        "/v1/mail-policy",
+        body={**body.model_dump(), "bot_name": bot_name_of(db, user.tenant_id)},
     )
 
 

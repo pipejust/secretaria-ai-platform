@@ -71,7 +71,7 @@ def control(tmp_path, monkeypatch):
             return httpx.Response(
                 200, json={"acten_tenant_id": 1, "browser_ready": True}, request=request
             )
-        if request.url.path == "/v1/recordings" and request.method == "POST":
+        if request.url.path in {"/v1/recordings", "/v1/meetings"} and request.method == "POST":
             body = json.loads(request.content)
             mid = ids.setdefault(body["external_id"], str(uuid.uuid4()))
             return httpx.Response(
@@ -106,6 +106,7 @@ def test_config_secret_encrypted_and_role_restricted(control):
     assert result.json() == {
         "configured": True,
         "service_url": "https://bot.example.test",
+        "bot_name": "Asistente Acten",
     }
     assert (
         client.get("/api/owned-bot/config", headers={"X-Test-User": "2"}).status_code
@@ -278,6 +279,39 @@ def test_mail_policy_is_admin_only_and_forwarded_to_bot(control):
     response = client.put("/api/owned-bot/mail-policy", json=body)
     assert response.status_code == 200
     forwarded = [c for c in calls if c.url.path == "/v1/mail-policy"]
-    assert forwarded[-1].method == "PUT" and json.loads(forwarded[-1].content) == body
+    assert forwarded[-1].method == "PUT"
+    assert json.loads(forwarded[-1].content) == {**body, "bot_name": "Asistente Acten"}
     assert client.get("/api/owned-bot/mail-policy").status_code == 200
     assert client.get("/api/owned-bot/mail-policy", headers={"X-Test-User": "3"}).status_code == 403
+
+
+def test_bot_name_is_per_company_and_reaches_meetings_and_mail_policy(control):
+    client, _, calls = control
+    saved = client.put(
+        "/api/owned-bot/config",
+        json={"service_url": "https://bot.example.test", "bot_name": "  Notas   de Acme "},
+    )
+    assert saved.status_code == 200
+    assert client.get("/api/owned-bot/config").json()["bot_name"] == "Notas de Acme"
+    response = client.post(
+        "/api/owned-bot/start/meeting",
+        json={
+            "external_id": "meet-1",
+            "meeting_url": "https://meet.google.com/abc-defg-hij",
+            "recording_authorized": True,
+        },
+    )
+    assert response.status_code == 202
+    sent = [c for c in calls if c.url.path == "/v1/meetings" and c.method == "POST"][-1]
+    assert json.loads(sent.content)["bot_name"] == "Notas de Acme"
+    client.put(
+        "/api/owned-bot/mail-policy",
+        json={"allowed_senders": ["ana@example.test"], "recording_authorized": True,
+              "timezone": "UTC"},
+    )
+    policy = [c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1]
+    assert json.loads(policy.content)["bot_name"] == "Notas de Acme"
+    too_long = client.put(
+        "/api/owned-bot/config", json={"service_url": "https://bot.example.test", "bot_name": "x" * 51}
+    )
+    assert too_long.status_code == 422

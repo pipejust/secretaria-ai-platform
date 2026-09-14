@@ -2765,6 +2765,9 @@
     "state_failed": "Fallida",
     "state_needs_attention": "Requereix revisió",
     "state_dispatch_unknown": "Entrada pendent de verificar",
-    "state_audio_dispatch_unknown": "Transcripció pendent de verificar"
+    "state_audio_dispatch_unknown": "Transcripció pendent de verificar",
+    "bot_name_label": "Nom del bot a la reunió",
+    "bot_name_placeholder": "Assistent Acten",
+    "bot_name_hint": "Així apareix a Meet, Teams i Zoom, tant si entra per enllaç com per invitació de correu. Màxim 50 caràcters."
   }
 }

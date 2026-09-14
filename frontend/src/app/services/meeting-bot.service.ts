@@ -32,6 +32,8 @@ export interface BotCapabilities {
 /** GET /config — la clave nunca vuelve al navegador. */
 export interface BotConfig {
   service_url: string;
+  /** Nombre con el que el bot entra a la reunión (por empresa). */
+  bot_name: string;
   configured: boolean;
 }
 
@@ -39,6 +41,7 @@ export interface BotConfig {
 export interface BotConfigInput {
   service_url: string;
   client_key: string;
+  bot_name: string;
 }
 
 /** Elemento de GET /meetings y respuesta de POST /start/{kind}.
@@ -177,6 +180,8 @@ export interface MailPolicy {
   allowed_senders: string[];
   recording_authorized: boolean;
   timezone: string;
+  /** Lo fija Acten a partir de la configuración; solo lectura aquí. */
+  bot_name?: string;
 }
 
 /** GET/PUT /mail-policy — espejo de conversacionalbot `mail_state`. */

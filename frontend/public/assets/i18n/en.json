@@ -2765,6 +2765,9 @@
     "state_failed": "Failed",
     "state_needs_attention": "Needs review",
     "state_dispatch_unknown": "Join pending verification",
-    "state_audio_dispatch_unknown": "Transcription pending verification"
+    "state_audio_dispatch_unknown": "Transcription pending verification",
+    "bot_name_label": "Bot name in the meeting",
+    "bot_name_placeholder": "Acten Assistant",
+    "bot_name_hint": "This is how it appears in Meet, Teams and Zoom, whether it joins by link or by email invitation. Up to 50 characters."
   }
 }

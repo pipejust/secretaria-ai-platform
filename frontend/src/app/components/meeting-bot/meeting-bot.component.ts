@@ -73,6 +73,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   speakerFilter = '';
   names: Record<string, string> = {};
   serviceUrl = '';
+  botName = 'Asistente Acten';
   serviceKey = '';
   policySenders = '';
   policyTimezone = 'America/Bogota';
@@ -89,7 +90,9 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     await this.refresh();
     if (this.isAdmin) {
       try {
-        this.serviceUrl = (await this.api.getConfig()).service_url;
+        const config = await this.api.getConfig();
+        this.serviceUrl = config.service_url;
+        this.botName = config.bot_name || this.botName;
       } catch (e) {
         this.error = this.detail(e) ?? this.translate.instant('meeting_bot.error_load_config');
       }
@@ -213,7 +216,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   }
   async saveConfig(): Promise<void> {
     await this.action(async () => {
-      await this.api.saveConfig({ service_url: this.serviceUrl, client_key: this.serviceKey });
+      await this.api.saveConfig({ service_url: this.serviceUrl, client_key: this.serviceKey, bot_name: this.botName.trim() || 'Asistente Acten' });
       this.serviceKey = ''; this.notice = this.translate.instant('meeting_bot.notice_config_saved'); await this.refresh();
     });
   }

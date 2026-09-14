@@ -2765,6 +2765,9 @@
     "state_failed": "Fallida",
     "state_needs_attention": "Requiere revisión",
     "state_dispatch_unknown": "Entrada pendiente de verificar",
-    "state_audio_dispatch_unknown": "Transcripción pendiente de verificar"
+    "state_audio_dispatch_unknown": "Transcripción pendiente de verificar",
+    "bot_name_label": "Nombre del bot en la reunión",
+    "bot_name_placeholder": "Asistente Acten",
+    "bot_name_hint": "Así aparece en Meet, Teams y Zoom, tanto al entrar por enlace como por invitación de correo. Máximo 50 caracteres."
   }
 }
