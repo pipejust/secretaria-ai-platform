@@ -1,5 +1,5 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { Injector, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -41,8 +41,11 @@ function planGateDetail(error: HttpErrorResponse): PlanGateDetail | null {
 }
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  const toast = inject(ToastService);
-  const translate = inject(TranslateService);
+  // Solo el Injector, nunca TranslateService directamente: el loader de
+  // traducciones usa HttpClient, HttpClient pasa por este interceptor, y
+  // pedir aquí TranslateService cerraba el ciclo. La carga de
+  // /assets/i18n/*.json fallaba sin ruido y toda la app mostraba claves.
+  const injector = inject(Injector);
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 && !isAuthEndpoint(req.url)) {
@@ -52,6 +55,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 402) {
         const gate = planGateDetail(error);
         if (gate) {
+          const toast = injector.get(ToastService);
+          const translate = injector.get(TranslateService);
           toast.warning(
             translate.instant('billing.feature_not_included', { label: gate.label || gate.feature }),
             6000,
