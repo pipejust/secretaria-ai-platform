@@ -280,7 +280,11 @@ def test_mail_policy_is_admin_only_and_forwarded_to_bot(control):
     assert response.status_code == 200
     forwarded = [c for c in calls if c.url.path == "/v1/mail-policy"]
     assert forwarded[-1].method == "PUT"
-    assert json.loads(forwarded[-1].content) == {**body, "bot_name": "Asistente Acten"}
+    # Origen «fireflies» (el de la empresa de prueba): los usuarios no se
+    # sincronizan; solo viajan los remitentes extra que escribió el admin.
+    assert json.loads(forwarded[-1].content) == {
+        **body, "extra_senders": ["ana@example.test"], "bot_name": "Asistente Acten",
+    }
     assert client.get("/api/owned-bot/mail-policy").status_code == 200
     assert client.get("/api/owned-bot/mail-policy", headers={"X-Test-User": "3"}).status_code == 403
 
@@ -315,3 +319,29 @@ def test_bot_name_is_per_company_and_reaches_meetings_and_mail_policy(control):
         "/api/owned-bot/config", json={"service_url": "https://bot.example.test", "bot_name": "x" * 51}
     )
     assert too_long.status_code == 422
+
+
+def test_company_users_become_senders_when_the_bot_is_an_accepted_source(control):
+    client, engine, calls = control
+    with Session(engine) as db:
+        t = db.get(Tenant, 1)
+        t.meeting_source = "both"
+        db.add(t)
+        db.commit()
+    response = client.put(
+        "/api/owned-bot/mail-policy",
+        json={"allowed_senders": ["Calendario@Example.test"], "recording_authorized": True,
+              "timezone": "UTC"},
+    )
+    assert response.status_code == 200
+    sent = json.loads([c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1].content)
+    # Usuarios activos de la empresa 1 (u1, u2, u3, u5) más el remitente extra.
+    assert sent["allowed_senders"] == sorted(
+        ["calendario@example.test", "u1@example.test", "u2@example.test", "u3@example.test", "u5@example.test"]
+    )
+    assert sent["extra_senders"] == ["calendario@example.test"]
+    # Sin remitentes extra también vale: los usuarios bastan.
+    response = client.put("/api/owned-bot/mail-policy", json={"recording_authorized": True})
+    assert response.status_code == 200
+    sent = json.loads([c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1].content)
+    assert "u1@example.test" in sent["allowed_senders"] and sent["extra_senders"] == []

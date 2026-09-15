@@ -188,7 +188,10 @@ export interface LabelAnswer {
 
 /** Política de invitaciones por correo; espejo de bot_control.py `MailPolicy`. */
 export interface MailPolicy {
+  /** Todos los remitentes que el bot acepta: usuarios activos + extra. */
   allowed_senders: string[];
+  /** Solo los que escribió el administrador; es lo que se edita. */
+  extra_senders?: string[];
   recording_authorized: boolean;
   timezone: string;
   /** Lo fija Acten a partir de la configuración; solo lectura aquí. */

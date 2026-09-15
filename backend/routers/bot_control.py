@@ -522,7 +522,7 @@ class MailPolicy(BaseModel):
     """Política de invitaciones por correo de la empresa; vive en el bot."""
 
     model_config = ConfigDict(extra="forbid")
-    allowed_senders: list[str] = PField(min_length=1, max_length=50)
+    allowed_senders: list[str] = PField(default_factory=list, max_length=50)
     recording_authorized: bool = False
     timezone: str = PField(default="America/Bogota", max_length=64)
 
@@ -553,12 +553,34 @@ async def write_mail_policy(
     user: User = Depends(require_admin),
     db: Session = Depends(get_session),
 ):
+    """Guarda la política en el bot.
+
+    `allowed_senders` que escribe el administrador son remitentes EXTRA:
+    los usuarios activos de la empresa se añaden solos (services.
+    mail_policy_sync) y se refrescan cada hora y al cambiar el origen.
+    """
+    from services import mail_policy_sync
+
+    extra = [e.strip().lower() for e in body.allowed_senders if e.strip()]
+    estado = await bot_call(db, user.tenant_id, "GET", "/v1/mail-policy")
+    actual = (estado.get("policy") if isinstance(estado, dict) else None) or {}
     return await bot_call(
         db,
         user.tenant_id,
         "PUT",
         "/v1/mail-policy",
-        body={**body.model_dump(), "bot_name": bot_name_of(db, user.tenant_id)},
+        body={
+            "allowed_senders": mail_policy_sync.combinar(db, user.tenant_id, extra),
+            "extra_senders": sorted(set(extra)),
+            "recording_authorized": body.recording_authorized,
+            "timezone": body.timezone,
+            "bot_name": bot_name_of(db, user.tenant_id),
+        },
+    ) if actual or extra or body.recording_authorized else await bot_call(
+        db, user.tenant_id, "PUT", "/v1/mail-policy",
+        body={"allowed_senders": mail_policy_sync.combinar(db, user.tenant_id, []),
+              "extra_senders": [], "recording_authorized": False, "timezone": body.timezone,
+              "bot_name": bot_name_of(db, user.tenant_id)},
     )
 
 

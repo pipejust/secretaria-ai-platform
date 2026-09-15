@@ -548,7 +548,7 @@ def get_meeting_source(
 
 
 @router.put("/meeting-source")
-def put_meeting_source(
+async def put_meeting_source(
     body: MeetingSourceIn,
     _admin: User = Depends(require_admin),
     tenant: Tenant = Depends(get_current_tenant),
@@ -568,4 +568,12 @@ def put_meeting_source(
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     logger.info("Empresa %s cambió el origen de reuniones a %s", tenant.id, body.source)
+    # Los remitentes del bot dependen del origen: al apagar el bot propio
+    # salen de la lista (y dejan de causar ambigüedad en otra empresa).
+    try:
+        from services import mail_policy_sync
+
+        await mail_policy_sync.sincronizar(session, tenant.id)
+    except Exception as exc:  # noqa: BLE001 — sin bot configurado no hay nada que sincronizar
+        logger.info("Sin sincronización de remitentes para la empresa %s: %s", tenant.id, exc)
     return meeting_source.estado(session, tenant.id)

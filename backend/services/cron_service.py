@@ -823,6 +823,23 @@ scheduler.add_job(
 scheduler.add_job(
     check_overdue_action_items, "interval", hours=1, max_instances=1
 )
+
+
+def sync_bot_mail_senders():
+    """Remitentes autorizados del bot = usuarios activos de cada empresa."""
+    import asyncio
+
+    from database import engine
+    from services.mail_policy_sync import sincronizar_todas
+    from sqlmodel import Session as _Session
+
+    with _Session(engine) as db:
+        hechas = asyncio.run(sincronizar_todas(db))
+    if hechas:
+        logger.info("Remitentes del bot sincronizados en %s empresas.", hechas)
+
+
+scheduler.add_job(sync_bot_mail_senders, "interval", hours=1, max_instances=1)
 # Refetch periódico de summaries / retry de errores transitorios de
 # Fireflies. Corre cada 5 min con offset de 2 min después de la hora
 # exacta (XX:02, XX:07, XX:12, ...). Esto evita martillar la API de

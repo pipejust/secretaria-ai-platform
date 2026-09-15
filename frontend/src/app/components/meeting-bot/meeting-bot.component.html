@@ -55,6 +55,6 @@
     <label>{{ 'meeting_bot.senders_label' | translate }}<textarea [(ngModel)]="policySenders" rows="4" [placeholder]="'meeting_bot.senders_placeholder' | translate" [disabled]="!caps?.invitation_email"></textarea></label>
     <label>{{ 'meeting_bot.timezone_label' | translate }}<input [(ngModel)]="policyTimezone" maxlength="64" [placeholder]="'meeting_bot.timezone_placeholder' | translate" [disabled]="!caps?.invitation_email"></label>
     <label class="consent wide"><input type="checkbox" [(ngModel)]="policyAuthorized" [disabled]="!caps?.invitation_email">{{ 'meeting_bot.policy_consent' | translate }}</label>
-    <button (click)="saveMailPolicy()" [disabled]="busy || !caps?.invitation_email || !policySenders.trim()">{{ 'meeting_bot.save_mail_policy' | translate }}</button>
+    <button (click)="saveMailPolicy()" [disabled]="busy || !caps?.invitation_email">{{ 'meeting_bot.save_mail_policy' | translate }}</button>
   </details>
 </main>

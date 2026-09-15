@@ -233,7 +233,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     try {
       const policy = (await this.api.getMailPolicy()).policy;
       if (policy) {
-        this.policySenders = (policy.allowed_senders ?? []).join('\n');
+        this.policySenders = (policy.extra_senders ?? []).join('\n');
         this.policyTimezone = policy.timezone || 'America/Bogota';
         this.policyAuthorized = !!policy.recording_authorized;
       }
