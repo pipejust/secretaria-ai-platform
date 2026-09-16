@@ -231,7 +231,7 @@ def lookup_tenant(slug: str, db: Session = Depends(get_session)):
     return {"id": t.id, "slug": t.slug, "name": t.name, "is_active": t.is_active}
 
 
-@router.get("/resolve-host")
+@public_router.get("/resolve-host")
 def resolve_host(host: str, db: Session = Depends(get_session)):
     """Empresa que atiende un dominio propio (`Tenant.domain`).
 
