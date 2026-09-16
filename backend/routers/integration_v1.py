@@ -587,7 +587,7 @@ def sync_proyectos(
 
     if not payload:
         rep = SyncReport(dry_run=False)
-        sync_projects(db, ctx.tenant.id, ServiciosClient(), dry_run=False, report=rep)
+        sync_projects(db, ctx.tenant.id, ServiciosClient.for_tenant(ctx.tenant.id), dry_run=False, report=rep)
         return {"modo": "catalogo_completo", **rep.as_dict()["proyectos"]}
 
     if "projects" in payload:

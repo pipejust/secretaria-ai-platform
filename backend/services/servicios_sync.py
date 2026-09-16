@@ -73,11 +73,51 @@ def name_tokens(v: Optional[str]) -> set[str]:
 # ── Cliente HTTP ──────────────────────────────────────────────────────
 
 class ServiciosClient:
-    """Cliente de la API externa. Honra `429` con `Retry-After`."""
+    """Cliente de la API externa. Honra `429` con `Retry-After`.
 
-    def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None):
+    Multi-tenant: `for_tenant(tenant_id)` resuelve `remote_base_url` +
+    `remote_api_key` desde `outboundintegration` por tenant. Sin fila
+    activa cae al env (SERVICIOS_API_BASE_URL / SERVICIOS_API_KEY), que
+    apunta a UN único cliente y por eso cruzaba datos entre tenants.
+    """
+
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        tenant_id: Optional[int] = None,
+    ):
         self.base_url = (base_url or os.getenv("SERVICIOS_API_BASE_URL", "")).rstrip("/")
         self.api_key = api_key or os.getenv("SERVICIOS_API_KEY", "")
+        self.tenant_id = tenant_id
+
+    @classmethod
+    def for_tenant(cls, tenant_id: Optional[int]) -> "ServiciosClient":
+        """Cliente ligado a un tenant. Lee `outboundintegration` primero;
+        si no hay fila activa, cae al env (compat legacy con Softnexus)."""
+        if tenant_id is not None:
+            try:
+                from sqlmodel import Session as _S, select as _sel
+                from database import engine as _engine
+                from models import OutboundIntegration as _OI
+                with _S(_engine) as db:
+                    fila = db.exec(
+                        _sel(_OI)
+                        .where(_OI.tenant_id == tenant_id)
+                        .where(_OI.is_active == True)  # noqa: E712
+                    ).first()
+                if fila and (fila.remote_base_url or "").strip():
+                    return cls(
+                        base_url=fila.remote_base_url.strip(),
+                        api_key=(fila.remote_api_key or "").strip(),
+                        tenant_id=tenant_id,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "no se pudo leer outboundintegration tenant %s: %s",
+                    tenant_id, exc,
+                )
+        return cls(tenant_id=tenant_id)
 
     @property
     def configured(self) -> bool:
@@ -644,7 +684,7 @@ def sync_un_proyecto(
 
     El archivado por ausencia se desactiva — ver `sync_projects`.
     """
-    base = client or ServiciosClient()
+    base = client or ServiciosClient.for_tenant(tenant_id)
 
     class _Uno(ServiciosClient):
         """Cliente que solo conoce este proyecto; el resto lo delega."""
@@ -737,7 +777,7 @@ def run_full_sync(
     db: Session, tenant_id: int, *, dry_run: bool = True,
     client: Optional[ServiciosClient] = None,
 ) -> dict:
-    c = client or ServiciosClient()
+    c = client or ServiciosClient.for_tenant(tenant_id)
     rep = SyncReport(dry_run=dry_run)
     try:
         sync_projects(db, tenant_id, c, dry_run=dry_run, report=rep)

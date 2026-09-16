@@ -867,9 +867,9 @@ def sync_servicios_directory() -> None:
     """
     from services.servicios_sync import ServiciosClient, run_full_sync
 
-    client = ServiciosClient()
-    if not client.configured:
-        return  # integración no configurada en este despliegue
+    # Multi-tenant: no gate-eamos por env aquí — puede haber tenants con
+    # `outboundintegration` propia aunque no haya env global. Verificamos
+    # `client.configured` dentro del loop, por tenant.
 
     from database import engine as _engine
     from models import Tenant as _T
@@ -896,7 +896,10 @@ def sync_servicios_directory() -> None:
             for t in tenants:
                 if not t or not t.is_active:
                     continue
-                rep = run_full_sync(db, t.id, dry_run=False, client=client)
+                client_t = ServiciosClient.for_tenant(t.id)
+                if not client_t.configured:
+                    continue  # este tenant no tiene integración; siguiente
+                rep = run_full_sync(db, t.id, dry_run=False, client=client_t)
                 emp = rep.get("employees", {})
                 logger.info(
                     "sync Servicios [%s]: %s personas enlazadas, %s sin pareja, errores=%s",
@@ -917,9 +920,7 @@ def sync_servicios_proyectos() -> None:
     """
     from services.servicios_sync import ServiciosClient, sync_projects
 
-    client = ServiciosClient()
-    if not client.configured:
-        return
+    # Multi-tenant: cliente resuelto por tenant dentro del loop.
     from database import engine as _engine
     from models import Project as _P, Tenant as _T
     from sqlmodel import Session as _S, select as _sel
@@ -942,7 +943,10 @@ def sync_servicios_proyectos() -> None:
             for t in tenants:
                 if not t or not t.is_active:
                     continue
-                rep = sync_projects(db, t.id, client, dry_run=False)
+                client_t = ServiciosClient.for_tenant(t.id)
+                if not client_t.configured:
+                    continue
+                rep = sync_projects(db, t.id, client_t, dry_run=False)
                 if rep.projects_unmatched or rep.projects_renamed or rep.projects_archived:
                     logger.info(
                         "proyectos [%s]: creados=%s renombrados=%s archivados=%s",

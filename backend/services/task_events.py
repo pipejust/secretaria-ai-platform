@@ -101,7 +101,7 @@ def actor_de_integracion(db: Session, ctx: Any) -> dict:
     # quien nunca lo pidió.
     externo = (getattr(ctx, "on_behalf_of", "") or "").strip()
     if externo:
-        ficha = _empleado(externo)
+        ficha = _empleado(externo, tenant_id=getattr(ctx.tenant, 'id', None))
         if ficha:
             return {
                 "kind": "user",
@@ -179,22 +179,25 @@ _CACHE_EMPLEADOS: dict[str, tuple[float, dict]] = {}
 _CACHE_TTL = 3600.0
 
 
-def _empleado(employee_id: str) -> Optional[dict]:
+def _empleado(employee_id: str, tenant_id: Optional[int] = None) -> Optional[dict]:
     import time
 
-    guardado = _CACHE_EMPLEADOS.get(employee_id)
+    # Cache por (tenant, employee_id): dos tenants distintos pueden tener
+    # employees con el mismo id externo apuntando a personas diferentes.
+    cache_key = (tenant_id, employee_id)
+    guardado = _CACHE_EMPLEADOS.get(cache_key)
     if guardado and time.time() - guardado[0] < _CACHE_TTL:
         return guardado[1] or None
     try:
         from services.servicios_sync import ServiciosClient
 
-        ficha = ServiciosClient().employee(employee_id)
+        ficha = ServiciosClient.for_tenant(tenant_id).employee(employee_id)
     except Exception as exc:  # noqa: BLE001
         logger.info("Directorio no consultable para %s: %s", employee_id, exc)
         return None
     # Se recuerda incluso el «no está», para no repetir la llamada por cada
     # cambio de un id que su directorio no conoce.
-    _CACHE_EMPLEADOS[employee_id] = (time.time(), ficha or {})
+    _CACHE_EMPLEADOS[cache_key] = (time.time(), ficha or {})
     return ficha
 
 
