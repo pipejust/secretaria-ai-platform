@@ -94,7 +94,11 @@ def _origenes_de_empresas() -> list[str]:
 
         with _S(_engine) as _db:
             dominios = _db.exec(_select(_Tenant.domain).where(_Tenant.domain.is_not(None))).all()
-        return [f"https://{d.strip().lower()}" for d in dominios if d and d.strip()]
+        return [
+            f"https://{h.strip().lower()}"
+            for d in dominios if d
+            for h in d.split(",") if h.strip()
+        ]
     except Exception as exc:  # noqa: BLE001 — sin base al arrancar (tests) no hay dominios
         logging.getLogger(__name__).info("Sin dominios propios de empresas para CORS: %s", exc)
         return []

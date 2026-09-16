@@ -26,7 +26,6 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func
 from sqlmodel import Session, select
 
 from auth_utils import get_password_hash
@@ -242,10 +241,16 @@ def resolve_host(host: str, db: Session = Depends(get_session)):
     target = (host or "").strip().lower().split(":")[0]
     if not target or len(target) > 253:
         raise HTTPException(status_code=400, detail="host requerido")
-    t = db.exec(select(Tenant).where(func.lower(Tenant.domain) == target)).first()
-    if not t or not t.is_active:
-        raise HTTPException(status_code=404, detail="Dominio sin empresa")
-    return {"slug": t.slug, "name": t.name}
+    # `Tenant.domain` admite varios hosts separados por coma
+    # (acten.softnexus.io,acten.softnexus.co); son pocas filas.
+    for t in db.exec(select(Tenant).where(Tenant.domain.is_not(None))).all():
+        if target in dominios_de(t) and t.is_active:
+            return {"slug": t.slug, "name": t.name}
+    raise HTTPException(status_code=404, detail="Dominio sin empresa")
+
+
+def dominios_de(t: Tenant) -> set[str]:
+    return {d.strip().lower() for d in (t.domain or "").split(",") if d.strip()}
 
 
 # ============================================================================
@@ -545,13 +550,12 @@ def update_tenant(
     if patch.name is not None:
         t.name = patch.name.strip()
     if patch.domain is not None:
-        new_domain = patch.domain.strip() or None
+        new_domain = ",".join(d.strip().lower() for d in patch.domain.split(",") if d.strip()) or None
         if new_domain:
-            clash = db.exec(
-                select(Tenant).where(Tenant.domain == new_domain).where(Tenant.id != t.id)
-            ).first()
-            if clash:
-                raise HTTPException(status_code=409, detail="Ese dominio ya está en uso.")
+            nuevos = set(new_domain.split(","))
+            for otro in db.exec(select(Tenant).where(Tenant.domain.is_not(None)).where(Tenant.id != t.id)).all():
+                if nuevos & dominios_de(otro):
+                    raise HTTPException(status_code=409, detail="Ese dominio ya está en uso.")
         t.domain = new_domain
     if patch.is_active is not None:
         t.is_active = patch.is_active
