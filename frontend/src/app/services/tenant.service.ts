@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, computed, inject, signal } from '@angular/core';
 
 /**
@@ -58,6 +59,24 @@ export class TenantService {
   // ------------------------------------------------------------------
   // helpers privados
   // ------------------------------------------------------------------
+
+  /**
+   * Dominio propio de una empresa (acten.softnexus.io → softnexus). Se
+   * consulta al arrancar solo cuando el host no es el de Acten; si el
+   * backend conoce el dominio, el slug queda fijado antes del login.
+   * Cualquier fallo deja la resolución por path/subdominio/localStorage.
+   */
+  async resolveFromHost(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    const host = window.location.hostname.toLowerCase();
+    if (!host || host === 'localhost' || host.endsWith('.acten.app') || host === 'acten.app') return;
+    try {
+      const res = await fetch(`${environment.apiUrl}/api/tenants/resolve-host?host=${encodeURIComponent(host)}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { slug?: string };
+      if (data.slug) this.setSlug(data.slug, true);
+    } catch { /* sin red o sin dominio: se sigue con el slug normal */ }
+  }
 
   private _initialSlug(): string {
     if (typeof window === 'undefined') return DEFAULT_SLUG;

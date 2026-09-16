@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from auth_utils import get_password_hash
@@ -228,6 +229,23 @@ def lookup_tenant(slug: str, db: Session = Depends(get_session)):
     if not t:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     return {"id": t.id, "slug": t.slug, "name": t.name, "is_active": t.is_active}
+
+
+@router.get("/resolve-host")
+def resolve_host(host: str, db: Session = Depends(get_session)):
+    """Empresa que atiende un dominio propio (`Tenant.domain`).
+
+    El front lo consulta al arrancar cuando la página se abre en un host
+    que no es el de Acten (p. ej. acten.softnexus.io) para fijar el slug
+    antes de mostrar el login. Público y mínimo, como `lookup_tenant`.
+    """
+    target = (host or "").strip().lower().split(":")[0]
+    if not target or len(target) > 253:
+        raise HTTPException(status_code=400, detail="host requerido")
+    t = db.exec(select(Tenant).where(func.lower(Tenant.domain) == target)).first()
+    if not t or not t.is_active:
+        raise HTTPException(status_code=404, detail="Dominio sin empresa")
+    return {"slug": t.slug, "name": t.name}
 
 
 # ============================================================================

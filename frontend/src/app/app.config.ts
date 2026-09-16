@@ -12,6 +12,7 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { authInterceptor } from './interceptors/auth-interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor';
 import { tenantInterceptor } from './interceptors/tenant.interceptor';
+import { TenantService } from './services/tenant.service';
 import { BrandingService } from './services/branding.service';
 import { LanguageService } from './services/language.service';
 import { TitleService } from './services/title.service';
@@ -46,6 +47,9 @@ export const appConfig: ApplicationConfig = {
     // navigator > 'es') antes de que arranquen las rutas.
     provideTranslateService({ fallbackLang: 'es' }),
     provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' }),
+    // Dominio propio de la empresa (acten.softnexus.io): fija el slug antes
+    // de que branding y login pregunten por él.
+    provideAppInitializer(() => inject(TenantService).resolveFromHost()),
     provideAppInitializer(() => inject(BrandingService).loadFromServer()),
     provideAppInitializer(() => inject(LanguageService).bootstrap()),
     // El TitleService se arranca DESPUÉS del LanguageService porque depende

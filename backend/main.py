@@ -75,6 +75,33 @@ if _frontend_url:
     # Deduplica preservando orden
     _dynamic_origins = list(dict.fromkeys(_dynamic_origins))
 
+# Dominios propios de las empresas (Tenant.domain, p. ej. acten.softnexus.io)
+# y extras por entorno. Se leen al arrancar: asignar un dominio nuevo a una
+# empresa requiere reiniciar el backend para que el navegador pueda llamar
+# a la API desde él.
+for _extra in os.environ.get("CORS_EXTRA_ORIGINS", "").split(","):
+    _extra = _extra.strip().rstrip("/")
+    if _extra:
+        _dynamic_origins.append(_extra)
+
+
+def _origenes_de_empresas() -> list[str]:
+    try:
+        from sqlmodel import Session as _S, select as _select
+
+        from database import engine as _engine
+        from models import Tenant as _Tenant
+
+        with _S(_engine) as _db:
+            dominios = _db.exec(_select(_Tenant.domain).where(_Tenant.domain.is_not(None))).all()
+        return [f"https://{d.strip().lower()}" for d in dominios if d and d.strip()]
+    except Exception as exc:  # noqa: BLE001 — sin base al arrancar (tests) no hay dominios
+        logging.getLogger(__name__).info("Sin dominios propios de empresas para CORS: %s", exc)
+        return []
+
+
+_dynamic_origins = list(dict.fromkeys(_dynamic_origins + _origenes_de_empresas()))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
