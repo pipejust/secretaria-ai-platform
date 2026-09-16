@@ -51,9 +51,12 @@ export const appConfig: ApplicationConfig = {
     // de que branding y login pregunten por él.
     // Los inicializadores corren en paralelo: el branding debe esperar a que
     // el slug esté resuelto o carga la marca de Acten en vez de la empresa.
-    provideAppInitializer(async () => {
-      await inject(TenantService).resolveFromHost();
-      await inject(BrandingService).loadFromServer();
+    // Ambos servicios se inyectan ANTES del primer await: tras un await ya
+    // no hay contexto de inyección y Angular lanza NG0203 (pantalla en blanco).
+    provideAppInitializer(() => {
+      const tenants = inject(TenantService);
+      const branding = inject(BrandingService);
+      return tenants.resolveFromHost().then(() => branding.loadFromServer());
     }),
     provideAppInitializer(() => inject(LanguageService).bootstrap()),
     // El TitleService se arranca DESPUÉS del LanguageService porque depende
