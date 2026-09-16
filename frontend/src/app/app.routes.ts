@@ -8,6 +8,7 @@ import { UsersComponent } from './components/users/users.component';
 import { RolesComponent } from './components/roles/roles.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import { customDomainGuard } from './guards/custom-domain.guard';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
 
@@ -281,6 +282,8 @@ export const routes: Routes = [
     {
         path: '',
         pathMatch: 'full',
+        // En dominios propios de empresa la raíz va al login o al panel.
+        canActivate: [customDomainGuard],
         loadComponent: () => import('./components/landing/landing.component').then(m => m.LandingComponent),
         title: 'Acten — Convierte cada reunión en una decisión',
         data: {

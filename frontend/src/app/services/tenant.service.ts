@@ -33,6 +33,9 @@ export class TenantService {
 
   readonly isDefault = computed(() => this.slug() === DEFAULT_SLUG);
 
+  /** True cuando el slug vino del dominio propio de la empresa (Tenant.domain). */
+  readonly resolvedFromHost = signal<boolean>(false);
+
   /**
    * Setea explícitamente el slug. Útil al loguear contra un tenant nuevo,
    * o al super-admin al cambiar de tenant para administrar.
@@ -74,7 +77,10 @@ export class TenantService {
       const res = await fetch(`${environment.apiUrl}/api/tenants/resolve-host?host=${encodeURIComponent(host)}`);
       if (!res.ok) return;
       const data = (await res.json()) as { slug?: string };
-      if (data.slug) this.setSlug(data.slug, true);
+      if (data.slug) {
+        this.setSlug(data.slug, true);
+        this.resolvedFromHost.set(true);
+      }
     } catch { /* sin red o sin dominio: se sigue con el slug normal */ }
   }
 
