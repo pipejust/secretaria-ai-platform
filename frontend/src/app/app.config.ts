@@ -49,8 +49,12 @@ export const appConfig: ApplicationConfig = {
     provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' }),
     // Dominio propio de la empresa (acten.softnexus.io): fija el slug antes
     // de que branding y login pregunten por él.
-    provideAppInitializer(() => inject(TenantService).resolveFromHost()),
-    provideAppInitializer(() => inject(BrandingService).loadFromServer()),
+    // Los inicializadores corren en paralelo: el branding debe esperar a que
+    // el slug esté resuelto o carga la marca de Acten en vez de la empresa.
+    provideAppInitializer(async () => {
+      await inject(TenantService).resolveFromHost();
+      await inject(BrandingService).loadFromServer();
+    }),
     provideAppInitializer(() => inject(LanguageService).bootstrap()),
     // El TitleService se arranca DESPUÉS del LanguageService porque depende
     // del fallbackLang y de las traducciones cargadas para resolver los
