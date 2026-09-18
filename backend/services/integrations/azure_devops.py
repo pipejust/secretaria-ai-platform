@@ -30,7 +30,7 @@ class AzureDevOpsIntegrationService:
         final_desc = description
         owner_label = owner_name or owner_email or assigned_to or "Sin asignar"
         owner_email_label = owner_email or assigned_to or "n/a"
-        final_desc += "<br><br><b>Metadatos de Notiva:</b>"
+        final_desc += "<br><br><b>Metadatos de Acten:</b>"
         final_desc += f"<br>- Asignado Original: {owner_label} ({owner_email_label})"
 
         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

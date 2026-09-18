@@ -1,4 +1,4 @@
-"""Ask Notiva — chat con RAG sobre el histórico de actas.
+"""Ask Acten — chat con RAG sobre el histórico de actas.
 
 Endpoint:
     POST /api/ask  body: {question, project_id?, top_k?, min_relevance?}
@@ -45,7 +45,7 @@ from services.embedding_service import search_similar
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/ask", tags=["Ask Notiva (RAG)"])
+router = APIRouter(prefix="/api/ask", tags=["Ask Acten (RAG)"])
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 from services.groq_models import MODELO_PRINCIPAL, MODELO_RAPIDO

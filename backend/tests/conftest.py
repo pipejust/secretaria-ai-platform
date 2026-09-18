@@ -1,4 +1,4 @@
-"""Configuración común de pytest para Notiva.
+"""Configuración común de pytest para Acten.
 
 - Engine SQLite en memoria por test (rápido + aislado).
 - Sobrescribe `database.engine` y `get_session` para que la app use el de test.

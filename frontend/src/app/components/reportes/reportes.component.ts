@@ -833,7 +833,7 @@ export class ReportesComponent implements OnInit, OnDestroy {
                     a.href = url;
                     const safe = (this.data?.label || 'reporte').replace(/[^a-z0-9]/gi, '_').slice(0, 60);
                     const ext = this.exportFormat === 'excel' ? 'xlsx' : 'pdf';
-                    a.download = `Reporte_Notiva_${safe}.${ext}`;
+                    a.download = `Reporte_Acten_${safe}.${ext}`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);

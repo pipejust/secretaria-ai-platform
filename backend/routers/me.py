@@ -93,13 +93,13 @@ def export_my_data(
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("notiva-export.json", json.dumps(payload, indent=2, ensure_ascii=False, default=str))
+        zf.writestr("acten-export.json", json.dumps(payload, indent=2, ensure_ascii=False, default=str))
         zf.writestr("README.txt", (
             "Este archivo contiene tus datos personales según GDPR Art. 20.\n"
             "Para borrar tu cuenta: DELETE /api/me/account (purga real a los 30 días).\n"
         ))
     buf.seek(0)
-    fname = f"notiva-export-{current_user.id}-{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}.zip"
+    fname = f"acten-export-{current_user.id}-{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}.zip"
     return StreamingResponse(
         buf, media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},

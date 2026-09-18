@@ -86,7 +86,7 @@ class WordGeneratorService:
             local = f"/tmp/{uuid.uuid4()}.docx"
             req = urllib.request.Request(
                 template_path,
-                headers={"User-Agent": "Mozilla/5.0 (Notiva-Generator)"},
+                headers={"User-Agent": "Mozilla/5.0 (Acten-Generator)"},
             )
             try:
                 with urllib.request.urlopen(req) as resp, open(local, "wb") as out:

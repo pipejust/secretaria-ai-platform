@@ -555,7 +555,7 @@ async def _dispatch_routing(
         try:
             from sqlmodel import select as _sel
             sess = db.get(MeetingSession, action_items[0].session_id) if action_items else None
-            title = sess.title if sess else "Sesión Notiva"
+            title = sess.title if sess else "Sesión Acten"
             summary = (sess.raw_summary if sess else "")[:1500]
             count = len(action_items)
             if "slack" in dest_type:
@@ -587,7 +587,7 @@ async def _dispatch_routing(
             elif "salesforce" in dest_type:
                 opp = await service.find_opportunity_by_email(primary_email)
                 if opp: await service.attach_task(opp["Id"],
-                                                  subject=(action_items[0].title or "Notiva")[:255],
+                                                  subject=(action_items[0].title or "Acten")[:255],
                                                   description=body_html)
             elif "pipedrive" in dest_type:
                 deal = await service.find_deal_by_email(primary_email)

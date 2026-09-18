@@ -1353,7 +1353,7 @@ def __build_corporate_data(session_obj, action_items, db=None) -> dict:
             template_path = getattr(template_obj, "file_path", None)
                     
     return {
-        "entidad_principal": "Notiva",
+        "entidad_principal": "Acten",
         "entidad_secundaria": "Gestión Integral de Sesiones",
         "titulo_documento": "ACTA DE REUNIÓN",
         "subtitulo_documento": session_obj.title or "Sesión General",
@@ -1584,7 +1584,7 @@ async def dispatch_emails(
             ics_lines = [
                 "BEGIN:VCALENDAR",
                 "VERSION:2.0",
-                "PRODID:-//Notiva//ES"
+                "PRODID:-//Acten//ES"
             ] + ics_events + [
                 "END:VCALENDAR"
             ]
@@ -1715,7 +1715,7 @@ async def dispatch_platforms(
         eff_due_date = normalize_due_date(item.due_date) or datetime.now().strftime("%Y-%m-%d")
 
         owner_display = f"{item.owner_name} ({item.owner_email})" if item.owner_name else (item.owner_email or "N/A")
-        safe_description = f"{item.description}\n\n**Metadatos de Notiva**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
+        safe_description = f"{item.description}\n\n**Metadatos de Acten**\n- Asignado Original: {owner_display}\n- Fecha Vencimiento Asignada: {eff_due_date}"
 
         for routing in routings:
             config = json.loads(routing.destination_config or '{}')

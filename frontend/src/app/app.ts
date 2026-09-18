@@ -13,7 +13,7 @@ import { PreferencesService } from './services/preferences.service';
     styleUrl: './app.css',
 })
 export class App implements OnInit, OnDestroy {
-    protected readonly title = signal('Notiva');
+    protected readonly title = signal('Acten');
 
     private readonly destroy$ = new Subject<void>();
 

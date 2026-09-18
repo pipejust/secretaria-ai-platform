@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    project_name: str = "Notiva"
+    project_name: str = "Acten"
     database_url: str = ""
     # Ya no se usa para llamar a Groq: la llave sale de la base, por
     # empresa (services/llm_keys.py). Se conserva el campo para que un

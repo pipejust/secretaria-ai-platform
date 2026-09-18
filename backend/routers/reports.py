@@ -557,7 +557,7 @@ def get_report_pdf(
 
         # --- Header ---
         pdf.set_font("Helvetica", "B", 18)
-        pdf.cell(190, 10, _safe("Reporte ejecutivo Notiva"), ln=1)
+        pdf.cell(190, 10, _safe("Reporte ejecutivo Acten"), ln=1)
         pdf.set_font("Helvetica", "", 11)
         pdf.set_x(10); pdf.cell(190, 6, _safe(report["label"]), ln=1)
         pdf.set_x(10); pdf.cell(190, 6, _safe(f"Proyecto: {report['project_name']}"), ln=1)
@@ -665,7 +665,7 @@ def get_report_pdf(
         raise HTTPException(500, "No se pudo generar el PDF. Revisa los logs del servidor.")
 
     safe_label = report["label"].replace("/", "-").replace(" ", "_")
-    filename = f"Reporte_Notiva_{safe_label}.pdf"
+    filename = f"Reporte_Acten_{safe_label}.pdf"
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
@@ -705,7 +705,7 @@ def get_report_excel(
     # Hoja 1: Resumen
     ws = wb.active
     ws.title = "Resumen"
-    ws["A1"] = "Reporte ejecutivo Notiva"
+    ws["A1"] = "Reporte ejecutivo Acten"
     ws["A1"].font = Font(name="Calibri", size=16, bold=True)
     ws["A3"] = "Periodo:"; ws["B3"] = report["label"]
     ws["A4"] = "Proyecto:"; ws["B4"] = report["project_name"]
@@ -785,7 +785,7 @@ def get_report_excel(
     buf.seek(0)
 
     safe_label = report["label"].replace("/", "-").replace(" ", "_")
-    filename = f"Reporte_Notiva_{safe_label}.xlsx"
+    filename = f"Reporte_Acten_{safe_label}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

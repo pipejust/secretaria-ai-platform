@@ -30,7 +30,7 @@ def build_ics(
     start_utc = start.astimezone(timezone.utc).strftime(fmt)
     end_utc = end.astimezone(timezone.utc).strftime(fmt)
     dtstamp = datetime.now(timezone.utc).strftime(fmt)
-    uid = f"{uuid.uuid4()}@notiva"
+    uid = f"{uuid.uuid4()}@acten"
 
     def _escape(s: str) -> str:
         return s.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
@@ -38,7 +38,7 @@ def build_ics(
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//Notiva//Auto-schedule//ES",
+        "PRODID:-//Acten//Auto-schedule//ES",
         "CALSCALE:GREGORIAN",
         "METHOD:REQUEST",
         "BEGIN:VEVENT",
@@ -53,7 +53,7 @@ def build_ics(
     if location:
         lines.append(f"LOCATION:{_escape(location)}")
     if organizer_email:
-        lines.append(f"ORGANIZER;CN=Notiva:mailto:{organizer_email}")
+        lines.append(f"ORGANIZER;CN=Acten:mailto:{organizer_email}")
     for ae in attendee_emails or []:
         lines.append(f"ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:{ae}")
     lines += ["END:VEVENT", "END:VCALENDAR"]
