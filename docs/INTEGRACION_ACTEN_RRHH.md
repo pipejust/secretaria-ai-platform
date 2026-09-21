@@ -715,6 +715,8 @@ Query: `project_external_id`, `owner_external_id`, `status`, `updated_since`
 |---|---|---|
 | `status` | enum | Ver transiciones abajo |
 | `owner_external_id` | uuid \| null | UUID del empleado. `null` = sin asignar |
+| `owner_name`, `owner_email` | string | Responsable que no está en el directorio. `owner_external_id` manda si vienen los dos |
+| `project_external_id` | string \| null | Mueve la tarea a otro proyecto **sin tocar la sesión que la generó** (una reunión puede mezclar dos proyectos). `null` o `""` deshace la reasignación: la tarea vuelve al proyecto de su sesión. Proyecto inexistente → `422` |
 | `title` | string | |
 | `description` | string | |
 | `due_date` | date \| null | `YYYY-MM-DD` |
@@ -723,8 +725,16 @@ Query: `project_external_id`, `owner_external_id`, `status`, `updated_since`
 | `column` | string \| null | Columna del Kanban (§13.1) |
 | `order` | integer \| null | Posición dentro de la columna |
 
-**No modificables:** `id`, `source_session_id`, `project_external_id`,
-`origin`, `created_at`. Enviarlos → `400`.
+**No modificables:** `id`, `source_session_id`, `origin`, `created_at`.
+
+**Validación estricta:** cualquier campo que no esté en la tabla —los no
+modificables, un nombre mal escrito, uno que no existe— devuelve `422` con
+el nombre del campo en `detail[].loc`, y **no se aplica nada** del cuerpo.
+Antes se ignoraba en silencio y la respuesta era `200`.
+
+La reasignación se refleja en `GET /tasks` (`project_external_id` de la
+tarea y el filtro `?project_external_id=`), en el calendario, en Pendientes
+y en el Kanban de Acten. La sesión de origen conserva su proyecto.
 
 ### Estados y transiciones
 

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import and_, or_
 from sqlmodel import Session, select
 
 from database import get_session
@@ -298,8 +299,12 @@ def list_pendientes(
 
     stmt = select(ActionItem).where(ActionItem.tenant_id == tenant.id)
     if project_id is not None:
+        # La reasignación manual (ActionItem.project_id) manda sobre la sesión.
         stmt = stmt.join(MeetingSession, MeetingSession.id == ActionItem.session_id).where(
-            MeetingSession.project_id == project_id
+            or_(
+                ActionItem.project_id == project_id,
+                and_(ActionItem.project_id.is_(None), MeetingSession.project_id == project_id),
+            )
         )
     items = db.exec(stmt.limit(limit * 4)).all()
 
@@ -351,7 +356,7 @@ def list_pendientes(
 
     out: List[Dict[str, Any]] = []
     for item in items:
-        proj_id = session_to_project.get(item.session_id)
+        proj_id = item.project_id or session_to_project.get(item.session_id)
         proj_name = project_names.get(proj_id, "General") if proj_id else "General"
         # Sin proyecto o sin responsable, la pregunta no tiene sentido y se
         # deja en `None`: así el interruptor no esconde las tareas que

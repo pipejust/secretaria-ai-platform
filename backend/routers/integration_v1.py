@@ -17,7 +17,8 @@ from datetime import datetime
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import and_, or_
 from sqlmodel import Session, select
 
 from database import get_session
@@ -174,7 +175,8 @@ def _serialize_task(
     db: Session, item: ActionItem, proj_refs: dict[int, Optional[str]],
     session_project: dict[int, Optional[int]],
 ) -> dict[str, Any]:
-    pid = session_project.get(item.session_id)
+    # La reasignación manual manda sobre el proyecto de la sesión.
+    pid = item.project_id or session_project.get(item.session_id)
     duenio = _owner_block(db, item)
     return {
         "id": item.id,
@@ -368,7 +370,12 @@ def list_tasks(
             select(MeetingSession.id).where(MeetingSession.project_id == proj.id)
         ).all()
         sids = [r[0] if isinstance(r, tuple) else r for r in sids]
-        q = q.where(ActionItem.session_id.in_(sids or [-1]))
+        # Las reasignadas a este proyecto entran; las de sus sesiones que
+        # se reasignaron a otro, salen.
+        q = q.where(or_(
+            ActionItem.project_id == proj.id,
+            and_(ActionItem.project_id.is_(None), ActionItem.session_id.in_(sids or [-1])),
+        ))
     if status_filter:
         q = q.where(ActionItem.status == status_filter)
     if owner_external_id:
@@ -401,7 +408,14 @@ def list_tasks(
 
 
 class TaskPatch(BaseModel):
+    # Un campo que no existe es un 422, no un 200 que aparenta haber
+    # funcionado: quien integra tiene que enterarse en el momento.
+    model_config = ConfigDict(extra="forbid")
+
     status: Optional[str] = None
+    # Mueve la tarea a otro proyecto sin tocar la sesión que la generó.
+    # null o "" deshace la reasignación: vuelve al proyecto de su sesión.
+    project_external_id: Optional[str] = None
     owner_external_id: Optional[str] = None
     # Para quien no está en el directorio — la mayoría en un proyecto de
     # cliente. `owner_external_id` sigue mandando si vienen los dos.
@@ -461,6 +475,10 @@ def patch_task(
             item.owner_name, item.owner_email = c.name or "", c.email or ""
         else:
             item.owner_name, item.owner_email = "", ""
+
+    if "project_external_id" in data:
+        ref = (data["project_external_id"] or "").strip()
+        item.project_id = _resolve_project(db, ctx.tenant.id, ref).id if ref else None
 
     if "priority" in data and data["priority"]:
         p = str(data["priority"]).lower().strip()
@@ -976,6 +994,7 @@ def list_calendar_events(
         if date_to:
             tq = tq.where(ActionItem.due_date <= date_to[:10])
         for t, pid in db.exec(tq).all():
+            pid = t.project_id or pid  # reasignación manual
             if project_external_id and proj_refs.get(pid) != project_external_id:
                 continue
             # `due_date` es texto libre y arrastró basura histórica del

@@ -24,6 +24,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import and_, or_
 from sqlmodel import Session, select
 
 from database import get_session
@@ -181,7 +182,10 @@ def tablero(
     if project_id is not None:
         q = q.join(
             MeetingSession, MeetingSession.id == ActionItem.session_id,
-        ).where(MeetingSession.project_id == project_id)
+        ).where(or_(
+            ActionItem.project_id == project_id,
+            and_(ActionItem.project_id.is_(None), MeetingSession.project_id == project_id),
+        ))
     items = list(db.exec(q).all())
 
     proyectos = {
@@ -227,7 +231,7 @@ def tablero(
             }
         gente[p["clave"]]["tarjetas"] += 1
 
-        pid = ses_proy.get(it.session_id)
+        pid = it.project_id or ses_proy.get(it.session_id)
         por_columna[estado].append({
             "id": it.id,
             "titulo": it.title or "",

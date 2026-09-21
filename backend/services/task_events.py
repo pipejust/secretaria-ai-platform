@@ -101,7 +101,7 @@ def actor_de_integracion(db: Session, ctx: Any) -> dict:
     # quien nunca lo pidió.
     externo = (getattr(ctx, "on_behalf_of", "") or "").strip()
     if externo:
-        ficha = _empleado(externo, tenant_id=getattr(ctx.tenant, 'id', None))
+        ficha = _empleado(externo, tenant_id=getattr(getattr(ctx, 'tenant', None), 'id', None))
         if ficha:
             return {
                 "kind": "user",

@@ -927,6 +927,9 @@ class ActionItem(SQLModel, table=True):
     # Denormalizado para queries directos sin join al meetingsession.
     tenant_id: int = Field(foreign_key="tenant.id", index=True)
     session_id: int = Field(foreign_key="meetingsession.id")
+    # Reasignación manual: una reunión puede mezclar dos proyectos y dejar la
+    # tarea mal clasificada. NULL = hereda el proyecto de su sesión.
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id", index=True)
 
     owner_name: str
     owner_email: str

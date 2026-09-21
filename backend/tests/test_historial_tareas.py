@@ -160,7 +160,7 @@ def test_un_empleado_sin_cuenta_firma_con_su_nombre(db_session, monkeypatch):
     task_events._CACHE_EMPLEADOS.clear()
     monkeypatch.setattr(
         task_events, "_empleado",
-        lambda eid: {"id": eid, "display_name": "Miguel Campo",
+        lambda eid, **_: {"id": eid, "display_name": "Miguel Campo",
                      "full_name": "Miguel Ángel Campo Díaz"})
 
     class Ctx:
@@ -178,7 +178,7 @@ def test_un_empleado_sin_cuenta_firma_con_su_nombre(db_session, monkeypatch):
 
 def test_si_el_directorio_no_contesta_no_se_inventa_el_nombre(db_session, monkeypatch):
     task_events._CACHE_EMPLEADOS.clear()
-    monkeypatch.setattr(task_events, "_empleado", lambda eid: None)
+    monkeypatch.setattr(task_events, "_empleado", lambda eid, **_: None)
 
     class Ctx:
         acting_user = None
@@ -199,6 +199,10 @@ def test_el_directorio_se_pregunta_una_sola_vez(db_session, monkeypatch):
 
     class ClienteFalso:
         configured = True
+        @classmethod
+        def for_tenant(cls, tenant_id):
+            return cls()
+
         def employee(self, eid, timeout=4.0):
             llamadas.append(eid)
             return {"id": eid, "display_name": "Natalia Gaviria"}
