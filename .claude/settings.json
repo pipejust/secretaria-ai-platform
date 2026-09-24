@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "opusplan",
+  "permissions": {
+    "allow": [
+      "Bash(make test*)",
+      "Bash(make logs*)",
+      "Bash(make ps*)",
+      "Bash(npm test*)",
+      "Bash(npm run build*)",
+      "Bash(node scripts/check-file-size.mjs*)",
+      "Bash(node scripts/lint-no-hardcode.mjs*)",
+      "Bash(openspec *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(git push --force*)",
+      "Bash(make down-v*)"
+    ]
+  },
+  "enabledPlugins": {
+    "softnexus-sdd@softnexus": true,
+    "superpowers@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path'); case \"$f\" in *frontend/src/*) (cd frontend && npx prettier --write \"$f\") >/dev/null 2>&1 || true;; esac"
+          }
+        ]
+      }
+    ]
+  }
+}

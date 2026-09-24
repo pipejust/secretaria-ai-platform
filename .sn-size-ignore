@@ -1,0 +1,7 @@
+# Patrones excluidos del límite de 1000 líneas (un patrón por línea, estilo glob).
+# Generado y de aquí en adelante: solo cosas generadas o que no son código nuestro.
+frontend/src/styles/tokens.css
+frontend/public/assets/i18n/*.json
+docs/bot-ingest.schema.json
+runs/**
+local/**

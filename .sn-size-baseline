@@ -1,0 +1,35 @@
+# Deuda heredada al adoptar Spec Driven: archivos que ya pasaban 1000 líneas.
+# Pueden editarse sin crecer. Se reducen con la skill sn-split; al bajar del límite, se borra la línea.
+backend/models.py	1194
+backend/routers/ask.py	3760
+backend/routers/auth.py	1520
+backend/routers/fireflies.py	1414
+backend/routers/integration_v1.py	1270
+backend/routers/sessions_upload.py	1905
+backend/services/cron_service.py	1043
+backend/services/landing_content_service.py	1291
+docs/INTEGRACION_ACTEN_RRHH.md	1432
+frontend/src/app/components/admin-layout/admin-layout.component.css	1252
+frontend/src/app/components/ask/ask.component.css	1342
+frontend/src/app/components/branding-settings/branding-settings.component.css	1470
+frontend/src/app/components/curation-panel/curation-panel.component.css	1280
+frontend/src/app/components/curation-panel/curation-panel.component.ts	1228
+frontend/src/app/components/dashboard/dashboard.component.css	1103
+frontend/src/app/components/dashboard/dashboard.component.ts	1494
+frontend/src/app/components/landing/landing.component.css	2104
+frontend/src/app/components/meetings-list/meetings-list.component.css	1720
+frontend/src/app/components/meetings-list/meetings-list.component.html	1059
+frontend/src/app/components/meetings-list/meetings-list.component.ts	1255
+frontend/src/app/components/pendientes/pendientes.component.css	1507
+frontend/src/app/components/pendientes/pendientes.component.ts	1050
+frontend/src/app/components/profile/profile.component.css	1097
+frontend/src/app/components/projects/projects.component.html	1082
+frontend/src/app/components/projects/projects.component.ts	1327
+frontend/src/app/components/reportes/reportes.component.css	1323
+frontend/src/app/components/roles/roles.component.css	1251
+frontend/src/app/components/super-tenants/super-tenants.component.css	1332
+frontend/src/app/components/super-tenants/super-tenants.component.html	1331
+frontend/src/app/components/super-tenants/super-tenants.component.ts	1126
+frontend/src/app/components/templates/templates.component.css	1340
+frontend/src/app/components/users/users.component.css	1072
+frontend/src/styles.css	1450

@@ -1,0 +1,54 @@
+# openspec/config.yaml — Softnexus Spec Driven
+# Se inyecta en cada artefacto que genera OpenSpec (proposal, specs, design, tasks).
+schema: spec-driven
+
+context: |
+  Proyecto: Acten — convierte reuniones (Fireflies, bot propio o subida manual) en actas,
+  decisiones y tareas, y las distribuye a Trello, Jira, ClickUp y Azure DevOps.
+  Stack aprobado: Angular 21 (standalone + signals, CSS con tokens propios, ngx-translate es/en/ca)
+  · Python 3.11 + FastAPI + SQLModel sobre PostgreSQL · Groq y OpenAI para extracción y RAG
+  · pytest y Vitest · Docker sobre Hetzner + Coolify.
+  Sistema multi-empresa (multi-tenant): cada empresa tiene marca, dominio propio, política de
+  correo y suscripción. Toda consulta a datos filtra por empresa; no hacerlo es una fuga entre
+  clientes. Acten también se usa headless detrás de la plataforma de Servicios/RRHH.
+  Usuarios: superadministrador (opera todas las empresas), administrador de empresa (cura las
+  reuniones, configura marca, integraciones y suscripción), usuario de la empresa (consulta sus
+  reuniones y tareas), y sistemas externos que entran por la API v1 con clave y alcances.
+  Idioma de los artefactos: español.
+
+rules:
+  proposal:
+    - Declarar tamaño (XS/S/M/L; XL prohibido, dividir) y riesgo (R0–R4).
+    - Incluir "Fuera de alcance" explícito.
+    - Si riesgo >= R3, incluir plan de rollback.
+    - Máximo 1 día de trabajo humano+agente; si no cabe, proponer slices.
+    - Si el cambio toca datos, decir explícitamente cómo se aísla por empresa.
+  specs:
+    - Cada requisito con escenarios Given/When/Then.
+    - Mínimo un escenario happy path, uno de fallo y uno de borde por requisito.
+    - Criterios observables y medibles (nada de "rápido", "seguro", "bonito").
+    - Incluir estados de UI cuando aplique - vacío, cargando, error, sin permisos.
+    - Si el requisito toca datos de varias empresas, incluir un escenario que pruebe el aislamiento.
+  design:
+    - Reutilizar patrones existentes del repo; citar el archivo que sirve de ejemplo.
+    - Listar archivos a tocar. Si son más de ~10, justificar o dividir.
+    - Diseñar por módulos pequeños - cada archivo nuevo con una responsabilidad y pensado para 200-400 líneas.
+    - Si un archivo existente quedaría sobre 800 líneas, el diseño pone el código nuevo en un módulo aparte.
+    - Si el archivo es deuda heredada (.sn-size-baseline), no puede crecer - el código nuevo va en otro módulo.
+    - Toda dependencia nueva debe existir en el stack aprobado.
+    - El HTTP del frontend va en un servicio tipado, no en el componente; los textos visibles van a los tres idiomas.
+  tasks:
+    - Tareas atómicas de <= 30 minutos, ordenadas por dependencia.
+    - La primera tarea de lógica escribe el test que falla (TDD).
+    - Última tarea siempre - correr gates (tests del backend, tests y build del frontend, check-file-size) y /sn-evidence.
+
+operations:
+  apply:
+    guidance:
+      - Marcar cada tarea al terminarla; no avanzar con tests rojos.
+      - Si una tarea revela que la spec está mal, parar y actualizar la spec antes de seguir.
+      - Si cambia UI, abrir la página y tomar screenshot antes de dar la tarea por hecha.
+      - tokens.css es generado - se editan frontend/tokens/*.json y se corre node scripts/tokens-build.mjs.
+  archive:
+    guidance:
+      - Archivar solo después del merge a la rama de trabajo.

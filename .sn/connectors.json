@@ -1,0 +1,13 @@
+{
+  "connectors": [
+    {
+      "name": "altum",
+      "kind": "altum",
+      "events": [
+        "sn.item.*"
+      ],
+      "project_id": "15c5f5ee-2596-4062-a5a9-5a33ce3aecdd"
+    }
+  ],
+  "project": "acten"
+}
