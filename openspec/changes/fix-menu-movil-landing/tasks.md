@@ -18,4 +18,4 @@
 ## 4. Cerrar
 
 - [x] 4.1 Correr las guardas: `npm test` y `npm run build` en `frontend/`, `make test` del backend y `node scripts/check-file-size.mjs`. Verificación: las cuatro en verde.
-- [ ] 4.2 Reunir la evidencia con `/sn-evidence`: tabla de mediciones antes y después, capturas a 320/375/430/768/1280 px y la salida de las guardas. Verificación: `evidencia.md` existe y cubre los ocho escenarios de la spec.
+- [x] 4.2 Reunir la evidencia con `/sn-evidence`: tabla de mediciones antes y después, capturas a 320/375/430/768/1280 px y la salida de las guardas. Verificación: `evidencia.md` existe y cubre los ocho escenarios de la spec.
