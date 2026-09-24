@@ -25,18 +25,5 @@
   "enabledPlugins": {
     "softnexus-sdd@softnexus": true,
     "superpowers@claude-plugins-official": true
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path'); case \"$f\" in *frontend/src/*) (cd frontend && npx prettier --write \"$f\") >/dev/null 2>&1 || true;; esac"
-          }
-        ]
-      }
-    ]
   }
 }
