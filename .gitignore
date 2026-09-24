@@ -92,3 +92,6 @@ rediseño/
 *.credentials
 *.token
 .coolify.env
+
+# Estado local del motor Softnexus (caché y marcas de sincronización, no se comparte)
+.sn/state/
