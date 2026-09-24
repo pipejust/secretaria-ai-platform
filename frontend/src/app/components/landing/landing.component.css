@@ -1748,7 +1748,7 @@ section[id] { scroll-margin-top: 88px; }
     color: var(--ac-on-dark);
   }
   .al-header__burger { display: inline-flex; }
-  .al-header__actions .al-btn--ghost-light { display: none; }
+  .al-header__actions .al-btn--ghost-light, .al-header__actions .al-btn--primary { display: none; } /* ACT-260924-a1f3: los dos botones van al drawer; el CTA acá dejaba la hamburguesa en 445px, fuera de pantalla */
 
   /* Acciones DENTRO del drawer móvil: visible solo cuando .al-nav está
      abierto. En desktop están en .al-header__actions; en mobile pasan
@@ -1767,10 +1767,6 @@ section[id] { scroll-margin-top: 88px; }
     padding: 12px 16px;
     font-size: 15px;
   }
-  /* CTA primary "Solicitar demo": en mobile se mantiene en el header bar
-     (es la acción principal, siempre visible). NO la duplicamos en el
-     drawer — solo Iniciar sesión va dentro. */
-  .al-nav__actions .al-nav__cta { display: none; }
 
   .al-hero { padding: 56px 0 36px; }
   /* Centramos copy + CTAs + chips en mobile — el split visual del
