@@ -1905,12 +1905,6 @@ section[id] { scroll-margin-top: 88px; }
     justify-content: center !important;
   }
 
-  /* Header CTA "Solicitar demo": en mobile el botón ya es visible pero
-     el padding/altura podría reducirse para no robar protagonismo del logo. */
-  .al-header .al-btn--primary {
-    padding: 8px 14px;
-    font-size: 13.5px;
-  }
   /* Padding vertical de TODAS las secciones más conservador en mobile. */
   .al-features,
   .al-flow,

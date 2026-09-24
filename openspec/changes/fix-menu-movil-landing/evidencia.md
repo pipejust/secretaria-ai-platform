@@ -99,6 +99,32 @@ retraso), más `aria-controls` en la hamburguesa apuntando al `id` del cajón.
 Comprobado además a 1280 px: el cajón sigue `visible`, sus 6 enlaces siguen siendo
 enfocables y la hamburguesa sigue oculta. A 320 px la hamburguesa sigue en 304 px.
 
+## 4c. Hallazgo de la revisión independiente, corregido
+
+La revisión en sesión nueva encontró que en el cajón "Solicitar demo" salía **más
+pequeño que "Iniciar sesión"**, al revés de lo que pide la jerarquía: el botón
+principal era el chico.
+
+La causa era una regla vieja, `​.al-header .al-btn--primary { padding: 8px 14px;
+font-size: 13.5px; }`, pensada para achicar el botón de la barra superior en el
+teléfono. El cajón vive dentro de `.al-header`, así que también le pegaba; tiene la
+misma especificidad que la regla del cajón y viene después, así que ganaba. Con este
+PR el botón de la barra superior ya no se muestra en móvil, de modo que la regla se
+quedó sin nada que hacer — y su comentario ("en mobile el botón ya es visible") pasó
+a decir lo contrario de lo que ocurre.
+
+Se borró. Medido a 375 px con el cajón abierto:
+
+| | Antes | Después |
+|---|---|---|
+| "Iniciar sesión" | 45 px de alto · 15 px · `12px 16px` | igual |
+| "Solicitar demo" | **35 px de alto · 13.5 px · `8px 14px`** | **45 px · 15 px · `12px 16px`** |
+
+Los dos quedan iguales y por encima de los 44 px de área táctil recomendada.
+Comprobado a 1280 px que el botón del encabezado en escritorio no cambió
+(42 px de alto, 14.5 px, `11px 18px`): la regla borrada vivía dentro de
+`@media (max-width: 768px)`.
+
 ## 5. ¿Qué es lo más probable que se rompa?
 
 Que alguien del equipo comercial note que el botón ya no está arriba en el teléfono
