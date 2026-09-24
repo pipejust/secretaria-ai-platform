@@ -77,6 +77,28 @@ pie), y que el del encabezado **tampoco era alcanzable antes**.
 - Se borró un comentario que decía lo contrario de lo que ahora hace el código; se
   reemplazó por uno que explica la medición y referencia el ítem.
 
+## 4b. Hallazgo de la revisión, corregido en este mismo PR
+
+La revisión encontró que el cajón cerrado se ocultaba solo con `opacity: 0` y
+`pointer-events: none`, y ninguna de las dos saca los enlaces del orden de
+tabulación: con el menú cerrado a 375 px, **los 8 controles del cajón recibían
+foco** aunque no se vieran. Era en parte anterior a este cambio —los seis enlaces
+de sección y "Iniciar sesión" ya estaban así—, pero destapar el CTA sumaba uno más.
+
+Corregido con `visibility: hidden` en el estado cerrado (y `visible` al abrir, sin
+retraso), más `aria-controls` en la hamburguesa apuntando al `id` del cajón.
+`visibility` sí saca del orden de tabulación y vive dentro de
+`@media (max-width: 768px)`, así que el escritorio no se toca.
+
+| Medición a 375 px | Antes de la corrección | Después |
+|---|---|---|
+| Enfocables con el cajón cerrado | 8 | **0** |
+| Enfocables con el cajón abierto | 8 | 8 |
+| `visibility` del cajón cerrado | `visible` | `hidden` |
+
+Comprobado además a 1280 px: el cajón sigue `visible`, sus 6 enlaces siguen siendo
+enfocables y la hamburguesa sigue oculta. A 320 px la hamburguesa sigue en 304 px.
+
 ## 5. ¿Qué es lo más probable que se rompa?
 
 Que alguien del equipo comercial note que el botón ya no está arriba en el teléfono

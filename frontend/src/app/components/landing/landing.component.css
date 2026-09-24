@@ -1722,10 +1722,10 @@ section[id] { scroll-margin-top: 88px; }
     backdrop-filter: blur(14px);
     padding: 16px 20px 22px;
     transform: translateY(-12px);
-    opacity: 0;
+    opacity: 0; visibility: hidden; /* hidden saca los enlaces del orden de tabulación; opacity sola no */
     pointer-events: none;
     transition: transform var(--ac-ease) 220ms,
-                opacity var(--ac-ease) 220ms;
+                opacity var(--ac-ease) 220ms, visibility 0s linear 220ms;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     /* Stack vertical para que .al-nav__list (links) y .al-nav__actions
        (login + cta del drawer) queden uno debajo del otro, no en row. */
@@ -1734,7 +1734,7 @@ section[id] { scroll-margin-top: 88px; }
   }
   .al-nav--open {
     transform: translateY(0);
-    opacity: 1;
+    opacity: 1; visibility: visible; transition-delay: 0s; /* al abrir, visible ya */
     pointer-events: auto;
   }
   .al-nav__list {

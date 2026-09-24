@@ -21,7 +21,7 @@
              width="118" height="32" decoding="async" fetchpriority="high" />
       </a>
 
-      <nav class="al-nav" [class.al-nav--open]="mobileMenuOpen" aria-label="Navegación principal">
+      <nav id="al-nav" class="al-nav" [class.al-nav--open]="mobileMenuOpen" aria-label="Navegación principal">
         <ul class="al-nav__list">
           <li *ngFor="let item of c.nav.items">
             <a [href]="item.anchor" (click)="scrollTo(item.anchor, $event)">{{ item.label }}</a>
@@ -55,6 +55,7 @@
           type="button"
           class="al-header__burger"
           (click)="toggleMobileMenu()"
+          aria-controls="al-nav"
           [attr.aria-expanded]="mobileMenuOpen"
           [attr.aria-label]="'common.open_menu' | translate">
           <span></span><span></span><span></span>
