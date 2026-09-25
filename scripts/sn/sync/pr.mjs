@@ -100,14 +100,17 @@ export function aprobacionesPr(numero, origen = origenRepo()) {
   };
 }
 
-// ¿La aprobación del PR es válida? Solo si la dio el líder que dice Altum y el líder no es quien
-// escribió el PR. Las aprobaciones de cualquier otra persona no cuentan.
+// ¿La aprobación del PR es válida? Solo si la dio el líder que dice Altum: las aprobaciones de
+// cualquier otra persona no cuentan.
+// Si el PR lo abrió el propio líder, vale: él es quien decide en este proyecto, así que su trabajo
+// no necesita la firma de nadie más (y GitHub no deja aprobar el PR propio, así que nunca habría
+// una aprobación que leer). Para todos los demás, sigue haciendo falta la del líder.
 export function firmaDelLider(aprob, lider) {
   if (!aprob) return { valida: false, motivo: 'no pude leer las aprobaciones del PR (¿sesión de gh o token de Azure DevOps?).' };
   if (!lider?.name) return { valida: false, motivo: 'Altum no dice quién es el líder de este proyecto.' };
   const esLider = (p) => (lider.github && p.usuario.toLowerCase() === lider.github.toLowerCase())
     || (lider.email && p.correo && p.correo === lider.email.toLowerCase());
-  if (esLider(aprob.autor)) return { valida: false, motivo: `el PR lo abrió el propio líder (${lider.name}): nadie aprueba su propio trabajo.` };
+  if (esLider(aprob.autor)) return { valida: true, motivo: `el PR lo abrió el propio líder (${lider.name}): su decisión es la que vale en este proyecto.` };
   if (aprob.aprobaron.some(esLider)) return { valida: true, motivo: `aprobado por ${lider.name}, el líder según Altum.` };
   const otros = aprob.aprobaron.map((p) => p.usuario).filter(Boolean);
   return {

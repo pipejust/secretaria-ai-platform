@@ -314,7 +314,9 @@ async function lead(config) {
   if (flag('--github')) {
     if (!l?.name) throw new Error('Altum no dice quién es el líder de este proyecto: no se pide revisión en GitHub (el mensaje sigue sirviendo).');
     if (!l.github) throw new Error(`${l.name} no tiene usuario de GitHub registrado en Altum (ficha del empleado → pestaña Git): no se pide revisión en GitHub; manda el mensaje.`);
-    if (l.github.toLowerCase() === cuentaGithubActual().toLowerCase()) throw new Error(`@${l.github} es la cuenta con la que estás trabajando: no puedes pedirte revisión a ti mismo.`);
+    // El líder trabajando en su propio PR: GitHub no deja pedirse revisión a uno mismo, y tampoco hace
+    // falta: él firma y une su propio trabajo desde /sn-validate.
+    if (l.github.toLowerCase() === cuentaGithubActual().toLowerCase()) throw new Error(`eres el líder de este proyecto (@${l.github}): tu propio PR no necesita la firma de nadie más, lo apruebas y lo unes tú con /sn-validate.`);
     return console.log(l.github);
   }
   process.stdout.write(leadText(l));
