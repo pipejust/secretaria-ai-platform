@@ -295,7 +295,7 @@ def _build_report(
                 if ms is None or ms.project_id != project_id:
                     completed_in_window.pop()
 
-    by_status = {"pending": 0, "blocked": 0, "done": 0, "cancelled": 0}
+    by_status = {"pending": 0, "blocked": 0, "done": 0, "cancelled": 0, "converted": 0}
     for it in items:
         by_status[it.status] = by_status.get(it.status, 0) + 1
 
@@ -351,7 +351,7 @@ def _build_report(
         status_key = _classify_project_by_sessions(proj_sessions, now)
         projects_breakdown_counts[status_key] = projects_breakdown_counts.get(status_key, 0) + 1
 
-        items_break = {"pending": 0, "done": 0, "blocked": 0, "cancelled": 0, "overdue": 0}
+        items_break = {"pending": 0, "done": 0, "blocked": 0, "cancelled": 0, "converted": 0, "overdue": 0}
         for it in its:
             items_break[it.status] = items_break.get(it.status, 0) + 1
             if it.status in ("pending", "blocked"):
@@ -403,7 +403,7 @@ def _build_report(
             "owner": owner,
             "email": email,
             "total": 0,
-            "by_status": {"pending": 0, "done": 0, "blocked": 0, "cancelled": 0, "overdue": 0},
+            "by_status": {"pending": 0, "done": 0, "blocked": 0, "cancelled": 0, "converted": 0, "overdue": 0},
             "meetings": 0,
         })
         entry["total"] += 1

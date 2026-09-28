@@ -77,3 +77,33 @@ def test_proyecto_inexistente_y_campos_desconocidos_son_422(client, escenario):
     assert r.status_code == 422
     assert "proyecto" in r.text  # el error nombra el campo que sobra
     assert client.get("/api/v1/tasks", headers=e["h"]).json()["items"][0]["title"] == "Mal clasificada"
+
+
+def test_estado_converted_se_escribe_filtra_y_se_puede_deshacer(client, escenario):
+    e = escenario
+    url = f"/api/v1/tasks/{e['task']}"
+    r = client.patch(url, headers=e["h"], json={"status": "converted"})
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "converted"
+    listado = client.get("/api/v1/tasks", headers=e["h"], params={"status": "converted"}).json()
+    assert [t["id"] for t in listado["items"]] == [e["task"]]
+    assert client.get("/api/v1/tasks", headers=e["h"], params={"status": "done"}).json()["items"] == []
+    # desde converted solo se vuelve a pending (deshacer la conversión)
+    assert client.patch(url, headers=e["h"], json={"status": "done"}).status_code == 409
+    assert client.patch(url, headers=e["h"], json={"status": "pending"}).json()["status"] == "pending"
+    # la que ya marcaron done mientras tanto se puede pasar a converted
+    client.patch(url, headers=e["h"], json={"status": "done"})
+    assert client.patch(url, headers=e["h"], json={"status": "converted"}).status_code == 200
+
+
+def test_converted_no_rompe_pendientes_ni_kanban(client, escenario, db_session):
+    from models import ActionItem as AI
+    from routers import kanban, pendientes
+
+    e = escenario
+    client.patch(f"/api/v1/tasks/{e['task']}", headers=e["h"], json={"status": "converted"})
+    db_session.expire_all()
+    item = db_session.get(AI, e["task"])
+    from datetime import datetime
+    assert pendientes._classify(item, datetime.now()) == "convertido"
+    assert "converted" in kanban.CLAVES and "converted" in kanban.CLOSED_STATES

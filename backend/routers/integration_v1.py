@@ -32,12 +32,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["Integración v1 (API pública)"])
 
 # ── Máquina de estados de una tarea (contrato §7) ──────────────────────
-TASK_STATES = ("pending", "blocked", "done", "cancelled")
+# `converted`: la tarea se volvió un ítem de trabajo en otro sistema (Altum).
+# Sale de las abiertas de Acten sin contar como hecha ni como cancelada; se
+# puede deshacer (volver a `pending`) si ese ítem desaparece.
+TASK_STATES = ("pending", "blocked", "done", "cancelled", "converted")
+CLOSED_STATES = ("done", "cancelled", "converted")
 VALID_TRANSITIONS: dict[str, set[str]] = {
-    "pending":   {"blocked", "done", "cancelled"},
-    "blocked":   {"pending", "done", "cancelled"},
-    "done":      {"pending"},          # reabrir
-    "cancelled": set(),                # terminal
+    "pending":   {"blocked", "done", "cancelled", "converted"},
+    "blocked":   {"pending", "done", "cancelled", "converted"},
+    "done":      {"pending", "converted"},   # reabrir; o la que ya marcaron done al convertir
+    "cancelled": set(),                      # terminal
+    "converted": {"pending"},                # deshacer la conversión
 }
 
 
@@ -988,7 +993,7 @@ def list_calendar_events(
             # Mismo criterio que el calendario de Acten, que trae su
             # propio interruptor apagado por defecto. Sin esto, cerrar el
             # trabajo atrasado no despeja nada: las tarjetas siguen ahí.
-            tq = tq.where(ActionItem.status.notin_(("done", "cancelled")))
+            tq = tq.where(ActionItem.status.notin_(CLOSED_STATES))
         if date_from:
             tq = tq.where(ActionItem.due_date >= date_from[:10])
         if date_to:

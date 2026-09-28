@@ -1304,7 +1304,9 @@
     "toast_task_create_error": "No s'ha pogut crear la tasca.",
     "show_external_owners": "Mostra responsables aliens al projecte",
     "show_external_owners_hint": "Tasques assignades a algú que no consta entre els integrants del projecte. En apagar-ho deixen de veure's aquí, però continuen existint.",
-    "owner_not_in_project": "El responsable no és integrant del projecte"
+    "owner_not_in_project": "El responsable no és integrant del projecte",
+    "estado_converted": "Convertida",
+    "status_converted": "Convertida"
   },
   "templates": {
     "title": "Plantilles",

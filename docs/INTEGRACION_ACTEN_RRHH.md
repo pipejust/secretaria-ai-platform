@@ -751,15 +751,24 @@ y en el Kanban de Acten. La sesión de origen conserva su proyecto.
    └─────────┘               └───────────┘
 ```
 
-| Desde → Hacia | `pending` | `blocked` | `done` | `cancelled` |
-|---|---|---|---|---|
-| **`pending`** | — | ✅ | ✅ | ✅ |
-| **`blocked`** | ✅ | — | ✅ | ✅ |
-| **`done`** | ✅ | ❌ | — | ❌ |
-| **`cancelled`** | ❌ | ❌ | ❌ | — |
+| Desde → Hacia | `pending` | `blocked` | `done` | `cancelled` | `converted` |
+|---|---|---|---|---|---|
+| **`pending`** | — | ✅ | ✅ | ✅ | ✅ |
+| **`blocked`** | ✅ | — | ✅ | ✅ | ✅ |
+| **`done`** | ✅ | ❌ | — | ❌ | ✅ |
+| **`cancelled`** | ❌ | ❌ | ❌ | — | ❌ |
+| **`converted`** | ✅ | ❌ | ❌ | ❌ | — |
 
 `cancelled` es terminal. Transición inválida → `409` con el estado actual.
 Al pasar a `done`, Acten sella `completed_at` automáticamente.
+
+**`converted`**: la tarea de la sesión se convirtió en un ítem de trabajo en
+otro sistema (Altum). Sale de las abiertas de Acten —no aparece en el
+calendario de pendientes, ni cuenta como vencida, ni en la columna de
+trabajo del Kanban— sin contar como `done` ni como `cancelled`; no sella
+`completed_at`. Se filtra con `GET /tasks?status=converted`. Se deshace con
+`converted → pending` (p. ej. si el ítem de Altum se borra). Las tareas que
+se marcaron `done` como solución provisional pasan con `done → converted`.
 
 ### `POST /api/v1/tasks`
 

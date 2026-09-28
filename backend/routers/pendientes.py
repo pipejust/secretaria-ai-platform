@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/pendientes", tags=["Pendientes / Trazabilidad"])
 
-VALID_STATUSES = {"pending", "done", "blocked", "cancelled"}
+VALID_STATUSES = {"pending", "done", "blocked", "cancelled", "converted"}
 
 
 def _parse_due(due: Optional[str]) -> Optional[datetime]:
@@ -52,11 +52,13 @@ def _parse_due(due: Optional[str]) -> Optional[datetime]:
 
 
 def _classify(item: ActionItem, now: datetime) -> str:
-    """vencido / proximo / sin_fecha / completado / cancelado / bloqueado."""
+    """vencido / proximo / sin_fecha / completado / cancelado / convertido / bloqueado."""
     if item.status == "done":
         return "completado"
     if item.status == "cancelled":
         return "cancelado"
+    if item.status == "converted":
+        return "convertido"
     if item.status == "blocked":
         return "bloqueado"
     due = _parse_due(item.due_date)
@@ -277,7 +279,7 @@ def list_pendientes(
     tenant: Tenant = Depends(get_current_tenant),
     bucket: Optional[str] = Query(
         None,
-        description="vencido | proximo | sin_fecha | pendiente | completado | bloqueado | cancelado | activos",
+        description="vencido | proximo | sin_fecha | pendiente | completado | bloqueado | cancelado | convertido | activos",
     ),
     project_id: Optional[int] = Query(None),
     owner: Optional[str] = Query(None, description="Texto a buscar en owner_name/email"),
@@ -385,7 +387,7 @@ def list_pendientes(
         if bucket:
             wanted = bucket.lower()
             if wanted == "activos":
-                if record["bucket"] in ("completado", "cancelado"):
+                if record["bucket"] in ("completado", "cancelado", "convertido"):
                     continue
             elif record["bucket"] != wanted:
                 continue
@@ -410,6 +412,7 @@ def list_pendientes(
         "sin_fecha": 4,
         "completado": 5,
         "cancelado": 6,
+        "convertido": 7,
     }
     out.sort(
         key=lambda r: (
@@ -429,7 +432,7 @@ def stats(
     now = datetime.now()
     counters = {b: 0 for b in (
         "vencido", "proximo", "pendiente", "sin_fecha",
-        "bloqueado", "completado", "cancelado",
+        "bloqueado", "completado", "cancelado", "convertido",
     )}
     by_owner: Dict[str, int] = {}
 

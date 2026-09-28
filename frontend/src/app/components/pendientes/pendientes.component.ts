@@ -34,13 +34,13 @@ interface PendingItem {
     due_date: string | null;
     due_time?: string | null;
     priority?: 'alta' | 'media' | 'baja';
-    status: 'pending' | 'done' | 'blocked' | 'cancelled';
+    status: 'pending' | 'done' | 'blocked' | 'cancelled' | 'converted';
     completed_at: string | null;
     is_approved: boolean;
     project_name: string;
     /** null = la tarea no cuelga de ningún proyecto. */
     owner_in_project?: boolean | null;
-    bucket: 'vencido' | 'proximo' | 'pendiente' | 'sin_fecha' | 'completado' | 'cancelado' | 'bloqueado';
+    bucket: 'vencido' | 'proximo' | 'pendiente' | 'sin_fecha' | 'completado' | 'cancelado' | 'convertido' | 'bloqueado';
 }
 
 interface ProjectLite { id: number; name: string; }
@@ -420,6 +420,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
      *  mostrar Vencida/En progreso/Abierta/Completada/Bloqueada. */
     estadoLabel(item: PendingItem): string {
         if (item.status === 'cancelled') return this.translate.instant('pendientes.estado_cancelled');
+        if (item.status === 'converted') return this.translate.instant('pendientes.estado_converted');
         if (item.status === 'done') return this.translate.instant('pendientes.estado_done');
         if (item.status === 'blocked') return this.translate.instant('pendientes.estado_blocked');
         if (item.bucket === 'vencido') return this.translate.instant('pendientes.estado_overdue');
@@ -429,7 +430,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
 
     estadoTone(item: PendingItem): 'red' | 'amber' | 'blue' | 'green' | 'gray' | 'violet' {
         // Tone derivation by raw item state — independent of i18n labels.
-        if (item.status === 'cancelled') return 'gray';
+        if (item.status === 'cancelled' || item.status === 'converted') return 'gray';
         if (item.status === 'done') return 'green';
         if (item.status === 'blocked') return 'violet';
         if (item.bucket === 'vencido') return 'red';
@@ -443,6 +444,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
             done: this.translate.instant('pendientes.status_done'),
             blocked: this.translate.instant('pendientes.status_blocked'),
             cancelled: this.translate.instant('pendientes.status_cancelled'),
+            converted: this.translate.instant('pendientes.status_converted'),
         };
         return map[s] || s;
     }
@@ -454,7 +456,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
      *  La barra es informativa, no editable.
      */
     progress(item: PendingItem): number {
-        if (item.status === 'done' || item.status === 'cancelled') return 100;
+        if (item.status === 'done' || item.status === 'cancelled' || item.status === 'converted') return 100;
         if (item.status === 'blocked') return 50;
         if (item.bucket === 'vencido') return 20;
         if (item.bucket === 'proximo') return 60;
@@ -463,7 +465,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
     }
 
     progressTone(item: PendingItem): 'red' | 'amber' | 'blue' | 'green' | 'gray' | 'violet' {
-        if (item.status === 'cancelled') return 'gray';
+        if (item.status === 'cancelled' || item.status === 'converted') return 'gray';
         if (item.status === 'done') return 'green';
         if (item.status === 'blocked') return 'violet';
         if (item.bucket === 'vencido') return 'red';
@@ -762,7 +764,7 @@ export class PendientesComponent implements OnInit, OnDestroy {
                 if (this.workloadRangeFilter === 'month' && diffDays > 31) return false;
                 if (diffDays < -1) return false; // ya muy vencidas no cuentan en el rango futuro
             }
-            return it.bucket !== 'completado' && it.bucket !== 'cancelado';
+            return it.bucket !== 'completado' && it.bucket !== 'cancelado' && it.bucket !== 'convertido';
         });
 
         // Agrupar por owner_name.

@@ -1304,7 +1304,9 @@
     "toast_task_create_error": "Could not create task.",
     "show_external_owners": "Show owners outside the project",
     "show_external_owners_hint": "Tasks assigned to someone who is not a project member. Turning this off hides them here; they still exist.",
-    "owner_not_in_project": "The owner is not a project member"
+    "owner_not_in_project": "The owner is not a project member",
+    "estado_converted": "Converted",
+    "status_converted": "Converted"
   },
   "templates": {
     "title": "Templates",

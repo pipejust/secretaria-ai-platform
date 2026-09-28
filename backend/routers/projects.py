@@ -542,7 +542,7 @@ def get_project_dashboard(
             if item.status == "done":
                 completed_count += 1
                 continue
-            if item.status == "cancelled":
+            if item.status in ("cancelled", "converted"):
                 continue
             due_dt = None
             if item.due_date:

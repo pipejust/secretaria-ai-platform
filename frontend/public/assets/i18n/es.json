@@ -1304,7 +1304,9 @@
     "toast_task_create_error": "No se pudo crear la tarea.",
     "show_external_owners": "Ver responsables ajenos al proyecto",
     "show_external_owners_hint": "Tareas asignadas a alguien que no figura entre los integrantes del proyecto. Al apagarlo dejan de verse aquí, pero siguen existiendo.",
-    "owner_not_in_project": "El responsable no es integrante del proyecto"
+    "owner_not_in_project": "El responsable no es integrante del proyecto",
+    "estado_converted": "Convertida",
+    "status_converted": "Convertida"
   },
   "templates": {
     "title": "Plantillas",

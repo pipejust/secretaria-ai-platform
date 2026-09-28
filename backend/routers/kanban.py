@@ -43,16 +43,12 @@ COLUMNAS = [
     {"key": "blocked",   "titulo": "Bloqueada"},
     {"key": "done",      "titulo": "Hecha"},
     {"key": "cancelled", "titulo": "Cancelada"},
+    {"key": "converted", "titulo": "Convertida"},
 ]
 CLAVES = [c["key"] for c in COLUMNAS]
 
-# Mismas reglas que la API pública (`integration_v1.VALID_TRANSITIONS`).
-TRANSICIONES: dict[str, set[str]] = {
-    "pending":   {"blocked", "done", "cancelled"},
-    "blocked":   {"pending", "done", "cancelled"},
-    "done":      {"pending"},
-    "cancelled": set(),
-}
+# Las mismas reglas que la API pública, sin copia que pueda divergir.
+from routers.integration_v1 import CLOSED_STATES, VALID_TRANSITIONS as TRANSICIONES  # noqa: E402
 
 
 # Carril de las tareas que no ha cogido nadie.
@@ -213,7 +209,7 @@ def tablero(
 
     for it in items:
         estado = it.status if it.status in CLAVES else "pending"
-        if not incluir_cerradas and estado in ("done", "cancelled"):
+        if not incluir_cerradas and estado in CLOSED_STATES:
             continue
         p = _persona(it, ident)
         if solo_mias:
