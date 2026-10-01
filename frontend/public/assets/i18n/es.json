@@ -2848,7 +2848,8 @@
     "bot_name_placeholder": "Asistente Acten",
     "bot_name_hint": "Así aparece en Meet, Teams y Zoom, tanto al entrar por enlace como por invitación de correo. Máximo 50 caracteres.",
     "video_label": "Grabar vídeo de la reunión",
-    "video_hint": "El bot graba imagen además de audio. El vídeo se guarda en el almacenamiento de Acten y se reproduce desde el detalle de la sesión."
+    "video_hint": "El bot graba imagen además de audio. El vídeo se guarda en el almacenamiento de Acten y se reproduce desde el detalle de la sesión.",
+    "policy_video": "Grabar también vídeo en las reuniones a las que se invite al bot por correo."
   },
   "billing": {
     "title": "Suscripción",

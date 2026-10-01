@@ -284,6 +284,7 @@ def test_mail_policy_is_admin_only_and_forwarded_to_bot(control):
     # sincronizan; solo viajan los remitentes extra que escribió el admin.
     assert json.loads(forwarded[-1].content) == {
         **body, "extra_senders": ["ana@example.test"], "bot_name": "Asistente Acten",
+        "video": False,
     }
     assert client.get("/api/owned-bot/mail-policy").status_code == 200
     assert client.get("/api/owned-bot/mail-policy", headers={"X-Test-User": "3"}).status_code == 403
@@ -345,3 +346,31 @@ def test_company_users_become_senders_when_the_bot_is_an_accepted_source(control
     assert response.status_code == 200
     sent = json.loads([c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1].content)
     assert "u1@example.test" in sent["allowed_senders"] and sent["extra_senders"] == []
+
+
+def test_video_in_email_invitations_requires_the_plan_feature(control):
+    from datetime import datetime, timedelta
+
+    from models import Subscription
+    from services import billing_catalog as cat
+
+    client, engine, calls = control
+    body = {"allowed_senders": ["ana@example.test"], "recording_authorized": True, "video": True}
+    # Empresa recién creada = en prueba, con todo incluido.
+    assert client.put("/api/owned-bot/mail-policy", json=body).status_code == 200
+    sent = [c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1]
+    assert json.loads(sent.content)["video"] is True
+    # Con un plan sin vídeo, 402 y nada llega al bot.
+    with Session(engine) as db:
+        cat.sembrar_catalogo(db)
+        t = db.get(Tenant, 1)
+        t.created_at = (datetime.now() - timedelta(days=60)).isoformat()
+        db.add(t)
+        db.add(Subscription(tenant_id=1, plan_key="business", status="active",
+                            billing_mode="manual", addons_json=json.dumps(["owned_bot"])))
+        db.commit()
+    antes = len(calls)
+    r = client.put("/api/owned-bot/mail-policy", json=body)
+    assert r.status_code == 402 and r.json()["detail"]["feature"] == cat.F_VIDEO
+    assert not [c for c in calls[antes:] if c.method == "PUT"]
+    assert client.put("/api/owned-bot/mail-policy", json={**body, "video": False}).status_code == 200

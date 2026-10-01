@@ -196,6 +196,8 @@ export interface MailPolicy {
   timezone: string;
   /** Lo fija Acten a partir de la configuración; solo lectura aquí. */
   bot_name?: string;
+  /** Grabar también vídeo en las reuniones invitadas por correo (exige el plan). */
+  video?: boolean;
 }
 
 /** GET/PUT /mail-policy — espejo de conversacionalbot `mail_state`. */

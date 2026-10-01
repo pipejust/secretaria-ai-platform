@@ -2848,7 +2848,8 @@
     "bot_name_placeholder": "Acten Assistant",
     "bot_name_hint": "This is how it appears in Meet, Teams and Zoom, whether it joins by link or by email invitation. Up to 50 characters.",
     "video_label": "Record meeting video",
-    "video_hint": "The bot records picture as well as audio. The video is stored in Acten's storage and played from the session detail."
+    "video_hint": "The bot records picture as well as audio. The video is stored in Acten's storage and played from the session detail.",
+    "policy_video": "Also record video in meetings the bot is invited to by email."
   },
   "billing": {
     "title": "Subscription",

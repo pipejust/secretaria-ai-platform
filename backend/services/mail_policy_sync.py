@@ -15,7 +15,8 @@ import logging
 from sqlmodel import Session, select
 
 from models import IntegrationSetting, Tenant, User
-from services import meeting_source
+from services import entitlements, meeting_source
+from services.billing_catalog import F_VIDEO
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,9 @@ async def sincronizar(db: Session, tenant_id: int, extra: list[str] | None = Non
         "recording_authorized": autorizado,
         "timezone": (actual or {}).get("timezone") or "America/Bogota",
         "bot_name": bot_name_of(db, tenant_id),
+        # Si el plan deja de incluir vídeo, las invitaciones por correo
+        # vuelven a grabar solo audio en la siguiente pasada.
+        "video": bool((actual or {}).get("video")) and entitlements.tiene(db, tenant_id, F_VIDEO),
     }
     # Corre cada pocos minutos: si nada cambió, no se escribe.
     if actual is not None and all(actual.get(k) == v for k, v in body.items()):

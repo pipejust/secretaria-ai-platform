@@ -67,7 +67,7 @@ def test_apagar_el_bot_sin_remitentes_extra_retira_la_autorizacion(empresa, db_s
     t, suf, bot, _ = empresa
     bot["policy"] = {"allowed_senders": [f"ana-{suf}@s.test"], "extra_senders": [],
                      "recording_authorized": True, "timezone": "America/Bogota",
-                     "bot_name": "Asistente Acten"}
+                     "bot_name": "Asistente Acten", "video": False}
     t.meeting_source = "fireflies"
     db_session.add(t); db_session.commit()
     sync(db_session, t.id)

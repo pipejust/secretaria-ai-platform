@@ -525,6 +525,8 @@ class MailPolicy(BaseModel):
     allowed_senders: list[str] = PField(default_factory=list, max_length=50)
     recording_authorized: bool = False
     timezone: str = PField(default="America/Bogota", max_length=64)
+    # Grabar también vídeo en las reuniones que llegan por correo.
+    video: bool = False
 
     @model_validator(mode="after")
     def addresses(self):
@@ -559,11 +561,20 @@ async def write_mail_policy(
     los usuarios activos de la empresa se añaden solos (services.
     mail_policy_sync) y se refrescan cada hora y al cambiar el origen.
     """
-    from services import mail_policy_sync
+    from services import entitlements, mail_policy_sync
+    from services.billing_catalog import FEATURES, F_VIDEO
 
+    # Vídeo en las reuniones invitadas por correo: solo con el plan que lo incluye.
+    if body.video and not entitlements.tiene(db, user.tenant_id, F_VIDEO):
+        raise HTTPException(
+            402,
+            {
+                "message": "Esta opción no está incluida en el plan de tu empresa.",
+                "feature": F_VIDEO,
+                "label": FEATURES[F_VIDEO],
+            },
+        )
     extra = [e.strip().lower() for e in body.allowed_senders if e.strip()]
-    estado = await bot_call(db, user.tenant_id, "GET", "/v1/mail-policy")
-    actual = (estado.get("policy") if isinstance(estado, dict) else None) or {}
     return await bot_call(
         db,
         user.tenant_id,
@@ -575,12 +586,8 @@ async def write_mail_policy(
             "recording_authorized": body.recording_authorized,
             "timezone": body.timezone,
             "bot_name": bot_name_of(db, user.tenant_id),
+            "video": body.video,
         },
-    ) if actual or extra or body.recording_authorized else await bot_call(
-        db, user.tenant_id, "PUT", "/v1/mail-policy",
-        body={"allowed_senders": mail_policy_sync.combinar(db, user.tenant_id, []),
-              "extra_senders": [], "recording_authorized": False, "timezone": body.timezone,
-              "bot_name": bot_name_of(db, user.tenant_id)},
     )
 
 

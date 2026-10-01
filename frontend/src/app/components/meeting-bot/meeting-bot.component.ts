@@ -85,6 +85,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   policySenders = '';
   policyTimezone = 'America/Bogota';
   policyAuthorized = false;
+  policyVideo = false;
   elapsed = '00:00';
   recorder = new BrowserRecording(
     (id, seq, blob) => this.api.uploadChunk(id, seq, blob),
@@ -236,6 +237,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
         this.policySenders = (policy.extra_senders ?? []).join('\n');
         this.policyTimezone = policy.timezone || 'America/Bogota';
         this.policyAuthorized = !!policy.recording_authorized;
+        this.policyVideo = !!policy.video;
       }
     } catch (e) {
       this.error = this.detail(e) ?? this.translate.instant('meeting_bot.error_load_mail_policy');
@@ -247,6 +249,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
       const senders = this.policySenders.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
       await this.api.saveMailPolicy({
         allowed_senders: senders, recording_authorized: this.policyAuthorized,
+        video: this.canRecordVideo && this.policyVideo,
         timezone: this.policyTimezone.trim() || 'America/Bogota',
       });
       this.notice = this.translate.instant(this.policyAuthorized
