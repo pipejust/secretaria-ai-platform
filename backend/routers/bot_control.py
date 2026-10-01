@@ -273,6 +273,10 @@ async def put_config(
                     "/v1/mail-policy",
                     body={
                         "allowed_senders": policy["allowed_senders"],
+                        # Sin estos dos el bot los devuelve a su valor por
+                        # defecto: cambiar el nombre apagaba el vídeo.
+                        "extra_senders": policy.get("extra_senders", []),
+                        "video": policy.get("video", False),
                         "recording_authorized": policy["recording_authorized"],
                         "timezone": policy["timezone"],
                         "bot_name": body.bot_name,

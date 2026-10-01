@@ -79,6 +79,10 @@ def control(tmp_path, monkeypatch):
                 json={"id": mid, "external_id": body["external_id"]},
                 request=request,
             )
+        if request.url.path == "/v1/mail-policy":
+            if request.method == "PUT":
+                ids["policy"] = json.loads(request.content)
+            return httpx.Response(200, json={"ok": True, "policy": ids.get("policy")}, request=request)
         return httpx.Response(200, json={"ok": True}, request=request)
 
     monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", remote)
@@ -316,6 +320,10 @@ def test_bot_name_is_per_company_and_reaches_meetings_and_mail_policy(control):
     )
     policy = [c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1]
     assert json.loads(policy.content)["bot_name"] == "Notas de Acme"
+    # Cambiar el nombre reescribe la política sin perder remitentes extra ni vídeo.
+    client.put("/api/owned-bot/config", json={"service_url": "https://bot.example.test", "bot_name": "Otro"})
+    renamed = json.loads([c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1].content)
+    assert renamed == {**json.loads(policy.content), "bot_name": "Otro"}
     too_long = client.put(
         "/api/owned-bot/config", json={"service_url": "https://bot.example.test", "bot_name": "x" * 51}
     )
