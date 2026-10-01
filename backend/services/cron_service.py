@@ -1024,11 +1024,16 @@ scheduler.add_job(
 )
 
 
-from services.bot_ingest import process_bot_inbox
+from services.bot_ingest import copy_pending_videos, process_bot_inbox
 
 scheduler.add_job(
     process_bot_inbox, "interval", seconds=30,
     id="owned_bot_inbox", max_instances=1, coalesce=True,
+)
+# Aparte del inbox: comprimir un vídeo tarda minutos y no debe frenar las actas.
+scheduler.add_job(
+    copy_pending_videos, "interval", minutes=1,
+    id="owned_bot_videos", max_instances=1, coalesce=True,
 )
 
 

@@ -14,7 +14,10 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
@@ -30,7 +33,15 @@ SLUG_DUENIO = "acten"
 SEGUNDOS_URL = 900
 # Un WebM de 8 h a 1080p ronda los 5 GB; por encima de esto algo no cuadra.
 MAX_BYTES = 8 * 1024 ** 3
-CONTENT_TYPE_VIDEO = "video/webm"
+# Una reunión no es cine: 720p a 15 fps basta para leer una pantalla compartida
+# y ver caras, y la voz cabe en mono. CRF más alto = archivo más pequeño.
+FFMPEG_ARGS = [
+    "-vf", "scale=-2:'min(720,trunc(ih/2)*2)',fps=15",
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "30", "-pix_fmt", "yuv420p",
+    "-c:a", "aac", "-ac", "1", "-b:a", "48k",
+    "-movflags", "+faststart",
+]
+FFMPEG_TIMEOUT = 3 * 3600
 # Transporte httpx para la descarga; solo las pruebas lo sustituyen.
 _transport_descarga: httpx.BaseTransport | None = None
 
@@ -52,8 +63,8 @@ class StorageConfig:
         return bool(self.endpoint_url and self.bucket and self.access_key and self.secret_key)
 
 
-def clave_video(tenant_id: int, session_id: int) -> str:
-    return f"tenants/{tenant_id}/sessions/{session_id}/recording.webm"
+def clave_video(tenant_id: int, session_id: int, ext: str = "mp4") -> str:
+    return f"tenants/{tenant_id}/sessions/{session_id}/recording.{ext}"
 
 
 def _fila(db: Session):
@@ -190,32 +201,6 @@ def _resumen(exc: Exception) -> str:
     return texto if len(texto) <= 200 else texto[:200] + "…"
 
 
-class _Lector:
-    """Adapta el streaming de httpx a `read(n)` para `upload_fileobj`, contando bytes."""
-
-    def __init__(self, chunks, limite: int):
-        self._chunks = chunks
-        self._resto = b""
-        self._limite = limite
-        self.bytes = 0
-
-    def read(self, size: int = -1) -> bytes:
-        while size < 0 or len(self._resto) < size:
-            try:
-                parte = next(self._chunks)
-            except StopIteration:
-                break
-            self._resto += parte
-            self.bytes += len(parte)
-            if self.bytes > self._limite:
-                raise StorageError("La grabación supera el tamaño máximo admitido")
-        if size < 0:
-            datos, self._resto = self._resto, b""
-        else:
-            datos, self._resto = self._resto[:size], self._resto[size:]
-        return datos
-
-
 def _origen_permitido(url: str) -> None:
     parsed = urlsplit(url)
     if parsed.scheme != "https" or not parsed.hostname:
@@ -228,40 +213,70 @@ def _origen_permitido(url: str) -> None:
         raise StorageError(str(exc)) from exc
 
 
-def subir_desde_url(
-    db: Session,
-    url: str,
-    key: str,
-    content_type: str = CONTENT_TYPE_VIDEO,
-    *,
-    transport: httpx.BaseTransport | None = None,
-) -> dict:
-    """Descarga `url` en streaming y la sube al bucket bajo `key`.
-
-    No se guarda en disco: la grabación puede pesar gigas y el contenedor
-    no tiene sitio para eso. `transport` solo lo usan las pruebas.
-    """
-    _origen_permitido(url)
-    client, cfg = _cliente_configurado(db)
+def _descargar(url: str, destino: Path) -> int:
     try:
         with httpx.Client(
             timeout=httpx.Timeout(60, connect=15),
             follow_redirects=True,
-            transport=transport or _transport_descarga,
-        ) as http, http.stream("GET", url) as response:
+            transport=_transport_descarga,
+        ) as http, http.stream("GET", url) as response, destino.open("wb") as salida:
             if response.status_code != 200:
                 raise StorageError(f"La grabación respondió {response.status_code}")
-            lector = _Lector(response.iter_bytes(), MAX_BYTES)
-            client.upload_fileobj(
-                lector, cfg.bucket, key, ExtraArgs={"ContentType": content_type}
-            )
-            return {"key": key, "bytes": lector.bytes}
-    except StorageError:
-        raise
+            total = 0
+            for parte in response.iter_bytes():
+                total += len(parte)
+                if total > MAX_BYTES:
+                    raise StorageError("La grabación supera el tamaño máximo admitido")
+                salida.write(parte)
+            return total
     except httpx.HTTPError as exc:
         raise StorageError(f"No se pudo descargar la grabación: {_resumen(exc)}") from exc
-    except Exception as exc:  # noqa: BLE001
-        raise StorageError(f"No se pudo subir la grabación al bucket: {_resumen(exc)}") from exc
+
+
+def _comprimir(origen: Path, destino: Path) -> bool:
+    """Recodifica a MP4 compacto. True solo si salió bien y pesa menos que el original."""
+    # `-f matroska` (WebM): sin adivinar el formato, un archivo que no sea la
+    # grabación (una lista HLS que apunte a otros archivos o URLs) no se abre.
+    orden = ["nice", "-n", "19", "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+             "-f", "matroska", "-i", str(origen), *FFMPEG_ARGS, str(destino)]
+    try:
+        subprocess.run(
+            orden, check=True, timeout=FFMPEG_TIMEOUT,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.warning("ffmpeg no pudo comprimir el vídeo: %s", exc.stderr[-500:].decode(errors="replace"))
+        return False
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        logger.warning("ffmpeg no pudo comprimir el vídeo: %s", _resumen(exc))
+        return False
+    return 0 < destino.stat().st_size < origen.stat().st_size
+
+
+def subir_video(cfg: StorageConfig, url: str, tenant_id: int, session_id: int) -> dict:
+    """Descarga la grabación, la comprime y la sube al bucket.
+
+    Recibe la configuración y no una sesión de base: esto tarda minutos y no
+    debe retener una conexión. Si ffmpeg falla se sube el original tal cual:
+    un vídeo grande es mejor que ninguno, y la URL de origen caduca.
+    """
+    _origen_permitido(url)
+    if not cfg.configured:
+        raise StorageError("El almacenamiento de vídeo no está configurado")
+    client = _cliente(cfg)
+    with tempfile.TemporaryDirectory(prefix="acten-video-") as carpeta:
+        original, compacto = Path(carpeta) / "original", Path(carpeta) / "compacto.mp4"
+        bytes_original = _descargar(url, original)
+        ext, archivo = ("mp4", compacto) if _comprimir(original, compacto) else ("webm", original)
+        key = clave_video(tenant_id, session_id, ext)
+        try:
+            with archivo.open("rb") as contenido:
+                client.upload_fileobj(
+                    contenido, cfg.bucket, key, ExtraArgs={"ContentType": f"video/{ext}"}
+                )
+        except Exception as exc:  # noqa: BLE001
+            raise StorageError(f"No se pudo subir la grabación al bucket: {_resumen(exc)}") from exc
+        return {"key": key, "bytes": archivo.stat().st_size, "original_bytes": bytes_original}
 
 
 def url_firmada(db: Session, key: str, segundos: int = SEGUNDOS_URL) -> str:

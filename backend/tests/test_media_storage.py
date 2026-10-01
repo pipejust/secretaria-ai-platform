@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import shutil
+import subprocess
 import uuid
 from datetime import datetime, timedelta
 
@@ -23,7 +25,7 @@ from models import IntegrationSetting, MeetingSession, Role, Subscription, Tenan
 from services import billing_catalog as cat
 from services import media_storage
 from services.bot_contract import ActenBotEvent
-from services.bot_ingest import BotInbox, ingest, process_one
+from services.bot_ingest import BotInbox, copy_pending_videos, ingest, process_one
 
 RECORDING_URL = "https://files.skribby.test/bots/abc/recording.webm"
 
@@ -152,6 +154,7 @@ async def _pipeline_ok(db, session_id):
 def _procesar(engine, db, tenant_id, **evento):
     row = ingest(db, _evento(tenant_id, **evento))
     assert asyncio.run(process_one(engine, row.id, pipeline=_pipeline_ok)) is True
+    copy_pending_videos(engine)
     with Session(engine) as fresh:
         return fresh.get(BotInbox, row.id), fresh.get(MeetingSession, row.session_id)
 
@@ -206,20 +209,52 @@ def test_probar_lista_el_bucket_y_devuelve_502_si_falla(client, db_session, s3, 
 # ─────────────────────────── ingesta ───────────────────────────
 
 
-def test_ingesta_copia_el_video_con_funcion_y_bucket(test_engine, db_session, s3, descarga):
+def test_ingesta_sube_el_video_comprimido(test_engine, db_session, s3, descarga, monkeypatch):
     _configurar(db_session)
     t = _empresa(db_session)  # nueva → prueba con todas las funciones
     assert cat.F_VIDEO in __import__("services.entitlements", fromlist=["x"]).de_empresa(db_session, t.id).features
-    row, meeting = _procesar(test_engine, db_session, t.id)
-    key = f"tenants/{t.id}/sessions/{meeting.id}/recording.webm"
-    assert row.state == "completed" and row.error_code == ""
-    assert meeting.recording_video_key == key
-    assert s3.uploaded == [("acten-video", key, b"webm-bytes", {"ContentType": "video/webm"})]
+    monkeypatch.setattr(media_storage.subprocess, "run",
+                        lambda orden, **_: open(orden[-1], "wb").write(b"mp4"))
+    row = ingest(db_session, _evento(t.id))
+    assert asyncio.run(process_one(test_engine, row.id, pipeline=_pipeline_ok)) is True
+    # El acta queda lista sin esperar al vídeo: lo copia otro cron.
+    db_session.refresh(row)
+    assert row.state == "completed" and row.error_code == "video_pending" and s3.uploaded == []
+    copy_pending_videos(test_engine)
+    with Session(test_engine) as db:
+        row, meeting = db.get(BotInbox, row.id), db.get(MeetingSession, row.session_id)
+    key = f"tenants/{t.id}/sessions/{meeting.id}/recording.mp4"
+    assert row.error_code == "" and meeting.recording_video_key == key
+    assert s3.uploaded == [("acten-video", key, b"mp4", {"ContentType": "video/mp4"})]
     # Volver a procesar no vuelve a subir.
     with Session(test_engine) as db:
         db.get(BotInbox, row.id).state = "queued"; db.commit()
     assert asyncio.run(process_one(test_engine, row.id, pipeline=_pipeline_ok)) is True
+    copy_pending_videos(test_engine)
     assert len(s3.uploaded) == 1
+
+
+def test_si_ffmpeg_falla_se_sube_el_original(test_engine, db_session, s3, descarga):
+    _configurar(db_session)
+    t = _empresa(db_session)
+    # «webm-bytes» no es un vídeo: ffmpeg falla (o no está instalado) y no se pierde la grabación.
+    row, meeting = _procesar(test_engine, db_session, t.id)
+    key = f"tenants/{t.id}/sessions/{meeting.id}/recording.webm"
+    assert row.error_code == "" and meeting.recording_video_key == key
+    assert s3.uploaded == [("acten-video", key, b"webm-bytes", {"ContentType": "video/webm"})]
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="sin ffmpeg")
+def test_ffmpeg_de_verdad_reduce_un_video(tmp_path):
+    origen, destino = tmp_path / "original", tmp_path / "compacto.mp4"
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=duration=2:size=1280x721:rate=30",
+         "-f", "lavfi", "-i", "sine=duration=2", "-c:v", "libvpx", "-b:v", "4M", "-c:a", "libopus",
+         "-f", "webm", str(origen)],
+        check=True,
+    )
+    assert media_storage._comprimir(origen, destino) is True
+    assert destino.read_bytes()[4:8] == b"ftyp"
 
 
 def test_ingesta_sin_bucket_no_falla_y_avisa(test_engine, db_session, s3, descarga, caplog):
@@ -251,6 +286,17 @@ def test_fallo_de_copia_deja_error_visible_pero_la_sesion_queda(test_engine, db_
     assert row.state == "completed" and row.error_code == "video_copy_failed"
     assert meeting.recording_video_key is None
     assert meeting.processing_error == ""
+    # No se reintenta sola: el siguiente pase no vuelve a descargar.
+    s3.fail_upload = False
+    copy_pending_videos(test_engine)
+    assert s3.uploaded == []
+
+
+def test_grabacion_demasiado_grande_no_se_copia(test_engine, db_session, s3, descarga, monkeypatch):
+    _configurar(db_session)
+    monkeypatch.setattr(media_storage, "MAX_BYTES", 5)
+    row, meeting = _procesar(test_engine, db_session, _empresa(db_session).id)
+    assert row.error_code == "video_copy_failed" and s3.uploaded == []
 
 
 # ─────────────────────────── plan ───────────────────────────
@@ -301,12 +347,14 @@ def test_url_firmada_solo_para_la_empresa_y_404_sin_video(client, db_session, s3
     assert client.get(f"/api/sessions/{con.id}/video", headers=ajena).status_code == 404
 
 
-def test_borrar_y_lector_en_streaming(db_session, s3):
+def test_borrar_la_sesion_borra_su_video(client, db_session, s3, monkeypatch):
+    monkeypatch.setattr(database, "engine", db_session.get_bind())
     _configurar(db_session)
-    media_storage.borrar(db_session, "tenants/1/sessions/1/recording.webm")
-    assert s3.deleted == [("acten-video", "tenants/1/sessions/1/recording.webm")]
-    lector = media_storage._Lector(iter([b"abc", b"def", b"g"]), limite=100)
-    assert lector.read(4) == b"abcd" and lector.read() == b"efg" and lector.bytes == 7
-    grande = media_storage._Lector(iter([b"x" * 10]), limite=5)
-    with pytest.raises(media_storage.StorageError):
-        grande.read()
+    t = _empresa(db_session)
+    key = f"tenants/{t.id}/sessions/1/recording.mp4"
+    con = MeetingSession(tenant_id=t.id, fireflies_id="BOT-9", title="Con vídeo", date="2026-09-12",
+                         recording_video_key=key)
+    db_session.add(con); db_session.commit(); db_session.refresh(con)
+    r = client.delete(f"/api/sessions/{con.id}", headers=_token(db_session, t))
+    assert r.status_code == 200, r.text
+    assert s3.deleted == [("acten-video", key)]

@@ -583,8 +583,21 @@ def delete_session(
             .values(session_id=None)
         )
         # 8) La sesión misma
+        video_key = session_obj.recording_video_key
         db.delete(session_obj)
         db.commit()
+        if video_key:
+            # El vídeo vive en el bucket, no en la base: sin esto queda huérfano
+            # (y es la grabación de una reunión que pidieron borrar).
+            from services import media_storage
+            try:
+                media_storage.borrar(db, video_key)
+            except media_storage.StorageError as exc:
+                import logging as _logging
+                _logging.getLogger(__name__).error(
+                    "delete_session: sesión %s borrada pero su vídeo sigue en el bucket: %s",
+                    session_id, exc,
+                )
     except IntegrityError as exc:
         # Algún FK que no contemplamos (modelo nuevo agregado sin actualizar
         # esta cascada). Devolvemos 409 con el nombre de la constraint para

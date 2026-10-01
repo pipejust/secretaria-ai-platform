@@ -439,7 +439,7 @@ class MeetingSession(SQLModel, table=True):
 
     # Vídeo de la reunión copiado a nuestro bucket (S3 compatible) desde la
     # grabación del bot propio: clave del objeto, p. ej.
-    # `tenants/1/sessions/9/recording.webm`. NULL = sin vídeo (solo audio,
+    # `tenants/1/sessions/9/recording.mp4`. NULL = sin vídeo (solo audio,
     # función no incluida en el plan, o bucket sin configurar).
     recording_video_key: Optional[str] = Field(default=None, max_length=512)
 

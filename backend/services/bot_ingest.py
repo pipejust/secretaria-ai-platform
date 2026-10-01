@@ -142,12 +142,14 @@ async def process_one(engine, inbox_id: int, pipeline=None) -> bool:
             success = (
                 bool(meeting.processing_completed_at) and not meeting.processing_error
             )
-            # El vídeo se copia después del acta: pesa gigas y no debe
-            # retrasar lo que la gente espera leer. Un fallo aquí queda en
-            # `error_code` pero no tumba la sesión; `/retry` lo reintenta.
-            video_error = copiar_video(db, row, meeting)
+            # El vídeo no se copia aquí: descargarlo y comprimirlo tarda
+            # minutos y no debe retrasar esta acta ni las de la cola. Queda
+            # anotado y `copy_pending_videos` lo recoge en su propio cron.
             row.state = "completed" if success else "failed"
-            row.error_code = video_error if success else "acten_pipeline_incomplete"
+            if not success:
+                row.error_code = "acten_pipeline_incomplete"
+            else:
+                row.error_code = VIDEO_PENDING if _video_por_copiar(db, row, meeting) else ""
         except Exception:
             db.rollback()
             row = db.get(BotInbox, inbox_id)
@@ -163,13 +165,14 @@ async def process_one(engine, inbox_id: int, pipeline=None) -> bool:
         return True
 
 
-def copiar_video(db: Session, row: BotInbox, meeting: MeetingSession) -> str:
-    """Copia la grabación de vídeo del bot a nuestro bucket. Devuelve un código de error o ''.
+VIDEO_PENDING = "video_pending"
+
+
+def _video_por_copiar(db: Session, row: BotInbox, meeting: MeetingSession) -> str:
+    """URL de la grabación de vídeo que toca copiar a nuestro bucket, o ''.
 
     Solo si el evento trae `recording.kind == "video"`, la empresa tiene la
     función `meetings.video` y el superadministrador configuró el bucket.
-    Nunca lanza: la sesión ya existe y el acta vale igual sin vídeo. La URL
-    de Skribby caduca (`recording.expires_at`), de ahí copiarlo a lo nuestro.
     """
     from services import billing_catalog, entitlements, media_storage
 
@@ -194,17 +197,61 @@ def copiar_video(db: Session, row: BotInbox, meeting: MeetingSession) -> str:
             meeting.id,
         )
         return ""
-    key = media_storage.clave_video(row.tenant_id, meeting.id)
-    try:
-        subida = media_storage.subir_desde_url(db, recording.url, key)
-    except media_storage.StorageError as exc:
-        logger.error("Sesión %s: no se pudo copiar el vídeo al bucket: %s", meeting.id, exc)
-        return "video_copy_failed"
-    meeting.recording_video_key = key
-    db.add(meeting)
-    db.commit()
-    logger.info("Sesión %s: vídeo copiado a %s (%s bytes)", meeting.id, key, subida["bytes"])
-    return ""
+    return recording.url
+
+
+def copy_pending_videos(engine=None) -> None:
+    """Cron: copia a nuestro bucket, comprimido, el vídeo de UNA reunión pendiente.
+
+    De uno en uno porque ffmpeg ocupa la CPU del servidor. Si el proceso muere
+    a medias (un despliegue) la fila sigue en `video_pending` y se reintenta
+    sola: subir dos veces la misma clave no hace daño. Un fallo de verdad deja
+    `video_copy_failed` y no se reintenta; el acta vale igual sin vídeo. La
+    URL de Skribby caduca (`recording.expires_at`), de ahí copiarlo.
+    """
+    from services import media_storage
+
+    if engine is None:
+        from database import engine
+    with Session(engine) as db:
+        row = db.exec(
+            select(BotInbox)
+            .where(BotInbox.state == "completed", BotInbox.error_code == VIDEO_PENDING)
+            .order_by(BotInbox.created_at)
+        ).first()
+        if row is None:
+            return
+        meeting = db.get(MeetingSession, row.session_id)
+        url = _video_por_copiar(db, row, meeting) if meeting else ""
+        inbox_id, tenant_id, session_id = row.id, row.tenant_id, row.session_id
+        cfg = media_storage.leer_config(db)
+    # Sin sesión de base abierta: lo que sigue tarda minutos.
+    key, error = "", ""
+    if url:
+        try:
+            subida = media_storage.subir_video(cfg, url, tenant_id, session_id)
+            key = subida["key"]
+            logger.info(
+                "Sesión %s: vídeo copiado a %s (%s bytes; el original pesaba %s)",
+                session_id, key, subida["bytes"], subida["original_bytes"],
+            )
+        except Exception as exc:  # noqa: BLE001 — cualquier fallo sin marcar se reintentaría cada minuto
+            logger.error("Sesión %s: no se pudo copiar el vídeo al bucket: %s", session_id, exc)
+            error = "video_copy_failed"
+    with Session(engine) as db:
+        row = db.get(BotInbox, inbox_id)
+        meeting = db.get(MeetingSession, session_id)
+        if row is None or meeting is None:
+            # Borraron la sesión mientras se copiaba: no dejar el vídeo huérfano.
+            if key:
+                media_storage.borrar(db, key)
+            return
+        row.error_code = error
+        if key:
+            meeting.recording_video_key = key
+            db.add(meeting)
+        db.add(row)
+        db.commit()
 
 
 # Cuánto puede llevar «processing» antes de darlo por interrumpido. El
