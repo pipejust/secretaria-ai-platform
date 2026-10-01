@@ -839,7 +839,10 @@ def sync_bot_mail_senders():
         logger.info("Remitentes del bot sincronizados en %s empresas.", hechas)
 
 
-scheduler.add_job(sync_bot_mail_senders, "interval", hours=1, max_instances=1)
+# Cada 5 minutos: quien acaba de recibir su usuario puede invitar al bot
+# casi de inmediato (el bot reintenta lo que llegó antes). Sin cambios no
+# escribe nada: son dos lecturas por empresa con bot.
+scheduler.add_job(sync_bot_mail_senders, "interval", minutes=5, max_instances=1)
 # Refetch periódico de summaries / retry de errores transitorios de
 # Fireflies. Corre cada 5 min con offset de 2 min después de la hora
 # exacta (XX:02, XX:07, XX:12, ...). Esto evita martillar la API de

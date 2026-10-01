@@ -55,7 +55,8 @@ async def sincronizar(db: Session, tenant_id: int, extra: list[str] | None = Non
 
     `extra` = lista que escribió el administrador (se guarda tal cual en
     `extra_senders` para no perderla en la siguiente sincronización). Sin
-    política previa y sin `extra`, no hay nada que sincronizar.
+    política previa y sin `extra`, no hay nada que sincronizar. Devuelve
+    `None` cuando no hubo nada que escribir.
     """
     from routers.bot_control import bot_call, bot_name_of
 
@@ -64,13 +65,26 @@ async def sincronizar(db: Session, tenant_id: int, extra: list[str] | None = Non
     if actual is None and extra is None:
         return None
     manuales = list(extra) if extra is not None else list((actual or {}).get("extra_senders") or [])
+    remitentes = combinar(db, tenant_id, manuales)
+    autorizado = bool((actual or {}).get("recording_authorized", False))
+    if not remitentes:
+        # La empresa apagó el bot propio y no dejó remitentes extra. El bot
+        # no admite una lista vacía, así que se conserva la anterior pero se
+        # retira la autorización: sin ella no entra a ninguna reunión.
+        remitentes = list((actual or {}).get("allowed_senders") or [])
+        autorizado = False
+        if not remitentes:
+            return None
     body = {
-        "allowed_senders": combinar(db, tenant_id, manuales),
+        "allowed_senders": remitentes,
         "extra_senders": sorted({e.strip().lower() for e in manuales if e and "@" in e}),
-        "recording_authorized": bool((actual or {}).get("recording_authorized", False)),
+        "recording_authorized": autorizado,
         "timezone": (actual or {}).get("timezone") or "America/Bogota",
         "bot_name": bot_name_of(db, tenant_id),
     }
+    # Corre cada pocos minutos: si nada cambió, no se escribe.
+    if actual is not None and all(actual.get(k) == v for k, v in body.items()):
+        return None
     return await bot_call(db, tenant_id, "PUT", "/v1/mail-policy", body=body)
 
 
