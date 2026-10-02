@@ -1190,6 +1190,12 @@ async def _process_uploaded_session_background(session_id: int) -> None:
             )
 
 
+# Tope de lo que se lee en memoria y se manda a transcribir. El servicio de
+# transcripción rechaza archivos mayores; mejor decirlo aquí que fallar a medias.
+MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+AUDIO_EXTENSIONS = ('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm', '.flac', '.ogg')
+
+
 @router.post("/upload")
 async def upload_manual_session(
     title: str = Form(...),
@@ -1217,37 +1223,87 @@ async def upload_manual_session(
       - youtube_url: URL de YouTube (alternativa a file/text_content)
       - llm_provider: 'auto' | 'openai' | 'groq' (override por sesión)
     """
+    new_session = await create_uploaded_session(
+        db, tenant, background_tasks, title=title, date=date, language=language,
+        project_id=project_id, text_content=text_content, youtube_url=youtube_url,
+        llm_provider=llm_provider, file=file,
+    )
+    return {
+        "status": "success",
+        "session_id": new_session.id,
+        "message": (
+            "Sesión creada. La IA está procesando idioma, asistentes, temas, "
+            "decisiones, riesgos, acuerdos y tareas en segundo plano."
+        ),
+    }
+
+
+async def create_uploaded_session(
+    db: Session,
+    tenant: Tenant,
+    background_tasks: BackgroundTasks,
+    *,
+    title: str,
+    date: Optional[str] = None,
+    language: Optional[str] = None,
+    project_id: Optional[int] = None,
+    text_content: Optional[str] = None,
+    youtube_url: Optional[str] = None,
+    llm_provider: Optional[str] = "auto",
+    file: Optional[UploadFile] = None,
+) -> MeetingSession:
+    """Convierte audio, texto o YouTube en una sesión y lanza el pipeline IA.
+
+    Lo comparten la pantalla (`/api/sessions/upload`) y la API pública
+    (`POST /api/v1/sessions`).
+    """
     try:
         import time
         import uuid
+
+        import httpx
 
         session_date = date if date else str(int(time.time() * 1000))
         session_language = language if language else "Desconocido"
 
         raw_transcript = ""
 
-        if youtube_url:
-            from services.youtube_ingest import fetch_audio_bytes, is_youtube_url
-            if not is_youtube_url(youtube_url):
-                raise HTTPException(status_code=400, detail="youtube_url no parece una URL válida de YouTube.")
-            try:
-                audio_bytes, fname = await fetch_audio_bytes(youtube_url)
-            except RuntimeError as exc:
-                raise HTTPException(status_code=422, detail=str(exc))
-            from services.llm_groq import GroqLLMService
-            raw_transcript = await GroqLLMService(tenant_id=tenant.id).transcribe_audio(audio_bytes, fname)
-        elif file and file.filename:
-            content = await file.read()
-            if file.filename.lower().endswith(
-                ('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm', '.flac', '.ogg')
-            ):
+        try:
+            if youtube_url:
+                from services.youtube_ingest import fetch_audio_bytes, is_youtube_url
+                if not is_youtube_url(youtube_url):
+                    raise HTTPException(status_code=400, detail="youtube_url no parece una URL válida de YouTube.")
+                try:
+                    audio_bytes, fname = await fetch_audio_bytes(youtube_url)
+                except RuntimeError as exc:
+                    raise HTTPException(status_code=422, detail=str(exc))
                 from services.llm_groq import GroqLLMService
-                groq = GroqLLMService(tenant_id=tenant.id)
-                raw_transcript = await groq.transcribe_audio(content, file.filename)
-            else:
-                raw_transcript = content.decode('utf-8', errors='ignore')
-        elif text_content:
-            raw_transcript = text_content
+                raw_transcript = await GroqLLMService(tenant_id=tenant.id).transcribe_audio(audio_bytes, fname)
+            elif file and file.filename:
+                content = await file.read(MAX_UPLOAD_BYTES + 1)
+                if len(content) > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"El archivo supera el máximo de {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                    )
+                if file.filename.lower().endswith(AUDIO_EXTENSIONS):
+                    from services.llm_groq import GroqLLMService
+                    groq = GroqLLMService(tenant_id=tenant.id)
+                    raw_transcript = await groq.transcribe_audio(content, file.filename)
+                else:
+                    raw_transcript = content.decode('utf-8', errors='ignore')
+            elif text_content:
+                raw_transcript = text_content
+        except httpx.HTTPStatusError as exc:
+            # El servicio de transcripción contestó con error: decir cuál y no un 500 mudo.
+            demasiado = exc.response.status_code == 413
+            raise HTTPException(
+                status_code=413 if demasiado else 502,
+                detail=(
+                    "El archivo es demasiado grande para transcribirlo; súbelo comprimido o por partes."
+                    if demasiado else "El servicio de transcripción no pudo procesar el archivo."
+                ),
+            ) from exc
 
         if not raw_transcript or len(raw_transcript.strip()) < 5:
             raise HTTPException(
@@ -1289,15 +1345,7 @@ async def upload_manual_session(
         background_tasks.add_task(
             _process_uploaded_session_background, new_session.id
         )
-
-        return {
-            "status": "success",
-            "session_id": new_session.id,
-            "message": (
-                "Sesión creada. La IA está procesando idioma, asistentes, temas, "
-                "decisiones, riesgos, acuerdos y tareas en segundo plano."
-            ),
-        }
+        return new_session
     except HTTPException:
         raise
     except Exception:

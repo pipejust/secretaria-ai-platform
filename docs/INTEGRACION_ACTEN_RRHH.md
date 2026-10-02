@@ -794,6 +794,43 @@ horario, porque la hora va en `due_time` y recortarla en silencio sería
 peor que rechazarla. Para dejar la tarea sin fecha, mándenlo como `null` u
 omítanlo. Aplica igual en el `PATCH`.
 
+### `POST /api/v1/sessions` — subir una grabación o un texto y volverlo sesión
+
+Alcance `sessions:write`. Es la misma subida que hace la pantalla de Acten.
+El cuerpo va en **`multipart/form-data`** (no JSON), con **uno** de `file` o
+`text_content`:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `title` | string | **Obligatorio.** Título de la sesión (máx. 300) |
+| `file` | archivo | Audio o vídeo (`.mp3 .wav .m4a .mp4 .mpeg .mpga .webm .flac .ogg`): Acten lo transcribe. Cualquier otro archivo se lee como texto. Máximo 100 MB |
+| `text_content` | string | Transcripción o notas ya escritas, en lugar de `file` |
+| `date` | ISO 8601 | Fecha de la reunión. Por defecto, el momento de la subida |
+| `language` | `es`\|`en`\|`ca` | Si falta, Acten lo detecta |
+| `project_external_id` | string | La sesión nace en ese proyecto. Sin él, Acten lo deduce al procesarla. Proyecto inexistente o no visible para la persona → `422` |
+
+```bash
+curl -X POST https://api.acten.app/api/v1/sessions \
+  -H "X-API-Key: $ACTEN_KEY" \
+  -F title="Comité de obra" -F language=es \
+  -F project_external_id="…" -F file=@reunion.mp3
+```
+
+Respuesta `202`: `{"id": 1412, "title": "Comité de obra", "date": "…",
+"status": "processing", "project_external_id": "…"}`. La transcripción del
+audio se hace **dentro de la llamada** (puede tardar según la duración);
+el acta, las decisiones y las tareas se generan después: consulten
+`GET /api/v1/sessions/{id}` hasta que `status` deje de ser `processing`.
+
+Errores: `422` falta `title`, vienen `file` y `text_content` a la vez o
+ninguno, fecha o idioma inválidos, proyecto desconocido · `400` el archivo
+no dejó texto aprovechable · `413` archivo demasiado grande · `502` el
+servicio de transcripción falló (reintentable).
+
+> Sin `project_external_id`, la sesión queda sin proyecto hasta que Acten
+> lo deduzca o alguien lo asigne, y mientras tanto solo se ve leyendo como
+> empresa (`X-On-Behalf-Of: *`).
+
 ### `POST /api/v1/meetings/live` — mandar el bot a una reunión en curso
 
 Alcance `sessions:write`. El bot de Acten pide entrar **de inmediato** a la

@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status,
+)
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import and_, or_
 from sqlmodel import Session, select
@@ -328,6 +330,64 @@ def get_session_detail(
         "risks": s.processed_risks or "",
         "participants": attendees,
         "tasks": [_serialize_task(db, t, proj_refs, sp) for t in tasks],
+    }
+
+
+# Nombre de idioma que guarda la subida desde la pantalla; el pipeline lo normaliza.
+_IDIOMA_SUBIDA = {"es": "Español", "ca": "Català", "en": "Inglés"}
+
+
+@router.post("/sessions", status_code=status.HTTP_202_ACCEPTED)
+async def create_session_from_upload(
+    background_tasks: BackgroundTasks,
+    title: str = Form(..., min_length=1, max_length=300),
+    date: Optional[str] = Form(None),
+    language: Optional[Literal["es", "en", "ca"]] = Form(None),
+    project_external_id: Optional[str] = Form(None, max_length=200),
+    text_content: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Crea una sesión a partir de una grabación o de una transcripción ya hecha.
+
+    `multipart/form-data` con **uno** de `file` (audio o vídeo: se
+    transcribe; cualquier otro archivo se lee como texto) o `text_content`.
+    Responde en cuanto la sesión existe; el acta, las decisiones y las
+    tareas se generan después: consultar `GET /sessions/{id}` hasta que
+    `status` deje de ser `processing`.
+    """
+    from routers.sessions_upload import create_uploaded_session
+
+    tiene_archivo = bool(file and file.filename)
+    tiene_texto = bool(text_content and text_content.strip())
+    if tiene_archivo == tiene_texto:
+        raise HTTPException(422, "Envía un archivo (`file`) o el texto (`text_content`), uno de los dos.")
+    if date:
+        try:
+            datetime.fromisoformat(date.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise HTTPException(422, "`date` debe ser una fecha ISO 8601.") from exc
+    project_id = None
+    if project_external_id:
+        proj = _resolve_project(db, ctx.tenant.id, project_external_id)
+        if ctx.on_behalf_of and proj.id not in ctx.visible_project_ids:
+            raise HTTPException(
+                422, f"No existe un proyecto sincronizado con id '{project_external_id}'."
+            )
+        project_id = proj.id
+    s = await create_uploaded_session(
+        db, ctx.tenant, background_tasks, title=title.strip(), date=date,
+        language=_IDIOMA_SUBIDA.get(language or ""), project_id=project_id,
+        text_content=text_content if tiene_texto else None,
+        file=file if tiene_archivo else None,
+    )
+    return {
+        "id": s.id,
+        "title": s.title,
+        "date": s.date,
+        "status": s.status,
+        "project_external_id": project_external_id if project_id else None,
     }
 
 
