@@ -269,6 +269,31 @@ def _hours_since_iso(value: str) -> Optional[float]:
     return max(0.0, (now - dt).total_seconds() / 3600.0)
 
 
+async def cerrar_sesion_del_bot(session_id: int, tenant_id: int) -> None:
+    """Lo que sigue al análisis de una reunión del bot propio, igual que en Fireflies.
+
+    1. Si el análisis terminó limpio y el proyecto tiene rutas activas
+       (Trello, Jira, ClickUp, Azure DevOps), se envían las tareas.
+    2. Correo y notificación de «sesión procesada».
+
+    Un fallo en las rutas no impide el aviso.
+    """
+    from database import engine
+
+    try:
+        with Session(engine) as db:
+            ms = db.get(MeetingSession, session_id)
+            if ms and ms.project_id and not (ms.processing_error or "").strip():
+                routings = _routings_for_project_dispatch(db, ms.project_id)
+                if routings:
+                    items = db.exec(select(ActionItem).where(ActionItem.session_id == ms.id)).all()
+                    for routing in routings:
+                        await _dispatch_routing(db, routing, items)
+    except Exception:  # noqa: BLE001
+        logger.exception("Sesión %s: fallo enviando las tareas a las rutas externas", session_id)
+    await _send_session_ready_email(session_id, tenant_id)
+
+
 async def _send_session_ready_email(
     session_id: int,
     tenant_id: int,

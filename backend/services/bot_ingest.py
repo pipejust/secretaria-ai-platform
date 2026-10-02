@@ -157,13 +157,14 @@ def asistentes_de(db: Session, session_id: int) -> list[str]:
 
 async def process_one(engine, inbox_id: int, pipeline=None, notify=None) -> bool:
     if pipeline is None:
-        from routers.fireflies import _send_session_ready_email
+        from routers.fireflies import cerrar_sesion_del_bot
         from services.transcript_pipeline import process_session_with_ai
 
         pipeline = process_session_with_ai
-        # El mismo aviso que reciben las reuniones de Fireflies: correo y
-        # notificación de «sesión procesada» a quien le toca revisarla.
-        notify = notify or _send_session_ready_email
+        # El mismo cierre que tienen las reuniones de Fireflies: tareas a las
+        # rutas externas del proyecto, y correo y notificación de «sesión
+        # procesada» a quien le toca revisarla.
+        notify = notify or cerrar_sesion_del_bot
     with Session(engine) as db:
         result = db.execute(
             update(BotInbox)

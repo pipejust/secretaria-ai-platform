@@ -73,6 +73,48 @@ _BASE_BACKOFF_SEC = 2.0
 T = TypeVar("T")
 
 
+# Las tres secciones del acta que escribe el modelo. El prompt le pide una
+# viñeta «Sin elementos relevantes» cuando no hay nada, así que las tres
+# vacías a la vez no es «reunión sin acuerdos»: es una respuesta a medias.
+_CAMPOS_ACTA = ("decisions", "agreements", "risks")
+_REINTENTOS_ACTA_VACIA = 2
+# Por debajo de esto (un saludo, una prueba de micrófono) no hay acta que exigir.
+_MIN_CHARS_ACTA = 500
+
+
+def _texto_acta(valor) -> str:
+    """Texto de una sección; el modelo a veces devuelve una lista en vez de viñetas."""
+    if isinstance(valor, list):
+        return "\n".join(f"- {str(x).strip()}" for x in valor if str(x).strip())
+    return valor.strip() if isinstance(valor, str) else ""
+
+
+def _acta_vacia(insights: dict) -> bool:
+    return not any(_texto_acta(insights.get(k)) for k in _CAMPOS_ACTA)
+
+
+async def insights_con_acta(groq, transcript, project_contacts, tenant_lang, *, etiqueta: str) -> dict:
+    """Pide el análisis y lo repite si vuelve sin decisiones, acuerdos ni riesgos."""
+    async def pedir() -> dict:
+        return await _call_with_retry(
+            etiqueta,
+            lambda: groq.process_fundamentals_and_insights(
+                transcript, project_contacts, output_language=tenant_lang
+            ),
+        )
+
+    insights = await pedir()
+    for intento in range(1, _REINTENTOS_ACTA_VACIA + 1):
+        if not _acta_vacia(insights) or len(transcript) <= _MIN_CHARS_ACTA:
+            break
+        logger.warning(
+            "%s: el análisis volvió sin decisiones, acuerdos ni riesgos; se repite (%s/%s).",
+            etiqueta, intento, _REINTENTOS_ACTA_VACIA,
+        )
+        insights = await pedir()
+    return insights
+
+
 async def _call_with_retry(
     label: str,
     fn: Callable[[], Awaitable[T]],
@@ -480,15 +522,19 @@ async def process_session_with_ai(
     # ---------- 2. Groq → fundamentals + insights (CRÍTICO, con retry) ----------
     insights: dict = {}
     try:
-        insights = await _call_with_retry(
-            f"groq.insights[session={session_id}]",
-            lambda: groq.process_fundamentals_and_insights(
-                transcript, project_contacts, output_language=tenant_lang
-            ),
+        insights = await insights_con_acta(
+            groq, transcript, project_contacts, tenant_lang,
+            etiqueta=f"groq.insights[session={session_id}]",
         )
     except Exception as exc:  # noqa: BLE001
         errors["insights"] = f"Groq insights falló tras reintentos: {exc}"
         logger.exception("Groq insights agotó reintentos para sesión %s", session_id)
+    if insights and _acta_vacia(insights) and len(transcript) > _MIN_CHARS_ACTA:
+        # Antes pasaba en silencio: la sesión quedaba «lista» sin decisiones,
+        # acuerdos ni riesgos y nadie se enteraba hasta abrirla.
+        errors["insights"] = (
+            "El análisis volvió sin decisiones, acuerdos ni riesgos tras reintentar."
+        )
 
     # ---------- 3. Project matching nivel 2 (Groq deduce por contexto) ----------
     if auto_match_project and not matched_project_id:
@@ -536,9 +582,9 @@ async def process_session_with_ai(
         session_obj.language = (
             insights.get("language") or session_obj.language or "Español"
         )
-        session_obj.processed_decisions = insights.get("decisions", "") or ""
-        session_obj.processed_risks = insights.get("risks", "") or ""
-        session_obj.processed_agreements = insights.get("agreements", "") or ""
+        session_obj.processed_decisions = _texto_acta(insights.get("decisions"))
+        session_obj.processed_risks = _texto_acta(insights.get("risks"))
+        session_obj.processed_agreements = _texto_acta(insights.get("agreements"))
         session_obj.processed_themes = json.dumps(
             insights.get("themes", []) or [], ensure_ascii=False
         )
