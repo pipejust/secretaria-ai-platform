@@ -3,7 +3,7 @@ import { clampMonths, dependentsOf, toggleAddon, totalCopCents } from './billing
 
 const plan: Plan = {
   key: 'business', name: 'Business', price_usd_cents: 14900, price_cop_cents: 59_600_000, interval: 'month',
-  features: [], meetings_per_month: 100, users_included: null, is_public: true, is_active: true, sort_order: 2,
+  features: [], meetings_per_month: 100, users_included: null, video_retention_days: 90, is_public: true, is_active: true, sort_order: 2,
 };
 const addon = (key: string, cop: number, requires: string[] = []): AddOn => ({
   key, name: key, price_usd_cents: 0, price_cop_cents: cop, features: [], requires, is_active: true, sort_order: 1,

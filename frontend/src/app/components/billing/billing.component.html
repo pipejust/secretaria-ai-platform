@@ -129,6 +129,7 @@
                         <span class="bl-plan-limits">
                             <span>{{ 'billing.plan_meetings' | translate:{ n: p.meetings_per_month ?? ('billing.unlimited' | translate) } }}</span>
                             <span>{{ 'billing.plan_users' | translate:{ n: p.users_included ?? ('billing.unlimited' | translate) } }}</span>
+                            <span>{{ (p.video_retention_days ? 'billing.plan_video_days' : 'billing.plan_video_forever') | translate:{ n: p.video_retention_days } }}</span>
                         </span>
                         <ul class="bl-plan-features">
                             <li *ngFor="let f of p.features">{{ featureLabel(f) }}</li>

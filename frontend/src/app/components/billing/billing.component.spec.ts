@@ -15,9 +15,9 @@ const catalog: Catalog = {
   features: { 'meetings.owned_bot': 'Bot propio', 'meetings.video': 'Vídeo' },
   plans: [
     { key: 'starter', name: 'Starter', price_usd_cents: 4900, price_cop_cents: 19_600_000, interval: 'month',
-      features: [], meetings_per_month: 20, users_included: 5, is_public: true, is_active: true, sort_order: 1 },
+      features: [], meetings_per_month: 20, users_included: 5, video_retention_days: 30, is_public: true, is_active: true, sort_order: 1 },
     { key: 'business', name: 'Business', price_usd_cents: 14900, price_cop_cents: 59_600_000, interval: 'month',
-      features: ['meetings.owned_bot'], meetings_per_month: 100, users_included: null, is_public: true, is_active: true, sort_order: 2 },
+      features: ['meetings.owned_bot'], meetings_per_month: 100, users_included: null, video_retention_days: 90, is_public: true, is_active: true, sort_order: 2 },
   ],
   addons: [
     { key: 'owned_bot', name: 'Bot propio', price_usd_cents: 2900, price_cop_cents: 11_600_000, features: ['meetings.owned_bot'], requires: [], is_active: true, sort_order: 1 },
@@ -27,7 +27,7 @@ const catalog: Catalog = {
 
 const me: BillingMe = {
   entitlements: { plan: 'business', status: 'active', features: [], addons: ['owned_bot'], period_end: '2030-01-01T00:00:00',
-    trial_ends: null, meetings_per_month: 100, users_included: null, billing_mode: 'manual' },
+    trial_ends: null, meetings_per_month: 100, users_included: null, video_retention_days: 90, billing_mode: 'manual' },
   plan: catalog.plans[1],
   subscription: { status: 'active', billing_mode: 'manual', current_period_start: null, current_period_end: '2030-01-01T00:00:00',
     cancel_at_period_end: false, addons: ['owned_bot'], customer_email: null },

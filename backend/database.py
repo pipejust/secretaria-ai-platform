@@ -109,6 +109,7 @@ def _apply_lightweight_migrations() -> None:
             # Vídeo de la reunión en el bucket propio (bot propio).
             "ALTER TABLE meetingsession ADD COLUMN recording_video_key TEXT",
             "ALTER TABLE actionitem ADD COLUMN project_id INTEGER REFERENCES project(id)",
+            "ALTER TABLE plan ADD COLUMN video_retention_days INTEGER",
         ]
     else:
         statements = [
@@ -321,6 +322,8 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS recording_video_key VARCHAR(512)",
             "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES project(id) ON DELETE SET NULL",
             "CREATE INDEX IF NOT EXISTS ix_actionitem_project_id ON actionitem (project_id)",
+            # Retención del vídeo por plan (NULL = sin límite).
+            "ALTER TABLE plan ADD COLUMN IF NOT EXISTS video_retention_days INTEGER",
         ]
 
     from sqlalchemy import text

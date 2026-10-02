@@ -523,6 +523,7 @@
                         <div class="cp-card-titles">
                             <h3>{{ 'curation.video_title' | translate }}</h3>
                             <p class="cp-video-hint">{{ 'curation.video_hint' | translate }}</p>
+                            <p class="cp-video-hint" *ngIf="videoUntil">{{ 'curation.video_until' | translate:{ date: (videoUntil | date:'dd/MM/yyyy') } }}</p>
                         </div>
                     </header>
                     <video #videoPlayer *ngIf="videoUrl" class="cp-video" controls preload="metadata"

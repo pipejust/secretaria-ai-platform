@@ -33,6 +33,7 @@ class Entitlements:
     trial_ends: str | None = None
     meetings_per_month: int | None = None
     users_included: int | None = None
+    video_retention_days: int | None = None  # None = el vídeo no caduca
     billing_mode: str = "manual"
 
     def tiene(self, feature: str) -> bool:
@@ -44,6 +45,7 @@ class Entitlements:
             "addons": list(self.addons), "period_end": self.period_end,
             "trial_ends": self.trial_ends, "meetings_per_month": self.meetings_per_month,
             "users_included": self.users_included, "billing_mode": self.billing_mode,
+            "video_retention_days": self.video_retention_days,
         }
 
 
@@ -72,8 +74,10 @@ def de_empresa(db: Session, tenant_id: int, ahora: datetime | None = None) -> En
         fin = creada + timedelta(days=cat.DIAS_PRUEBA)
         if ahora <= fin:
             return Entitlements(plan_key=None, status="trialing", features=set(cat.FEATURES),
-                                trial_ends=fin.isoformat())
-        return Entitlements(plan_key=None, status="none")
+                                trial_ends=fin.isoformat(),
+                                video_retention_days=cat.RETENCION_VIDEO_SIN_PLAN)
+        return Entitlements(plan_key=None, status="none",
+                            video_retention_days=cat.RETENCION_VIDEO_SIN_PLAN)
     addons = json.loads(sub.addons_json or "[]")
     plan = db.get(Plan, sub.plan_key)
     base = Entitlements(
@@ -81,6 +85,7 @@ def de_empresa(db: Session, tenant_id: int, ahora: datetime | None = None) -> En
         period_end=sub.current_period_end, billing_mode=sub.billing_mode,
         meetings_per_month=plan.meetings_per_month if plan else None,
         users_included=plan.users_included if plan else None,
+        video_retention_days=plan.video_retention_days if plan else cat.RETENCION_VIDEO_SIN_PLAN,
     )
     if sub.status in {"cancelled", "expired"}:
         base.status = "expired"

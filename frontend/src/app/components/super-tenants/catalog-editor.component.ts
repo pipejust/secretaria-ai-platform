@@ -16,6 +16,7 @@ export interface PlanRow {
     price_cop: number;
     meetings_per_month: number | null;
     users_included: number | null;
+    video_retention_days: number | null;
     is_public: boolean;
     is_active: boolean;
 }
@@ -31,6 +32,7 @@ export interface AddOnRow {
 const toPlanRow = (p: Plan): PlanRow => ({
     key: p.key, name: p.name, price_usd: p.price_usd_cents / 100, price_cop: p.price_cop_cents / 100,
     meetings_per_month: p.meetings_per_month, users_included: p.users_included,
+    video_retention_days: p.video_retention_days,
     is_public: p.is_public, is_active: p.is_active,
 });
 
@@ -100,6 +102,8 @@ export class CatalogEditorComponent implements OnInit, OnDestroy {
         const users = intOrNull(row.users_included);
         if (meetings !== null) { body.meetings_per_month = meetings; }
         if (users !== null) { body.users_included = users; }
+        // Retención del vídeo: vacío o 0 = sin límite (el backend guarda null con 0).
+        body.video_retention_days = intOrNull(row.video_retention_days) ?? 0;
         this.savingKey = row.key;
         this.billing.updatePlan(row.key, body).pipe(takeUntil(this.destroy$)).subscribe({
             next: (p) => {

@@ -73,6 +73,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   sessionId: number | null = null;
   /** Vídeo del bot propio (bucket de Acten). Vacío = la sesión no tiene vídeo. */
   videoUrl = '';
+  videoUntil: string | null = null;
   videoError = false;
   private videoExpiresAt = 0;
   private videoResumeAt = 0;
@@ -1164,6 +1165,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
           this.videoResumeAt = resumeAt;
           this.videoExpiresAt = Date.now() + video.expires_in * 1000;
           this.videoUrl = video.url;
+          this.videoUntil = video.available_until;
           this.videoError = false;
           this.cdr.detectChanges();
         },

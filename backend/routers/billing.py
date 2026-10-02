@@ -362,6 +362,8 @@ class PlanIn(BaseModel):
     features: Optional[list[str]] = None
     meetings_per_month: Optional[int] = Field(default=None, ge=0)
     users_included: Optional[int] = Field(default=None, ge=0)
+    # 0 = sin límite (se guarda NULL); ausente = no se toca.
+    video_retention_days: Optional[int] = Field(default=None, ge=0, le=3650)
     is_public: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -378,6 +380,8 @@ def put_plan(key: str, body: PlanIn, _u: User = Depends(require_superadmin),
         if desconocidas:
             raise HTTPException(422, f"Funciones desconocidas: {sorted(desconocidas)}")
         p.features_json = json.dumps(datos.pop("features"))
+    if "video_retention_days" in datos:
+        datos["video_retention_days"] = datos["video_retention_days"] or None
     for k, v in datos.items():
         setattr(p, k, v)
     db.add(p)

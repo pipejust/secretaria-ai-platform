@@ -339,9 +339,13 @@ def test_url_firmada_solo_para_la_empresa_y_404_sin_video(client, db_session, s3
     _configurar(db_session)
     r = client.get(f"/api/sessions/{con.id}/video", headers=mia)
     assert r.status_code == 200, r.text
-    assert r.json() == {
+    cuerpo = r.json()
+    # Empresa en prueba, sin plan: el vídeo caduca a los 30 días de la sesión.
+    vence = datetime.fromisoformat(con.created_at) + timedelta(days=cat.RETENCION_VIDEO_SIN_PLAN)
+    assert cuerpo == {
         "url": f"https://s3.test/acten-video/{con.recording_video_key}?X-Amz-Expires=900",
         "expires_in": 900,
+        "available_until": vence.isoformat(),
     }
     assert client.get(f"/api/sessions/{sin.id}/video", headers=mia).status_code == 404
     assert client.get(f"/api/sessions/{con.id}/video", headers=ajena).status_code == 404
@@ -358,3 +362,53 @@ def test_borrar_la_sesion_borra_su_video(client, db_session, s3, monkeypatch):
     r = client.delete(f"/api/sessions/{con.id}", headers=_token(db_session, t))
     assert r.status_code == 200, r.text
     assert s3.deleted == [("acten-video", key)]
+
+
+# ─────────────────────────── retención por plan ───────────────────────────
+
+
+def _sesion_con_video(db, tenant, dias):
+    m = MeetingSession(tenant_id=tenant.id, fireflies_id=f"BOT-{uuid.uuid4().hex[:8]}", title="v",
+                       date="2026-01-01", created_at=(datetime.now() - timedelta(days=dias)).isoformat())
+    db.add(m); db.commit(); db.refresh(m)
+    m.recording_video_key = media_storage.clave_video(tenant.id, m.id)
+    db.add(m); db.commit()
+    return m
+
+
+def test_la_retencion_del_video_depende_del_plan(client, db_session, s3, monkeypatch):
+    monkeypatch.setattr(database, "engine", db_session.get_bind())
+    _configurar(db_session)
+    cat.sembrar_catalogo(db_session)
+    # El superadministrador la ajusta en el catálogo; 0 = sin límite.
+    sa = _token(db_session, _duenio(db_session), superadmin=True)
+    r = client.put("/api/billing/catalog/plans/starter", headers=sa, json={"video_retention_days": 30})
+    assert r.status_code == 200 and r.json()["video_retention_days"] == 30
+    r = client.put("/api/billing/catalog/plans/business", headers=sa, json={"video_retention_days": 90})
+    assert r.json()["video_retention_days"] == 90
+    r = client.put("/api/billing/catalog/plans/enterprise", headers=sa, json={"video_retention_days": 0})
+    assert r.json()["video_retention_days"] is None
+
+    def con_plan(plan):
+        t = _empresa(db_session)
+        db_session.add(Subscription(tenant_id=t.id, plan_key=plan, status="active"))
+        db_session.commit()
+        return t
+
+    starter, business, enterprise = con_plan("starter"), con_plan("business"), con_plan("enterprise")
+    vencida = _sesion_con_video(db_session, starter, 45)      # 45 días > 30 de Starter
+    vigente = _sesion_con_video(db_session, business, 45)     # 45 días < 90 de Business
+    vieja = _sesion_con_video(db_session, business, 91)
+    eterna = _sesion_con_video(db_session, enterprise, 2000)  # sin límite
+    claves = {m.id: m.recording_video_key for m in (vencida, vigente, vieja, eterna)}
+
+    assert media_storage.purgar_vencidos(db_session) >= 2
+    borradas = {key for _, key in s3.deleted}
+    assert {claves[vencida.id], claves[vieja.id]} <= borradas
+    assert not {claves[vigente.id], claves[eterna.id]} & borradas
+    for m in (vencida, vigente, vieja, eterna):
+        db_session.refresh(m)
+    assert vencida.recording_video_key is None and vieja.recording_video_key is None
+    assert vigente.recording_video_key and eterna.recording_video_key
+    # Lo que queda no se toca en el siguiente pase.
+    assert media_storage.purgar_vencidos(db_session) == 0

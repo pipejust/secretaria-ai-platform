@@ -943,6 +943,7 @@
     "catalog_price_cop": "COP / mes",
     "catalog_meetings": "Reunions / mes",
     "catalog_users": "Usuaris",
+    "catalog_video_days": "Dies de vídeo",
     "catalog_public": "Públic",
     "catalog_active": "Actiu",
     "catalog_hint": "Un límit buit vol dir il·limitat i no es modifica en desar.",
@@ -2614,6 +2615,7 @@
     "toast_reprocess_failed": "No s'ha pogut iniciar el reprocessament.",
     "video_title": "Vídeo de la reunió",
     "video_hint": "Enregistrat pel bot d'Acten. L'enllaç de reproducció caduca i es renova sol.",
+    "video_until": "Disponible fins al {{date}}; després s'esborra segons el pla de la teva empresa. L'acta i la transcripció es conserven.",
     "video_unavailable": "No s'ha pogut carregar el vídeo. Torna-ho a provar d'aquí a uns segons."
   },
   "meetings_list": {
@@ -2885,6 +2887,8 @@
     "per_month": "/ mes",
     "plan_meetings": "{{n}} reunions al mes",
     "plan_users": "{{n}} usuaris inclosos",
+    "plan_video_days": "Vídeo de reunions desat {{n}} dies",
+    "plan_video_forever": "Vídeo de reunions desat sense límit",
     "plan_current_badge": "El teu pla",
     "addons_title": "Add-ons",
     "addons_sub": "Opcions soltes que se sumen al pla.",

@@ -20,6 +20,7 @@
                         <th>{{ 'tenants.catalog_price_cop' | translate }}</th>
                         <th>{{ 'tenants.catalog_meetings' | translate }}</th>
                         <th>{{ 'tenants.catalog_users' | translate }}</th>
+                        <th>{{ 'tenants.catalog_video_days' | translate }}</th>
                         <th>{{ 'tenants.catalog_public' | translate }}</th>
                         <th>{{ 'tenants.catalog_active' | translate }}</th>
                         <th></th>
@@ -33,6 +34,7 @@
                         <td><input type="number" min="0" step="1000" [(ngModel)]="p.price_cop" [name]="'plan-cop-' + p.key" /></td>
                         <td><input type="number" min="0" step="1" [(ngModel)]="p.meetings_per_month" [name]="'plan-meet-' + p.key" [placeholder]="'billing.unlimited' | translate" /></td>
                         <td><input type="number" min="0" step="1" [(ngModel)]="p.users_included" [name]="'plan-users-' + p.key" [placeholder]="'billing.unlimited' | translate" /></td>
+                        <td><input type="number" min="0" max="3650" step="1" [(ngModel)]="p.video_retention_days" [name]="'plan-video-' + p.key" [placeholder]="'billing.unlimited' | translate" /></td>
                         <td><input type="checkbox" [(ngModel)]="p.is_public" [name]="'plan-public-' + p.key" /></td>
                         <td><input type="checkbox" [(ngModel)]="p.is_active" [name]="'plan-active-' + p.key" /></td>
                         <td>

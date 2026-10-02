@@ -943,6 +943,7 @@
     "catalog_price_cop": "COP / mes",
     "catalog_meetings": "Reuniones / mes",
     "catalog_users": "Usuarios",
+    "catalog_video_days": "Días de vídeo",
     "catalog_public": "Público",
     "catalog_active": "Activo",
     "catalog_hint": "Un límite vacío significa ilimitado y no se modifica al guardar.",
@@ -2614,6 +2615,7 @@
     "toast_reprocess_failed": "No se pudo iniciar el reprocesamiento.",
     "video_title": "Vídeo de la reunión",
     "video_hint": "Grabado por el bot de Acten. El enlace de reproducción caduca y se renueva solo.",
+    "video_until": "Disponible hasta el {{date}}; después se borra según el plan de tu empresa. El acta y la transcripción se conservan.",
     "video_unavailable": "El vídeo no se pudo cargar. Vuelve a intentarlo en unos segundos."
   },
   "meetings_list": {
@@ -2885,6 +2887,8 @@
     "per_month": "/ mes",
     "plan_meetings": "{{n}} reuniones al mes",
     "plan_users": "{{n}} usuarios incluidos",
+    "plan_video_days": "Vídeo de reuniones guardado {{n}} días",
+    "plan_video_forever": "Vídeo de reuniones guardado sin límite",
     "plan_current_badge": "Tu plan",
     "addons_title": "Add-ons",
     "addons_sub": "Opciones sueltas que se suman al plan.",

@@ -20,6 +20,8 @@ export interface Plan {
     features: string[];
     meetings_per_month: number | null;
     users_included: number | null;
+    /** Días que se conserva el vídeo de una reunión; null = sin límite. */
+    video_retention_days: number | null;
     is_public: boolean;
     is_active: boolean;
     sort_order: number;
@@ -54,6 +56,7 @@ export interface Entitlements {
     trial_ends: string | null;
     meetings_per_month: number | null;
     users_included: number | null;
+    video_retention_days: number | null;
     billing_mode: BillingMode;
 }
 
@@ -159,7 +162,7 @@ export interface WompiConfigInput {
 }
 
 export type PlanUpdate = Partial<Pick<Plan,
-    'name' | 'price_usd_cents' | 'price_cop_cents' | 'features' | 'meetings_per_month' | 'users_included' | 'is_public' | 'is_active'>>;
+    'name' | 'price_usd_cents' | 'price_cop_cents' | 'features' | 'meetings_per_month' | 'users_included' | 'video_retention_days' | 'is_public' | 'is_active'>>;
 export type AddOnUpdate = Partial<Pick<AddOn, 'name' | 'price_usd_cents' | 'price_cop_cents' | 'is_active'>>;
 
 /** Cuerpo del 402 que devuelve cualquier endpoint protegido por plan. */

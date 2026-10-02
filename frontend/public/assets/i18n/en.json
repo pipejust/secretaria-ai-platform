@@ -943,6 +943,7 @@
     "catalog_price_cop": "COP / month",
     "catalog_meetings": "Meetings / month",
     "catalog_users": "Users",
+    "catalog_video_days": "Video days",
     "catalog_public": "Public",
     "catalog_active": "Active",
     "catalog_hint": "An empty limit means unlimited and is left untouched when saving.",
@@ -2614,6 +2615,7 @@
     "toast_reprocess_failed": "Could not start reprocessing.",
     "video_title": "Meeting video",
     "video_hint": "Recorded by the Acten bot. The playback link expires and is renewed automatically.",
+    "video_until": "Available until {{date}}; after that it is deleted according to your company's plan. The minutes and transcript are kept.",
     "video_unavailable": "The video could not be loaded. Try again in a few seconds."
   },
   "meetings_list": {
@@ -2885,6 +2887,8 @@
     "per_month": "/ month",
     "plan_meetings": "{{n}} meetings per month",
     "plan_users": "{{n}} users included",
+    "plan_video_days": "Meeting video kept for {{n}} days",
+    "plan_video_forever": "Meeting video kept with no limit",
     "plan_current_badge": "Your plan",
     "addons_title": "Add-ons",
     "addons_sub": "Standalone options added on top of the plan.",

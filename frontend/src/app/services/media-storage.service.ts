@@ -33,6 +33,8 @@ export interface MediaStorageTestResult {
 export interface SessionVideo {
   url: string;
   expires_in: number;
+  /** Fecha ISO en que la retención del plan borra el vídeo; null = no caduca. */
+  available_until: string | null;
 }
 
 /** Bucket S3 compatible (Hetzner Object Storage) del vídeo de reuniones;

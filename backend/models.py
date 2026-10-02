@@ -1138,6 +1138,8 @@ class Plan(SQLModel, table=True):
     features_json: str = Field(default="[]")  # claves de services.entitlements.FEATURES
     meetings_per_month: Optional[int] = Field(default=None)  # None = ilimitado
     users_included: Optional[int] = Field(default=None)
+    # Días que se conserva el vídeo de una reunión en nuestro bucket; None = sin límite.
+    video_retention_days: Optional[int] = Field(default=None)
     is_public: bool = Field(default=True)  # se puede contratar por checkout
     sort_order: int = Field(default=0)
     is_active: bool = Field(default=True)

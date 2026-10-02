@@ -387,7 +387,13 @@ def get_session_video(
         url = media_storage.url_firmada(db, obj.recording_video_key, media_storage.SEGUNDOS_URL)
     except media_storage.StorageError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return {"url": url, "expires_in": media_storage.SEGUNDOS_URL}
+    vence = media_storage.caduca_el(db, obj)
+    return {
+        "url": url,
+        "expires_in": media_storage.SEGUNDOS_URL,
+        # Fecha en que la retención del plan borra el vídeo; null = no caduca.
+        "available_until": vence.isoformat() if vence else None,
+    }
 
 
 @router.post("/{session_id}/fetch_summary")

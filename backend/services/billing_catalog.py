@@ -20,6 +20,8 @@ TASA_USD_COP_SIEMBRA = 4000
 
 # Días de prueba con todo activo para una empresa nueva sin plan asignado.
 DIAS_PRUEBA = 14
+# Retención del vídeo para una empresa sin suscripción (en prueba o ya sin plan).
+RETENCION_VIDEO_SIN_PLAN = 30
 
 # Claves de funciones. Los routers piden `require_feature(<clave>)`.
 F_FIREFLIES = "meetings.fireflies"
@@ -47,18 +49,19 @@ FEATURES = {
 PLANES = [
     {
         "key": "starter", "name": "Starter", "price_usd_cents": 4900, "sort_order": 1,
-        "meetings_per_month": 20, "users_included": 5,
+        "meetings_per_month": 20, "users_included": 5, "video_retention_days": 30,
         "features": [F_FIREFLIES, F_DOCUMENTS, F_REPORTS, F_CALENDAR],
     },
     {
         "key": "business", "name": "Business", "price_usd_cents": 14900, "sort_order": 2,
-        "meetings_per_month": 100, "users_included": None,
+        "meetings_per_month": 100, "users_included": None, "video_retention_days": 90,
         "features": [F_FIREFLIES, F_DOCUMENTS, F_REPORTS, F_CALENDAR, F_TEMPLATES,
                      F_INTEGRATIONS, F_ASK],
     },
     {
         "key": "enterprise", "name": "Enterprise", "price_usd_cents": 0, "sort_order": 3,
         "meetings_per_month": None, "users_included": None, "is_public": False,
+        "video_retention_days": 365,
         "features": list(FEATURES),
     },
 ]
@@ -90,6 +93,7 @@ def sembrar_catalogo(db: Session) -> None:
                 key=p["key"], name=p["name"], price_usd_cents=p["price_usd_cents"],
                 price_cop_cents=_cop(p["price_usd_cents"]), sort_order=p["sort_order"],
                 meetings_per_month=p["meetings_per_month"], users_included=p["users_included"],
+                video_retention_days=p["video_retention_days"],
                 is_public=p.get("is_public", True), features_json=json.dumps(p["features"]),
             ))
     for a in ADDONS:
@@ -136,6 +140,7 @@ def plan_dict(p: Plan) -> dict:
         "price_cop_cents": p.price_cop_cents, "interval": p.interval,
         "features": json.loads(p.features_json or "[]"),
         "meetings_per_month": p.meetings_per_month, "users_included": p.users_included,
+        "video_retention_days": p.video_retention_days,
         "is_public": p.is_public, "is_active": p.is_active, "sort_order": p.sort_order,
     }
 

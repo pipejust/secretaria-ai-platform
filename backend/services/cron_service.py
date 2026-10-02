@@ -1037,6 +1037,22 @@ scheduler.add_job(
 )
 
 
+def purgar_videos_vencidos() -> None:
+    from database import engine
+    from services import media_storage
+
+    with Session(engine) as db:
+        if media_storage.configurado(db):
+            media_storage.purgar_vencidos(db)
+
+
+# Retención del vídeo según el plan de cada empresa, una vez al día.
+scheduler.add_job(
+    purgar_videos_vencidos, "cron", hour=4, minute=10, max_instances=1,
+    coalesce=True, id="videos_retencion",
+)
+
+
 def start_cron() -> None:
     scheduler.start()
     logger.info(

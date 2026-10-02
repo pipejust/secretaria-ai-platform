@@ -17,13 +17,14 @@ import logging
 import subprocess
 import tempfile
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
 from sqlmodel import Session, select
 
-from models import IntegrationSetting, Tenant
+from models import IntegrationSetting, MeetingSession, Tenant
 from services.cifrado import cifrar, descifrar
 
 logger = logging.getLogger(__name__)
@@ -295,3 +296,44 @@ def borrar(db: Session, key: str) -> None:
         client.delete_object(Bucket=cfg.bucket, Key=key)
     except Exception as exc:  # noqa: BLE001
         raise StorageError(f"No se pudo borrar «{key}»: {_resumen(exc)}") from exc
+
+
+def caduca_el(db: Session, meeting: MeetingSession) -> datetime | None:
+    """Cuándo se borra el vídeo de esta sesión según el plan de su empresa; None = nunca."""
+    from services import entitlements
+
+    dias = entitlements.de_empresa(db, meeting.tenant_id).video_retention_days
+    if not dias:
+        return None
+    try:
+        return datetime.fromisoformat(meeting.created_at) + timedelta(days=dias)
+    except (TypeError, ValueError):
+        return None  # sin fecha fiable no se borra nada
+
+
+def purgar_vencidos(db: Session, ahora: datetime | None = None) -> int:
+    """Borra del bucket los vídeos que pasaron la retención de su plan. Devuelve cuántos.
+
+    Solo se va el vídeo: el acta, la transcripción y el audio siguen. Si el
+    bucket no responde, la clave se conserva y se reintenta en el siguiente pase.
+    """
+    ahora = ahora or datetime.now()
+    borrados = 0
+    con_video = db.exec(
+        select(MeetingSession).where(MeetingSession.recording_video_key.is_not(None))
+    ).all()
+    for meeting in con_video:
+        vence = caduca_el(db, meeting)
+        if vence is None or vence > ahora:
+            continue
+        try:
+            borrar(db, meeting.recording_video_key)
+        except StorageError as exc:
+            logger.error("Sesión %s: no se pudo borrar el vídeo vencido: %s", meeting.id, exc)
+            continue
+        logger.info("Sesión %s: vídeo %s borrado por retención del plan.", meeting.id, meeting.recording_video_key)
+        meeting.recording_video_key = None
+        db.add(meeting)
+        db.commit()
+        borrados += 1
+    return borrados
