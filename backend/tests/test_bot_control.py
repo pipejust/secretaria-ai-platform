@@ -521,3 +521,39 @@ def test_public_api_schedules_the_bot_for_a_calendar_meeting_and_cancels_it(cont
     assert client.post(f"/api/v1/meetings/live/{uuid.uuid4()}/stop", headers=h).status_code == 404
     solo_lectura = _api_key(engine, ["sessions:read", "org:read"])
     assert client.post(f"/api/v1/meetings/live/{mid}/stop", headers=solo_lectura).status_code == 403
+
+
+def test_public_api_changes_the_bot_name_and_the_meeting_source(control):
+    client, engine, calls = control
+    h = _api_key(engine, ["integrations:read", "integrations:write", "org:read"], source="fireflies")
+    actual = client.get("/api/v1/meetings/settings", headers=h)
+    assert actual.status_code == 200, actual.text
+    assert actual.json()["bot_name"] == "Asistente Acten" and actual.json()["meeting_source"] == "fireflies"
+    assert actual.json()["owned_bot"] is False and actual.json()["fireflies"] is True
+    assert {o["value"] for o in actual.json()["meeting_source_options"] if o["available"]} == {
+        "fireflies", "owned_bot", "both"}
+
+    # Hay política de correo guardada: el nombre nuevo también llega a las invitaciones.
+    client.put("/api/owned-bot/mail-policy", json={"allowed_senders": ["ana@example.test"],
+                                                   "recording_authorized": True})
+    r = client.patch("/api/v1/meetings/settings", headers=h,
+                     json={"bot_name": "  Notas   de Acme ", "meeting_source": "both"})
+    assert r.status_code == 200, r.text
+    assert r.json()["bot_name"] == "Notas de Acme" and r.json()["meeting_source"] == "both"
+    assert r.json()["owned_bot"] is True and r.json()["fireflies"] is True
+    policy = json.loads([c for c in calls if c.url.path == "/v1/mail-policy" and c.method == "PUT"][-1].content)
+    assert policy["bot_name"] == "Notas de Acme" and policy["extra_senders"] == ["ana@example.test"]
+    assert client.get("/api/owned-bot/config").json()["bot_name"] == "Notas de Acme"
+
+    # Solo el bot: Fireflies queda desactivado para la empresa.
+    solo_bot = client.patch("/api/v1/meetings/settings", headers=h, json={"meeting_source": "owned_bot"})
+    assert solo_bot.json()["fireflies"] is False and solo_bot.json()["owned_bot"] is True
+    assert solo_bot.json()["bot_name"] == "Notas de Acme"  # lo que no viene no se toca
+
+    patch = lambda body, headers=h: client.patch("/api/v1/meetings/settings", headers=headers, json=body)  # noqa: E731
+    assert patch({"bot_name": "   "}).status_code == 422
+    assert patch({"bot_name": "x" * 51}).status_code == 422
+    assert patch({"meeting_source": "zoom"}).status_code == 422
+    assert patch({"otro": 1}).status_code == 422
+    solo_lectura = _api_key(engine, ["integrations:read", "org:read"], source="owned_bot")
+    assert patch({"bot_name": "X"}, solo_lectura).status_code == 403

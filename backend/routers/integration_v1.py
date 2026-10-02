@@ -283,7 +283,7 @@ def list_sessions(
             "status": s.status,
             "language": s.language or None,
             "origin": (
-                "manual" if (not ff or ff.startswith("MANUAL-"))
+                "manual" if (not ff or ff.startswith(("MANUAL-", "MANUAL_")))
                 else "bot" if ff.startswith("BOT-")
                 else "web"
             ),

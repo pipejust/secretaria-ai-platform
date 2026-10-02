@@ -220,6 +220,53 @@ def bot_name_of(db, tenant_id):
     return cfg.get("bot_name") or DEFAULT_BOT_NAME
 
 
+async def _copy_name_to_mail_policy(db, tenant_id: int, name: str) -> None:
+    """Las invitaciones por correo las programa el bot solo: si ya hay una
+    política guardada, se le copia el nombre nuevo. Que el bot no responda no
+    invalida el nombre recién guardado."""
+    try:
+        state = await bot_call(db, tenant_id, "GET", "/v1/mail-policy")
+        policy = state.get("policy") if isinstance(state, dict) else None
+        if policy:
+            await bot_call(
+                db,
+                tenant_id,
+                "PUT",
+                "/v1/mail-policy",
+                body={
+                    "allowed_senders": policy["allowed_senders"],
+                    # Sin estos el bot los devuelve a su valor por defecto:
+                    # cambiar el nombre apagaba el vídeo.
+                    "extra_senders": policy.get("extra_senders", []),
+                    "video": policy.get("video", False),
+                    **({"realtime": policy["realtime"]} if "realtime" in policy else {}),
+                    "recording_authorized": policy["recording_authorized"],
+                    "timezone": policy["timezone"],
+                    "bot_name": name,
+                },
+            )
+    except HTTPException as exc:
+        logger.warning(
+            "Nombre del bot guardado, pero no se pudo copiar a la política de correo: %s",
+            exc.detail,
+        )
+
+
+async def set_bot_name(db, tenant_id: int, name: str) -> str:
+    """Cambia solo el nombre con el que el bot aparece en las reuniones."""
+    row = config_row(db, tenant_id)
+    if not row or not row.is_active:
+        raise HTTPException(503, "El bot de esta empresa no está configurado")
+    cfg = json.loads(row.config_json)
+    anterior = cfg.get("bot_name") or DEFAULT_BOT_NAME
+    row.config_json = json.dumps({**cfg, "bot_name": name})
+    db.add(row)
+    db.commit()
+    if anterior != name:
+        await _copy_name_to_mail_policy(db, tenant_id, name)
+    return name
+
+
 @router.put("/config")
 async def put_config(
     body: BotConfig,
@@ -263,36 +310,8 @@ async def put_config(
     row.is_active = True
     db.add(row)
     db.commit()
-    # Las invitaciones por correo las programa el bot solo; si ya hay una
-    # política guardada, se le copia el nombre nuevo. Que el bot no responda
-    # no invalida la configuración recién guardada.
     if old.get("bot_name", DEFAULT_BOT_NAME) != body.bot_name:
-        try:
-            state = await bot_call(db, user.tenant_id, "GET", "/v1/mail-policy")
-            policy = state.get("policy") if isinstance(state, dict) else None
-            if policy:
-                await bot_call(
-                    db,
-                    user.tenant_id,
-                    "PUT",
-                    "/v1/mail-policy",
-                    body={
-                        "allowed_senders": policy["allowed_senders"],
-                        # Sin estos dos el bot los devuelve a su valor por
-                        # defecto: cambiar el nombre apagaba el vídeo.
-                        "extra_senders": policy.get("extra_senders", []),
-                        "video": policy.get("video", False),
-                        **({"realtime": policy["realtime"]} if "realtime" in policy else {}),
-                        "recording_authorized": policy["recording_authorized"],
-                        "timezone": policy["timezone"],
-                        "bot_name": body.bot_name,
-                    },
-                )
-        except HTTPException as exc:
-            logger.warning(
-                "Nombre del bot guardado, pero no se pudo copiar a la política de correo: %s",
-                exc.detail,
-            )
+        await _copy_name_to_mail_policy(db, user.tenant_id, body.bot_name)
     return {"configured": True}
 
 
@@ -964,3 +983,77 @@ def _live_public(result: dict, session_id: int | None, project_external_id: str 
         "project_external_id": project_external_id,
         "acten_session_id": session_id,
     }
+
+
+# ─────────────── API pública: ajustes de reuniones de la empresa ───────────────
+
+
+class MeetingSettingsPatch(BaseModel):
+    """Cuerpo de PATCH /api/v1/meetings/settings; solo cambia lo que venga."""
+
+    model_config = ConfigDict(extra="forbid")
+    # Nombre con el que el bot aparece en Meet, Teams y Zoom.
+    bot_name: str | None = PField(default=None, min_length=1, max_length=50)
+    # Por dónde entran las reuniones: Fireflies, el bot propio o ambos.
+    meeting_source: Literal["fireflies", "owned_bot", "both"] | None = None
+
+
+def _meeting_settings(db: Session, tenant_id: int) -> dict:
+    from services import meeting_source
+
+    estado = meeting_source.estado(db, tenant_id)
+    return {
+        "bot_name": bot_name_of(db, tenant_id),
+        "meeting_source": estado["source"],
+        "fireflies": estado["accepts_fireflies"],
+        "owned_bot": estado["accepts_owned_bot"],
+        # Qué orígenes deja elegir la suscripción de la empresa.
+        "meeting_source_options": [
+            {"value": o["value"], "label": o["label"], "available": o["available"]}
+            for o in estado["options"]
+        ],
+    }
+
+
+@v1_router.get("/meetings/settings")
+def get_meeting_settings(
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("integrations:read")),
+):
+    """Nombre del bot y origen de las reuniones de la empresa."""
+    return _meeting_settings(db, ctx.tenant.id)
+
+
+@v1_router.patch("/meetings/settings")
+async def patch_meeting_settings(
+    body: MeetingSettingsPatch,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("integrations:write")),
+):
+    """Cambia el nombre del bot y/o el origen de las reuniones.
+
+    Son ajustes de toda la empresa: en nombre de una persona solo los cambia
+    un administrador. Lo que la suscripción no incluye no se puede elegir.
+    """
+    from services import mail_policy_sync, meeting_source
+
+    if ctx.on_behalf_of and not ctx.org_wide:
+        if ctx.acting_user is None or not is_admin(ctx.acting_user):
+            raise HTTPException(403, "Solo un administrador de la empresa cambia estos ajustes.")
+    tenant_id = ctx.tenant.id
+    if body.meeting_source:
+        try:
+            meeting_source.cambiar(db, tenant_id, body.meeting_source)
+        except PermissionError as exc:
+            raise HTTPException(402, str(exc)) from exc
+        # Los remitentes de las invitaciones por correo dependen del origen.
+        try:
+            await mail_policy_sync.sincronizar(db, tenant_id)
+        except Exception as exc:  # noqa: BLE001 — sin bot configurado no hay nada que sincronizar
+            logger.info("Sin sincronización del bot para la empresa %s: %s", tenant_id, exc)
+    if body.bot_name is not None:
+        nombre = " ".join(body.bot_name.split())
+        if not nombre:
+            raise HTTPException(422, "El nombre del bot no puede quedar vacío.")
+        await set_bot_name(db, tenant_id, nombre)
+    return _meeting_settings(db, tenant_id)

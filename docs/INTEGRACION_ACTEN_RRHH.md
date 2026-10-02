@@ -836,6 +836,16 @@ endpoint dice qué hay, para mostrar u ocultar opciones en su interfaz:
 | `calendar_invitation` | `email`: dirección a la que se invita al bot desde el calendario. `enabled`: la empresa ya autorizó las invitaciones por correo. Ver «Reuniones programadas» |
 | `meeting_source` | `fireflies`, `owned_bot` o `both` |
 
+### `GET` / `PATCH /api/v1/meetings/settings` — nombre del bot y origen de las reuniones
+
+Alcances `integrations:read` / `integrations:write`. El `PATCH` acepta
+`bot_name` (1–50 caracteres) y `meeting_source` (`fireflies`, `owned_bot`,
+`both`), y solo cambia lo que venga. `fireflies` deja el bot apagado;
+`owned_bot` deja Fireflies apagado. `402` si el origen no está en la
+suscripción; `403` si la llamada va en nombre de alguien que no es
+administrador. Detalle y ejemplos en `docs/ACTEN_API_REUNIONES.md`, que es
+la guía que se entrega a quien integra.
+
 ### `POST /api/v1/sessions` — subir una grabación o un texto y volverlo sesión
 
 Alcance `sessions:write`. Es la misma subida que hace la pantalla de Acten.
