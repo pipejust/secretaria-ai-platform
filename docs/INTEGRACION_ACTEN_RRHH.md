@@ -821,8 +821,9 @@ endpoint dice qué hay, para mostrar u ocultar opciones en su interfaz:
 
 ```json
 {"plan": "business", "status": "active", "meeting_source": "both",
- "fireflies": true, "owned_bot": true, "video": true,
- "video_retention_days": 90, "upload": true}
+ "fireflies": true, "owned_bot": true, "video": true, "realtime": true,
+ "video_retention_days": 90, "upload": true,
+ "calendar_invitation": {"email": "bot@acten.app", "enabled": true}}
 ```
 
 | Campo | Significado |
@@ -832,6 +833,7 @@ endpoint dice qué hay, para mostrar u ocultar opciones en su interfaz:
 | `video_retention_days` | Días que se conserva el vídeo; `null` = sin límite. El acta y la transcripción no caducan |
 | `realtime` | `true` → la transcripción se puede seguir **en vivo** mientras dura la reunión (ver `realtime_url` abajo) |
 | `upload` | `POST /sessions` disponible |
+| `calendar_invitation` | `email`: dirección a la que se invita al bot desde el calendario. `enabled`: la empresa ya autorizó las invitaciones por correo. Ver «Reuniones programadas» |
 | `meeting_source` | `fireflies`, `owned_bot` o `both` |
 
 ### `POST /api/v1/sessions` — subir una grabación o un texto y volverlo sesión
@@ -871,7 +873,41 @@ servicio de transcripción falló (reintentable).
 > lo deduzca o alguien lo asigne, y mientras tanto solo se ve leyendo como
 > empresa (`X-On-Behalf-Of: *`).
 
-### `POST /api/v1/meetings/live` — mandar el bot a una reunión en curso
+### Reuniones programadas: agregar el bot a un evento de calendario
+
+Hay dos formas, y se pueden combinar. En las dos el bot entra solo a la
+hora de la reunión y, al terminar, la sesión aparece en Acten.
+
+**A. Invitar a `bot@acten.app` al evento (sin integración).** Es lo mismo
+que hacen otras plataformas: se añade el bot como un invitado más en Google
+Calendar u Outlook.
+
+- La dirección es **una sola para todas las empresas**; el bot sabe a qué
+  empresa pertenece la reunión por **quién envía la invitación**. La API la
+  devuelve en `capabilities.calendar_invitation.email`.
+- **Quién puede invitar**: los usuarios activos de la empresa en Acten (se
+  sincronizan solos) y los remitentes extra que el administrador añada en
+  «Bot de reuniones → Invitaciones por correo». La invitación de cualquier
+  otro remitente se ignora. El correo debe salir de verdad del dominio del
+  remitente (se comprueba la firma del correo).
+- **Qué debe traer el evento**: fecha y hora, y un enlace directo de Google
+  Meet, Microsoft Teams o Zoom. Los eventos de día completo se ignoran.
+- **Cambios**: si se mueve o se cancela el evento, el calendario manda la
+  actualización y el bot la sigue. Los eventos recurrentes se programan
+  solos, ocurrencia por ocurrencia.
+- El administrador tiene que haber marcado la autorización de grabación en
+  esa pantalla (`calendar_invitation.enabled`).
+- Vídeo y transcripción en vivo se aplican según la suscripción, igual que
+  en el resto.
+
+**B. Programarlo por API.** `POST /api/v1/meetings/live` con
+`scheduled_start` (abajo). Sirve cuando su plataforma ya conoce el evento y
+quiere decidir a qué reuniones va el bot, sin depender del correo.
+
+Con cualquiera de las dos, no usen ambas para la misma reunión: entrarían
+dos bots.
+
+### `POST /api/v1/meetings/live` — mandar el bot a una reunión, ahora o programada
 
 Alcance `sessions:write`. El bot de Acten pide entrar **de inmediato** a la
 reunión del enlace; alguien de la reunión tiene que admitirlo. Al terminar,
@@ -884,6 +920,7 @@ la sesión aparece en Acten como cualquier otra (y en `GET /api/v1/sessions`).
 | `title` | string | Título de la sesión. Por defecto «Reunión» |
 | `language` | `es`\|`en`\|`ca` | Por defecto `es` |
 | `project_external_id` | string | La sesión nace en ese proyecto. Sin él, Acten lo deduce al procesarla. Proyecto inexistente o no visible para la persona → `422` |
+| `scheduled_start` | ISO 8601 con zona | **Reunión programada**: el bot entra a esa hora (p. ej. `2026-11-02T09:00:00-05:00`). Sin zona horaria → `422`. Ausente = entra ahora. Admite hasta un año hacia adelante |
 | `external_id` | string | Idempotencia: repetir la llamada con el mismo valor **no** manda otro bot. Si falta, Acten genera uno |
 | `video` | bool | **Obsoleto, sin efecto.** Se acepta para no romper integraciones, pero el vídeo lo decide la suscripción de la empresa (ver `GET /api/v1/capabilities`) |
 
@@ -891,17 +928,31 @@ Campos desconocidos → `422`. Respuesta `202`:
 
 ```json
 {"id": "f51d6936-…", "external_id": "altum-123", "state": "queued", "title": "Comité",
- "error_code": null, "project_external_id": "…", "acten_session_id": null}
+ "scheduled_start": null, "error_code": null, "realtime_url": null,
+ "project_external_id": "…", "acten_session_id": null}
 ```
+
+Programada, `state` es `scheduled` y `scheduled_start` trae la hora. Usen
+como `external_id` el identificador del evento en su calendario: repetir la
+llamada no duplica el bot. Para **mover** una reunión ya programada,
+cancélenla (`/stop`) y créenla de nuevo con otro `external_id`: el mismo
+`external_id` con otra hora responde `409`.
 
 Errores: `402` la empresa no tiene el bot propio en su plan · `409` la
 empresa no tiene el bot como origen de reuniones (sigue en Fireflies) ·
 `422` enlace no admitido o proyecto desconocido · `503` bot sin configurar.
 
+### `POST /api/v1/meetings/live/{id}/stop` — cancelar o sacar al bot
+
+Alcance `sessions:write`. Si la reunión está **programada**, la cancela
+(`state: "cancelled"`) y el bot no entra. Si está **en curso**, el bot sale
+y la reunión se procesa con lo grabado hasta ese momento. Repetir la
+llamada no hace daño. `404` si la captura no se pidió a través de Acten.
+
 ### `GET /api/v1/meetings/live/{id}` — estado de esa captura
 
 Alcance `sessions:read` (con `X-On-Behalf-Of`, como toda lectura). Devuelve
-la misma forma. `state` avanza por `queued` → `dispatching` → `joining` →
+la misma forma. `state` empieza en `scheduled` si es programada y avanza por `queued` → `dispatching` → `joining` →
 `recording` → `transcribing` → `analyzing` → `completed`. Finales sin
 sesión: `failed`, `analysis_failed`, `cancelled`, `needs_attention`, con el
 motivo en `error_code` (por ejemplo `capture_not_admitted` si nadie admitió

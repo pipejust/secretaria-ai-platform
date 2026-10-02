@@ -81,6 +81,12 @@ def control(tmp_path, monkeypatch):
                 json={"id": mid, "external_id": body["external_id"]},
                 request=request,
             )
+        if request.url.path.endswith("/stop") and request.method == "POST":
+            mid = request.url.path.split("/")[-2]
+            external = next((e for e, m in ids.items() if m == mid), None)
+            return httpx.Response(
+                202, json={"id": mid, "external_id": external, "state": "cancelled",
+                           "title": "Reunión", "error_code": None}, request=request)
         if request.url.path.startswith("/v1/meetings/") and request.method == "GET":
             mid = request.url.path.rsplit("/", 1)[-1]
             external = next((e for e, m in ids.items() if m == mid), None)
@@ -466,7 +472,7 @@ def test_public_api_sends_the_bot_to_a_live_meeting(control):
     estado = client.get(f"/api/v1/meetings/live/{live['id']}", headers=h)
     assert estado.status_code == 200, estado.text
     assert estado.json() == {"id": live["id"], "external_id": "altum-1", "state": "joining",
-                             "title": "Reunión", "error_code": None,
+                             "title": "Reunión", "scheduled_start": None, "error_code": None,
                              "realtime_url": "wss://realtime.skribby.test/solo-lectura",
                              "project_external_id": "ext-p", "acten_session_id": session_id}
     assert client.get(f"/api/v1/meetings/live/{uuid.uuid4()}", headers=h).status_code == 404
@@ -487,3 +493,31 @@ def test_public_live_meeting_validates_consent_project_scope_and_source(control)
     # Empresa que sigue en Fireflies: la API no manda el bot.
     fireflies = _api_key(engine, ["sessions:write", "org:read"], source="fireflies")
     assert post(ok, fireflies).status_code == 409
+
+
+def test_public_api_schedules_the_bot_for_a_calendar_meeting_and_cancels_it(control):
+    client, engine, calls = control
+    h = _api_key(engine, ["sessions:read", "sessions:write", "org:read"])
+    body = {"meeting_url": "https://meet.google.com/abc-defg-hij", "recording_authorized": True,
+            "external_id": "evento-77", "title": "Comité del lunes",
+            "scheduled_start": "2026-11-02T09:00:00-05:00"}
+    r = client.post("/api/v1/meetings/live", headers=h, json=body)
+    assert r.status_code == 202, r.text
+    sent = json.loads([c for c in calls if c.url.path == "/v1/meetings" and c.method == "POST"][-1].content)
+    # El bot entra a la hora de la reunión, no ahora.
+    assert sent["join_at"] == sent["scheduled_start"] == "2026-11-02T09:00:00-05:00"
+    # Sin hora no se programa nada.
+    ahora = client.post("/api/v1/meetings/live", headers=h, json={**body, "external_id": "ya", "scheduled_start": None})
+    sent = json.loads([c for c in calls if c.url.path == "/v1/meetings" and c.method == "POST"][-1].content)
+    assert ahora.status_code == 202 and "join_at" not in sent
+    # Una fecha sin zona horaria es ambigua: se rechaza.
+    assert client.post("/api/v1/meetings/live", headers=h,
+                       json={**body, "external_id": "x", "scheduled_start": "2026-11-02T09:00:00"}).status_code == 422
+    # Cancelar la programada.
+    mid = r.json()["id"]
+    stop = client.post(f"/api/v1/meetings/live/{mid}/stop", headers=h)
+    assert stop.status_code == 202 and stop.json()["state"] == "cancelled"
+    assert [c for c in calls if c.url.path == f"/v1/meetings/{mid}/stop"]
+    assert client.post(f"/api/v1/meetings/live/{uuid.uuid4()}/stop", headers=h).status_code == 404
+    solo_lectura = _api_key(engine, ["sessions:read", "org:read"])
+    assert client.post(f"/api/v1/meetings/live/{mid}/stop", headers=solo_lectura).status_code == 403

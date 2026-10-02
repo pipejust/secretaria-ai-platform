@@ -337,7 +337,7 @@ def get_session_detail(
 
 
 @router.get("/capabilities")
-def get_capabilities(
+async def get_capabilities(
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
 ):
@@ -367,6 +367,26 @@ def get_capabilities(
         "video_retention_days": e.video_retention_days,
         # Subir una grabación o un texto (POST /sessions) va con cualquier plan.
         "upload": True,
+        # Invitar al bot desde el calendario: correo al que se invita y si la
+        # empresa ya autorizó las invitaciones.
+        "calendar_invitation": await _invitacion_por_calendario(db, ctx.tenant.id) if bot
+        else {"email": None, "enabled": False},
+    }
+
+
+async def _invitacion_por_calendario(db: Session, tenant_id: int) -> dict:
+    from routers.bot_control import bot_call
+
+    try:
+        caps = await bot_call(db, tenant_id, "GET", "/v1/capabilities")
+        estado = await bot_call(db, tenant_id, "GET", "/v1/mail-policy")
+    except HTTPException:
+        # Bot sin configurar o sin responder: no se puede prometer la invitación.
+        return {"email": None, "enabled": False}
+    policy = estado.get("policy") if isinstance(estado, dict) else None
+    return {
+        "email": caps.get("invitation_email"),
+        "enabled": bool(caps.get("invitation_email") and policy and policy.get("recording_authorized")),
     }
 
 

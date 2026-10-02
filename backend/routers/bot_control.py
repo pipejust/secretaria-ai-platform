@@ -389,6 +389,9 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
             # Con vídeo si la suscripción lo incluye; lo configura Acten, no el cliente.
             video=graba_video(db, tenant_id),
         )
+        # Reunión programada: el bot entra a esa hora, no ahora.
+        if body.scheduled_start:
+            payload["join_at"] = payload["scheduled_start"]
         # Transcripción en vivo, también según la suscripción. Solo se manda
         # cuando aplica: un bot anterior a esta opción rechaza la clave.
         if transcribe_en_vivo(db, tenant_id):
@@ -806,6 +809,9 @@ class LiveMeeting(BaseModel):
     # Idempotencia: repetir la llamada con el mismo valor no manda otro bot.
     external_id: str | None = PField(default=None, min_length=1, max_length=160)
     project_external_id: str | None = PField(default=None, min_length=1, max_length=200)
+    # Reunión programada: fecha y hora de inicio con zona (ISO 8601). El bot
+    # entra a esa hora. Ausente = entra ahora.
+    scheduled_start: AwareDatetime | None = None
     # Obsoleto y sin efecto (se acepta por compatibilidad): el vídeo lo decide
     # la suscripción de la empresa. Ver GET /api/v1/capabilities.
     video: bool = False
@@ -877,6 +883,7 @@ async def live_start(
         meeting_url=body.meeting_url,
         recording_authorized=True,
         project_id=project_id,
+        scheduled_start=body.scheduled_start,
     )
     result = await start_capture(db, tenant_id, owner.id, "meeting", capture)
     return _live_public(result, None, body.project_external_id)
@@ -913,6 +920,34 @@ async def live_status(
     )
 
 
+@v1_router.post("/meetings/live/{meeting_id}/stop", status_code=202)
+async def live_stop(
+    meeting_id: UUID,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Cancela una reunión programada o saca al bot de una en curso.
+
+    En curso, el bot sale y la reunión se procesa con lo grabado hasta ahí.
+    Repetir la llamada no hace daño.
+    """
+    link = db.exec(
+        select(BotControlLink).where(
+            BotControlLink.tenant_id == ctx.tenant.id,
+            BotControlLink.meeting_id == str(meeting_id),
+        )
+    ).first()
+    if link and ctx.on_behalf_of and not ctx.org_wide:
+        mine = ctx.acting_user is not None and link.owner_id == ctx.acting_user.id
+        if not mine and link.project_id not in ctx.visible_project_ids:
+            link = None
+    if link is None:
+        raise HTTPException(404, "Captura no encontrada.")
+    result = await bot_call(db, ctx.tenant.id, "POST", f"/v1/meetings/{meeting_id}/stop")
+    project = db.get(Project, link.project_id) if link.project_id else None
+    return _live_public(result, None, project.external_ref if project else None)
+
+
 def _live_public(result: dict, session_id: int | None, project_external_id: str | None) -> dict:
     """Solo lo que le sirve a otra plataforma; nada interno del proveedor."""
     return {
@@ -920,6 +955,8 @@ def _live_public(result: dict, session_id: int | None, project_external_id: str 
         "external_id": result["external_id"],
         "state": result.get("state"),
         "title": result.get("title"),
+        # Hora a la que entra el bot si la reunión es programada; si no, null.
+        "scheduled_start": result.get("join_at"),
         "error_code": result.get("error_code"),
         # Stream de solo lectura de la transcripción en vivo (WebSocket); solo
         # mientras el bot está en la reunión y si la suscripción lo incluye.
