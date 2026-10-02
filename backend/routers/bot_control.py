@@ -34,6 +34,7 @@ from models import (
     User,
 )
 from routers.auth import get_current_tenant, require_admin, require_session_writer
+from services.api_key_auth import IntegrationContext, require_scopes
 from services.bot_contract import ActenBotEvent
 from services.bot_ingest import BotInbox
 from services.billing_catalog import F_OWNED_BOT, F_VIDEO
@@ -47,6 +48,8 @@ router = APIRouter(
     dependencies=[Depends(get_current_tenant), Depends(require_feature(F_OWNED_BOT))],
 )
 audio_router = APIRouter(prefix="/api/owned-bot", tags=["Audio del bot"])
+# API pública: otras plataformas mandan el bot a una reunión con su X-API-Key.
+v1_router = APIRouter(prefix="/api/v1", tags=["Bot propio"])
 logger = logging.getLogger(__name__)
 
 
@@ -58,6 +61,8 @@ class BotControlLink(SQLModel, table=True):
     external_id: str
     meeting_id: Optional[str] = Field(default=None, index=True)
     kind: str
+    # Proyecto elegido al pedir la captura; la sesión nace ya en él.
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id")
 
 
 class BotAudioGrant(SQLModel, table=True):
@@ -312,6 +317,8 @@ class StartCapture(BaseModel):
     # `meetings.video` del plan; el bot lo pide a Skribby y Acten lo copia
     # a su bucket al recibir la reunión.
     video: bool = False
+    # Proyecto de la sesión; sin él, Acten lo deduce al procesarla.
+    project_id: int | None = None
 
 
 @router.post("/start/{kind}", status_code=202)
@@ -321,25 +328,35 @@ async def start(
     user: User = Depends(require_session_writer),
     db: Session = Depends(get_session),
 ):
-    if kind == "meeting" and not body.meeting_url:
-        raise HTTPException(422, "Indica el enlace de la reunión")
     if body.video:
         # Misma respuesta (402 con detalle) que el resto de opciones del plan.
         require_feature(F_VIDEO)(user=user, db=db)
+    return await start_capture(db, user.tenant_id, user.id, kind, body)
+
+
+async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: StartCapture):
+    """Pide la captura al bot. Lo comparten la pantalla y la API pública."""
+    if kind == "meeting" and not body.meeting_url:
+        raise HTTPException(422, "Indica el enlace de la reunión")
+    if body.project_id is not None:
+        project = db.get(Project, body.project_id)
+        if not project or project.tenant_id != tenant_id:
+            raise HTTPException(422, "El proyecto no existe en esta empresa")
     row = db.exec(
         select(BotControlLink).where(
-            BotControlLink.tenant_id == user.tenant_id,
+            BotControlLink.tenant_id == tenant_id,
             BotControlLink.external_id == body.external_id,
         )
     ).first()
-    if row and (row.owner_id != user.id or row.kind != kind):
+    if row and (row.owner_id != owner_id or row.kind != kind):
         raise HTTPException(409, "Ese identificador ya pertenece a otra solicitud")
     if not row:
         row = BotControlLink(
-            tenant_id=user.tenant_id,
-            owner_id=user.id,
+            tenant_id=tenant_id,
+            owner_id=owner_id,
             external_id=body.external_id,
             kind=kind,
+            project_id=body.project_id,
         )
         db.add(row)
         try:
@@ -350,20 +367,22 @@ async def start(
             raise HTTPException(
                 409, "Solicitud simultánea; reintenta con el mismo identificador"
             ) from exc
-    payload = body.model_dump(mode="json", exclude={"meeting_url", "mime_type", "video"})
+    payload = body.model_dump(
+        mode="json", exclude={"meeting_url", "mime_type", "video", "project_id"}
+    )
     payload["analysis_scope"] = "base"
     if kind == "meeting":
         payload.update(
             meeting_url=body.meeting_url,
             profile="quality",
-            bot_name=bot_name_of(db, user.tenant_id),
+            bot_name=bot_name_of(db, tenant_id),
             video=body.video,
         )
     else:
         payload["mime_type"] = body.mime_type
     result = await bot_call(
         db,
-        user.tenant_id,
+        tenant_id,
         "POST",
         "/v1/meetings" if kind == "meeting" else "/v1/recordings",
         body=payload,
@@ -766,4 +785,138 @@ def label(
         "display_name": name,
         "identity_source": "human_confirmed",
         "transcript_preserved": preserved,
+    }
+
+
+# ─────────────────────── API pública: sesión en vivo ───────────────────────
+
+
+class LiveMeeting(BaseModel):
+    """Cuerpo de POST /api/v1/meetings/live."""
+
+    model_config = ConfigDict(extra="forbid")
+    meeting_url: str = PField(min_length=1, max_length=4096)
+    title: str = PField(default="Reunión", min_length=1, max_length=300)
+    language: Literal["es", "en", "ca"] = "es"
+    # Idempotencia: repetir la llamada con el mismo valor no manda otro bot.
+    external_id: str | None = PField(default=None, min_length=1, max_length=160)
+    project_external_id: str | None = PField(default=None, min_length=1, max_length=200)
+    video: bool = False
+    # Quien llama declara que los asistentes saben que se graba.
+    recording_authorized: Literal[True]
+
+
+def _exigir_funcion(db: Session, tenant_id: int, feature: str) -> None:
+    from services import entitlements
+    from services.billing_catalog import FEATURES
+
+    if not entitlements.tiene(db, tenant_id, feature):
+        raise HTTPException(
+            402,
+            {
+                "message": "Esta opción no está incluida en el plan de tu empresa.",
+                "feature": feature,
+                "label": FEATURES.get(feature, feature),
+            },
+        )
+
+
+@v1_router.post("/meetings/live", status_code=202)
+async def live_start(
+    body: LiveMeeting,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Manda el bot a una reunión de Meet, Teams o Zoom que ya está en curso.
+
+    El bot pide entrar de inmediato; alguien de la reunión tiene que
+    admitirlo. Al terminar, la sesión aparece en Acten como cualquier otra.
+    """
+    from services import meeting_source
+
+    tenant_id = ctx.tenant.id
+    _exigir_funcion(db, tenant_id, F_OWNED_BOT)
+    if body.video:
+        _exigir_funcion(db, tenant_id, F_VIDEO)
+    if not meeting_source.admite(db, tenant_id, meeting_source.OWNED_BOT):
+        raise HTTPException(409, "Esta empresa no tiene el bot propio como origen de reuniones.")
+    project_id = None
+    if body.project_external_id:
+        project = db.exec(
+            select(Project).where(
+                Project.tenant_id == tenant_id,
+                Project.external_ref == body.project_external_id,
+            )
+        ).first()
+        visible = ctx.org_wide or not ctx.on_behalf_of or (
+            project is not None and project.id in ctx.visible_project_ids
+        )
+        if not project or not visible:
+            raise HTTPException(
+                422, f"No existe un proyecto sincronizado con id '{body.project_external_id}'."
+            )
+        project_id = project.id
+    # La captura necesita un dueño en Acten. Si la persona de la otra
+    # plataforma aún no tiene cuenta aquí, se atribuye al primer usuario activo.
+    owner = ctx.acting_user or db.exec(
+        select(User)
+        .where(User.tenant_id == tenant_id, User.is_active == True)  # noqa: E712
+        .order_by(User.id)
+    ).first()
+    if owner is None:
+        raise HTTPException(503, "La empresa no tiene usuarios activos.")
+    capture = StartCapture(
+        external_id=body.external_id or f"api-{secrets.token_hex(12)}",
+        title=body.title,
+        language=body.language,
+        meeting_url=body.meeting_url,
+        recording_authorized=True,
+        video=body.video,
+        project_id=project_id,
+    )
+    result = await start_capture(db, tenant_id, owner.id, "meeting", capture)
+    return _live_public(result, None, body.project_external_id)
+
+
+@v1_router.get("/meetings/live/{meeting_id}")
+async def live_status(
+    meeting_id: UUID,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
+):
+    """Estado de una captura pedida por la API; `acten_session_id` llega al terminar."""
+    link = db.exec(
+        select(BotControlLink).where(
+            BotControlLink.tenant_id == ctx.tenant.id,
+            BotControlLink.meeting_id == str(meeting_id),
+        )
+    ).first()
+    if link and ctx.on_behalf_of and not ctx.org_wide:
+        mine = ctx.acting_user is not None and link.owner_id == ctx.acting_user.id
+        if not mine and link.project_id not in ctx.visible_project_ids:
+            link = None
+    if link is None:
+        raise HTTPException(404, "Captura no encontrada.")
+    result = await bot_call(db, ctx.tenant.id, "GET", f"/v1/meetings/{meeting_id}")
+    inbox = db.exec(
+        select(BotInbox).where(
+            BotInbox.tenant_id == ctx.tenant.id, BotInbox.meeting_id == str(meeting_id)
+        )
+    ).first()
+    project = db.get(Project, link.project_id) if link.project_id else None
+    return _live_public(
+        result, inbox.session_id if inbox else None, project.external_ref if project else None
+    )
+
+
+def _live_public(result: dict, session_id: int | None, project_external_id: str | None) -> dict:
+    """Solo lo que le sirve a otra plataforma; nada interno del proveedor."""
+    return {
+        "id": result["id"],
+        "external_id": result["external_id"],
+        "state": result.get("state"),
+        "title": result.get("title"),
+        "error_code": result.get("error_code"),
+        "project_external_id": project_external_id,
+        "acten_session_id": session_id,
     }

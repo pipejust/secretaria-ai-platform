@@ -2619,6 +2619,14 @@
     "video_unavailable": "El vídeo no se pudo cargar. Vuelve a intentarlo en unos segundos."
   },
   "meetings_list": {
+    "new_live": "Sesión en vivo",
+    "new_live_hint": "Pega el enlace y el bot entra ahora a la reunión",
+    "new_upload": "Subir grabación o texto",
+    "new_upload_hint": "Audio, vídeo o una transcripción ya hecha",
+    "toast_link_required": "Pega el enlace de la reunión.",
+    "toast_live_error": "No se pudo enviar el bot: {{detail}}",
+    "live_error_generic": "revisa que sea el enlace directo de Meet, Teams o Zoom",
+    "live_sending": "Enviando el bot…",
     "toast_title_required": "El título/motivo es obligatorio.",
     "toast_audio_required": "Debe subir un archivo de audio para transcribir.",
     "toast_text_required": "Debe pegar el texto de la transcripción.",

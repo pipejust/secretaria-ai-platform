@@ -1,5 +1,6 @@
 """Tenant/owner controls with isolated databases and mocked external HTTP only."""
 
+import hashlib
 import json
 import uuid
 
@@ -10,9 +11,9 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from database import get_session
-from models import IntegrationSetting, MeetingSession, Role, Tenant, User
+from models import ApiKey, IntegrationSetting, MeetingSession, Project, Role, Tenant, User
 from routers.auth import get_current_user
-from routers.bot_control import BotControlLink, audio_router, router
+from routers.bot_control import BotControlLink, audio_router, router, v1_router
 from services.bot_contract import ActenBotEvent
 from services.bot_ingest import BotInbox, ingest
 
@@ -61,6 +62,7 @@ def control(tmp_path, monkeypatch):
     app = FastAPI()
     app.include_router(router)
     app.include_router(audio_router)
+    app.include_router(v1_router)
     app.dependency_overrides[get_session] = sessions
     app.dependency_overrides[get_current_user] = principal
     calls, ids = [], {}
@@ -77,6 +79,17 @@ def control(tmp_path, monkeypatch):
             return httpx.Response(
                 202,
                 json={"id": mid, "external_id": body["external_id"]},
+                request=request,
+            )
+        if request.url.path.startswith("/v1/meetings/") and request.method == "GET":
+            mid = request.url.path.rsplit("/", 1)[-1]
+            external = next((e for e, m in ids.items() if m == mid), None)
+            if external is None:
+                return httpx.Response(404, json={"detail": "x"}, request=request)
+            return httpx.Response(
+                200,
+                json={"id": mid, "external_id": external, "state": "joining",
+                      "title": "Reunión", "error_code": None, "provider_id": "interno"},
                 request=request,
             )
         if request.url.path == "/v1/mail-policy":
@@ -382,3 +395,83 @@ def test_video_in_email_invitations_requires_the_plan_feature(control):
     assert r.status_code == 402 and r.json()["detail"]["feature"] == cat.F_VIDEO
     assert not [c for c in calls[antes:] if c.method == "PUT"]
     assert client.put("/api/owned-bot/mail-policy", json={**body, "video": False}).status_code == 200
+
+
+def event(tenant_id, *, mid):
+    return ActenBotEvent.model_validate({
+        "id": f"meeting.completed:{mid}:v1", "meeting_id": mid, "tenant_id": tenant_id,
+        "occurred_at": "2026-09-12T00:00:00Z",
+        "data": {
+            "external_id": "altum-1", "title": "Comité", "date": "2026-09-12T00:00:00Z",
+            "date_source": "bot_requested_at", "language_hint": "es",
+            "timebase": "seconds_from_recording_start",
+            "transcript": [{"id": "s1", "start": 0, "end": 2, "text": "Hola.",
+                            "speaker_id": "0", "speaker_name": None}],
+            "summary": [{"text": "Saludo", "evidence_ids": ["s1"]}],
+            "key_points": [], "timeline": [], "participants": [], "recording": {},
+            "warnings": [], "provenance": {},
+        },
+    })
+
+
+def _api_key(engine, scopes, source="both"):
+    clave = "acten_" + uuid.uuid4().hex * 2
+    with Session(engine) as db:
+        t = db.get(Tenant, 1)
+        t.meeting_source = source
+        db.add(t)
+        db.add(ApiKey(tenant_id=1, user_id=1, name="t", scopes=json.dumps(scopes),
+                      hashed_key=hashlib.sha256(clave.encode()).hexdigest()))
+        if not db.exec(select(Project).where(Project.external_ref == "ext-p")).first():
+            db.add(Project(name="P", tenant_id=1, external_ref="ext-p"))
+            db.add(Project(name="Ajeno", tenant_id=2, external_ref="ext-ajeno"))
+        db.commit()
+    return {"X-API-Key": clave, "X-On-Behalf-Of": "*"}
+
+
+def test_public_api_sends_the_bot_to_a_live_meeting(control):
+    client, engine, calls = control
+    h = _api_key(engine, ["sessions:read", "sessions:write", "org:read"])
+    body = {"meeting_url": "https://meet.google.com/abc-defg-hij", "recording_authorized": True,
+            "external_id": "altum-1", "title": "Comité", "project_external_id": "ext-p"}
+    r = client.post("/api/v1/meetings/live", headers=h, json=body)
+    assert r.status_code == 202, r.text
+    live = r.json()
+    assert live["external_id"] == "altum-1" and live["project_external_id"] == "ext-p"
+    assert live["acten_session_id"] is None and "provider_id" not in live
+    sent = json.loads([c for c in calls if c.url.path == "/v1/meetings" and c.method == "POST"][-1].content)
+    assert sent["meeting_url"] == body["meeting_url"] and sent["title"] == "Comité"
+    assert sent["bot_name"] == "Asistente Acten" and "project_id" not in sent
+    # Repetir con el mismo external_id no crea otra captura.
+    assert client.post("/api/v1/meetings/live", headers=h, json=body).json()["id"] == live["id"]
+    with Session(engine) as db:
+        links = db.exec(select(BotControlLink).where(BotControlLink.external_id == "altum-1")).all()
+        project = db.exec(select(Project).where(Project.external_ref == "ext-p")).first()
+        assert len(links) == 1 and links[0].project_id == project.id
+        # Al llegar la reunión, la sesión nace en ese proyecto.
+        row = ingest(db, event(1, mid=live["id"]))
+        assert db.get(MeetingSession, row.session_id).project_id == project.id
+        session_id = row.session_id
+    estado = client.get(f"/api/v1/meetings/live/{live['id']}", headers=h)
+    assert estado.status_code == 200, estado.text
+    assert estado.json() == {"id": live["id"], "external_id": "altum-1", "state": "joining",
+                             "title": "Reunión", "error_code": None,
+                             "project_external_id": "ext-p", "acten_session_id": session_id}
+    assert client.get(f"/api/v1/meetings/live/{uuid.uuid4()}", headers=h).status_code == 404
+
+
+def test_public_live_meeting_validates_consent_project_scope_and_source(control):
+    client, engine, _ = control
+    h = _api_key(engine, ["sessions:read", "sessions:write", "org:read"])
+    ok = {"meeting_url": "https://meet.google.com/abc-defg-hij", "recording_authorized": True}
+    post = lambda body, headers=h: client.post("/api/v1/meetings/live", headers=headers, json=body)  # noqa: E731
+    assert post({"meeting_url": ok["meeting_url"]}).status_code == 422                 # sin consentimiento
+    assert post({**ok, "recording_authorized": False}).status_code == 422
+    assert post({**ok, "project_external_id": "ext-ajeno"}).status_code == 422         # proyecto de otra empresa
+    assert post({**ok, "desconocido": 1}).status_code == 422
+    solo_lectura = _api_key(engine, ["sessions:read", "org:read"])
+    assert post(ok, solo_lectura).status_code == 403
+    assert post(ok).status_code == 202                                                # sin external_id: se genera
+    # Empresa que sigue en Fireflies: la API no manda el bot.
+    fireflies = _api_key(engine, ["sessions:write", "org:read"], source="fireflies")
+    assert post(ok, fireflies).status_code == 409

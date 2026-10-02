@@ -2619,6 +2619,14 @@
     "video_unavailable": "The video could not be loaded. Try again in a few seconds."
   },
   "meetings_list": {
+    "new_live": "Live session",
+    "new_live_hint": "Paste the link and the bot joins the meeting now",
+    "new_upload": "Upload a recording or text",
+    "new_upload_hint": "Audio, video or an existing transcript",
+    "toast_link_required": "Paste the meeting link.",
+    "toast_live_error": "The bot could not be sent: {{detail}}",
+    "live_error_generic": "check that it is the direct Meet, Teams or Zoom link",
+    "live_sending": "Sending the bot…",
     "toast_title_required": "Title/subject is required.",
     "toast_audio_required": "You must upload an audio file to transcribe.",
     "toast_text_required": "You must paste the transcript text.",

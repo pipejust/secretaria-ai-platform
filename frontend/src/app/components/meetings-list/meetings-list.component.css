@@ -85,6 +85,75 @@
     box-shadow: 0 3px 6px rgba(0, 34, 115, 0.20);
 }
 .mt-cta svg { flex-shrink: 0; }
+.mt-cta-caret { margin-left: 2px; transition: transform 150ms ease; }
+.mt-cta-caret.is-open { transform: rotate(180deg); }
+
+/* Menú «Nueva reunión»: en vivo (bot) o subir grabación */
+.mt-new { position: relative; flex-shrink: 0; }
+.mt-new-backdrop { position: fixed; inset: 0; z-index: 999; }
+.mt-new-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 1000;
+    width: min(320px, calc(100vw - 32px));
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+.mt-new-item {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-12, 12px);
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    font-family: var(--font-sans);
+    color: var(--color-fg-default);
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+.mt-new-item:hover, .mt-new-item:focus-visible { background: var(--brand-cream-100); outline: none; }
+.mt-new-item:focus-visible { box-shadow: 0 0 0 2px var(--color-accent); }
+.mt-new-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    color: var(--color-fg-muted);
+}
+.mt-new-icon-live { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-fg-on-dark); }
+.mt-new-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mt-new-text strong { font-size: var(--text-14); font-weight: var(--fw-semibold); }
+.mt-new-text small { font-size: 0.75rem; color: var(--color-fg-muted); line-height: 1.35; }
+
+/* Diálogo «Sesión en vivo» */
+.mt-live-intro { margin: 0 0 var(--space-16, 16px); font-size: var(--text-14); color: var(--color-fg-muted); line-height: 1.45; }
+.mt-live-hint { margin: var(--space-8, 8px) 0 0; font-size: 0.75rem; color: var(--color-fg-muted); line-height: 1.4; }
+.mt-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: var(--space-12, 12px);
+    font-size: var(--text-14);
+    color: var(--color-fg-default);
+    line-height: 1.4;
+    cursor: pointer;
+}
+.mt-check input { margin-top: 2px; flex-shrink: 0; }
+.mt-check-consent { padding-top: var(--space-12, 12px); border-top: 1px dashed var(--color-border); }
 
 /* ============================================================
  *  METRIC CARDS (4 en línea)

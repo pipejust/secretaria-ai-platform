@@ -75,6 +75,15 @@ def ingest(db: Session, event: ActenBotEvent) -> BotInbox:
     row = existing()
     if row is not None:
         return row
+    # Proyecto elegido al pedir la captura (pantalla o API); sin él lo deduce el pipeline.
+    from routers.bot_control import BotControlLink
+
+    project_id = db.exec(
+        select(BotControlLink.project_id).where(
+            BotControlLink.tenant_id == event.tenant_id,
+            BotControlLink.meeting_id == str(event.meeting_id),
+        )
+    ).first()
     session = MeetingSession(
         tenant_id=event.tenant_id,
         fireflies_id=f"BOT-{event.meeting_id}",
@@ -83,6 +92,7 @@ def ingest(db: Session, event: ActenBotEvent) -> BotInbox:
         raw_transcript=event.data.transcript_text(),
         raw_summary=event.data.summary_text(),
         status="processing",
+        project_id=project_id,
     )
     try:
         db.add(session)

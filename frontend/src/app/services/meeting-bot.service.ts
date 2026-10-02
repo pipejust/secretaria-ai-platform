@@ -161,6 +161,8 @@ export interface StartCapturePayload {
   recording_authorized?: boolean;
   /** Vídeo además de audio (solo captura por enlace); exige la función `meetings.video` del plan. */
   video?: boolean;
+  /** Proyecto de la sesión; sin él, Acten lo deduce al procesarla. */
+  project_id?: number;
 }
 
 /** Cuerpo de POST /recordings/{id}/finish; espejo de bot_control.py `Finish`. */

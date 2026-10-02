@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +14,7 @@ import { UserChipComponent } from '../shared/user-chip/user-chip.component';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { BrandingService } from '../../services/branding.service';
 import { parseLocalDate } from '../../shared/dates';
+import { MeetingBotService } from '../../services/meeting-bot.service';
 
 /** Sub-tab de la card del header (filtro rápido por status). */
 type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
@@ -74,6 +75,13 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         textContent: '',
         file: null as File | null
     };
+
+    // ---------- Sesión en vivo (bot propio) ----------
+    private readonly bot = inject(MeetingBotService);
+    showNewMenu = false;
+    showLiveModal = false;
+    isJoining = false;
+    liveForm = { url: '', title: '', language: 'es', projectId: '', video: false, authorized: false };
 
     showDeleteModal = false;
     sessionToDelete: any = null;
@@ -880,6 +888,70 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     }
 
     closeUploadModal() { this.showUploadModal = false; }
+
+    /** El bot solo se ofrece a la empresa que lo tiene como origen y en su plan. */
+    get canUseBot(): boolean {
+        const tenant = this.authService.currentUserValue?.tenant;
+        const fuente = tenant?.meeting_source ?? 'fireflies';
+        const features: unknown = tenant?.entitlements?.features;
+        const enPlan = Array.isArray(features) ? features.includes('meetings.owned_bot') : true;
+        return (fuente === 'owned_bot' || fuente === 'both') && enPlan;
+    }
+
+    get canRecordVideo(): boolean {
+        const features: unknown = this.authService.currentUserValue?.tenant?.entitlements?.features;
+        return Array.isArray(features) && features.includes('meetings.video');
+    }
+
+    /** Sin bot, el botón sigue abriendo la subida como siempre. */
+    onNewClick(): void {
+        if (this.canUseBot) { this.showNewMenu = !this.showNewMenu; return; }
+        this.openUploadModal();
+    }
+
+    chooseUpload(): void { this.showNewMenu = false; this.openUploadModal(); }
+
+    openLiveModal(): void {
+        const lang = (this.branding.brand().default_language || 'es').toLowerCase();
+        this.liveForm = {
+            url: '', title: '', language: ['es', 'en', 'ca'].includes(lang) ? lang : 'es',
+            projectId: '', video: false, authorized: false,
+        };
+        this.showNewMenu = false;
+        this.showLiveModal = true;
+    }
+
+    closeLiveModal(): void { if (!this.isJoining) this.showLiveModal = false; }
+
+    async submitLive(): Promise<void> {
+        const url = this.liveForm.url.trim();
+        if (!url) { this.toast.warning(this.translate.instant('meetings_list.toast_link_required')); return; }
+        if (!this.liveForm.authorized) {
+            this.toast.warning(this.translate.instant('meeting_bot.error_confirm_authorization'));
+            return;
+        }
+        this.isJoining = true;
+        try {
+            await this.bot.startCapture('meeting', {
+                external_id: 'web:' + crypto.randomUUID(),
+                title: this.liveForm.title.trim() || this.translate.instant('meeting_bot.default_title'),
+                language: this.liveForm.language,
+                meeting_url: url,
+                recording_authorized: true,
+                video: this.canRecordVideo && this.liveForm.video,
+                ...(this.liveForm.projectId ? { project_id: Number(this.liveForm.projectId) } : {}),
+            });
+            this.showLiveModal = false;
+            this.toast.success(this.translate.instant('meeting_bot.notice_join_requested'));
+        } catch (err: any) {
+            const raw = err?.error?.detail;
+            const detail = typeof raw === 'string' ? raw : (raw?.message || this.translate.instant('meetings_list.live_error_generic'));
+            this.toast.error(this.translate.instant('meetings_list.toast_live_error', { detail }));
+        } finally {
+            this.isJoining = false;
+            this.cdr.detectChanges();
+        }
+    }
 
     onFileSelected(event: any) {
         const file: File = event.target.files[0];

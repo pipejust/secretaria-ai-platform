@@ -2619,6 +2619,14 @@
     "video_unavailable": "No s'ha pogut carregar el vídeo. Torna-ho a provar d'aquí a uns segons."
   },
   "meetings_list": {
+    "new_live": "Sessió en viu",
+    "new_live_hint": "Enganxa l'enllaç i el bot entra ara a la reunió",
+    "new_upload": "Pujar gravació o text",
+    "new_upload_hint": "Àudio, vídeo o una transcripció ja feta",
+    "toast_link_required": "Enganxa l'enllaç de la reunió.",
+    "toast_live_error": "No s'ha pogut enviar el bot: {{detail}}",
+    "live_error_generic": "revisa que sigui l'enllaç directe de Meet, Teams o Zoom",
+    "live_sending": "Enviant el bot…",
     "toast_title_required": "El títol/motiu és obligatori.",
     "toast_audio_required": "Has de pujar un fitxer d'àudio per transcriure.",
     "toast_text_required": "Has d'enganxar el text de la transcripció.",

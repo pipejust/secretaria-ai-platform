@@ -308,6 +308,7 @@ app.include_router(bot_ingest.router)
 from routers import bot_control
 app.include_router(bot_control.router)
 app.include_router(bot_control.audio_router)
+app.include_router(bot_control.v1_router)
 
 from routers import billing
 app.include_router(billing.router)

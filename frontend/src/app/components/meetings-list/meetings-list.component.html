@@ -14,14 +14,53 @@
                 <h1 class="mt-title">{{ 'sidebar.meetings' | translate }}</h1>
                 <p class="mt-sub">{{ 'meetings.subtitle' | translate }}</p>
             </div>
-            <button class="mt-cta" (click)="openUploadModal()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                {{ 'sidebar.new_meeting' | translate }}
-            </button>
+            <div class="mt-new" (keydown.escape)="showNewMenu = false">
+                <button class="mt-cta" (click)="onNewClick()"
+                        [attr.aria-haspopup]="canUseBot ? 'menu' : null"
+                        [attr.aria-expanded]="canUseBot ? showNewMenu : null">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    {{ 'sidebar.new_meeting' | translate }}
+                    <svg *ngIf="canUseBot" class="mt-cta-caret" [class.is-open]="showNewMenu" width="14" height="14"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="mt-new-backdrop" *ngIf="showNewMenu" (click)="showNewMenu = false"></div>
+                <div class="mt-new-menu" *ngIf="showNewMenu" role="menu">
+                    <button type="button" role="menuitem" class="mt-new-item" (click)="openLiveModal()">
+                        <span class="mt-new-icon mt-new-icon-live" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                            </svg>
+                        </span>
+                        <span class="mt-new-text">
+                            <strong>{{ 'meetings_list.new_live' | translate }}</strong>
+                            <small>{{ 'meetings_list.new_live_hint' | translate }}</small>
+                        </span>
+                    </button>
+                    <button type="button" role="menuitem" class="mt-new-item" (click)="chooseUpload()">
+                        <span class="mt-new-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </span>
+                        <span class="mt-new-text">
+                            <strong>{{ 'meetings_list.new_upload' | translate }}</strong>
+                            <small>{{ 'meetings_list.new_upload_hint' | translate }}</small>
+                        </span>
+                    </button>
+                </div>
+            </div>
         </header>
 
         <!-- 4 KPI cards -->
@@ -928,6 +967,79 @@
             <button type="button" class="ap-btn ap-btn-primary" (click)="submitUpload()" [disabled]="isUploading">
                 <span *ngIf="!isUploading">{{ 'common.process_session' | translate }}</span>
                 <span *ngIf="isUploading">{{ 'common.uploading_transcribing' | translate }}</span>
+            </button>
+        </footer>
+    </div>
+</div>
+
+<!-- ============ MODAL: sesión en vivo (el bot entra por enlace) ============ -->
+<div class="ap-modal-overlay" *ngIf="showLiveModal" (click)="closeLiveModal()">
+    <div class="ap-modal ap-modal-md" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+         aria-labelledby="live-modal-title">
+        <header class="ap-modal-head">
+            <h2 class="ap-modal-title" id="live-modal-title">{{ 'meetings_list.new_live' | translate }}</h2>
+            <button type="button" class="ap-modal-close" (click)="closeLiveModal()" [attr.title]="'common.close' | translate">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </header>
+
+        <form class="ap-modal-body" (ngSubmit)="submitLive()" id="live-form">
+            <p class="mt-live-intro">{{ 'meeting_bot.entry_live_text' | translate }}</p>
+            <div class="ap-field">
+                <label class="ap-label" for="live-url">{{ 'meeting_bot.meeting_url_label' | translate }} <span class="ap-required">*</span></label>
+                <input class="ap-input" id="live-url" name="live-url" type="url" inputmode="url" autocomplete="off"
+                       [(ngModel)]="liveForm.url" [disabled]="isJoining"
+                       [placeholder]="'meeting_bot.meeting_url_placeholder' | translate" />
+            </div>
+            <div class="ap-field">
+                <label class="ap-label" for="live-title">{{ 'meetings.title_or_reason' | translate }}</label>
+                <input class="ap-input" id="live-title" name="live-title" type="text" maxlength="300"
+                       [(ngModel)]="liveForm.title" [disabled]="isJoining"
+                       [placeholder]="'dashboard.title_example' | translate" />
+            </div>
+            <div class="ap-grid-2">
+                <div class="ap-field">
+                    <label class="ap-label" for="live-lang">{{ 'dashboard.main_language' | translate }}</label>
+                    <div class="ap-select-wrap">
+                        <select class="ap-select" id="live-lang" name="live-lang" [(ngModel)]="liveForm.language" [disabled]="isJoining">
+                            <option value="es">{{ 'lang.es' | translate }}</option>
+                            <option value="ca">{{ 'common.catalan' | translate }}</option>
+                            <option value="en">{{ 'common.english' | translate }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ap-field">
+                    <label class="ap-label" for="live-project">{{ 'dashboard.project_optional' | translate }}</label>
+                    <div class="ap-select-wrap">
+                        <select class="ap-select" id="live-project" name="live-project" [(ngModel)]="liveForm.projectId" [disabled]="isJoining">
+                            <option value="">{{ 'dashboard.no_project_general' | translate }}</option>
+                            <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <label class="mt-check" *ngIf="canRecordVideo">
+                <input type="checkbox" name="live-video" [(ngModel)]="liveForm.video" [disabled]="isJoining" />
+                <span>{{ 'meeting_bot.video_label' | translate }}</span>
+            </label>
+            <label class="mt-check mt-check-consent">
+                <input type="checkbox" name="live-consent" [(ngModel)]="liveForm.authorized" [disabled]="isJoining" />
+                <span>{{ 'meeting_bot.consent' | translate }}</span>
+            </label>
+            <p class="mt-live-hint">{{ 'meeting_bot.waiting_room_hint' | translate }}</p>
+        </form>
+
+        <footer class="ap-modal-foot">
+            <button type="button" class="ap-btn ap-btn-secondary" (click)="closeLiveModal()" [disabled]="isJoining">
+                {{ 'common.cancel' | translate }}
+            </button>
+            <button type="submit" form="live-form" class="ap-btn ap-btn-primary"
+                    [disabled]="isJoining || !liveForm.url.trim() || !liveForm.authorized">
+                {{ (isJoining ? 'meetings_list.live_sending' : 'meeting_bot.join_button') | translate }}
             </button>
         </footer>
     </div>

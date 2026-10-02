@@ -794,6 +794,44 @@ horario, porque la hora va en `due_time` y recortarla en silencio sería
 peor que rechazarla. Para dejar la tarea sin fecha, mándenlo como `null` u
 omítanlo. Aplica igual en el `PATCH`.
 
+### `POST /api/v1/meetings/live` — mandar el bot a una reunión en curso
+
+Alcance `sessions:write`. El bot de Acten pide entrar **de inmediato** a la
+reunión del enlace; alguien de la reunión tiene que admitirlo. Al terminar,
+la sesión aparece en Acten como cualquier otra (y en `GET /api/v1/sessions`).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `meeting_url` | string | **Obligatorio.** Enlace directo de Google Meet, Microsoft Teams o Zoom |
+| `recording_authorized` | `true` | **Obligatorio y literal.** Quien llama declara que los asistentes saben que se graba |
+| `title` | string | Título de la sesión. Por defecto «Reunión» |
+| `language` | `es`\|`en`\|`ca` | Por defecto `es` |
+| `project_external_id` | string | La sesión nace en ese proyecto. Sin él, Acten lo deduce al procesarla. Proyecto inexistente o no visible para la persona → `422` |
+| `external_id` | string | Idempotencia: repetir la llamada con el mismo valor **no** manda otro bot. Si falta, Acten genera uno |
+| `video` | bool | Graba también vídeo. Exige la función de vídeo en el plan (`402` si no) |
+
+Campos desconocidos → `422`. Respuesta `202`:
+
+```json
+{"id": "f51d6936-…", "external_id": "altum-123", "state": "queued", "title": "Comité",
+ "error_code": null, "project_external_id": "…", "acten_session_id": null}
+```
+
+Errores: `402` la empresa no tiene el bot propio en su plan · `409` la
+empresa no tiene el bot como origen de reuniones (sigue en Fireflies) ·
+`422` enlace no admitido o proyecto desconocido · `503` bot sin configurar.
+
+### `GET /api/v1/meetings/live/{id}` — estado de esa captura
+
+Alcance `sessions:read` (con `X-On-Behalf-Of`, como toda lectura). Devuelve
+la misma forma. `state` avanza por `queued` → `dispatching` → `joining` →
+`recording` → `transcribing` → `analyzing` → `completed`. Finales sin
+sesión: `failed`, `analysis_failed`, `cancelled`, `needs_attention`, con el
+motivo en `error_code` (por ejemplo `capture_not_admitted` si nadie admitió
+al bot). Traten cualquier valor desconocido como «en curso». `acten_session_id` deja de
+ser `null` cuando la reunión ya es una sesión de Acten. Solo responde por
+capturas pedidas a través de Acten (API o pantalla); `404` para el resto.
+
 ### Autenticación de su servidor contra Acten
 
 ```http
