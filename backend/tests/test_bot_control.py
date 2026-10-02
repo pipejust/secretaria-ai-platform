@@ -81,6 +81,14 @@ def control(tmp_path, monkeypatch):
                 json={"id": mid, "external_id": body["external_id"]},
                 request=request,
             )
+        if request.url.path == "/v1/meetings" and request.method == "GET":
+            estados = ids.get("estados", {})
+            return httpx.Response(200, request=request, json={"items": [
+                {"id": mid, "external_id": external, "state": estados.get(external, "recording"),
+                 "title": "Reunión", "error_code": None, "source": "meeting", "join_at": None,
+                 "live_url": "wss://realtime.skribby.test/solo-lectura"
+                 if estados.get(external, "recording") == "recording" else None}
+                for external, mid in ids.items() if isinstance(mid, str)]})
         if request.url.path.endswith("/stop") and request.method == "POST":
             mid = request.url.path.split("/")[-2]
             external = next((e for e, m in ids.items() if m == mid), None)
@@ -557,3 +565,25 @@ def test_public_api_changes_the_bot_name_and_the_meeting_source(control):
     assert patch({"otro": 1}).status_code == 422
     solo_lectura = _api_key(engine, ["integrations:read", "org:read"], source="owned_bot")
     assert patch({"bot_name": "X"}, solo_lectura).status_code == 403
+
+
+def test_public_api_lists_the_meetings_in_progress_with_their_live_link(control):
+    client, engine, _ = control
+    h = _api_key(engine, ["sessions:read", "sessions:write", "org:read"])
+    meeting = {"meeting_url": "https://meet.google.com/abc-defg-hij", "recording_authorized": True}
+    en_curso = client.post("/api/v1/meetings/live", headers=h,
+                           json={**meeting, "external_id": "en-curso", "project_external_id": "ext-p"}).json()
+    client.post("/api/v1/meetings/live", headers=h, json={**meeting, "external_id": "terminada"})
+    r = client.get("/api/v1/meetings/live", headers=h)
+    assert r.status_code == 200, r.text
+    items = {i["external_id"]: i for i in r.json()["items"]}
+    assert set(items) == {"en-curso", "terminada"}  # el bot de prueba las da a las dos por grabando
+    assert items["en-curso"]["state"] == "recording"
+    assert items["en-curso"]["realtime_url"] == "wss://realtime.skribby.test/solo-lectura"
+    assert items["en-curso"]["project_external_id"] == "ext-p" and items["en-curso"]["id"] == en_curso["id"]
+    assert items["terminada"]["project_external_id"] is None
+    assert "provider_id" not in items["en-curso"]
+    assert client.get("/api/v1/meetings/live?status=todo", headers=h).status_code == 422
+    assert client.get("/api/v1/meetings/live?status=all", headers=h).status_code == 200
+    sin_lectura = _api_key(engine, ["sessions:write", "org:read"])
+    assert client.get("/api/v1/meetings/live", headers=sin_lectura).status_code == 403

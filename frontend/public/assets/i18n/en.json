@@ -2627,6 +2627,9 @@
     "video_unavailable": "The video could not be loaded. Try again in a few seconds."
   },
   "meetings_list": {
+    "live_title": "Live now",
+    "live_manage": "Stop or manage the bot",
+    "live_no_stream": "The transcript appears once the bot starts recording",
     "live_now": "{{n}} in progress · Watch live",
     "video_badge": "Video",
     "has_video": "This session has video: open it to watch",
@@ -2739,6 +2742,7 @@
     "move_error": "The card could not be moved."
   },
   "meeting_bot": {
+    "state_joining": "Joining the meeting",
     "live_watch": "Watch live",
     "live_title": "Live transcript",
     "live_connecting": "Connecting…",

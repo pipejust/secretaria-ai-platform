@@ -908,6 +908,59 @@ async def live_start(
     return _live_public(result, None, body.project_external_id)
 
 
+# Estados en los que el bot aún no terminó: lo que se enseña como «en vivo».
+LIVE_ACTIVE_STATES = {
+    "scheduled", "queued", "dispatching", "joining", "recording", "transcribing", "analyzing",
+}
+
+
+@v1_router.get("/meetings/live")
+async def live_list(
+    status: Literal["active", "all"] = "active",
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
+):
+    """Reuniones del bot de la empresa: en curso (por defecto) o las últimas 100.
+
+    Sirve para pintar una zona «en vivo»: cada elemento trae su estado y, si
+    está grabando y la suscripción lo incluye, `realtime_url`. Leyendo como
+    empresa salen todas, también las invitadas por calendario; en nombre de
+    una persona, solo las que pidió ella o las de sus proyectos.
+    """
+    result = await bot_call(db, ctx.tenant.id, "GET", "/v1/meetings?limit=100")
+    links = {
+        row.meeting_id: row
+        for row in db.exec(
+            select(BotControlLink).where(BotControlLink.tenant_id == ctx.tenant.id)
+        ).all()
+        if row.meeting_id
+    }
+    sessions = {
+        row.meeting_id: row.session_id
+        for row in db.exec(select(BotInbox).where(BotInbox.tenant_id == ctx.tenant.id)).all()
+    }
+    refs = {
+        p.id: p.external_ref
+        for p in db.exec(select(Project).where(Project.tenant_id == ctx.tenant.id)).all()
+    }
+    personal = bool(ctx.on_behalf_of) and not ctx.org_wide
+    items = []
+    for item in result.get("items", []):
+        if item.get("source") == "browser":
+            continue  # grabación web: no hay bot en ninguna reunión
+        if status == "active" and item.get("state") not in LIVE_ACTIVE_STATES:
+            continue
+        link = links.get(item["id"])
+        if personal:
+            mine = link is not None and ctx.acting_user is not None and link.owner_id == ctx.acting_user.id
+            if not mine and (link is None or link.project_id not in ctx.visible_project_ids):
+                continue
+        items.append(
+            _live_public(item, sessions.get(item["id"]), refs.get(link.project_id) if link else None)
+        )
+    return {"items": items}
+
+
 @v1_router.get("/meetings/live/{meeting_id}")
 async def live_status(
     meeting_id: UUID,

@@ -72,7 +72,8 @@ muestren u oculten opciones según eso.
      o invitar a `bot@acten.app` al evento del calendario.
 3. Si mandaron el bot: consultar `GET /api/v1/meetings/live/{id}` hasta que
    `acten_session_id` deje de ser `null`. Mientras graba, `realtime_url`
-   permite mostrar la transcripción en vivo.
+   permite mostrar la transcripción en vivo. Para una zona «En vivo» con
+   todas las reuniones en curso, `GET /api/v1/meetings/live`.
 4. Leer el resultado: `GET /api/v1/sessions/{id}`, `/transcript` y `/video`.
 
 ---
@@ -279,6 +280,28 @@ invitado más del evento en Google Calendar u Outlook.
 
 ## 7. Seguir y detener una reunión del bot
 
+### `GET /api/v1/meetings/live`
+
+Alcance `sessions:read`. Las reuniones del bot de la empresa que **aún no
+terminan**: programadas, entrando, grabando o preparando el acta. Es lo que
+se necesita para pintar una zona «En vivo».
+
+```json
+{"items": [
+  {"id": "db7227b5-…", "external_id": "evento-77", "state": "recording",
+   "title": "Licitaciones contexto general", "scheduled_start": null,
+   "error_code": null, "realtime_url": "wss://…", "project_external_id": "…",
+   "acten_session_id": null}
+]}
+```
+
+- `?status=all` devuelve también las terminadas (las últimas 100).
+- Leyendo como empresa (`X-On-Behalf-Of: *`) salen **todas**, incluidas las
+  invitadas por calendario. En nombre de una persona, solo las que pidió ella
+  o las de sus proyectos.
+- Refresquen cada 5–10 segundos mientras la zona esté a la vista: una reunión
+  que termina desaparece de la lista y aparece como sesión.
+
 ### `GET /api/v1/meetings/live/{id}`
 
 Alcance `sessions:read`. Misma forma que la respuesta de creación.
@@ -318,17 +341,35 @@ Mensajes JSON con la forma `{"type": …, "data": …}`:
 | `ts` | Un segmento nuevo: `{"transcript": "…", "start": 1.23, "end": 4.56, "speaker": 0, "speaker_name": "Ana Ruiz"}` |
 | `status-update` | `data.new_status`. Con `finished` la reunión terminó |
 
-`start` y `end` son segundos desde el inicio de la grabación. Los primeros
-segmentos pueden traer un nombre genérico («Speaker 1») hasta que la voz se
-empareja con el participante. Ignoren los tipos de mensaje que no conozcan.
+`start` y `end` son segundos desde el inicio de la grabación. Ignoren los
+tipos de mensaje que no conozcan.
+
+**Nombres de quien habla.** `speaker` es el número de la voz y no cambia en
+toda la reunión. Los primeros segmentos de cada voz llegan con un nombre
+provisional (`"Speaker 1"`) y los siguientes ya con el del participante. Para
+que la misma persona no salga con dos etiquetas: guarden por cada `speaker`
+el último `speaker_name` que **no** sea de la forma `Speaker N` y úsenlo
+también para sus segmentos anteriores. Una voz que nunca se identifica
+(por ejemplo, varias personas en una misma sala) se queda con su número.
 
 ```js
+const segments = [];
+const names = new Map();               // voz → nombre real
+const generic = /^speaker\s*\d+$/i;
+
+const add = (s) => {
+  segments.push(s);
+  if (s.speaker_name && !generic.test(s.speaker_name)) names.set(s.speaker, s.speaker_name);
+};
+const label = (s) => names.get(s.speaker) ?? `Hablante ${s.speaker}`;
+
 const ws = new WebSocket(realtimeUrl);
 ws.onmessage = (e) => {
   const { type, data } = JSON.parse(e.data);
-  if (type === 'connected') render(data.transcripts);
-  if (type === 'ts') append(data);
+  if (type === 'connected') data.transcripts.forEach(add);
+  if (type === 'ts') add(data);
   if (type === 'status-update' && data.new_status === 'finished') ws.close();
+  render(segments, label);             // vuelve a pintar con los nombres ya conocidos
 };
 ```
 
@@ -421,6 +462,7 @@ Errores: `404` la sesión no tiene vídeo o no es visible para esa persona ·
 | `PATCH /api/v1/meetings/settings` | `integrations:write` | Cambiarlos |
 | `POST /api/v1/sessions` | `sessions:write` | Subir grabación o texto |
 | `POST /api/v1/meetings/live` | `sessions:write` | Mandar el bot, ahora o programado |
+| `GET /api/v1/meetings/live` | `sessions:read` | Reuniones del bot en curso, con su enlace en vivo |
 | `GET /api/v1/meetings/live/{id}` | `sessions:read` | Estado, transcripción en vivo y sesión resultante |
 | `POST /api/v1/meetings/live/{id}/stop` | `sessions:write` | Cancelar o sacar al bot |
 | `GET /api/v1/sessions` | `sessions:read` | Listar sesiones |

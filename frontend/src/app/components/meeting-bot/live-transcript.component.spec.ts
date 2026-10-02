@@ -14,4 +14,16 @@ describe('live transcript turns', () => {
       { speaker: 0, name: 'Ana', start: 6, text: 'Sigo yo.' },
     ]);
   });
+
+  it('names a voice retroactively once the provider matches it to a participant', () => {
+    const turns = toTurns([
+      { transcript: 'Listo, caballero.', start: 6, end: 7, speaker: 1, speaker_name: 'Speaker 1' },
+      { transcript: 'Buenas.', start: 8, end: 9, speaker: 2, speaker_name: 'Speaker 2' },
+      { transcript: 'Empecemos.', start: 101, end: 102, speaker: 1, speaker_name: 'William Aragón' },
+      { transcript: 'Sin emparejar.', start: 110, end: 111, speaker: 3, speaker_name: 'Speaker 3' },
+    ]);
+    expect(turns.map((t) => [t.speaker, t.name])).toEqual([
+      [1, 'William Aragón'], [2, null], [1, 'William Aragón'], [3, null],
+    ]);
+  });
 });

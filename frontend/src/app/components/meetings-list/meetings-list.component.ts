@@ -14,7 +14,8 @@ import { UserChipComponent } from '../shared/user-chip/user-chip.component';
 import { UserDirectoryService } from '../../services/user-directory.service';
 import { BrandingService } from '../../services/branding.service';
 import { parseLocalDate } from '../../shared/dates';
-import { MeetingBotService } from '../../services/meeting-bot.service';
+import { BotMeeting, MeetingBotService } from '../../services/meeting-bot.service';
+import { LiveTranscriptComponent } from '../meeting-bot/live-transcript.component';
 
 /** Sub-tab de la card del header (filtro rápido por status). */
 type StatusTab = 'all' | 'analyzed' | 'drafts' | 'archived';
@@ -49,10 +50,13 @@ interface Attendee {
     email?: string;
 }
 
+const LIVE_REFRESH_MS = 10_000;
+const LIVE_STATES = new Set(['queued', 'dispatching', 'joining', 'recording']);
+
 @Component({
     selector: 'app-meetings-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe, UserChipComponent, TranslateModule],
+    imports: [CommonModule, FormsModule, RouterModule, MdRenderPipe, UserChipComponent, TranslateModule, LiveTranscriptComponent],
     templateUrl: './meetings-list.component.html',
     styleUrls: ['./meetings-list.component.css']
 })
@@ -82,8 +86,11 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     showLiveModal = false;
     isJoining = false;
     liveForm = { url: '', title: '', language: 'es', projectId: '', authorized: false };
-    /** Reuniones que el bot está grabando ahora mismo. */
-    liveNow = 0;
+    /** Reuniones que el bot tiene en curso (entrando o grabando). */
+    liveMeetings: BotMeeting[] = [];
+    /** La que se está viendo en vivo; la URL se conserva aunque la lista se refresque. */
+    liveOpen: { id: string; title: string; url: string } | null = null;
+    private liveTimer?: ReturnType<typeof setInterval>;
 
     showDeleteModal = false;
     sessionToDelete: any = null;
@@ -155,17 +162,28 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         this.loadProjects();
         this.loadStats();
         void this.loadLiveNow();
+        // La zona «En vivo» se mantiene al día sola; sin bot, la consulta no sale.
+        this.liveTimer = setInterval(() => void this.loadLiveNow(), LIVE_REFRESH_MS);
     }
 
-    /** Cuántas reuniones tiene el bot en curso; sin bot o si falla, simplemente no se avisa. */
+    /** Reuniones del bot en curso; sin bot o si falla, la zona simplemente no aparece. */
     async loadLiveNow(): Promise<void> {
         if (!this.canUseBot) { return; }
+        const antes = this.liveMeetings.length;
         try {
             const meetings = await this.bot.listMeetings();
-            this.liveNow = meetings.filter((m) => m.state === 'joining' || m.state === 'recording').length;
-        } catch { this.liveNow = 0; }
+            this.liveMeetings = meetings.filter((m) => m.source !== 'browser' && LIVE_STATES.has(m.state));
+        } catch { this.liveMeetings = []; }
+        // Al terminar una reunión, su sesión aparece en la lista sin recargar.
+        if (antes > this.liveMeetings.length) { this.loadSessions(); }
         this.cdr.detectChanges();
     }
+
+    watchLive(m: BotMeeting): void {
+        this.liveOpen = m.live_url ? { id: m.id, title: m.title || m.external_id, url: m.live_url } : null;
+    }
+
+    trackLive(_i: number, m: BotMeeting): string { return m.id; }
 
     // ---------- KPIs globales (no paginados) ----------
     /** Agregados del backend para alimentar las 4 tarjetas KPI del header.
@@ -202,6 +220,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     }
 
     ngOnDestroy(): void {
+        clearInterval(this.liveTimer);
         this.destroy$.next();
         this.destroy$.complete();
     }

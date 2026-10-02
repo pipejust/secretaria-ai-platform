@@ -23,14 +23,31 @@ const MAX_RETRIES = 5;
 const RETRY_MS = 2000;
 const ENDED = new Set(['finished', 'not_admitted', 'processing', 'transcribing']);
 
-export const toTurns = (segments: readonly LiveSegment[]): LiveTurn[] =>
-  segments.reduce<LiveTurn[]>((turns, s) => {
+/** Nombre provisional que pone el proveedor mientras empareja la voz con un participante. */
+const GENERIC = /^speaker\s*\d+$/i;
+const realName = (name: string | null | undefined): string | null =>
+  name && !GENERIC.test(name.trim()) ? name.trim() : null;
+
+/** Los primeros segmentos de cada voz llegan como «Speaker N» y los siguientes ya
+ *  con el nombre: en cuanto una voz tiene nombre, se aplica a todo lo que dijo. */
+export const speakerNames = (segments: readonly LiveSegment[]): Map<number, string> =>
+  segments.reduce((names, s) => {
+    const name = realName(s.speaker_name);
+    return name && s.speaker !== null && s.speaker !== undefined ? new Map(names).set(s.speaker, name) : names;
+  }, new Map<number, string>());
+
+export const toTurns = (segments: readonly LiveSegment[]): LiveTurn[] => {
+  const names = speakerNames(segments);
+  return segments.reduce<LiveTurn[]>((turns, s) => {
+    const speaker = s.speaker ?? null;
+    const name = (speaker !== null ? names.get(speaker) : undefined) ?? realName(s.speaker_name);
     const last = turns[turns.length - 1];
-    const same = last && last.speaker === (s.speaker ?? null) && last.name === (s.speaker_name || null);
+    const same = last && last.speaker === speaker && last.name === name;
     return same
       ? [...turns.slice(0, -1), { ...last, text: `${last.text} ${s.transcript}`.trim() }]
-      : [...turns, { speaker: s.speaker ?? null, name: s.speaker_name || null, start: s.start, text: s.transcript }];
+      : [...turns, { speaker, name, start: s.start, text: s.transcript }];
   }, []);
+};
 
 const isSegment = (v: unknown): v is LiveSegment =>
   !!v && typeof (v as LiveSegment).transcript === 'string' && typeof (v as LiveSegment).start === 'number';
@@ -51,7 +68,7 @@ const isSegment = (v: unknown): v is LiveSegment =>
       <div class="lt-turn" *ngFor="let turn of turns; trackBy: trackTurn">
         <span class="lt-time">{{ clock(turn.start) }}</span>
         <div>
-          <strong>{{ turn.name || ('meeting_bot.live_speaker' | translate:{ n: (turn.speaker ?? 0) + 1 }) }}</strong>
+          <strong>{{ turn.name || ('meeting_bot.live_speaker' | translate:{ n: turn.speaker ?? 1 }) }}</strong>
           <p>{{ turn.text }}</p>
         </div>
       </div>

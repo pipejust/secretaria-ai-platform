@@ -952,6 +952,14 @@ Errores: `402` la empresa no tiene el bot propio en su plan · `409` la
 empresa no tiene el bot como origen de reuniones (sigue en Fireflies) ·
 `422` enlace no admitido o proyecto desconocido · `503` bot sin configurar.
 
+### `GET /api/v1/meetings/live` — reuniones del bot en curso
+
+Alcance `sessions:read`. Devuelve `{"items": […]}` con la misma forma que el
+estado de una captura, para las reuniones que aún no terminan
+(`?status=all` incluye las últimas 100). Como empresa salen todas, también
+las invitadas por calendario; en nombre de una persona, las suyas y las de
+sus proyectos. Es lo que alimenta la zona «En vivo».
+
 ### `POST /api/v1/meetings/live/{id}/stop` — cancelar o sacar al bot
 
 Alcance `sessions:write`. Si la reunión está **programada**, la cancela

@@ -2627,6 +2627,9 @@
     "video_unavailable": "El vídeo no se pudo cargar. Vuelve a intentarlo en unos segundos."
   },
   "meetings_list": {
+    "live_title": "En vivo ahora",
+    "live_manage": "Detener o administrar el bot",
+    "live_no_stream": "La transcripción aparece cuando el bot empieza a grabar",
     "live_now": "{{n}} en curso · Ver en vivo",
     "video_badge": "Vídeo",
     "has_video": "Esta sesión tiene vídeo: ábrela para verlo",
@@ -2739,6 +2742,7 @@
     "move_error": "No se pudo mover la tarjeta."
   },
   "meeting_bot": {
+    "state_joining": "Entrando a la reunión",
     "live_watch": "Ver en vivo",
     "live_title": "Transcripción en vivo",
     "live_connecting": "Conectando…",

@@ -14,10 +14,6 @@
                 <h1 class="mt-title">{{ 'sidebar.meetings' | translate }}</h1>
                 <p class="mt-sub">{{ 'meetings.subtitle' | translate }}</p>
             </div>
-            <a class="mt-live-now" *ngIf="liveNow" routerLink="/admin/meeting-bot">
-                <span class="mt-live-dot" aria-hidden="true"></span>
-                {{ 'meetings_list.live_now' | translate:{ n: liveNow } }}
-            </a>
             <div class="mt-new" (keydown.escape)="showNewMenu = false">
                 <button class="mt-cta" (click)="onNewClick()"
                         [attr.aria-haspopup]="canUseBot ? 'menu' : null"
@@ -66,6 +62,31 @@
                 </div>
             </div>
         </header>
+
+        <!-- En vivo: reuniones que el bot tiene en curso, con su transcripción -->
+        <section class="mt-live" *ngIf="liveMeetings.length || liveOpen" [attr.aria-label]="'meetings_list.live_title' | translate">
+            <header class="mt-live-head">
+                <span class="mt-live-dot" aria-hidden="true"></span>
+                <h2>{{ 'meetings_list.live_title' | translate }}</h2>
+                <a class="mt-live-link" routerLink="/admin/meeting-bot">{{ 'meetings_list.live_manage' | translate }}</a>
+            </header>
+            <ul class="mt-live-list">
+                <li *ngFor="let m of liveMeetings; trackBy: trackLive">
+                    <span class="mt-live-name">{{ m.title || m.external_id }}</span>
+                    <span class="mt-live-state">{{ ('meeting_bot.state_' + m.state) | translate }}</span>
+                    <button type="button" class="ap-btn ap-btn-secondary" *ngIf="m.live_url" (click)="watchLive(m)"
+                            [attr.aria-pressed]="liveOpen?.id === m.id">{{ 'meeting_bot.live_watch' | translate }}</button>
+                    <span class="mt-live-wait" *ngIf="!m.live_url">{{ 'meetings_list.live_no_stream' | translate }}</span>
+                </li>
+            </ul>
+            <div class="mt-live-panel" *ngIf="liveOpen as l">
+                <div class="mt-live-panel-head">
+                    <strong>{{ l.title }}</strong>
+                    <button type="button" class="ap-btn ap-btn-secondary" (click)="liveOpen = null">{{ 'common.close' | translate }}</button>
+                </div>
+                <app-live-transcript [url]="l.url"></app-live-transcript>
+            </div>
+        </section>
 
         <!-- 4 KPI cards -->
         <section class="mt-metrics" [attr.aria-label]="'meetings.metrics_aria' | translate">

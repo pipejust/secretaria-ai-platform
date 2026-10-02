@@ -2627,6 +2627,9 @@
     "video_unavailable": "No s'ha pogut carregar el vídeo. Torna-ho a provar d'aquí a uns segons."
   },
   "meetings_list": {
+    "live_title": "En viu ara",
+    "live_manage": "Aturar o administrar el bot",
+    "live_no_stream": "La transcripció apareix quan el bot comença a gravar",
     "live_now": "{{n}} en curs · Veure en viu",
     "video_badge": "Vídeo",
     "has_video": "Aquesta sessió té vídeo: obre-la per veure'l",
@@ -2739,6 +2742,7 @@
     "move_error": "No s'ha pogut moure la targeta."
   },
   "meeting_bot": {
+    "state_joining": "Entrant a la reunió",
     "live_watch": "Veure en viu",
     "live_title": "Transcripció en viu",
     "live_connecting": "Connectant…",
