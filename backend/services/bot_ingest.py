@@ -155,11 +155,15 @@ def asistentes_de(db: Session, session_id: int) -> list[str]:
     return nombres
 
 
-async def process_one(engine, inbox_id: int, pipeline=None) -> bool:
+async def process_one(engine, inbox_id: int, pipeline=None, notify=None) -> bool:
     if pipeline is None:
+        from routers.fireflies import _send_session_ready_email
         from services.transcript_pipeline import process_session_with_ai
 
         pipeline = process_session_with_ai
+        # El mismo aviso que reciben las reuniones de Fireflies: correo y
+        # notificación de «sesión procesada» a quien le toca revisarla.
+        notify = notify or _send_session_ready_email
     with Session(engine) as db:
         result = db.execute(
             update(BotInbox)
@@ -197,7 +201,9 @@ async def process_one(engine, inbox_id: int, pipeline=None) -> bool:
                 row.error_code = "acten_pipeline_incomplete"
             else:
                 row.error_code = VIDEO_PENDING if _video_por_copiar(db, row, meeting) else ""
+            aviso = (row.session_id, row.tenant_id)
         except Exception:
+            aviso = None
             db.rollback()
             row = db.get(BotInbox, inbox_id)
             meeting = db.get(MeetingSession, row.session_id)
@@ -209,7 +215,14 @@ async def process_one(engine, inbox_id: int, pipeline=None) -> bool:
             logger.error("Bot pipeline failed for inbox %s", inbox_id)
         db.add(row)
         db.commit()
-        return True
+    # Fuera de la sesión de base: el aviso abre la suya. Es idempotente (no
+    # reenvía en un reintento) y un fallo de correo no cambia el resultado.
+    if aviso and notify:
+        try:
+            await notify(*aviso)
+        except Exception:  # noqa: BLE001
+            logger.exception("Sesión %s: no se pudo enviar el aviso de sesión procesada", aviso[0])
+    return True
 
 
 VIDEO_PENDING = "video_pending"

@@ -578,3 +578,41 @@ def test_attendees_come_from_the_people_the_bot_saw_in_the_room(bot_api, bot_eve
         otra = MeetingSession(tenant_id=1, fireflies_id="FF-1", title="x", date="2026-09-12")
         db.add(otra); db.commit(); db.refresh(otra)
         assert _hablantes_y_presentes(db, otra.id, "[Ana] Hola.\n[Speaker 2] Sí.") == ["Ana"]
+
+
+def test_processed_bot_session_notifies_like_a_fireflies_one(bot_api, bot_event):
+    from services.bot_ingest import ingest
+
+    _, engine = bot_api
+    avisos = []
+
+    async def notify(session_id, tenant_id):
+        avisos.append((session_id, tenant_id))
+
+    async def pipeline_ok(db, session_id):
+        meeting = db.get(MeetingSession, session_id)
+        meeting.processing_completed_at, meeting.processing_error = "2026-10-02T10:00:00", ""
+        db.add(meeting); db.commit()
+
+    async def pipeline_crash(db, session_id):
+        raise RuntimeError("boom")
+
+    with Session(engine) as db:
+        row = ingest(db, ActenBotEvent.model_validate(bot_event))
+        inbox_id, session_id = row.id, row.session_id
+    assert asyncio.run(process_one(engine, inbox_id, pipeline=pipeline_ok, notify=notify)) is True
+    assert avisos == [(session_id, 1)]
+    # Un pipeline que revienta no avisa de nada: no hay acta que anunciar.
+    with Session(engine) as db:
+        db.get(BotInbox, inbox_id).state = "queued"; db.commit()
+    assert asyncio.run(process_one(engine, inbox_id, pipeline=pipeline_crash, notify=notify)) is True
+    assert len(avisos) == 1
+    # Un aviso que falla no cambia el resultado del trabajo.
+    async def notify_roto(session_id, tenant_id):
+        raise RuntimeError("smtp caído")
+
+    with Session(engine) as db:
+        db.get(BotInbox, inbox_id).state = "queued"; db.commit()
+    assert asyncio.run(process_one(engine, inbox_id, pipeline=pipeline_ok, notify=notify_roto)) is True
+    with Session(engine) as db:
+        assert db.get(BotInbox, inbox_id).state == "completed"
