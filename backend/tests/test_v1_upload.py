@@ -133,3 +133,21 @@ def test_capacidades_reflejan_la_suscripcion(client, api, db_session):
     assert caps["realtime"] is True
     # Con el bot como origen pero sin servicio configurado, no se promete la invitación.
     assert caps["calendar_invitation"] == {"email": None, "enabled": False}
+
+
+def test_la_clave_del_emparejamiento_sirve_para_todo_el_ciclo(client, api, db_session):
+    codigo = client.post("/api/integrations/pairing", headers=api["jwt"])
+    assert codigo.status_code == 200, codigo.text
+    canje = client.post("/api/v1/pair/redeem", json={"codigo": codigo.json()["codigo"], "plataforma": "Altum"})
+    assert canje.status_code == 200, canje.text
+    clave = next(v for v in canje.json().values() if isinstance(v, str) and v.startswith("nv_"))
+    guardada = db_session.exec(select(ApiKey).where(ApiKey.hashed_key == hashlib.sha256(clave.encode()).hexdigest())).first()
+    assert {"sessions:read", "sessions:write", "sync:write", "org:read", "integrations:write"} <= set(json.loads(guardada.scopes))
+    h = {"X-API-Key": clave, "X-On-Behalf-Of": "*"}
+    assert client.get("/api/v1/capabilities", headers=h).status_code == 200            # leer como empresa
+    subida = client.post("/api/v1/sessions", headers=h,
+                         data={"title": "Desde Altum", "text_content": "Texto suficiente para una sesión."})
+    assert subida.status_code == 202, subida.text                                      # subir una sesión
+    # El código es de un solo uso.
+    otra_vez = client.post("/api/v1/pair/redeem", json={"codigo": codigo.json()["codigo"], "plataforma": "Altum"})
+    assert otra_vez.status_code == 400

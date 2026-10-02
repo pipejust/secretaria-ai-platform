@@ -53,7 +53,12 @@ ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 # Se conceden juntos a propósito: pedirle al administrador que elija entre
 # quince alcances es devolverle justo la complejidad que esto quita.
 ALCANCES_COMPLETOS = [
-    "sessions:read", "sessions:send", "tasks:read", "tasks:write",
+    # `sessions:write` sube grabaciones y manda el bot; `sync:write` empuja
+    # proyectos y fuerza la sincronización; `org:read` deja leer como empresa
+    # (`X-On-Behalf-Of: *`). Sin los tres, una empresa conectada por código
+    # quedaba a medias y había que rehacerle la clave a mano.
+    "sessions:read", "sessions:write", "sessions:send", "tasks:read", "tasks:write",
+    "sync:write", "org:read",
     "ask:query", "calendar:read", "calendar:write",
     "integrations:read", "integrations:write",
     "outputs:read", "outputs:write",
