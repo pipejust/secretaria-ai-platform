@@ -2627,6 +2627,7 @@
     "video_unavailable": "El vídeo no se pudo cargar. Vuelve a intentarlo en unos segundos."
   },
   "meetings_list": {
+    "live_now": "{{n}} en curso · Ver en vivo",
     "video_badge": "Vídeo",
     "has_video": "Esta sesión tiene vídeo: ábrela para verlo",
     "new_live": "Sesión en vivo",
@@ -2738,6 +2739,14 @@
     "move_error": "No se pudo mover la tarjeta."
   },
   "meeting_bot": {
+    "live_watch": "Ver en vivo",
+    "live_title": "Transcripción en vivo",
+    "live_connecting": "Conectando…",
+    "live_live": "En vivo",
+    "live_ended": "La reunión terminó. El acta llegará a Sesiones en unos minutos.",
+    "live_error": "Se perdió la conexión con la transcripción en vivo.",
+    "live_waiting": "Esperando a que alguien hable…",
+    "live_speaker": "Hablante {{n}}",
     "video_included": "Tu suscripción incluye vídeo: las reuniones que graba el bot se guardan con imagen además de audio. Avísalo a las personas participantes.",
     "eyebrow": "ASISTENTE DE REUNIONES",
     "title": "Tu bot de Acten",

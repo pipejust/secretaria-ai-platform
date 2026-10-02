@@ -37,7 +37,7 @@ from routers.auth import get_current_tenant, require_admin, require_session_writ
 from services.api_key_auth import IntegrationContext, require_scopes
 from services.bot_contract import ActenBotEvent
 from services.bot_ingest import BotInbox
-from services.billing_catalog import F_OWNED_BOT, F_VIDEO
+from services.billing_catalog import F_OWNED_BOT, F_REALTIME, F_VIDEO
 from services.cifrado import cifrar, descifrar
 from services.entitlements import require_feature
 
@@ -282,6 +282,7 @@ async def put_config(
                         # defecto: cambiar el nombre apagaba el vídeo.
                         "extra_senders": policy.get("extra_senders", []),
                         "video": policy.get("video", False),
+                        **({"realtime": policy["realtime"]} if "realtime" in policy else {}),
                         "recording_authorized": policy["recording_authorized"],
                         "timezone": policy["timezone"],
                         "bot_name": body.bot_name,
@@ -337,6 +338,12 @@ def graba_video(db, tenant_id: int) -> bool:
     return entitlements.tiene(db, tenant_id, F_VIDEO)
 
 
+def transcribe_en_vivo(db, tenant_id: int) -> bool:
+    from services import entitlements
+
+    return entitlements.tiene(db, tenant_id, F_REALTIME)
+
+
 async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: StartCapture):
     """Pide la captura al bot. Lo comparten la pantalla y la API pública."""
     if kind == "meeting" and not body.meeting_url:
@@ -382,6 +389,10 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
             # Con vídeo si la suscripción lo incluye; lo configura Acten, no el cliente.
             video=graba_video(db, tenant_id),
         )
+        # Transcripción en vivo, también según la suscripción. Solo se manda
+        # cuando aplica: un bot anterior a esta opción rechaza la clave.
+        if transcribe_en_vivo(db, tenant_id):
+            payload["realtime"] = True
     else:
         payload["mime_type"] = body.mime_type
     result = await bot_call(
@@ -603,6 +614,7 @@ async def write_mail_policy(
             "timezone": body.timezone,
             "bot_name": bot_name_of(db, user.tenant_id),
             "video": graba_video(db, user.tenant_id),
+            **({"realtime": True} if transcribe_en_vivo(db, user.tenant_id) else {}),
         },
     )
 
@@ -909,6 +921,9 @@ def _live_public(result: dict, session_id: int | None, project_external_id: str 
         "state": result.get("state"),
         "title": result.get("title"),
         "error_code": result.get("error_code"),
+        # Stream de solo lectura de la transcripción en vivo (WebSocket); solo
+        # mientras el bot está en la reunión y si la suscripción lo incluye.
+        "realtime_url": result.get("live_url"),
         "project_external_id": project_external_id,
         "acten_session_id": session_id,
     }

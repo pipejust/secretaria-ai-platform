@@ -27,6 +27,7 @@ RETENCION_VIDEO_SIN_PLAN = 30
 F_FIREFLIES = "meetings.fireflies"
 F_OWNED_BOT = "meetings.owned_bot"
 F_VIDEO = "meetings.video"
+F_REALTIME = "meetings.realtime"
 F_DOCUMENTS = "documents.export"   # actas en Word y PDF
 F_REPORTS = "reports"
 F_CALENDAR = "calendar"
@@ -38,6 +39,7 @@ FEATURES = {
     F_FIREFLIES: "Reuniones por Fireflies",
     F_OWNED_BOT: "Bot propio de Acten (Meet, Teams, Zoom y grabación web)",
     F_VIDEO: "Grabación de vídeo de la reunión",
+    F_REALTIME: "Transcripción en vivo de la reunión",
     F_DOCUMENTS: "Actas en Word y PDF",
     F_REPORTS: "Reportes ejecutivos",
     F_CALENDAR: "Calendario",
@@ -72,6 +74,8 @@ ADDONS = [
      "features": [F_OWNED_BOT], "requires": [], "sort_order": 1},
     {"key": "video_recording", "name": "Grabación de vídeo", "price_usd_cents": 1900,
      "features": [F_VIDEO], "requires": ["owned_bot"], "sort_order": 2},
+    {"key": "realtime_transcription", "name": "Transcripción en vivo", "price_usd_cents": 1900,
+     "features": [F_REALTIME], "requires": ["owned_bot"], "sort_order": 6},
     {"key": "ask_ai", "name": "Pregúntale a la IA", "price_usd_cents": 1900,
      "features": [F_ASK], "requires": [], "sort_order": 3},
     {"key": "integrations", "name": "Integraciones", "price_usd_cents": 2900,

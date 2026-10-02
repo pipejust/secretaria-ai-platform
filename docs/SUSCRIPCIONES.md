@@ -79,3 +79,10 @@ resultado en `GET /api/v1/capabilities`.
 Los campos `video` de `POST /api/owned-bot/start/meeting`, de
 `PUT /api/owned-bot/mail-policy` y de `POST /api/v1/meetings/live` se
 aceptan pero no tienen efecto.
+
+**Transcripción en vivo** (2026-10-02): función `meetings.realtime`, add-on
+`realtime_transcription` (requiere `owned_bot`). Con ella el bot usa el
+modelo en tiempo real y la reunión expone un stream de solo lectura
+(`live_url` en `/api/owned-bot/meetings`, `realtime_url` en la API pública).
+Se ve en «Bot de reuniones → Ver en vivo». Como el vídeo, la activa Acten
+por empresa; el cliente no la elige.

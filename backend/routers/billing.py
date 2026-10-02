@@ -425,6 +425,7 @@ def list_tenant_subscriptions(_u: User = Depends(require_superadmin),
             "notes": sub.notes if sub else "",
             # Lo que la empresa tiene activo, ya resuelto con plan + add-ons.
             "owned_bot": e.tiene(cat.F_OWNED_BOT), "video": e.tiene(cat.F_VIDEO),
+            "realtime": e.tiene(cat.F_REALTIME),
             "video_retention_days": e.video_retention_days,
             "video_retention_override": sub.video_retention_days if sub else None,
         })

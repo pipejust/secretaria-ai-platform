@@ -63,6 +63,8 @@ export interface BotMeeting {
   created_at?: number;
   updated_at?: number;
   result_url?: string;
+  /** Stream de solo lectura de la transcripción en vivo; solo mientras el bot está en la reunión. */
+  live_url?: string | null;
   /** Lo añade bot_control.py al listar: sesión Acten ya importada, si existe. */
   acten_session_id?: string | null;
 }

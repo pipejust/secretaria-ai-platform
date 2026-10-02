@@ -8,6 +8,7 @@ import {
   BotCapabilities, BotMeeting, BotSpeaker, CaptureKind, EmailReceipt, MeetingBotService, MeetingResult,
   StartCapturePayload, TranscriptSegment,
 } from '../../services/meeting-bot.service';
+import { LiveTranscriptComponent } from './live-transcript.component';
 import { BrowserRecording, RecordingMeta } from './browser-recording';
 
 /** Forma mínima de un error HTTP (HttpErrorResponse) o de un Error normal
@@ -29,7 +30,7 @@ interface SavedCaptureIdentity {
 
 @Component({
   selector: 'app-meeting-bot', standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterLink, TranslateModule, LiveTranscriptComponent],
   templateUrl: './meeting-bot.component.html', styleUrl: './meeting-bot.component.css',
 })
 export class MeetingBotComponent implements OnInit, OnDestroy {
@@ -38,6 +39,11 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   private cd = inject(ChangeDetectorRef);
   private translate = inject(TranslateService);
   private timer?: ReturnType<typeof setInterval>;
+  /** Reunión cuya transcripción en vivo se está viendo; la URL se conserva aunque la lista se refresque. */
+  live: { id: string; title: string; url: string } | null = null;
+  watchLive(item: BotMeeting): void {
+    this.live = item.live_url ? { id: item.id, title: item.title || item.external_id, url: item.live_url } : null;
+  }
   private refreshing = false;
   private destroyed = false;
   // Getters, no campos: el perfil llega por /auth/me de forma asíncrona y

@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 
 from models import IntegrationSetting, Tenant, User
 from services import entitlements, meeting_source
-from services.billing_catalog import F_VIDEO
+from services.billing_catalog import F_REALTIME, F_VIDEO
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,11 @@ async def sincronizar(db: Session, tenant_id: int, extra: list[str] | None = Non
         # Acten, las invitaciones por correo cambian en la siguiente pasada.
         "video": entitlements.tiene(db, tenant_id, F_VIDEO),
     }
+    # Igual con la transcripción en vivo. La clave solo se manda si aplica o
+    # si el bot ya la conoce: uno anterior a esta opción la rechazaría.
+    en_vivo = entitlements.tiene(db, tenant_id, F_REALTIME)
+    if en_vivo or "realtime" in (actual or {}):
+        body["realtime"] = en_vivo
     # Corre cada pocos minutos: si nada cambió, no se escribe.
     if actual is not None and all(actual.get(k) == v for k, v in body.items()):
         return None

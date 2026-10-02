@@ -361,6 +361,8 @@ def get_capabilities(
         "owned_bot": bot,
         # Las reuniones que graba el bot llevan vídeo además de audio.
         "video": bot and e.tiene(cat.F_VIDEO),
+        # La transcripción se puede seguir en vivo (`realtime_url` en GET /meetings/live/{id}).
+        "realtime": bot and e.tiene(cat.F_REALTIME),
         # Días que se conserva el vídeo; null = sin límite.
         "video_retention_days": e.video_retention_days,
         # Subir una grabación o un texto (POST /sessions) va con cualquier plan.

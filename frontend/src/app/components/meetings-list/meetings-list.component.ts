@@ -82,6 +82,8 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     showLiveModal = false;
     isJoining = false;
     liveForm = { url: '', title: '', language: 'es', projectId: '', authorized: false };
+    /** Reuniones que el bot está grabando ahora mismo. */
+    liveNow = 0;
 
     showDeleteModal = false;
     sessionToDelete: any = null;
@@ -152,6 +154,17 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         this.loadSessions();
         this.loadProjects();
         this.loadStats();
+        void this.loadLiveNow();
+    }
+
+    /** Cuántas reuniones tiene el bot en curso; sin bot o si falla, simplemente no se avisa. */
+    async loadLiveNow(): Promise<void> {
+        if (!this.canUseBot) { return; }
+        try {
+            const meetings = await this.bot.listMeetings();
+            this.liveNow = meetings.filter((m) => m.state === 'joining' || m.state === 'recording').length;
+        } catch { this.liveNow = 0; }
+        this.cdr.detectChanges();
     }
 
     // ---------- KPIs globales (no paginados) ----------
@@ -942,6 +955,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             });
             this.showLiveModal = false;
             this.toast.success(this.translate.instant('meeting_bot.notice_join_requested'));
+            void this.loadLiveNow();
         } catch (err: any) {
             const raw = err?.error?.detail;
             const detail = typeof raw === 'string' ? raw : (raw?.message || this.translate.instant('meetings_list.live_error_generic'));

@@ -14,6 +14,10 @@
                 <h1 class="mt-title">{{ 'sidebar.meetings' | translate }}</h1>
                 <p class="mt-sub">{{ 'meetings.subtitle' | translate }}</p>
             </div>
+            <a class="mt-live-now" *ngIf="liveNow" routerLink="/admin/meeting-bot">
+                <span class="mt-live-dot" aria-hidden="true"></span>
+                {{ 'meetings_list.live_now' | translate:{ n: liveNow } }}
+            </a>
             <div class="mt-new" (keydown.escape)="showNewMenu = false">
                 <button class="mt-cta" (click)="onNewClick()"
                         [attr.aria-haspopup]="canUseBot ? 'menu' : null"

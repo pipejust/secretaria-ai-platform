@@ -89,7 +89,8 @@ def control(tmp_path, monkeypatch):
             return httpx.Response(
                 200,
                 json={"id": mid, "external_id": external, "state": "joining",
-                      "title": "Reunión", "error_code": None, "provider_id": "interno"},
+                      "title": "Reunión", "error_code": None, "provider_id": "interno",
+                      "live_url": "wss://realtime.skribby.test/solo-lectura"},
                 request=request,
             )
         if request.url.path == "/v1/mail-policy":
@@ -301,7 +302,7 @@ def test_mail_policy_is_admin_only_and_forwarded_to_bot(control):
     # sincronizan; solo viajan los remitentes extra que escribió el admin.
     assert json.loads(forwarded[-1].content) == {
         **body, "extra_senders": ["ana@example.test"], "bot_name": "Asistente Acten",
-        "video": True,  # empresa en prueba: el vídeo viene con la suscripción
+        "video": True, "realtime": True,  # empresa en prueba: vienen con la suscripción
     }
     assert client.get("/api/owned-bot/mail-policy").status_code == 200
     assert client.get("/api/owned-bot/mail-policy", headers={"X-Test-User": "3"}).status_code == 403
@@ -384,6 +385,7 @@ def test_video_follows_the_subscription_not_the_client(control):
     assert ultimo("/v1/mail-policy")["video"] is True
     assert client.post("/api/owned-bot/start/meeting", json={**meeting, "external_id": "v-1"}).status_code == 202
     assert ultimo("/v1/meetings")["video"] is True
+    assert ultimo("/v1/meetings")["realtime"] is True and ultimo("/v1/mail-policy")["realtime"] is True
     # Con un plan sin vídeo no lo hay, aunque el cliente lo pida.
     with Session(engine) as db:
         cat.sembrar_catalogo(db)
@@ -398,6 +400,8 @@ def test_video_follows_the_subscription_not_the_client(control):
     assert ultimo("/v1/mail-policy")["video"] is False
     r = client.post("/api/owned-bot/start/meeting", json={**meeting, "external_id": "v-2", "video": True})
     assert r.status_code == 202 and ultimo("/v1/meetings")["video"] is False
+    # Sin la función, la clave ni se manda al iniciar; la política ya la conoce y se apaga.
+    assert "realtime" not in ultimo("/v1/meetings")
     # En la API pública `video` se acepta por compatibilidad, pero manda la suscripción.
     h = _api_key(engine, ["sessions:read", "sessions:write", "org:read"])
     assert client.post("/api/v1/meetings/live", headers=h, json={**meeting, "video": True}).status_code == 202
@@ -463,6 +467,7 @@ def test_public_api_sends_the_bot_to_a_live_meeting(control):
     assert estado.status_code == 200, estado.text
     assert estado.json() == {"id": live["id"], "external_id": "altum-1", "state": "joining",
                              "title": "Reunión", "error_code": None,
+                             "realtime_url": "wss://realtime.skribby.test/solo-lectura",
                              "project_external_id": "ext-p", "acten_session_id": session_id}
     assert client.get(f"/api/v1/meetings/live/{uuid.uuid4()}", headers=h).status_code == 404
 

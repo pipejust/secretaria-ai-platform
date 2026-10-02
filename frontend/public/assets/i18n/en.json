@@ -2627,6 +2627,7 @@
     "video_unavailable": "The video could not be loaded. Try again in a few seconds."
   },
   "meetings_list": {
+    "live_now": "{{n}} in progress · Watch live",
     "video_badge": "Video",
     "has_video": "This session has video: open it to watch",
     "new_live": "Live session",
@@ -2738,6 +2739,14 @@
     "move_error": "The card could not be moved."
   },
   "meeting_bot": {
+    "live_watch": "Watch live",
+    "live_title": "Live transcript",
+    "live_connecting": "Connecting…",
+    "live_live": "Live",
+    "live_ended": "The meeting ended. The minutes will reach Sessions in a few minutes.",
+    "live_error": "The connection to the live transcript was lost.",
+    "live_waiting": "Waiting for someone to speak…",
+    "live_speaker": "Speaker {{n}}",
     "video_included": "Your subscription includes video: meetings recorded by the bot are saved with image as well as audio. Let the participants know.",
     "eyebrow": "MEETING ASSISTANT",
     "title": "Your Acten bot",

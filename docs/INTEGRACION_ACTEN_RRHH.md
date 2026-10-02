@@ -830,6 +830,7 @@ endpoint dice qué hay, para mostrar u ocultar opciones en su interfaz:
 | `owned_bot` | `true` → se puede usar `POST /meetings/live` (si no, responde `402` o `409`) |
 | `video` | `true` → las reuniones que graba el bot llevan vídeo además de audio. No hay parámetro para encenderlo o apagarlo |
 | `video_retention_days` | Días que se conserva el vídeo; `null` = sin límite. El acta y la transcripción no caducan |
+| `realtime` | `true` → la transcripción se puede seguir **en vivo** mientras dura la reunión (ver `realtime_url` abajo) |
 | `upload` | `POST /sessions` disponible |
 | `meeting_source` | `fireflies`, `owned_bot` o `both` |
 
@@ -907,6 +908,21 @@ motivo en `error_code` (por ejemplo `capture_not_admitted` si nadie admitió
 al bot). Traten cualquier valor desconocido como «en curso». `acten_session_id` deja de
 ser `null` cuando la reunión ya es una sesión de Acten. Solo responde por
 capturas pedidas a través de Acten (API o pantalla); `404` para el resto.
+
+**Transcripción en vivo.** Si la empresa la tiene (`capabilities.realtime`),
+mientras el bot está en la reunión la respuesta trae `realtime_url`: un
+WebSocket (`wss://…`) de **solo lectura** que se puede abrir directamente
+desde el navegador. Mensajes JSON `{"type": …, "data": …}`:
+
+- `connected`: primer mensaje; `data.transcripts` trae lo dicho hasta ese
+  momento (sirve para reconectar sin perder nada) y `data.status`.
+- `ts`: un segmento nuevo — `{"transcript": "…", "start": 1.23, "end": 4.56,
+  "speaker": 0, "speaker_name": "Ana Ruiz"}`. Los primeros pueden venir como
+  «Speaker 1» hasta que se empareja la voz con el participante.
+- `status-update`: `data.new_status`; con `finished` la reunión terminó.
+
+`realtime_url` es `null` antes de que el bot entre y después de que salga.
+El acta final (con las voces separadas) sigue llegando como sesión.
 
 ### Autenticación de su servidor contra Acten
 

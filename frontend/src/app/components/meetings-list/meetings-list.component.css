@@ -139,6 +139,28 @@
 .mt-new-text strong { font-size: var(--text-14); font-weight: var(--fw-semibold); }
 .mt-new-text small { font-size: 0.75rem; color: var(--color-fg-muted); line-height: 1.35; }
 
+/* Reunión en curso: enlace a la transcripción en vivo */
+.mt-live-now {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 var(--space-12, 12px);
+    margin-right: var(--space-8, 8px);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-14);
+    font-weight: var(--fw-semibold);
+    color: var(--color-fg-default);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 120ms ease;
+}
+.mt-live-now:hover, .mt-live-now:focus-visible { background: var(--brand-cream-100); }
+.mt-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #dc3b30; animation: mt-live-pulse 1.4s ease-in-out infinite; }
+@keyframes mt-live-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .mt-live-dot { animation: none; } }
+
 /* Sesión con vídeo guardado */
 .row-video {
     display: inline-flex;

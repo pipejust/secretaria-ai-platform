@@ -122,10 +122,11 @@ def test_capacidades_reflejan_la_suscripcion(client, api, db_session):
     assert r.status_code == 200, r.text
     # Empresa recién creada: en prueba, todavía por Fireflies.
     assert r.json() == {"plan": None, "status": "trialing", "meeting_source": "fireflies",
-                        "fireflies": True, "owned_bot": False, "video": False,
+                        "fireflies": True, "owned_bot": False, "video": False, "realtime": False,
                         "video_retention_days": 30, "upload": True}
     t = db_session.get(Tenant, api["tenant"])
     t.meeting_source = "both"
     db_session.add(t); db_session.commit()
     caps = client.get("/api/v1/capabilities", headers=api["empresa"]).json()
     assert caps["owned_bot"] is True and caps["video"] is True and caps["meeting_source"] == "both"
+    assert caps["realtime"] is True

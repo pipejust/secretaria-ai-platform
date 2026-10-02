@@ -2627,6 +2627,7 @@
     "video_unavailable": "No s'ha pogut carregar el vídeo. Torna-ho a provar d'aquí a uns segons."
   },
   "meetings_list": {
+    "live_now": "{{n}} en curs · Veure en viu",
     "video_badge": "Vídeo",
     "has_video": "Aquesta sessió té vídeo: obre-la per veure'l",
     "new_live": "Sessió en viu",
@@ -2738,6 +2739,14 @@
     "move_error": "No s'ha pogut moure la targeta."
   },
   "meeting_bot": {
+    "live_watch": "Veure en viu",
+    "live_title": "Transcripció en viu",
+    "live_connecting": "Connectant…",
+    "live_live": "En viu",
+    "live_ended": "La reunió ha acabat. L'acta arribarà a Sessions d'aquí a uns minuts.",
+    "live_error": "S'ha perdut la connexió amb la transcripció en viu.",
+    "live_waiting": "Esperant que algú parli…",
+    "live_speaker": "Parlant {{n}}",
     "video_included": "La teva subscripció inclou vídeo: les reunions que grava el bot es desen amb imatge a més d'àudio. Avisa'n les persones participants.",
     "eyebrow": "ASSISTENT DE REUNIONS",
     "title": "El teu bot d'Acten",
