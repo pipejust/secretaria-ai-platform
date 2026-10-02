@@ -2627,6 +2627,8 @@
     "video_unavailable": "The video could not be loaded. Try again in a few seconds."
   },
   "meetings_list": {
+    "video_badge": "Video",
+    "has_video": "This session has video: open it to watch",
     "new_live": "Live session",
     "new_live_hint": "Paste the link and the bot joins the meeting now",
     "new_upload": "Upload a recording or text",

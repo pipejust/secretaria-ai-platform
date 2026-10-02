@@ -594,6 +594,25 @@ Query: `project_external_id`, `updated_since`, `status`, `page`, `limit`, `searc
 Devuelve además: `summary`, `decisions`, `agreements`, `risks`,
 `participants[]`, `tasks[]`.
 
+### `GET /api/v1/sessions/{id}/video` — ver el vídeo de la reunión
+
+Alcance `sessions:read`. El listado y el detalle de sesiones traen
+`has_video`; cuando es `true`, este endpoint devuelve un enlace temporal:
+
+```json
+{"url": "https://…firmada…", "expires_in": 900, "content_type": "video/mp4",
+ "available_until": "2026-12-31T09:39:46"}
+```
+
+- `url` va directa como `src` de un `<video controls>`; admite saltar a
+  cualquier punto. **Caduca a los `expires_in` segundos**: no la guarden;
+  pidan otra al abrir el reproductor (y si la reproducción falla por
+  caducidad, otra más y continúen desde el mismo segundo).
+- `available_until`: fecha en que la retención de la suscripción borra el
+  vídeo (`null` = no caduca). El acta y la transcripción no se borran.
+- `404` si la sesión no tiene vídeo o no es visible para esa persona;
+  `503` si el almacenamiento no responde (reintentable).
+
 ### `GET /api/v1/sessions/{id}/transcript`
 Texto completo con marcadores de speaker. Separado porque pesa.
 

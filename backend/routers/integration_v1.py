@@ -288,6 +288,8 @@ def list_sessions(
                 else "web"
             ),
             "duration_min": max(1, round(palabras / 150)) if palabras else None,
+            # Hay grabación de vídeo guardada: se pide en /sessions/{id}/video.
+            "has_video": bool(s.recording_video_key),
             "duration_is_estimate": True,
             "counts": {"tasks": n_tasks},
         })
@@ -324,6 +326,7 @@ def get_session_detail(
         "date": s.date,
         "project_external_id": proj_refs.get(s.project_id) if s.project_id else None,
         "status": s.status,
+        "has_video": bool(s.recording_video_key),
         "summary": s.raw_summary or "",
         "decisions": s.processed_decisions or "",
         "agreements": s.processed_agreements or "",
@@ -420,6 +423,42 @@ async def create_session_from_upload(
         "date": s.date,
         "status": s.status,
         "project_external_id": project_external_id if project_id else None,
+    }
+
+
+@router.get("/sessions/{session_id}/video")
+def get_session_video(
+    session_id: int,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
+):
+    """Enlace temporal para reproducir el vídeo de la reunión.
+
+    El vídeo vive en el almacenamiento de Acten y no es público: se entrega
+    una URL firmada que caduca (`expires_in` segundos). Para seguir
+    reproduciendo después, se pide otra. Sirve tal cual como `src` de un
+    `<video>` (MP4, admite saltar a cualquier punto).
+    """
+    from services import media_storage
+
+    s = db.get(MeetingSession, session_id)
+    if not s or s.tenant_id != ctx.tenant.id:
+        raise HTTPException(404, "Sesión no encontrada.")
+    if ctx.on_behalf_of and s.project_id not in ctx.visible_project_ids:
+        raise HTTPException(404, "Sesión no encontrada.")
+    if not s.recording_video_key:
+        raise HTTPException(404, "Esta sesión no tiene vídeo.")
+    try:
+        url = media_storage.url_firmada(db, s.recording_video_key, media_storage.SEGUNDOS_URL)
+    except media_storage.StorageError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    vence = media_storage.caduca_el(db, s)
+    return {
+        "url": url,
+        "expires_in": media_storage.SEGUNDOS_URL,
+        "content_type": "video/webm" if s.recording_video_key.endswith(".webm") else "video/mp4",
+        # Fecha en que la retención del plan borra el vídeo; null = no caduca.
+        "available_until": vence.isoformat() if vence else None,
     }
 
 

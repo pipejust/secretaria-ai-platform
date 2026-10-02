@@ -2627,6 +2627,8 @@
     "video_unavailable": "El vídeo no se pudo cargar. Vuelve a intentarlo en unos segundos."
   },
   "meetings_list": {
+    "video_badge": "Vídeo",
+    "has_video": "Esta sesión tiene vídeo: ábrela para verlo",
     "new_live": "Sesión en vivo",
     "new_live_hint": "Pega el enlace y el bot entra ahora a la reunión",
     "new_upload": "Subir grabación o texto",

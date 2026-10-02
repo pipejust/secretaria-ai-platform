@@ -428,3 +428,40 @@ def test_la_retencion_del_video_depende_del_plan(client, db_session, s3, monkeyp
     assert vigente.recording_video_key and eterna.recording_video_key
     # Lo que queda no se toca en el siguiente pase.
     assert media_storage.purgar_vencidos(db_session) == 0
+
+
+def test_la_api_publica_entrega_el_video_solo_a_quien_ve_la_sesion(client, db_session, s3, monkeypatch):
+    import hashlib
+
+    from models import ApiKey, Project
+
+    monkeypatch.setattr(database, "engine", db_session.get_bind())
+    _configurar(db_session)
+    t, otra = _empresa(db_session), _empresa(db_session)
+    _token(db_session, t); _token(db_session, otra)  # un usuario por empresa, dueño de la clave
+
+    def clave(tenant):
+        valor = "acten_" + uuid.uuid4().hex * 2
+        dueno = db_session.exec(select(User).where(User.tenant_id == tenant.id)).first()
+        db_session.add(ApiKey(tenant_id=tenant.id, user_id=dueno.id, name="t",
+                              scopes=json.dumps(["sessions:read", "org:read"]),
+                              hashed_key=hashlib.sha256(valor.encode()).hexdigest()))
+        db_session.commit()
+        return {"X-API-Key": valor, "X-On-Behalf-Of": "*"}
+
+    con = _sesion_con_video(db_session, t, 1)
+    sin = MeetingSession(tenant_id=t.id, fireflies_id="BOT-sin", title="Sin vídeo", date="2026-09-12")
+    db_session.add(sin); db_session.commit(); db_session.refresh(sin)
+    mia, ajena = clave(t), clave(otra)
+
+    r = client.get(f"/api/v1/sessions/{con.id}/video", headers=mia)
+    assert r.status_code == 200, r.text
+    cuerpo = r.json()
+    assert cuerpo["url"] == f"https://s3.test/acten-video/{con.recording_video_key}?X-Amz-Expires=900"
+    assert cuerpo["expires_in"] == 900 and cuerpo["content_type"] == "video/mp4" and cuerpo["available_until"]
+    assert client.get(f"/api/v1/sessions/{sin.id}/video", headers=mia).status_code == 404
+    assert client.get(f"/api/v1/sessions/{con.id}/video", headers=ajena).status_code == 404
+    assert client.get(f"/api/v1/sessions/{con.id}", headers=mia).json()["has_video"] is True
+    assert client.get(f"/api/v1/sessions/{sin.id}", headers=mia).json()["has_video"] is False
+    lista = {i["id"]: i["has_video"] for i in client.get("/api/v1/sessions", headers=mia).json()["items"]}
+    assert lista[con.id] is True and lista[sin.id] is False
