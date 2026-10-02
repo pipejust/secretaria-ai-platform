@@ -50,6 +50,7 @@ def api(test_engine, monkeypatch, db_session: Session):
     db_session.add(p); db_session.add(ajeno); db_session.commit(); db_session.refresh(p)
     jwt = {"Authorization": "Bearer " + create_access_token({"sub": u.email, "tenant_id": t.id})}
     return {"jwt": jwt, "h": clave(["sessions:read", "sessions:write"]), "lectura": clave(["sessions:read"]),
+            "empresa": {**clave(["sessions:read", "org:read"]), "X-On-Behalf-Of": "*"},
             "ref": p.external_ref, "pid": p.id, "ajeno": ajeno.external_ref, "tenant": t.id,
             "procesadas": procesadas}
 
@@ -114,3 +115,17 @@ def test_la_subida_desde_la_pantalla_sigue_igual(client, api, db_session):
     s = db_session.get(MeetingSession, r.json()["session_id"])
     assert s.project_id == api["pid"] and s.language == "Español" and s.status == "processing"
     assert api["procesadas"] == [s.id]
+
+
+def test_capacidades_reflejan_la_suscripcion(client, api, db_session):
+    r = client.get("/api/v1/capabilities", headers=api["empresa"])
+    assert r.status_code == 200, r.text
+    # Empresa recién creada: en prueba, todavía por Fireflies.
+    assert r.json() == {"plan": None, "status": "trialing", "meeting_source": "fireflies",
+                        "fireflies": True, "owned_bot": False, "video": False,
+                        "video_retention_days": 30, "upload": True}
+    t = db_session.get(Tenant, api["tenant"])
+    t.meeting_source = "both"
+    db_session.add(t); db_session.commit()
+    caps = client.get("/api/v1/capabilities", headers=api["empresa"]).json()
+    assert caps["owned_bot"] is True and caps["video"] is True and caps["meeting_source"] == "both"

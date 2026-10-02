@@ -17,6 +17,9 @@ interface EditorForm {
     /** yyyy-mm-dd para el <input type="date">; vacío = sin vencimiento. */
     period_end: string;
     notes: string;
+    meeting_source: 'fireflies' | 'owned_bot' | 'both';
+    /** Vacío = los días del plan; 0 = sin límite. */
+    video_days: number | null;
 }
 
 /** Asignación manual de plan por empresa (contratos, cortesías, Enterprise). */
@@ -75,7 +78,8 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
     get addons(): AddOn[] { return this.catalog?.addons ?? []; }
 
     private emptyForm(): EditorForm {
-        return { plan_key: '', addons: new Set<string>(), status: 'active', period_end: '', notes: '' };
+        return { plan_key: '', addons: new Set<string>(), status: 'active', period_end: '', notes: '',
+                 meeting_source: 'fireflies', video_days: null };
     }
 
     private pickRow(): void {
@@ -87,11 +91,23 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
             status: r?.status === 'expired' ? 'cancelled' : 'active',
             period_end: r?.period_end ? r.period_end.slice(0, 10) : '',
             notes: r?.notes ?? '',
+            meeting_source: (r?.meeting_source as EditorForm['meeting_source']) ?? 'fireflies',
+            video_days: r?.video_retention_override ?? null,
         };
         this.cdr.detectChanges();
     }
 
     isAddonOn(key: string): boolean { return this.form.addons.has(key); }
+
+    /** El bot como origen exige su add-on (o un plan que ya lo traiga). */
+    get botAvailable(): boolean {
+        const plan = this.plans.find((p) => p.key === this.form.plan_key);
+        return this.form.addons.has('owned_bot') || !!plan?.features.includes('meetings.owned_bot');
+    }
+
+    get planVideoDays(): number | null {
+        return this.plans.find((p) => p.key === this.form.plan_key)?.video_retention_days ?? null;
+    }
 
     toggleAddon(key: string): void {
         const next = new Set(this.form.addons);
@@ -114,6 +130,8 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
             status: this.form.status,
             current_period_end: this.form.period_end ? `${this.form.period_end}T23:59:59` : null,
             notes: this.form.notes.trim(),
+            meeting_source: this.botAvailable ? this.form.meeting_source : 'fireflies',
+            video_retention_days: this.videoDaysValue(),
         };
         this.saving = true;
         this.billing.updateTenantSubscription(this.tenantId, body).pipe(takeUntil(this.destroy$)).subscribe({
@@ -121,7 +139,10 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
                 this.saving = false;
                 this.rows = this.rows.map((r) => r.tenant_id === this.tenantId
                     ? { ...r, plan: me.entitlements.plan, status: me.entitlements.status, addons: me.entitlements.addons,
-                        billing_mode: me.entitlements.billing_mode, period_end: me.entitlements.period_end, notes: body.notes }
+                        billing_mode: me.entitlements.billing_mode, period_end: me.entitlements.period_end, notes: body.notes,
+                        meeting_source: body.meeting_source ?? r.meeting_source,
+                        video_retention_override: body.video_retention_days ?? null,
+                        video_retention_days: me.entitlements.video_retention_days }
                     : r);
                 this.row = this.rows.find((r) => r.tenant_id === this.tenantId) ?? null;
                 this.toast.success(this.translate.instant('tenants.billing_saved'));
@@ -133,6 +154,12 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
                 this.cdr.detectChanges();
             },
         });
+    }
+
+    private videoDaysValue(): number | null {
+        const v = this.form.video_days;
+        if (v === null || v === undefined || String(v) === '' || Number.isNaN(Number(v))) { return null; }
+        return Math.max(0, Math.trunc(Number(v)));
     }
 
     private detail(e: HttpErrorResponse): string {

@@ -302,24 +302,40 @@ def test_grabacion_demasiado_grande_no_se_copia(test_engine, db_session, s3, des
 # ─────────────────────────── plan ───────────────────────────
 
 
-def test_pedir_video_sin_la_funcion_devuelve_402(client, db_session, monkeypatch):
+def test_retencion_propia_de_la_empresa_manda_sobre_el_plan(client, db_session, s3, monkeypatch):
     monkeypatch.setattr(database, "engine", db_session.get_bind())
+    _configurar(db_session)
     cat.sembrar_catalogo(db_session)
+    sa = _token(db_session, _duenio(db_session), superadmin=True)
+    client.put("/api/billing/catalog/plans/business", headers=sa, json={"video_retention_days": 90})
     t = _empresa(db_session, dias=cat.DIAS_PRUEBA + 1)
-    admin = _token(db_session, t)
-    sub = Subscription(tenant_id=t.id, plan_key="business", status="active", billing_mode="manual",
-                       addons_json=json.dumps(["owned_bot"]))
-    db_session.add(sub); db_session.commit()
-    body = {"external_id": "agenda-9", "meeting_url": "https://meet.google.com/abc-defg-hij",
-            "recording_authorized": True, "video": True}
-    r = client.post("/api/owned-bot/start/meeting", headers=admin, json=body)
-    assert r.status_code == 402, r.text
-    assert r.json()["detail"]["feature"] == cat.F_VIDEO
-    # Con el add-on de vídeo pasa la puerta del plan (y falla después por no
-    # tener el bot conectado, que es otra cosa).
-    sub.addons_json = json.dumps(["owned_bot", "video_recording"]); db_session.add(sub); db_session.commit()
-    r = client.post("/api/owned-bot/start/meeting", headers=admin, json=body)
-    assert r.status_code == 503
+    asignar = lambda **extra: client.put(f"/api/billing/tenants/{t.id}", headers=sa, json={  # noqa: E731
+        "plan_key": "business", "addons": ["owned_bot", "video_recording"], **extra})
+    de = __import__("services.entitlements", fromlist=["x"]).de_empresa
+
+    r = asignar(meeting_source="both")
+    assert r.status_code == 200, r.text
+    assert r.json()["meeting_source"]["source"] == "both" and r.json()["entitlements"]["video_retention_days"] == 90
+    vieja = _sesion_con_video(db_session, t, 100)          # 100 días > 90 del plan…
+    assert asignar(video_retention_days=365).status_code == 200
+    db_session.expire_all()
+    assert de(db_session, t.id).video_retention_days == 365  # …pero esta empresa tiene 365
+    media_storage.purgar_vencidos(db_session)
+    db_session.refresh(vieja)
+    assert vieja.recording_video_key
+    assert asignar(video_retention_days=0).status_code == 200
+    db_session.expire_all()
+    assert de(db_session, t.id).video_retention_days is None  # 0 = sin límite
+    assert asignar().status_code == 200
+    db_session.expire_all()
+    assert de(db_session, t.id).video_retention_days == 90    # sin ajuste: vuelve al plan
+    fila = next(i for i in client.get("/api/billing/tenants", headers=sa).json()["items"] if i["tenant_id"] == t.id)
+    assert fila["owned_bot"] and fila["video"] and fila["video_retention_days"] == 90
+    assert fila["video_retention_override"] is None and fila["meeting_source"] == "both"
+    # Sin el add-on del bot no se puede elegir el bot como origen.
+    r = client.put(f"/api/billing/tenants/{t.id}", headers=sa,
+                   json={"plan_key": "business", "addons": [], "meeting_source": "owned_bot"})
+    assert r.status_code == 422
 
 
 # ─────────────────────────── reproducción ───────────────────────────

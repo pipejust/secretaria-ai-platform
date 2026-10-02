@@ -740,6 +740,14 @@
     "msg_delete_failed": "No pude eliminar el usuario. Inténtalo de nuevo en unos minutos."
   },
   "tenants": {
+    "billing_source": "Origen de las reuniones",
+    "billing_source_bot": "Bot propio de Acten",
+    "billing_source_both": "Ambos",
+    "billing_source_hint": "Por dónde entran las reuniones de esta empresa.",
+    "billing_source_needs_bot": "Activa el add-on «Bot propio de Acten» para elegir el bot.",
+    "billing_video_days": "Días de vídeo de esta empresa",
+    "billing_video_days_plan": "Según el plan ({{n}})",
+    "billing_video_days_hint": "Vacío = los días de su plan. 0 = sin límite. El vídeo y el bot se activan con los add-ons de arriba; el cliente no los elige al grabar.",
     "title": "Empresas",
     "subtitle": "Gestioná las empresas registradas en la plataforma.",
     "create_tenant": "Crear empresa",
@@ -2728,6 +2736,7 @@
     "move_error": "No se pudo mover la tarjeta."
   },
   "meeting_bot": {
+    "video_included": "Tu suscripción incluye vídeo: las reuniones que graba el bot se guardan con imagen además de audio. Avísalo a las personas participantes.",
     "eyebrow": "ASISTENTE DE REUNIONES",
     "title": "Tu bot de Acten",
     "subtitle": "Captura una conversación y vuelve a cada decisión, voz y momento.",

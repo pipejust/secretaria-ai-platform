@@ -111,6 +111,7 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE actionitem ADD COLUMN project_id INTEGER REFERENCES project(id)",
             "ALTER TABLE plan ADD COLUMN video_retention_days INTEGER",
             "ALTER TABLE botcontrollink ADD COLUMN project_id INTEGER REFERENCES project(id)",
+            "ALTER TABLE subscription ADD COLUMN video_retention_days INTEGER",
         ]
     else:
         statements = [
@@ -327,6 +328,8 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE plan ADD COLUMN IF NOT EXISTS video_retention_days INTEGER",
             # Proyecto elegido al mandar el bot a una reunión.
             "ALTER TABLE botcontrollink ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES project(id) ON DELETE SET NULL",
+            # Retención de vídeo propia de una empresa (NULL = la del plan, 0 = sin límite).
+            "ALTER TABLE subscription ADD COLUMN IF NOT EXISTS video_retention_days INTEGER",
         ]
 
     from sqlalchemy import text

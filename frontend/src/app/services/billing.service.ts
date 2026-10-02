@@ -133,6 +133,13 @@ export interface TenantSubscriptionRow {
     trial_ends: string | null;
     meeting_source: string;
     notes: string;
+    /** Resuelto con plan + add-ons. */
+    owned_bot: boolean;
+    video: boolean;
+    /** Días de vídeo efectivos; null = sin límite. */
+    video_retention_days: number | null;
+    /** Ajuste propio de la empresa; null = usa el del plan, 0 = sin límite. */
+    video_retention_override: number | null;
 }
 
 export interface TenantSubscriptionInput {
@@ -141,6 +148,9 @@ export interface TenantSubscriptionInput {
     status: 'active' | 'cancelled';
     current_period_end: string | null;
     notes: string;
+    meeting_source?: 'fireflies' | 'owned_bot' | 'both';
+    /** null = los días del plan; 0 = sin límite. */
+    video_retention_days?: number | null;
 }
 
 export interface WompiConfigState {

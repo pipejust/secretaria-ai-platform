@@ -67,7 +67,7 @@ describe('Meeting bot screen', () => {
     http.verify();
     sessionStorage.clear();
   });
-  it('hides the video option without the plan feature and sends video:true with it', async () => {
+  it('never lets the client choose video: the subscription decides, the screen only says so', async () => {
     // Ivy toma los hooks del prototipo: un espía sobre la instancia no evita
     // que ngOnInit real pida /config y /capabilities.
     const init = vi.spyOn(MeetingBotComponent.prototype, 'ngOnInit').mockImplementation(async () => {});
@@ -80,14 +80,14 @@ describe('Meeting bot screen', () => {
     user.tenant = { id: 1, entitlements: { features: ['meetings.video'] } };
     fixture.detectChanges();
     expect(page.canRecordVideo).toBe(true);
-    expect(fixture.nativeElement.querySelector('input[name="video"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('input[name="video"]')).toBeNull();
     vi.spyOn(page, 'refresh').mockResolvedValue(undefined);
-    page.authorized = true; page.video = true; page.meetingUrl = 'https://meet.google.com/abc-defg-hij';
+    page.authorized = true; page.meetingUrl = 'https://meet.google.com/abc-defg-hij';
     sessionStorage.clear();
     const joined = page.join();
     const http = TestBed.inject(HttpTestingController);
     const request = http.expectOne(r => r.method === 'POST' && r.url.endsWith('/start/meeting'));
-    expect(request.request.body.video).toBe(true);
+    expect('video' in request.request.body).toBe(false);
     expect(request.request.body.meeting_url).toBe('https://meet.google.com/abc-defg-hij');
     request.flush({ id: 'remote-id', external_id: request.request.body.external_id });
     await joined;

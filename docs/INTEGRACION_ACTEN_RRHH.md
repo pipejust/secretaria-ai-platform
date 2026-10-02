@@ -794,6 +794,26 @@ horario, porque la hora va en `due_time` y recortarla en silencio sería
 peor que rechazarla. Para dejar la tarea sin fecha, mándenlo como `null` u
 omítanlo. Aplica igual en el `PATCH`.
 
+### `GET /api/v1/capabilities` — qué tiene activo la empresa
+
+Alcance `sessions:read`. **Bot, vídeo y tiempos los configura Acten en la
+suscripción de cada empresa; quien integra no los elige por llamada.** Este
+endpoint dice qué hay, para mostrar u ocultar opciones en su interfaz:
+
+```json
+{"plan": "business", "status": "active", "meeting_source": "both",
+ "fireflies": true, "owned_bot": true, "video": true,
+ "video_retention_days": 90, "upload": true}
+```
+
+| Campo | Significado |
+|---|---|
+| `owned_bot` | `true` → se puede usar `POST /meetings/live` (si no, responde `402` o `409`) |
+| `video` | `true` → las reuniones que graba el bot llevan vídeo además de audio. No hay parámetro para encenderlo o apagarlo |
+| `video_retention_days` | Días que se conserva el vídeo; `null` = sin límite. El acta y la transcripción no caducan |
+| `upload` | `POST /sessions` disponible |
+| `meeting_source` | `fireflies`, `owned_bot` o `both` |
+
 ### `POST /api/v1/sessions` — subir una grabación o un texto y volverlo sesión
 
 Alcance `sessions:write`. Es la misma subida que hace la pantalla de Acten.
@@ -845,7 +865,7 @@ la sesión aparece en Acten como cualquier otra (y en `GET /api/v1/sessions`).
 | `language` | `es`\|`en`\|`ca` | Por defecto `es` |
 | `project_external_id` | string | La sesión nace en ese proyecto. Sin él, Acten lo deduce al procesarla. Proyecto inexistente o no visible para la persona → `422` |
 | `external_id` | string | Idempotencia: repetir la llamada con el mismo valor **no** manda otro bot. Si falta, Acten genera uno |
-| `video` | bool | Graba también vídeo. Exige la función de vídeo en el plan (`402` si no) |
+| `video` | bool | **Obsoleto, sin efecto.** Se acepta para no romper integraciones, pero el vídeo lo decide la suscripción de la empresa (ver `GET /api/v1/capabilities`) |
 
 Campos desconocidos → `422`. Respuesta `202`:
 

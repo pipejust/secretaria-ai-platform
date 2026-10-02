@@ -87,6 +87,9 @@ def de_empresa(db: Session, tenant_id: int, ahora: datetime | None = None) -> En
         users_included=plan.users_included if plan else None,
         video_retention_days=plan.video_retention_days if plan else cat.RETENCION_VIDEO_SIN_PLAN,
     )
+    if sub.video_retention_days is not None:
+        # Ajuste del superadministrador para esta empresa; 0 = sin límite.
+        base.video_retention_days = sub.video_retention_days or None
     if sub.status in {"cancelled", "expired"}:
         base.status = "expired"
         return base

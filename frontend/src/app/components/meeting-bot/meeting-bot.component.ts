@@ -52,8 +52,8 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     const rol = this.auth.currentUserValue?.role;
     return rol?.name === 'admin' || rol === 'admin';
   }
-  /** La grabación de vídeo la decide el plan: `/auth/me` trae
-   *  `tenant.entitlements.features`; sin `meetings.video` la casilla no se enseña. */
+  /** El vídeo lo decide la suscripción (lo configura Acten): aquí solo se
+   *  avisa de que las reuniones se graban con imagen. */
   get canRecordVideo(): boolean {
     const features: unknown = this.auth.currentUserValue?.tenant?.entitlements?.features;
     return Array.isArray(features) && features.includes('meetings.video');
@@ -71,7 +71,6 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   vocabulary = '';
   language = 'es';
   authorized = false;
-  video = false;
   systemAudio = true;
   busy = false;
   error = '';
@@ -85,7 +84,6 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   policySenders = '';
   policyTimezone = 'America/Bogota';
   policyAuthorized = false;
-  policyVideo = false;
   elapsed = '00:00';
   recorder = new BrowserRecording(
     (id, seq, blob) => this.api.uploadChunk(id, seq, blob),
@@ -160,7 +158,7 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
   async join(): Promise<void> {
     if (!this.authorized) { this.error = this.translate.instant('meeting_bot.error_confirm_authorization'); return; }
     await this.action(async () => {
-      await this.startCapture('meeting', { ...this.payload(), meeting_url: this.meetingUrl, video: this.canRecordVideo && this.video });
+      await this.startCapture('meeting', { ...this.payload(), meeting_url: this.meetingUrl });
       this.notice = this.translate.instant('meeting_bot.notice_join_requested');
       await this.refresh();
     });
@@ -237,7 +235,6 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
         this.policySenders = (policy.extra_senders ?? []).join('\n');
         this.policyTimezone = policy.timezone || 'America/Bogota';
         this.policyAuthorized = !!policy.recording_authorized;
-        this.policyVideo = !!policy.video;
       }
     } catch (e) {
       this.error = this.detail(e) ?? this.translate.instant('meeting_bot.error_load_mail_policy');
@@ -249,7 +246,6 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
       const senders = this.policySenders.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
       await this.api.saveMailPolicy({
         allowed_senders: senders, recording_authorized: this.policyAuthorized,
-        video: this.canRecordVideo && this.policyVideo,
         timezone: this.policyTimezone.trim() || 'America/Bogota',
       });
       this.notice = this.translate.instant(this.policyAuthorized

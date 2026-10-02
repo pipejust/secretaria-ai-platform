@@ -740,6 +740,14 @@
     "msg_delete_failed": "No he pogut eliminar l'usuari. Torna-ho a provar en uns minuts."
   },
   "tenants": {
+    "billing_source": "Origen de les reunions",
+    "billing_source_bot": "Bot propi d'Acten",
+    "billing_source_both": "Tots dos",
+    "billing_source_hint": "Per on entren les reunions d'aquesta empresa.",
+    "billing_source_needs_bot": "Activa el complement «Bot propi d'Acten» per triar el bot.",
+    "billing_video_days": "Dies de vídeo d'aquesta empresa",
+    "billing_video_days_plan": "Segons el pla ({{n}})",
+    "billing_video_days_hint": "Buit = els dies del seu pla. 0 = sense límit. El vídeo i el bot s'activen amb els complements de dalt; el client no els tria en gravar.",
     "title": "Empreses",
     "subtitle": "Gestiona les empreses registrades a la plataforma.",
     "create_tenant": "Crea empresa",
@@ -2728,6 +2736,7 @@
     "move_error": "No s'ha pogut moure la targeta."
   },
   "meeting_bot": {
+    "video_included": "La teva subscripció inclou vídeo: les reunions que grava el bot es desen amb imatge a més d'àudio. Avisa'n les persones participants.",
     "eyebrow": "ASSISTENT DE REUNIONS",
     "title": "El teu bot d'Acten",
     "subtitle": "Captura una conversa i torna a cada decisió, veu i moment.",

@@ -1171,6 +1171,8 @@ class Subscription(SQLModel, table=True):
     cancel_at_period_end: bool = Field(default=False)
     customer_email: Optional[str] = Field(default=None, max_length=320)
     wompi_payment_source_id: Optional[int] = Field(default=None)  # cobro automático (v2)
+    # Días de vídeo propios de esta empresa: NULL = los del plan, 0 = sin límite.
+    video_retention_days: Optional[int] = Field(default=None)
     notes: str = Field(default="")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())

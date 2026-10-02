@@ -313,9 +313,9 @@ class StartCapture(BaseModel):
     max_duration_minutes: int = PField(default=480, ge=5, le=720)
     vocabulary: list[str] = PField(default_factory=list, max_length=100)
     recording_authorized: Literal[True]
-    # Vídeo además de audio (solo captura por enlace). Exige la función
-    # `meetings.video` del plan; el bot lo pide a Skribby y Acten lo copia
-    # a su bucket al recibir la reunión.
+    # Obsoleto y sin efecto: el vídeo lo decide la suscripción de la empresa
+    # (función `meetings.video`), no quien pide la captura. Se sigue
+    # aceptando para no romper pantallas abiertas con la versión anterior.
     video: bool = False
     # Proyecto de la sesión; sin él, Acten lo deduce al procesarla.
     project_id: int | None = None
@@ -328,10 +328,13 @@ async def start(
     user: User = Depends(require_session_writer),
     db: Session = Depends(get_session),
 ):
-    if body.video:
-        # Misma respuesta (402 con detalle) que el resto de opciones del plan.
-        require_feature(F_VIDEO)(user=user, db=db)
     return await start_capture(db, user.tenant_id, user.id, kind, body)
+
+
+def graba_video(db, tenant_id: int) -> bool:
+    from services import entitlements
+
+    return entitlements.tiene(db, tenant_id, F_VIDEO)
 
 
 async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: StartCapture):
@@ -376,7 +379,8 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
             meeting_url=body.meeting_url,
             profile="quality",
             bot_name=bot_name_of(db, tenant_id),
-            video=body.video,
+            # Con vídeo si la suscripción lo incluye; lo configura Acten, no el cliente.
+            video=graba_video(db, tenant_id),
         )
     else:
         payload["mime_type"] = body.mime_type
@@ -548,7 +552,7 @@ class MailPolicy(BaseModel):
     allowed_senders: list[str] = PField(default_factory=list, max_length=50)
     recording_authorized: bool = False
     timezone: str = PField(default="America/Bogota", max_length=64)
-    # Grabar también vídeo en las reuniones que llegan por correo.
+    # Obsoleto y sin efecto: el vídeo lo decide la suscripción (ver `graba_video`).
     video: bool = False
 
     @model_validator(mode="after")
@@ -584,19 +588,8 @@ async def write_mail_policy(
     los usuarios activos de la empresa se añaden solos (services.
     mail_policy_sync) y se refrescan cada hora y al cambiar el origen.
     """
-    from services import entitlements, mail_policy_sync
-    from services.billing_catalog import FEATURES, F_VIDEO
+    from services import mail_policy_sync
 
-    # Vídeo en las reuniones invitadas por correo: solo con el plan que lo incluye.
-    if body.video and not entitlements.tiene(db, user.tenant_id, F_VIDEO):
-        raise HTTPException(
-            402,
-            {
-                "message": "Esta opción no está incluida en el plan de tu empresa.",
-                "feature": F_VIDEO,
-                "label": FEATURES[F_VIDEO],
-            },
-        )
     extra = [e.strip().lower() for e in body.allowed_senders if e.strip()]
     return await bot_call(
         db,
@@ -609,7 +602,7 @@ async def write_mail_policy(
             "recording_authorized": body.recording_authorized,
             "timezone": body.timezone,
             "bot_name": bot_name_of(db, user.tenant_id),
-            "video": body.video,
+            "video": graba_video(db, user.tenant_id),
         },
     )
 
@@ -801,6 +794,8 @@ class LiveMeeting(BaseModel):
     # Idempotencia: repetir la llamada con el mismo valor no manda otro bot.
     external_id: str | None = PField(default=None, min_length=1, max_length=160)
     project_external_id: str | None = PField(default=None, min_length=1, max_length=200)
+    # Obsoleto y sin efecto (se acepta por compatibilidad): el vídeo lo decide
+    # la suscripción de la empresa. Ver GET /api/v1/capabilities.
     video: bool = False
     # Quien llama declara que los asistentes saben que se graba.
     recording_authorized: Literal[True]
@@ -836,8 +831,6 @@ async def live_start(
 
     tenant_id = ctx.tenant.id
     _exigir_funcion(db, tenant_id, F_OWNED_BOT)
-    if body.video:
-        _exigir_funcion(db, tenant_id, F_VIDEO)
     if not meeting_source.admite(db, tenant_id, meeting_source.OWNED_BOT):
         raise HTTPException(409, "Esta empresa no tiene el bot propio como origen de reuniones.")
     project_id = None
@@ -871,7 +864,6 @@ async def live_start(
         language=body.language,
         meeting_url=body.meeting_url,
         recording_authorized=True,
-        video=body.video,
         project_id=project_id,
     )
     result = await start_capture(db, tenant_id, owner.id, "meeting", capture)

@@ -740,6 +740,14 @@
     "msg_delete_failed": "Couldn't delete the user. Try again in a few minutes."
   },
   "tenants": {
+    "billing_source": "Meeting source",
+    "billing_source_bot": "Acten's own bot",
+    "billing_source_both": "Both",
+    "billing_source_hint": "Where this company's meetings come in from.",
+    "billing_source_needs_bot": "Enable the “Acten's own bot” add-on to choose the bot.",
+    "billing_video_days": "Video days for this company",
+    "billing_video_days_plan": "As per plan ({{n}})",
+    "billing_video_days_hint": "Empty = the plan's days. 0 = no limit. Video and the bot are enabled with the add-ons above; the customer does not choose them when recording.",
     "title": "Companies",
     "subtitle": "Manage companies registered on the platform.",
     "create_tenant": "Create company",
@@ -2728,6 +2736,7 @@
     "move_error": "The card could not be moved."
   },
   "meeting_bot": {
+    "video_included": "Your subscription includes video: meetings recorded by the bot are saved with image as well as audio. Let the participants know.",
     "eyebrow": "MEETING ASSISTANT",
     "title": "Your Acten bot",
     "subtitle": "Capture a conversation and come back to every decision, voice and moment.",

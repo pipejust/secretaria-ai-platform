@@ -47,6 +47,24 @@
             </div>
         </div>
 
+        <div class="ba-grid">
+            <div class="ba-field">
+                <label for="ba-source">{{ 'tenants.billing_source' | translate }}</label>
+                <select id="ba-source" [(ngModel)]="form.meeting_source" name="meeting_source" [disabled]="!botAvailable">
+                    <option value="fireflies">Fireflies</option>
+                    <option value="owned_bot">{{ 'tenants.billing_source_bot' | translate }}</option>
+                    <option value="both">{{ 'tenants.billing_source_both' | translate }}</option>
+                </select>
+                <p class="ba-hint">{{ (botAvailable ? 'tenants.billing_source_hint' : 'tenants.billing_source_needs_bot') | translate }}</p>
+            </div>
+            <div class="ba-field">
+                <label for="ba-video-days">{{ 'tenants.billing_video_days' | translate }}</label>
+                <input id="ba-video-days" type="number" min="0" max="3650" step="1" [(ngModel)]="form.video_days" name="video_days"
+                       [placeholder]="'tenants.billing_video_days_plan' | translate:{ n: planVideoDays ?? ('billing.unlimited' | translate) }" />
+                <p class="ba-hint">{{ 'tenants.billing_video_days_hint' | translate }}</p>
+            </div>
+        </div>
+
         <div class="ba-field">
             <label for="ba-notes">{{ 'tenants.billing_notes' | translate }}</label>
             <textarea id="ba-notes" [(ngModel)]="form.notes" name="notes" maxlength="2000"></textarea>

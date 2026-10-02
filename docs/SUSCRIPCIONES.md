@@ -53,3 +53,29 @@ Renovación: v1 = el administrador vuelve a pagar (aviso en la app desde 7 días
 | Wompi | `POST /api/webhook/wompi` |
 
 Pruebas: `backend/tests/test_billing.py`.
+
+
+## Bot, vídeo y tiempos: los decide Acten, no el cliente (2026-10-02)
+
+Quien graba una reunión (pantalla, correo o API pública) **no elige** si hay
+vídeo: lo decide la suscripción de su empresa. Lo configura el
+superadministrador en «Empresas → Suscripción» o por API con su sesión:
+
+`PUT /api/billing/tenants/{tenant_id}` (superadministrador)
+
+| Campo | Efecto |
+|---|---|
+| `plan_key`, `addons` | Plan y add-ons. `owned_bot` = bot propio (audio); `video_recording` = vídeo |
+| `meeting_source` | `fireflies`, `owned_bot` o `both`. Ausente = no se toca. El bot exige su add-on (`422` si no) |
+| `video_retention_days` | Días de vídeo propios de la empresa. `null` = los del plan; `0` = sin límite |
+| `status`, `current_period_end`, `notes` | Como antes |
+
+`GET /api/billing/tenants` lista por empresa lo ya resuelto: `owned_bot`,
+`video`, `video_retention_days` (efectivo) y `video_retention_override`.
+Al guardar, la política de invitaciones por correo de la empresa se
+actualiza sola (remitentes y vídeo). Las integraciones consultan el
+resultado en `GET /api/v1/capabilities`.
+
+Los campos `video` de `POST /api/owned-bot/start/meeting`, de
+`PUT /api/owned-bot/mail-policy` y de `POST /api/v1/meetings/live` se
+aceptan pero no tienen efecto.

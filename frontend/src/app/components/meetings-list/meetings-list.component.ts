@@ -81,7 +81,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     showNewMenu = false;
     showLiveModal = false;
     isJoining = false;
-    liveForm = { url: '', title: '', language: 'es', projectId: '', video: false, authorized: false };
+    liveForm = { url: '', title: '', language: 'es', projectId: '', authorized: false };
 
     showDeleteModal = false;
     sessionToDelete: any = null;
@@ -915,7 +915,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         const lang = (this.branding.brand().default_language || 'es').toLowerCase();
         this.liveForm = {
             url: '', title: '', language: ['es', 'en', 'ca'].includes(lang) ? lang : 'es',
-            projectId: '', video: false, authorized: false,
+            projectId: '', authorized: false,
         };
         this.showNewMenu = false;
         this.showLiveModal = true;
@@ -938,7 +938,6 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                 language: this.liveForm.language,
                 meeting_url: url,
                 recording_authorized: true,
-                video: this.canRecordVideo && this.liveForm.video,
                 ...(this.liveForm.projectId ? { project_id: Number(this.liveForm.projectId) } : {}),
             });
             this.showLiveModal = false;

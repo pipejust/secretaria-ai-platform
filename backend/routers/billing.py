@@ -423,6 +423,10 @@ def list_tenant_subscriptions(_u: User = Depends(require_superadmin),
             "billing_mode": e.billing_mode, "period_end": e.period_end,
             "trial_ends": e.trial_ends, "meeting_source": getattr(t, "meeting_source", "fireflies"),
             "notes": sub.notes if sub else "",
+            # Lo que la empresa tiene activo, ya resuelto con plan + add-ons.
+            "owned_bot": e.tiene(cat.F_OWNED_BOT), "video": e.tiene(cat.F_VIDEO),
+            "video_retention_days": e.video_retention_days,
+            "video_retention_override": sub.video_retention_days if sub else None,
         })
     return {"items": out}
 
@@ -434,12 +438,22 @@ class AssignIn(BaseModel):
     status: Literal["active", "cancelled"] = "active"
     current_period_end: Optional[str] = None  # ISO o null = sin vencimiento
     notes: str = Field(default="", max_length=2000)
+    # Origen de las reuniones; ausente = no se toca.
+    meeting_source: Optional[Literal["fireflies", "owned_bot", "both"]] = None
+    # Días de vídeo propios de la empresa: null = los del plan, 0 = sin límite.
+    video_retention_days: Optional[int] = Field(default=None, ge=0, le=3650)
 
 
 @router.put("/tenants/{tenant_id}")
-def assign_subscription(tenant_id: int, body: AssignIn, _u: User = Depends(require_superadmin),
-                        db: Session = Depends(get_session)):
-    """Asignación manual (contratos, cortesías, Enterprise)."""
+async def assign_subscription(tenant_id: int, body: AssignIn, _u: User = Depends(require_superadmin),
+                              db: Session = Depends(get_session)):
+    """Asignación manual (contratos, cortesías, Enterprise).
+
+    Aquí decide Acten qué tiene cada empresa: plan, bot propio y vídeo
+    (add-ons), por dónde entran sus reuniones y cuánto se guarda el vídeo.
+    El cliente no lo elige al grabar.
+    """
+    from services import mail_policy_sync, meeting_source
     if not db.get(Tenant, tenant_id):
         raise HTTPException(404, "Empresa no encontrada")
     plan = db.get(Plan, body.plan_key)
@@ -461,7 +475,18 @@ def assign_subscription(tenant_id: int, body: AssignIn, _u: User = Depends(requi
     sub.billing_mode = "manual"
     sub.current_period_end = body.current_period_end
     sub.notes = body.notes
+    sub.video_retention_days = body.video_retention_days
     sub.updated_at = _ahora().isoformat()
     db.add(sub)
     db.commit()
-    return _estado(db, tenant_id)
+    if body.meeting_source:
+        try:
+            meeting_source.cambiar(db, tenant_id, body.meeting_source)
+        except PermissionError as exc:
+            raise HTTPException(422, str(exc)) from exc
+    # Remitentes y vídeo de las invitaciones por correo dependen de lo anterior.
+    try:
+        await mail_policy_sync.sincronizar(db, tenant_id)
+    except Exception as exc:  # noqa: BLE001 — sin bot configurado no hay nada que sincronizar
+        logger.info("Sin sincronización del bot para la empresa %s: %s", tenant_id, exc)
+    return {**_estado(db, tenant_id), "meeting_source": meeting_source.estado(db, tenant_id)}

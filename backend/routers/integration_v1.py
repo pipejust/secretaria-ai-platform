@@ -333,6 +333,38 @@ def get_session_detail(
     }
 
 
+@router.get("/capabilities")
+def get_capabilities(
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
+):
+    """Qué tiene activo la empresa de la clave. Solo lectura.
+
+    Bot, vídeo y tiempos los configura Acten en la suscripción de la
+    empresa; quien integra no los elige por llamada, los consulta aquí.
+    """
+    from services import billing_catalog as cat
+    from services import entitlements, meeting_source
+
+    e = entitlements.de_empresa(db, ctx.tenant.id)
+    fuente = meeting_source.estado(db, ctx.tenant.id)
+    bot = fuente["accepts_owned_bot"]
+    return {
+        "plan": e.plan_key,
+        "status": e.status,
+        "meeting_source": fuente["source"],
+        "fireflies": fuente["accepts_fireflies"],
+        # Bot propio: habilita POST /meetings/live y las invitaciones por correo.
+        "owned_bot": bot,
+        # Las reuniones que graba el bot llevan vídeo además de audio.
+        "video": bot and e.tiene(cat.F_VIDEO),
+        # Días que se conserva el vídeo; null = sin límite.
+        "video_retention_days": e.video_retention_days,
+        # Subir una grabación o un texto (POST /sessions) va con cualquier plan.
+        "upload": True,
+    }
+
+
 # Nombre de idioma que guarda la subida desde la pantalla; el pipeline lo normaliza.
 _IDIOMA_SUBIDA = {"es": "Español", "ca": "Català", "en": "Inglés"}
 
