@@ -189,6 +189,10 @@ async def process_one(engine, inbox_id: int, pipeline=None, notify=None) -> bool
             db.commit()
             return True
         try:
+            # Si Fireflies grabó la misma reunión, gana esta: la otra se archiva.
+            from services import duplicados
+
+            duplicados.resolver_al_llegar(db, meeting)
             await pipeline(db, row.session_id)
             db.refresh(meeting)
             success = (

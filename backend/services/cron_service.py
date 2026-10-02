@@ -656,6 +656,8 @@ def check_pending_summaries() -> None:
         for ms in candidates:
             if (ms.fireflies_id or "").startswith(("manual_", "MANUAL-", "BOT-")):
                 continue
+            if ms.status == "archived":
+                continue  # p. ej. duplicada de una sesión del bot: no se reintenta ni avisa
             age_h = _hours_since_iso(ms.created_at)
             if age_h is None:
                 continue

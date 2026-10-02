@@ -327,6 +327,9 @@ def get_session_detail(
         "project_external_id": proj_refs.get(s.project_id) if s.project_id else None,
         "status": s.status,
         "has_video": bool(s.recording_video_key),
+        # Si no es null, esta sesión es la copia de Fireflies de una reunión
+        # que también grabó el bot: está archivada y la buena es esa otra.
+        "duplicate_of_session_id": s.duplicate_of,
         "summary": s.raw_summary or "",
         "decisions": s.processed_decisions or "",
         "agreements": s.processed_agreements or "",

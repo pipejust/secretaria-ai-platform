@@ -989,6 +989,12 @@ async def process_transcript_background(
             db.commit()
             db.refresh(new_session)
 
+            # La misma reunión ya llegó por el bot propio: esta queda archivada
+            # como duplicada, sin análisis, tareas, correos ni envíos.
+            from services import duplicados
+            if duplicados.resolver_al_llegar(db, new_session):
+                return
+
             # ---------- 2. Pipeline IA común (Groq insights + OpenAI tareas) ----------
             # process_session_with_ai sobreescribe processing_error con el
             # resultado de SUS pasos, así que cualquier error pre-pipeline

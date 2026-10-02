@@ -74,3 +74,24 @@ Prueba real: evento firmado → 202, buzón `completed`, sesión con proyecto, 2
 - **Hecho en producción (2026-10-01)**: bucket `acten-reuniones` en Hetzner Object Storage (Núremberg, privado) con credenciales propias, cargadas por el panel de superadministrador y probadas.
 - **Retención por plan**: `Plan.video_retention_days` (NULL = sin límite; siembra Starter 30, Business 90, Enterprise 365; sin suscripción, `RETENCION_VIDEO_SIN_PLAN` = 30). Se edita en el catálogo del superadministrador (`PUT /api/billing/catalog/plans/{key}`, 0 = sin límite). El cron diario `videos_retencion` (`media_storage.purgar_vencidos`, 04:10) borra del bucket los vídeos cuya sesión supera el plazo, contado desde `MeetingSession.created_at`; solo se va el vídeo. `GET /api/sessions/{id}/video` devuelve `available_until` y el detalle de la sesión lo muestra.
 - **Pendiente**: la grabación web (`browser`) sigue siendo solo audio; no se exporta el vídeo a Word/PDF ni se muestra en la lista de sesiones; el coste del vídeo en Skribby es aparte del audio.
+
+
+## Reunión grabada por el bot y por Fireflies (2026-10-02)
+
+`services/duplicados.py`. Con `meeting_source = both`, si las dos fuentes
+graban la misma reunión llegan dos sesiones. Antes de analizar una sesión
+recién llegada se busca su gemela de la otra fuente: misma empresa, inicios
+a menos de 90 minutos y transcripciones que comparten al menos el 30 % de
+sus tríos de palabras (calibrado con una reunión real: 73 % la misma,
+menos de 4 % reuniones distintas del mismo equipo el mismo día). **Gana el
+bot**: la de Fireflies queda `status = archived` con `duplicate_of`
+apuntando a la del bot, sin análisis, tareas, correos ni envíos; sus tareas
+abiertas, si ya las tenía, se cancelan. Una de Fireflies que alguien ya
+trabajó (estado distinto de `pending`/`processing`) no se archiva. No cruza
+empresas.
+
+El origen elegido se respeta en los dos sentidos: con `fireflies`,
+`start_capture` responde 409 y el bot no arranca (pantalla, API y grabación
+web); con `owned_bot`, el webhook de Fireflies ya se rechazaba. La entrega
+de una reunión ya grabada (`POST /api/v1/bot/meetings`) no se bloquea: si
+alguien cambia el origen a mitad de reunión, la grabación no se pierde.

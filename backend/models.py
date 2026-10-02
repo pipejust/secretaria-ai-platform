@@ -442,6 +442,11 @@ class MeetingSession(SQLModel, table=True):
     # `tenants/1/sessions/9/recording.mp4`. NULL = sin vídeo (solo audio,
     # función no incluida en el plan, o bucket sin configurar).
     recording_video_key: Optional[str] = Field(default=None, max_length=512)
+    # La misma reunión grabada por las dos fuentes: la de Fireflies queda
+    # archivada y apunta aquí a la del bot propio (services.duplicados).
+    duplicate_of: Optional[int] = Field(
+        default=None, foreign_key="meetingsession.id", ondelete="SET NULL"
+    )
 
     project: Optional[Project] = Relationship(back_populates="sessions")
     action_items: List["ActionItem"] = Relationship(back_populates="session")

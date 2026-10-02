@@ -165,8 +165,16 @@ como *Asistente*, *Bot*, *Notetaker*, *Recorder* o *AI* aumentan la
 probabilidad. Un nombre del estilo «Notas de Acme» o «Acme · Reuniones» la
 reduce, sin garantía. El aviso no impide grabar: basta con admitirlo.
 
-**Con `both`, cuidado con los duplicados.** Si Fireflies y el bot entran a
-la misma reunión, la empresa recibe dos sesiones.
+**Con `both`, si los dos graban la misma reunión queda una sola sesión: la
+del bot.** Acten reconoce que son la misma reunión comparando las
+transcripciones. La copia de Fireflies se conserva, pero archivada
+(`status: "archived"`, con `duplicate_of_session_id` apuntando a la del
+bot): no genera tareas, correos ni eventos, y no aparece en los listados
+salvo que se pida `?status=archived`. Esto solo funciona dentro de una
+misma empresa.
+
+**El origen elegido se respeta en los dos sentidos.** Con `fireflies`, el bot
+no arranca (`409`). Con `owned_bot`, lo que llegue de Fireflies se rechaza.
 
 ---
 
@@ -415,7 +423,7 @@ Alcance `sessions:read`. Filtros: `project_external_id`, `status`, `search`
 
 ```json
 {"id": 1405, "title": "…", "date": "…", "project_external_id": "…",
- "status": "pending", "has_video": true,
+ "status": "pending", "has_video": true, "duplicate_of_session_id": null,
  "summary": "…", "decisions": "…", "agreements": "…", "risks": "…",
  "participants": [{"name": "Ana Ruiz", "role": "…", "entity": "…", "email": "…"}],
  "tasks": [ … ]}

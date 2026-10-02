@@ -27,7 +27,8 @@ def control(tmp_path, monkeypatch):
     SQLModel.metadata.create_all(engine)
     with Session(engine) as db:
         for number in (1, 2):
-            db.add(Tenant(id=number, slug=f"control-{number}", name="Test"))
+            # «both»: el bot solo arranca en empresas que lo tienen como origen.
+            db.add(Tenant(id=number, slug=f"control-{number}", name="Test", meeting_source="both"))
         for number, name in ((1, "admin"), (2, "validator"), (3, "viewer")):
             db.add(Role(id=number, name=name))
         db.commit()
@@ -299,7 +300,12 @@ def test_confirmed_name_preserves_manual_curation(control):
 
 
 def test_mail_policy_is_admin_only_and_forwarded_to_bot(control):
-    client, _, calls = control
+    client, engine, calls = control
+    with Session(engine) as db:
+        t = db.get(Tenant, 1)
+        t.meeting_source = "fireflies"
+        db.add(t)
+        db.commit()
     body = {"allowed_senders": ["ana@example.test"], "recording_authorized": True,
             "timezone": "Europe/Madrid"}
     denied = client.put("/api/owned-bot/mail-policy", headers={"X-Test-User": "2"}, json=body)
@@ -312,7 +318,7 @@ def test_mail_policy_is_admin_only_and_forwarded_to_bot(control):
     assert response.status_code == 200
     forwarded = [c for c in calls if c.url.path == "/v1/mail-policy"]
     assert forwarded[-1].method == "PUT"
-    # Origen «fireflies» (el de la empresa de prueba): los usuarios no se
+    # Origen «fireflies»: los usuarios no se
     # sincronizan; solo viajan los remitentes extra que escribió el admin.
     assert json.loads(forwarded[-1].content) == {
         **body, "extra_senders": ["ana@example.test"], "bot_name": "Asistente Acten",
@@ -587,3 +593,19 @@ def test_public_api_lists_the_meetings_in_progress_with_their_live_link(control)
     assert client.get("/api/v1/meetings/live?status=all", headers=h).status_code == 200
     sin_lectura = _api_key(engine, ["sessions:write", "org:read"])
     assert client.get("/api/v1/meetings/live", headers=sin_lectura).status_code == 403
+
+
+def test_the_bot_does_not_start_for_a_company_that_only_uses_fireflies(control):
+    client, engine, calls = control
+    with Session(engine) as db:
+        t = db.get(Tenant, 1)
+        t.meeting_source = "fireflies"
+        db.add(t)
+        db.commit()
+    antes = len([c for c in calls if c.method == "POST"])
+    r = client.post("/api/owned-bot/start/meeting", json={
+        "external_id": "no-entra", "meeting_url": "https://meet.google.com/abc-defg-hij",
+        "recording_authorized": True})
+    assert r.status_code == 409 and "Bot propio" in r.json()["detail"]
+    assert start(client, external="tampoco").status_code == 409        # la grabación web también es del bot
+    assert len([c for c in calls if c.method == "POST"]) == antes       # nada llegó al bot

@@ -365,6 +365,10 @@ def transcribe_en_vivo(db, tenant_id: int) -> bool:
 
 async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: StartCapture):
     """Pide la captura al bot. Lo comparten la pantalla y la API pública."""
+    from services import meeting_source
+
+    if not meeting_source.admite(db, tenant_id, meeting_source.OWNED_BOT):
+        raise HTTPException(409, meeting_source.mensaje_rechazo(meeting_source.OWNED_BOT))
     if kind == "meeting" and not body.meeting_url:
         raise HTTPException(422, "Indica el enlace de la reunión")
     if body.project_id is not None:
