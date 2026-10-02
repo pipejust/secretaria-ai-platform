@@ -377,7 +377,10 @@ async def _send_session_ready_email(
             ok_any = False
             for email, name in admin_recipients:
                 try:
-                    await email_svc.send_session_received_email(
+                    # Sin llave de envío el servicio devuelve False sin lanzar:
+                    # no cuenta como enviado, o la sesión quedaría marcada
+                    # como avisada sin que nadie recibiera nada.
+                    enviado = await email_svc.send_session_received_email(
                         to_email=email,
                         admin_name=name,
                         session_title=ms.title or "Sin título",
@@ -391,7 +394,7 @@ async def _send_session_ready_email(
                         pipeline_failed=pipeline_failed,
                         pipeline_error_summary=pipeline_error_summary,
                     )
-                    ok_any = True
+                    ok_any = ok_any or bool(enviado)
                 except Exception:
                     logger.exception(
                         "Falló envío de correo post-pipeline a %s para sesión %s",
