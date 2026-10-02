@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import re
 import time
 from typing import Optional
 
@@ -116,6 +117,42 @@ def ingest(db: Session, event: ActenBotEvent) -> BotInbox:
         if row is None:
             raise
         return row
+
+
+# ponytail: grabadores automáticos reconocidos por nombre; si el proveedor
+# llega a marcar los bots en `participants`, usar esa marca en su lugar.
+_GRABADORES = re.compile(
+    r"notetaker|note taker|fireflies|otter\.ai|read\.ai|tl;dv|fathom|meetgeek|\bbot\b", re.I
+)
+
+
+def asistentes_de(db: Session, session_id: int) -> list[str]:
+    """Personas que el bot vio en la sala de esta sesión, sin los grabadores.
+
+    La sala sabe quién estuvo aunque la transcripción no separe voces. Lista
+    vacía si la sesión no vino del bot o el evento no trae participantes.
+    """
+    from routers.bot_control import bot_name_of
+
+    row = db.exec(select(BotInbox).where(BotInbox.session_id == session_id)).first()
+    if row is None:
+        return []
+    try:
+        participants = ActenBotEvent.model_validate_json(row.payload).data.participants
+    except ValueError:
+        return []
+    propio = bot_name_of(db, row.tenant_id).casefold()
+    nombres: list[str] = []
+    vistos: set[str] = set()
+    for item in participants:
+        crudo = item.get("name") if isinstance(item, dict) else item
+        nombre = " ".join(crudo.split()) if isinstance(crudo, str) else ""
+        clave = nombre.casefold()
+        if not nombre or clave == propio or clave in vistos or _GRABADORES.search(nombre):
+            continue
+        vistos.add(clave)
+        nombres.append(nombre)
+    return nombres
 
 
 async def process_one(engine, inbox_id: int, pipeline=None) -> bool:

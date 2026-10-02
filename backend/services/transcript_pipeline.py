@@ -35,6 +35,7 @@ import asyncio
 import json
 import logging
 import random
+import re
 from datetime import datetime, timezone
 from typing import Awaitable, Callable, Optional, TypeVar
 
@@ -225,6 +226,32 @@ def _name_quality_score(name: str) -> int:
     # Premiar longitud (preferir nombres completos sobre cortos)
     score += min(len(name), 30) // 5
     return score
+
+
+# «Hablante sin identificar» y «Hablante 0» son etiquetas del bot propio para
+# voces sin nombre, igual que «Speaker 1» en Fireflies: no son personas.
+_HABLANTE_ANONIMO = re.compile(r"^hablante( sin identificar| \S+)?$", re.I)
+
+
+def _hablantes_y_presentes(db: Session, session_id: int, transcript: str) -> list[str]:
+    """Quién asistió: los que hablan con nombre más los que el bot vio en la sala.
+
+    Sin separación de voces la transcripción solo trae «Hablante sin
+    identificar», pero la sala sí sabe quién estuvo.
+    """
+    from services.bot_ingest import asistentes_de
+
+    nombres = [
+        s for s in _extract_speakers_from_transcript(transcript)
+        if not _HABLANTE_ANONIMO.match(s.strip())
+    ]
+    vistos = {_canonical_speaker_name(s) for s in nombres}
+    for nombre in asistentes_de(db, session_id):
+        clave = _canonical_speaker_name(nombre)
+        if clave and clave not in vistos:
+            vistos.add(clave)
+            nombres.append(nombre)
+    return nombres
 
 
 def _merge_speakers_with_groq_attendees(
@@ -524,7 +551,7 @@ async def process_session_with_ai(
     # Fallback: si el transcript NO tiene marcadores `[Name]` (caso de
     # uploads manuales o pegados como texto plano), caemos a la lista
     # que produjo Groq — es lo mejor que tenemos.
-    real_speakers = _extract_speakers_from_transcript(transcript)
+    real_speakers = _hablantes_y_presentes(db, session_obj.id, transcript)
     groq_atts = insights.get("attendees", []) if insights else []
     if real_speakers:
         final_attendees = _merge_speakers_with_groq_attendees(
@@ -598,7 +625,7 @@ async def process_session_with_ai(
         if not isinstance(e, dict):
             continue
         nm = str(e.get("name") or "").strip()
-        if not nm or _re_prev.match(r"^speaker\s*\d*$", nm.lower()):
+        if not nm or _re_prev.match(r"^speaker\s*\d*$", nm.lower()) or _HABLANTE_ANONIMO.match(nm):
             continue
         _merged.append(e)
         _seen_canon.add(_canonical_speaker_name(nm))

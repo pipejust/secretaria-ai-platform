@@ -546,3 +546,35 @@ def test_complete_bot_flow_into_acten(bot_api, tmp_path, monkeypatch):
             assert meeting.raw_transcript == "[Ana] Revisamos el piloto."
             assert "Revisión del piloto" in meeting.raw_summary
             assert db.exec(select(BotInbox)).one().state == "queued"
+
+
+def test_attendees_come_from_the_people_the_bot_saw_in_the_room(bot_api, bot_event):
+    from services.bot_ingest import asistentes_de, ingest
+    from services.transcript_pipeline import _hablantes_y_presentes
+
+    _, engine = bot_api
+    # Sin separación de voces: un solo hablante anónimo, pero la sala sí sabe quién estuvo.
+    bot_event["data"]["transcript"][0].update(speaker_id=None, speaker_name=None)
+    bot_event["data"]["participants"] = [
+        {"name": "JDiego Toro", "events": []},
+        {"name": "  Felipe   Cortés "},
+        {"name": "Fireflies.ai Notetaker Felipe"},
+        {"name": "Asistente Acten"},
+        {"name": "felipe cortés"},
+        {"avatar": "sin nombre"},
+        "Ana Ruiz",
+    ]
+    with Session(engine) as db:
+        row = ingest(db, ActenBotEvent.model_validate(bot_event))
+        meeting = db.get(MeetingSession, row.session_id)
+        assert meeting.raw_transcript.startswith("[Hablante sin identificar]")
+        assert asistentes_de(db, meeting.id) == ["JDiego Toro", "Felipe Cortés", "Ana Ruiz"]
+        assert _hablantes_y_presentes(db, meeting.id, meeting.raw_transcript) == [
+            "JDiego Toro", "Felipe Cortés", "Ana Ruiz"]
+        # Quien habla con nombre va primero y no se repite si también estaba en la sala.
+        assert _hablantes_y_presentes(db, meeting.id, "[Felipe Cortés] Hola.\n[Hablante 1] Sí.") == [
+            "Felipe Cortés", "JDiego Toro", "Ana Ruiz"]
+        # Una sesión que no vino del bot no cambia.
+        otra = MeetingSession(tenant_id=1, fireflies_id="FF-1", title="x", date="2026-09-12")
+        db.add(otra); db.commit(); db.refresh(otra)
+        assert _hablantes_y_presentes(db, otra.id, "[Ana] Hola.\n[Speaker 2] Sí.") == ["Ana"]
