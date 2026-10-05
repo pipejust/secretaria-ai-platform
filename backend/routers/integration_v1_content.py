@@ -253,6 +253,7 @@ def editar_acta(
     es una acción aparte y explícita.
     """
     s = _sesion(db, ctx, session_id)
+    proyecto_anterior = s.project_id
 
     if payload.project_external_id is not None:
         ref = payload.project_external_id.strip()
@@ -330,6 +331,12 @@ def editar_acta(
     db.add(s)
     db.commit()
     db.refresh(s)
+    if "project_external_id" in tocados and s.project_id != proyecto_anterior:
+        # El proyecto nuevo manda: cargos, empresa y correos de asistentes y
+        # responsables se vuelven a casar con sus miembros.
+        from services.sesion_proyecto import realinear_con_proyecto
+        realinear_con_proyecto(db, s)
+        db.refresh(s)
 
     try:
         asistentes = json.loads(s.processed_attendees or "[]")
@@ -341,6 +348,57 @@ def editar_acta(
         "date": s.date,
         "participants": asistentes,
     }
+
+
+@router.post("/sessions/{session_id}/regenerate-participants")
+def regenerar_participantes_v1(
+    session_id: int,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Vuelve a calcular quién estuvo, sin tocar el resto del acta.
+
+    Suma a quien habla en la transcripción y a quien el bot vio en la sala,
+    conserva lo que ya estaba (salvo etiquetas de voz anónima), funde los
+    nombres repetidos por alias y alinea cargo, empresa y correo con los
+    miembros del proyecto. No usa el modelo: es inmediato.
+    """
+    from services.sesion_proyecto import regenerar_participantes
+
+    s = _sesion(db, ctx, session_id)
+    return {"id": s.id, "participants": regenerar_participantes(db, s)}
+
+
+@router.post("/sessions/{session_id}/participants", status_code=201)
+def anadir_participante_v1(
+    session_id: int,
+    payload: ParticipanteIn,
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Añade a una persona a la sesión (o completa su ficha si ya estaba). Idempotente."""
+    from services.sesion_proyecto import anadir_participante
+
+    if not payload.name.strip():
+        raise HTTPException(422, "El nombre no puede estar vacío.")
+    s = _sesion(db, ctx, session_id)
+    lista = anadir_participante(db, s, name=payload.name, role=payload.role or "",
+                                entity=payload.entity or "", email=payload.email or "")
+    return {"id": s.id, "participants": lista}
+
+
+@router.delete("/sessions/{session_id}/participants")
+def quitar_participante_v1(
+    session_id: int,
+    name: str = Query(min_length=1, description="Nombre tal como aparece en la sesión"),
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
+):
+    """Quita a una persona de la lista de asistentes. Sus tareas no se tocan."""
+    from services.sesion_proyecto import quitar_participante
+
+    s = _sesion(db, ctx, session_id)
+    return {"id": s.id, "participants": quitar_participante(db, s, name)}
 
 
 @router.post("/sessions/{session_id}/regenerate-tasks")

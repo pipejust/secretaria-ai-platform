@@ -436,6 +436,13 @@ la sala (sin los grabadores automáticos).
 
 `{"session_id": 1405, "transcript": "[Ana Ruiz] Buenos días…\n[Luis Pérez] …"}`.
 Una línea por intervención, con el nombre de quien habla entre corchetes.
+Con `?format=txt` se entrega como **archivo de texto** descargable
+(`Content-Disposition: attachment`, nombre `Transcripcion_Sesion_<id>_<título>.txt`).
+
+### `GET /api/v1/sessions/{id}/summary`
+
+El resumen del acta, solo: `{"session_id": 1405, "title": "…", "summary": "### Resumen\n- …"}`.
+Con `?format=md` se entrega como **archivo Markdown** descargable.
 
 ### `GET /api/v1/sessions/{id}/video`
 
@@ -448,6 +455,8 @@ Alcance `sessions:read`. Solo cuando `has_video` es `true`.
 
 - `url` va directa como `src` de un `<video controls>` y admite saltar a
   cualquier punto.
+- Con `?download=true` la `url` **guarda el archivo** (`.mp4`) en vez de
+  reproducirlo; sirve para un botón «Descargar vídeo». También caduca.
 - **Caduca a los `expires_in` segundos.** No la guarden: pidan otra al abrir
   el reproductor. Si la reproducción falla por caducidad, pidan otra y
   continúen desde el mismo segundo.
@@ -460,6 +469,28 @@ Errores: `404` la sesión no tiene vídeo o no es visible para esa persona ·
 `503` el almacenamiento no responde (se puede reintentar).
 
 ---
+
+## 8 bis. Participantes de una sesión
+
+En las reuniones del bot, los asistentes salen de quién habló y de quién
+estaba en la sala; en las de Fireflies, de quién habló. Cargo, empresa y
+correo se toman de los **miembros del proyecto** (lo que Altum sincroniza).
+La lista se puede corregir desde la API:
+
+| Método y ruta | Alcance | Qué hace |
+|---|---|---|
+| `POST /api/v1/sessions/{id}/participants` | `sessions:write` | Añade a una persona: `{"name": "Marta Gil", "role": "…", "entity": "…", "email": "…"}` (solo `name` es obligatorio). Si ya estaba, completa su ficha; no duplica. Responde `201` con la lista |
+| `DELETE /api/v1/sessions/{id}/participants?name=Marta%20Gil` | `sessions:write` | La quita de la lista. Sus tareas no se tocan |
+| `POST /api/v1/sessions/{id}/regenerate-participants` | `sessions:write` | Vuelve a calcular quién estuvo (voces con nombre + personas en la sala), conserva lo que ya estaba, funde nombres repetidos y alinea cargos con el proyecto. Inmediato, sin modelo |
+| `PATCH /api/v1/sessions/{id}` con `participants: [...]` | `sessions:write` | Reemplaza la lista entera (ya existía) |
+
+Los nombres pasan por el registro de alias de la empresa: «JD Toro» se guarda
+como «Juan Toro» si así está registrado.
+
+**Al cambiar la sesión de proyecto** (`PATCH` con `project_external_id`, o
+desde la pantalla), cargos, empresa y correos de asistentes y responsables
+de tareas se vuelven a casar solos con los miembros del proyecto nuevo. Lo
+que el proyecto no conoce se deja como estaba.
 
 ## 9. Resumen de endpoints
 
@@ -475,8 +506,11 @@ Errores: `404` la sesión no tiene vídeo o no es visible para esa persona ·
 | `POST /api/v1/meetings/live/{id}/stop` | `sessions:write` | Cancelar o sacar al bot |
 | `GET /api/v1/sessions` | `sessions:read` | Listar sesiones |
 | `GET /api/v1/sessions/{id}` | `sessions:read` | Acta completa |
-| `GET /api/v1/sessions/{id}/transcript` | `sessions:read` | Transcripción |
-| `GET /api/v1/sessions/{id}/video` | `sessions:read` | Enlace temporal al vídeo |
+| `GET /api/v1/sessions/{id}/transcript` | `sessions:read` | Transcripción (`?format=txt` = archivo) |
+| `GET /api/v1/sessions/{id}/summary` | `sessions:read` | Resumen (`?format=md` = archivo) |
+| `GET /api/v1/sessions/{id}/video` | `sessions:read` | Enlace temporal al vídeo (`?download=true` = guardar) |
+| `POST` / `DELETE /api/v1/sessions/{id}/participants` | `sessions:write` | Añadir o quitar un asistente |
+| `POST /api/v1/sessions/{id}/regenerate-participants` | `sessions:write` | Recalcular los asistentes |
 
 ## 10. Lista de comprobación
 

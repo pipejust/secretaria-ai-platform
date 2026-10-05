@@ -2504,6 +2504,11 @@
     "copyright": "© {{year}} Acten, Inc. Todos los derechos reservados."
   },
   "curation": {
+    "download": "Descargar",
+    "download_transcript": "Transcripción",
+    "download_summary": "Resumen",
+    "download_video": "Vídeo de la reunión",
+    "download_error": "No se pudo descargar el archivo.",
     "processing_ai": "Procesando análisis IA…",
     "processing_ai_body": "El pipeline IA está corriendo. Esto puede tardar entre 30 segundos y 2 minutos dependiendo del tamaño de la transcripción y de si hay que volver a consultar a Fireflies.",
     "status_label": "Estado:",

@@ -366,9 +366,48 @@ def get_session_details(
         "attendees_resolved": attendees_resolved,
     }
 
+def nombre_archivo(obj: MeetingSession, ext: str, prefijo: str = "") -> str:
+    """Nombre de archivo solo ASCII: las cabeceras HTTP no admiten tildes."""
+    import unicodedata
+
+    plano = unicodedata.normalize("NFKD", obj.title or "Sesion").encode("ascii", "ignore").decode()
+    titulo = "".join(c if c.isalnum() else "_" for c in plano)[:40].strip("_") or "Sesion"
+    return f"{prefijo}Sesion_{obj.id}_{titulo}.{ext}"
+
+
+def texto_descargable(obj: MeetingSession, que: str) -> Response:
+    """La transcripción o el resumen como archivo de texto, con nombre legible."""
+    if que == "transcript":
+        cuerpo, ext, tipo = obj.raw_transcript or "", "txt", "text/plain"
+    elif que == "summary":
+        cuerpo, ext, tipo = obj.raw_summary or "", "md", "text/markdown"
+    else:
+        raise HTTPException(404, "Se puede descargar transcript, summary o video")
+    if not cuerpo.strip():
+        raise HTTPException(404, "Esta sesión no tiene ese contenido")
+    encabezado = f"# {obj.title or 'Sesión'}\n\n" if que == "summary" else f"{obj.title or 'Sesión'}\n{obj.date}\n\n"
+    return Response(
+        content=(encabezado + cuerpo).encode("utf-8"),
+        media_type=f"{tipo}; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{nombre_archivo(obj, ext, "Transcripcion_" if que == "transcript" else "Resumen_")}"'},
+    )
+
+
+@router.get("/{session_id}/download/{que}")
+def download_session_content(
+    session_id: int,
+    que: str,
+    db: Session = Depends(get_session),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    """Transcripción (.txt) o resumen (.md) de la sesión, por separado. El vídeo va por /video?download=true."""
+    return texto_descargable(_get_session_or_404(db, session_id, tenant), que)
+
+
 @router.get("/{session_id}/video")
 def get_session_video(
     session_id: int,
+    download: bool = False,
     db: Session = Depends(get_session),
     tenant: Tenant = Depends(get_current_tenant),
 ):
@@ -388,6 +427,11 @@ def get_session_video(
     except media_storage.StorageError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     vence = media_storage.caduca_el(db, obj)
+    if download:
+        url = media_storage.url_firmada(
+            db, obj.recording_video_key, media_storage.SEGUNDOS_URL,
+            descargar_como=nombre_archivo(obj, obj.recording_video_key.rsplit(".", 1)[-1]),
+        )
     return {
         "url": url,
         "expires_in": media_storage.SEGUNDOS_URL,
@@ -1066,7 +1110,8 @@ def update_session_content(
         session_obj.processed_agreements = payload.processed_agreements
     if payload.status is not None:
         session_obj.status = payload.status
-    if hasattr(payload, 'project_id') and payload.project_id is not None:
+    proyecto_cambia = payload.project_id is not None and payload.project_id != session_obj.project_id
+    if payload.project_id is not None:
         session_obj.project_id = payload.project_id
     if payload.attendees is not None:
         # Reemplazo total de la lista de participantes. Filtramos nombres
@@ -1087,6 +1132,11 @@ def update_session_content(
     db.add(session_obj)
     db.commit()
     db.refresh(session_obj)
+    if proyecto_cambia:
+        # El proyecto nuevo manda: cargos, empresa y correos de asistentes y
+        # responsables se vuelven a casar con sus miembros.
+        from services.sesion_proyecto import realinear_con_proyecto
+        realinear_con_proyecto(db, session_obj)
     return {"status": "success", "message": "Manual edits saved successfully"}
 
 @router.put("/action_items/{item_id}")

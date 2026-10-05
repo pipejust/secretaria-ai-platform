@@ -2504,6 +2504,11 @@
     "copyright": "© {{year}} Acten, Inc. All rights reserved."
   },
   "curation": {
+    "download": "Download",
+    "download_transcript": "Transcript",
+    "download_summary": "Summary",
+    "download_video": "Meeting video",
+    "download_error": "The file could not be downloaded.",
     "processing_ai": "Processing AI analysis…",
     "processing_ai_body": "The AI pipeline is running. This may take between 30 seconds and 2 minutes depending on the size of the transcript and whether Fireflies has to be queried again.",
     "status_label": "Status:",

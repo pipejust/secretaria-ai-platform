@@ -280,12 +280,17 @@ def subir_video(cfg: StorageConfig, url: str, tenant_id: int, session_id: int) -
         return {"key": key, "bytes": archivo.stat().st_size, "original_bytes": bytes_original}
 
 
-def url_firmada(db: Session, key: str, segundos: int = SEGUNDOS_URL) -> str:
+def url_firmada(
+    db: Session, key: str, segundos: int = SEGUNDOS_URL, *, descargar_como: str | None = None
+) -> str:
+    """URL temporal. Con `descargar_como`, el navegador la guarda con ese nombre en vez de reproducirla."""
     client, cfg = _cliente_configurado(db)
+    params: dict = {"Bucket": cfg.bucket, "Key": key}
+    if descargar_como:
+        seguro = "".join(c if c.isalnum() or c in "._- " else "_" for c in descargar_como).strip() or "video"
+        params["ResponseContentDisposition"] = f'attachment; filename="{seguro}"'
     try:
-        return client.generate_presigned_url(
-            "get_object", Params={"Bucket": cfg.bucket, "Key": key}, ExpiresIn=segundos
-        )
+        return client.generate_presigned_url("get_object", Params=params, ExpiresIn=segundos)
     except Exception as exc:  # noqa: BLE001
         raise StorageError(f"No se pudo firmar la URL: {_resumen(exc)}") from exc
 

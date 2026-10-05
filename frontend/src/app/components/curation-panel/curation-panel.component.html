@@ -245,6 +245,30 @@
                     <span *ngIf="!isGeneratingDoc">PDF</span>
                     <span *ngIf="isGeneratingDoc">…</span>
                 </button>
+                <div class="cp-download" (keydown.escape)="showDownloadMenu = false">
+                    <button type="button" class="cp-btn cp-btn-download" (click)="showDownloadMenu = !showDownloadMenu"
+                            aria-haspopup="menu" [attr.aria-expanded]="showDownloadMenu">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        {{ 'curation.download' | translate }}
+                    </button>
+                    <div class="cp-download-backdrop" *ngIf="showDownloadMenu" (click)="showDownloadMenu = false"></div>
+                    <div class="cp-download-menu" *ngIf="showDownloadMenu" role="menu">
+                        <button type="button" role="menuitem" (click)="downloadText('transcript')" [disabled]="!meetingData.raw_transcript">
+                            {{ 'curation.download_transcript' | translate }} <small>.txt</small>
+                        </button>
+                        <button type="button" role="menuitem" (click)="downloadText('summary')" [disabled]="!meetingData.raw_summary">
+                            {{ 'curation.download_summary' | translate }} <small>.md</small>
+                        </button>
+                        <button type="button" role="menuitem" *ngIf="videoUrl" (click)="downloadVideo()">
+                            {{ 'curation.download_video' | translate }} <small>.mp4</small>
+                        </button>
+                    </div>
+                </div>
                 <button type="button" class="cp-btn cp-btn-save" (click)="saveManualEdits()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -1194,6 +1194,48 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     if (this.videoResumeAt > 0) { player.currentTime = this.videoResumeAt; this.videoResumeAt = 0; }
   }
 
+  // ── Descargas por separado: transcripción, resumen y vídeo ──
+  showDownloadMenu = false;
+
+  /** Baja la transcripción (.txt) o el resumen (.md) tal cual, sin pasar por el acta en Word. */
+  downloadText(que: 'transcript' | 'summary'): void {
+    this.showDownloadMenu = false;
+    const headers = this.authService.getAuthHeaders();
+    this.http.get(`${environment.apiUrl}/api/sessions/${this.sessionId}/download/${que}`, { headers, responseType: 'blob' })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const safeTitle = (this.meetingData.title || 'Sesion').normalize('NFKD').replace(/[^a-z0-9]/gi, '_').substring(0, 40);
+          const prefijo = que === 'transcript' ? 'Transcripcion' : 'Resumen';
+          this.saveBlob(blob, `${prefijo}_Sesion_${this.sessionId}_${safeTitle}.${que === 'transcript' ? 'txt' : 'md'}`);
+        },
+        error: () => this.showSaveMessage(this.translate.instant('curation.download_error'), true),
+      });
+  }
+
+  /** El vídeo se baja directo del almacenamiento con un enlace firmado que ordena guardarlo. */
+  downloadVideo(): void {
+    this.showDownloadMenu = false;
+    const headers = this.authService.getAuthHeaders();
+    this.http.get<SessionVideo>(`${environment.apiUrl}/api/sessions/${this.sessionId}/video?download=true`, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (video) => { window.location.assign(video.url); },
+        error: () => this.showSaveMessage(this.translate.instant('curation.download_error'), true),
+      });
+  }
+
+  private saveBlob(blob: Blob, nombre: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+
   approveAct(format: 'word' | 'pdf' = 'word') {
     this.isGeneratingDoc = true;
     this.showSaveMessage(this.translate.instant('curation.toast_generating_doc', { format: format.toUpperCase() }));

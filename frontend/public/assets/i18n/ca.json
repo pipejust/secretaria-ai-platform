@@ -2504,6 +2504,11 @@
     "copyright": "© {{year}} Acten, Inc. Tots els drets reservats."
   },
   "curation": {
+    "download": "Descarregar",
+    "download_transcript": "Transcripció",
+    "download_summary": "Resum",
+    "download_video": "Vídeo de la reunió",
+    "download_error": "No s'ha pogut descarregar el fitxer.",
     "processing_ai": "Processant anàlisi IA…",
     "processing_ai_body": "El pipeline IA està en marxa. Pot trigar entre 30 segons i 2 minuts depenent de la mida de la transcripció i de si cal tornar a consultar Fireflies.",
     "status_label": "Estat:",

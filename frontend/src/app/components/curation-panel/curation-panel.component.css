@@ -438,6 +438,51 @@
 }
 
 /* Botón "Guardar cambios" del panel de curación = acción → SECUNDARIO. */
+/* Descargar: transcripción, resumen o vídeo por separado */
+.cp-download { position: relative; }
+.cp-btn-download {
+    background: var(--color-bg-panel, #fff);
+    color: var(--color-fg-default);
+    border-color: var(--color-border);
+}
+.cp-btn-download:hover:not(:disabled) { background: var(--brand-cream-100, #f6f3ee); }
+.cp-download-backdrop { position: fixed; inset: 0; z-index: 999; }
+.cp-download-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 1000;
+    min-width: 240px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--color-bg-panel, #fff);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+.cp-download-menu button {
+    appearance: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--color-fg-default);
+    cursor: pointer;
+}
+.cp-download-menu button:hover:not(:disabled), .cp-download-menu button:focus-visible { background: var(--brand-cream-100, #f6f3ee); outline: none; }
+.cp-download-menu button:disabled { opacity: .45; cursor: default; }
+.cp-download-menu small { color: var(--color-fg-muted); font-size: 11.5px; }
+
 .cp-btn-word {
     background: var(--brand-action, #155EEF);
     color: var(--color-fg-on-dark);

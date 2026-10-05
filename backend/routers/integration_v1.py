@@ -454,10 +454,14 @@ async def create_session_from_upload(
 @router.get("/sessions/{session_id}/video")
 def get_session_video(
     session_id: int,
+    download: bool = False,
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
 ):
     """Enlace temporal para reproducir el vídeo de la reunión.
+
+    Con `download=true` el enlace guarda el archivo (`Content-Disposition:
+    attachment`) en vez de reproducirlo en el navegador.
 
     El vídeo vive en el almacenamiento de Acten y no es público: se entrega
     una URL firmada que caduca (`expires_in` segundos). Para seguir
@@ -473,8 +477,13 @@ def get_session_video(
         raise HTTPException(404, "Sesión no encontrada.")
     if not s.recording_video_key:
         raise HTTPException(404, "Esta sesión no tiene vídeo.")
+    from routers.sessions_upload import nombre_archivo
+
     try:
-        url = media_storage.url_firmada(db, s.recording_video_key, media_storage.SEGUNDOS_URL)
+        url = media_storage.url_firmada(
+            db, s.recording_video_key, media_storage.SEGUNDOS_URL,
+            descargar_como=nombre_archivo(s, s.recording_video_key.rsplit(".", 1)[-1]) if download else None,
+        )
     except media_storage.StorageError as exc:
         raise HTTPException(503, str(exc)) from exc
     vence = media_storage.caduca_el(db, s)
@@ -490,15 +499,39 @@ def get_session_video(
 @router.get("/sessions/{session_id}/transcript")
 def get_transcript(
     session_id: int,
+    format: Literal["json", "txt"] = "json",
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
 ):
+    """La transcripción. `format=txt` la entrega como archivo de texto descargable."""
     s = db.get(MeetingSession, session_id)
     if not s or s.tenant_id != ctx.tenant.id:
         raise HTTPException(404, "Sesión no encontrada.")
     if ctx.on_behalf_of and s.project_id not in ctx.visible_project_ids:
         raise HTTPException(404, "Sesión no encontrada.")
+    if format == "txt":
+        from routers.sessions_upload import texto_descargable
+        return texto_descargable(s, "transcript")
     return {"session_id": s.id, "transcript": s.raw_transcript or ""}
+
+
+@router.get("/sessions/{session_id}/summary")
+def get_summary(
+    session_id: int,
+    format: Literal["json", "md"] = "json",
+    db: Session = Depends(get_session),
+    ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
+):
+    """El resumen del acta, solo. `format=md` lo entrega como archivo Markdown descargable."""
+    s = db.get(MeetingSession, session_id)
+    if not s or s.tenant_id != ctx.tenant.id:
+        raise HTTPException(404, "Sesión no encontrada.")
+    if ctx.on_behalf_of and s.project_id not in ctx.visible_project_ids:
+        raise HTTPException(404, "Sesión no encontrada.")
+    if format == "md":
+        from routers.sessions_upload import texto_descargable
+        return texto_descargable(s, "summary")
+    return {"session_id": s.id, "title": s.title or "", "summary": s.raw_summary or ""}
 
 
 # ══════════════════════════════════════════════════════════════════════
