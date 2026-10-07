@@ -8,7 +8,9 @@ otra vez por cada clic haría que el calendario parpadeara.
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -28,6 +30,7 @@ from routers.auth import get_current_user, require_admin
 from services import (
     calendar_check, calendar_config, calendar_google, calendar_ics,
     calendar_microsoft, calendar_sync, calendar_write, calendars as svc,
+    meeting_source,
 )
 from services.cifrado import cifrar
 from services.calendar_providers import (
@@ -47,13 +50,44 @@ CONNECT_PURPOSE = "calendar_connect_v2"
 # Va firmado y caduca en diez minutos. Sin eso, un enlace de vuelta
 # preparado por otro colgaría su cuenta de Google en tu sesión.
 
-def _firmar_state(user: User, provider: str, volver: str) -> str:
+def _firmar_state(user: User, provider: str, volver: str, origen: str = "") -> str:
     from auth_utils import create_access_token
     return create_access_token(
         {"purpose": CONNECT_PURPOSE, "uid": user.id, "tid": user.tenant_id,
-         "provider": provider, "volver": volver},
+         "provider": provider, "volver": volver, "origen": origen},
         expires_delta=timedelta(minutes=CONNECT_TTL_MIN),
     )
+
+
+def _origen_seguro(db: Session, user: User, request: Request) -> str:
+    """El dominio del frontend desde el que se pidió conectar.
+
+    El viaje de OAuth vuelve al API, que no sabe en qué dominio vive cada
+    empresa (acten.singularlab.co, acten.softnexus.io…). Sin guardarlo,
+    el retorno caía en una ruta relativa del API y la persona terminaba
+    en otra empresa. Solo se acepta un dominio de la propia empresa o de
+    Acten: cualquier otro sería una redirección abierta.
+    """
+    from routers.tenants import dominios_de
+    crudo = request.headers.get("origin") or request.headers.get("referer") or ""
+    u = urlparse(crudo)
+    host = (u.hostname or "").lower()
+    if not host or u.scheme not in ("http", "https"):
+        return ""
+    from models import Tenant
+    tenant = db.get(Tenant, user.tenant_id)
+    propios = dominios_de(tenant) if tenant else set()
+    local = host in ("localhost", "127.0.0.1")
+    if not (host in propios or host == "acten.app" or host.endswith(".acten.app") or local):
+        return ""
+    if u.scheme != "https" and not local:
+        return ""
+    return f"{u.scheme}://{u.netloc}"
+
+
+def _base_publica(request: Request) -> str:
+    """La dirección pública del API: la que hay que pegar en la consola del proveedor."""
+    return (os.environ.get("PUBLIC_BASE_URL") or str(request.base_url)).rstrip("/")
 
 
 def _leer_state(state: str, provider: str) -> dict:
@@ -412,6 +446,24 @@ class EventoNuevo(BaseModel):
     all_day: bool = False
     meeting_url: str = ""
     project_id: Optional[int] = None
+    invite_bot: bool = Field(
+        default=True,
+        description="Invitar al bot de reuniones de Acten si hay enlace y la empresa lo admite.")
+
+
+async def _correo_del_bot(db: Session, tenant_id: int) -> str:
+    """A qué correo se invita al bot, o '' si la empresa no lo tiene listo."""
+    from routers.integration_v1 import _invitacion_por_calendario
+    inv = await _invitacion_por_calendario(db, tenant_id)
+    return (inv.get("email") or "") if inv.get("enabled") else ""
+
+
+async def _asistentes(db: Session, tenant_id: int, meeting_url: str, invite_bot: bool) -> list[str]:
+    """El bot va de invitado al evento del proveedor: así recibe la invitación y entra solo."""
+    if not (meeting_url and invite_bot and meeting_source.admite(db, tenant_id, "owned_bot")):
+        return []
+    correo = await _correo_del_bot(db, tenant_id)
+    return [correo] if correo else []
 
 
 @router.post("/eventos", status_code=201)
@@ -439,8 +491,10 @@ async def crear_evento(
         tenant_id=user.tenant_id, calendar_id=cal.id, title=cuerpo.title.strip(),
         description=cuerpo.description, location=cuerpo.location,
         start_at=cuerpo.start_at, end_at=cuerpo.end_at, all_day=cuerpo.all_day,
-        meeting_url=cuerpo.meeting_url, project_id=cuerpo.project_id,
+        meeting_url=cuerpo.meeting_url.strip(), project_id=cuerpo.project_id,
         created_by_user_id=user.id,
+        attendees_json=json.dumps(
+            await _asistentes(db, user.tenant_id, cuerpo.meeting_url.strip(), cuerpo.invite_bot)),
     )
     db.add(entrada); db.commit(); db.refresh(entrada)
     await calendar_write.crear(db, cal, entrada)
@@ -457,6 +511,7 @@ class EventoCambio(BaseModel):
     all_day: Optional[bool] = None
     meeting_url: Optional[str] = None
     project_id: Optional[int] = None
+    invite_bot: Optional[bool] = None
 
 
 @router.patch("/eventos/{evento_id}")
@@ -481,6 +536,10 @@ async def editar_evento(
         valor = getattr(cuerpo, campo)
         if valor is not None:
             setattr(entrada, campo, valor.strip() if isinstance(valor, str) else valor)
+    if cuerpo.meeting_url is not None or cuerpo.invite_bot is not None:
+        invitar = cuerpo.invite_bot if cuerpo.invite_bot is not None else entrada.attendees_json not in ("", "[]")
+        entrada.attendees_json = json.dumps(
+            await _asistentes(db, user.tenant_id, entrada.meeting_url, invitar))
     entrada.updated_at = datetime.now(timezone.utc).isoformat()
     db.add(entrada); db.commit(); db.refresh(entrada)
 
@@ -514,6 +573,8 @@ def _evento(e: CalendarEntry, cal: Calendar) -> dict:
         "description": e.description, "location": e.location,
         "start_at": e.start_at, "end_at": e.end_at, "all_day": e.all_day,
         "meeting_url": e.meeting_url, "project_id": e.project_id,
+        "attendees": json.loads(e.attendees_json or "[]"),
+        "bot_invited": e.attendees_json not in ("", "[]"),
         "external_uid": e.external_uid, "external_error": e.external_error,
     }
 
@@ -566,6 +627,7 @@ def estado_proveedor(
 @router.get("/{provider}/conectar")
 def conectar(
     provider: str,
+    request: Request,
     volver: str = Query("/admin/calendar", description="Camino interno al que volver."),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_session),
@@ -579,12 +641,23 @@ def conectar(
             424,
             f"{etiqueta(provider)} no está dado de alta. Un administrador tiene "
             "que pegar el ID de cliente y el secreto en Configuración → Calendarios.")
-    state = _firmar_state(user, provider, _volver_seguro(volver))
+    if not cfg.get("redirect_uri"):
+        sugerida = calendar_config.redireccion_sugerida(provider, _base_publica(request))
+        raise HTTPException(
+            424,
+            f"A {etiqueta(provider)} le falta la URI de retorno. Un administrador "
+            f"tiene que pegar «{sugerida}» en Configuración → Calendarios y en la "
+            "consola del proveedor.")
+    state = _firmar_state(user, provider, _volver_seguro(volver),
+                          _origen_seguro(db, user, request))
     mod = {"google": calendar_google, "microsoft": calendar_microsoft}.get(provider)
     if provider == "zoho":
         from services import calendar_zoho
         mod = calendar_zoho
-    return {"url": mod.url_autorizacion(cfg, state)}
+    try:
+        return {"url": mod.url_autorizacion(cfg, state)}
+    except Exception as e:  # noqa: BLE001  — ProveedorError de cada módulo
+        raise HTTPException(424, str(e)) from e
 
 
 @router.get("/{provider}/callback")
@@ -603,7 +676,7 @@ async def callback(
     en el inicio y parece que no pasó nada.
     """
     datos = _leer_state(state, provider)
-    destino = _volver_seguro(datos.get("volver", ""))
+    destino = (datos.get("origen") or "") + _volver_seguro(datos.get("volver", ""))
     if error or not code:
         return RedirectResponse(f"{destino}?calendario_error={error or 'sin_codigo'}")
 
@@ -726,7 +799,7 @@ def config_listar(
     db: Session = Depends(get_session),
 ):
     """Las tres tarjetas de Configuración → Calendarios. Sin secretos en claro."""
-    base = str(request.base_url).rstrip("/")
+    base = _base_publica(request)
     salida = []
     for p in PROVEEDORES:
         est = calendar_config.estado(db, admin.tenant_id, p)

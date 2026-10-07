@@ -42,10 +42,20 @@ def _payload(entrada: CalendarEntry) -> dict:
         "start_at": entrada.start_at,
         "end_at": entrada.end_at,
         "all_day": entrada.all_day,
+        "meeting_url": entrada.meeting_url,
+        "attendees": _asistentes(entrada),
         # La marca que evita el duplicado al releer: el evento vuelve de
         # Google con ella y se descarta en vez de aparecer dos veces.
         "acten_id": entrada.id,
     }
+
+
+def _asistentes(entrada: CalendarEntry) -> list[str]:
+    import json
+    try:
+        return [a for a in json.loads(entrada.attendees_json or "[]") if isinstance(a, str) and a]
+    except (json.JSONDecodeError, TypeError):
+        return []
 
 
 async def _llamar(db: Session, cal: Calendar, accion: str, *args):

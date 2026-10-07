@@ -9,7 +9,7 @@ from urllib.parse import quote, urlencode
 
 import httpx
 
-from services.calendar_providers import PROVEEDORES
+from services.calendar_providers import descripcion, PROVEEDORES
 
 logger = logging.getLogger(__name__)
 
@@ -222,13 +222,20 @@ def _cuerpo(ev: dict) -> dict:
         fin = {"dateTime": ev.get("end_at") or ev["start_at"]}
     cuerpo = {
         "summary": ev.get("title") or "(sin título)",
-        "description": ev.get("description") or "",
+        "description": descripcion(ev),
         "location": ev.get("location") or "",
         "start": ini, "end": fin,
     }
+    if ev.get("attendees"):
+        cuerpo["attendees"] = [{"email": a} for a in ev["attendees"]]
     if ev.get("acten_id"):
         cuerpo["extendedProperties"] = {"private": {"acten_id": str(ev["acten_id"])}}
     return cuerpo
+
+
+# Sin esto Google crea el evento pero no avisa a los invitados: el bot
+# nunca recibiría la invitación.
+_AVISAR = {"sendUpdates": "all"}
 
 
 async def crear_evento(access_token: str, external_id: str, ev: dict) -> str:
@@ -236,6 +243,7 @@ async def crear_evento(access_token: str, external_id: str, ev: dict) -> str:
         r = await cli.post(
             f"{P['api_base']}/calendars/{_id(external_id)}/events",
             headers={"Authorization": f"Bearer {access_token}"}, json=_cuerpo(ev),
+            params=_AVISAR,
         )
         if r.status_code >= 400:
             raise ProveedorError(f"Google no creó el evento: {r.text[:300]}")
@@ -248,6 +256,7 @@ async def actualizar_evento(
         r = await cli.patch(
             f"{P['api_base']}/calendars/{_id(external_id)}/events/{quote(uid, safe='')}",
             headers={"Authorization": f"Bearer {access_token}"}, json=_cuerpo(ev),
+            params=_AVISAR,
         )
         if r.status_code >= 400:
             raise ProveedorError(f"Google no actualizó el evento: {r.text[:300]}")

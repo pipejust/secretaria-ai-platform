@@ -20,7 +20,7 @@ from urllib.parse import quote, urlencode
 
 import httpx
 
-from services.calendar_providers import PROVEEDORES
+from services.calendar_providers import descripcion, PROVEEDORES
 
 logger = logging.getLogger(__name__)
 
@@ -209,13 +209,16 @@ def _acten_id(e: dict) -> str:
 def _cuerpo(ev: dict) -> dict:
     cuerpo = {
         "subject": ev.get("title") or "(sin título)",
-        "body": {"contentType": "text", "content": ev.get("description") or ""},
+        "body": {"contentType": "text", "content": descripcion(ev)},
         "location": {"displayName": ev.get("location") or ""},
         "start": {"dateTime": (ev.get("start_at") or "").replace("Z", ""), "timeZone": "UTC"},
         "end": {"dateTime": (ev.get("end_at") or ev.get("start_at") or "").replace("Z", ""),
                 "timeZone": "UTC"},
         "isAllDay": bool(ev.get("all_day")),
     }
+    if ev.get("attendees"):
+        cuerpo["attendees"] = [
+            {"emailAddress": {"address": a}, "type": "required"} for a in ev["attendees"]]
     if ev.get("acten_id"):
         cuerpo["singleValueExtendedProperties"] = [
             {"id": _PROP_ACTEN, "value": str(ev["acten_id"])}]

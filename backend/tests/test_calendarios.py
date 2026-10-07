@@ -287,3 +287,94 @@ def test_lo_guardado_antes_del_cifrado_se_sigue_leyendo():
     assert c.startswith("fer1:") and descifrar(c) == "refresh-token"
     assert cifrar(c) == c, "no debe cifrar dos veces"
     assert descifrar("token-viejo-en-claro") == "token-viejo-en-claro"
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Conectar: errores claros y vuelta al dominio de la empresa
+# ══════════════════════════════════════════════════════════════════════
+
+def test_conectar_sin_uri_de_retorno_dice_cual_pegar(client, ana, monkeypatch):
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://api.acten.app")
+    client.put("/api/v1/calendars/config/proveedores/google", headers=ana, json={
+        "client_id": "cid", "client_secret": "sec", "redirect_uri": ""})
+    r = client.get("/api/v1/calendars/google/conectar", headers=ana)
+    assert r.status_code == 424
+    assert "https://api.acten.app/api/v1/calendars/google/callback" in r.text
+
+
+def test_el_retorno_de_oauth_vuelve_al_dominio_de_la_empresa(client, ana, mundo, test_engine):
+    from urllib.parse import parse_qs, urlparse
+    with Session(test_engine) as db:
+        t = db.get(Tenant, mundo["tenant"]); t.domain = "acten.cal.test"; db.add(t); db.commit()
+    client.put("/api/v1/calendars/config/proveedores/google", headers=ana, json={
+        "client_id": "cid", "client_secret": "sec", "redirect_uri": "https://api.acten.app/cb"})
+
+    def state_desde(origin: str) -> str:
+        url = client.get("/api/v1/calendars/google/conectar", headers={**ana, "Origin": origin}).json()["url"]
+        return parse_qs(urlparse(url).query)["state"][0]
+
+    r = client.get("/api/v1/calendars/google/callback",
+                   params={"error": "denied", "state": state_desde("https://acten.cal.test")},
+                   follow_redirects=False)
+    assert r.status_code in (302, 307)
+    assert r.headers["location"] == "https://acten.cal.test/admin/calendar?calendario_error=denied"
+
+    # Un dominio ajeno no se acepta: sería una redirección abierta.
+    r = client.get("/api/v1/calendars/google/callback",
+                   params={"error": "denied", "state": state_desde("https://malo.test")},
+                   follow_redirects=False)
+    assert r.headers["location"] == "/admin/calendar?calendario_error=denied"
+
+
+# ══════════════════════════════════════════════════════════════════════
+# El bot de reuniones va invitado al evento
+# ══════════════════════════════════════════════════════════════════════
+
+def test_el_evento_con_enlace_invita_al_bot(client, ana, monkeypatch):
+    import routers.calendars as rc
+
+    async def correo(db, tenant_id):
+        return "bot@acten.app"
+    monkeypatch.setattr(rc, "_correo_del_bot", correo)
+    monkeypatch.setattr(rc.meeting_source, "admite", lambda db, t, f: True)
+
+    base = {"title": "Comité", "start_at": "2026-11-02T14:00:00+00:00", "end_at": "2026-11-02T15:00:00+00:00"}
+    con = client.post("/api/v1/calendars/eventos", headers=ana,
+                      json={**base, "meeting_url": "https://meet.google.com/abc-defg-hij"}).json()["event"]
+    assert con["attendees"] == ["bot@acten.app"] and con["bot_invited"] is True
+
+    sin = client.post("/api/v1/calendars/eventos", headers=ana, json=base).json()["event"]
+    assert sin["attendees"] == [] and sin["bot_invited"] is False
+
+    apagado = client.post("/api/v1/calendars/eventos", headers=ana, json={
+        **base, "meeting_url": "https://meet.google.com/x", "invite_bot": False}).json()["event"]
+    assert apagado["bot_invited"] is False
+
+    # Quitar el enlace al editar también retira al bot.
+    r = client.patch(f"/api/v1/calendars/eventos/{con['id']}", headers=ana, json={"meeting_url": ""})
+    assert r.json()["event"]["bot_invited"] is False
+
+
+def test_sin_bot_admitido_no_se_invita_a_nadie(client, ana, monkeypatch):
+    import routers.calendars as rc
+    monkeypatch.setattr(rc.meeting_source, "admite", lambda db, t, f: False)
+    ev = client.post("/api/v1/calendars/eventos", headers=ana, json={
+        "title": "x", "start_at": "2026-11-02T14:00:00+00:00",
+        "meeting_url": "https://meet.google.com/x"}).json()["event"]
+    assert ev["bot_invited"] is False
+
+
+def test_los_proveedores_reciben_al_invitado_y_el_enlace():
+    from services import calendar_google, calendar_microsoft, calendar_zoho
+    ev = {"title": "Comité", "description": "Orden del día", "start_at": "2026-11-02T14:00:00+00:00",
+          "end_at": "2026-11-02T15:00:00+00:00", "meeting_url": "https://meet.google.com/x",
+          "attendees": ["bot@acten.app"]}
+    g = calendar_google._cuerpo(ev)
+    assert g["attendees"] == [{"email": "bot@acten.app"}]
+    assert "https://meet.google.com/x" in g["description"] and "Orden del día" in g["description"]
+    m = calendar_microsoft._cuerpo(ev)
+    assert m["attendees"][0]["emailAddress"]["address"] == "bot@acten.app"
+    assert "https://meet.google.com/x" in m["body"]["content"]
+    z = calendar_zoho._cuerpo(ev)
+    assert z["attendees"] == [{"email": "bot@acten.app"}]
+    assert "sendUpdates" in str(calendar_google._AVISAR)

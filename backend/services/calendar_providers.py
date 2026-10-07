@@ -134,3 +134,16 @@ def conocido(provider: str) -> bool:
 
 def etiqueta(provider: str) -> str:
     return PROVEEDORES.get(provider, {}).get("etiqueta", provider)
+
+
+def descripcion(ev: dict) -> str:
+    """La descripción que viaja al proveedor, con el enlace de la reunión.
+
+    El bot de reuniones recibe la invitación por correo y saca el enlace
+    de ahí; si solo vive en Acten, el bot no tiene a dónde entrar.
+    """
+    texto = (ev.get("description") or "").strip()
+    enlace = (ev.get("meeting_url") or "").strip()
+    if enlace and enlace not in texto:
+        texto = f"{texto}\n\nReunión: {enlace}" if texto else f"Reunión: {enlace}"
+    return texto

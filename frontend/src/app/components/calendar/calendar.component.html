@@ -178,7 +178,15 @@
     </div>
 
     <label>Lugar
-      <input type="text" [(ngModel)]="formEvento.location" placeholder="Sala 2 / enlace" />
+      <input type="text" [(ngModel)]="formEvento.location" placeholder="Sala 2" />
+    </label>
+    <label>Enlace de la reunión
+      <input type="url" [(ngModel)]="formEvento.meeting_url"
+             placeholder="https://teams.microsoft.com/… · meet.google.com/… · zoom.us/…" />
+    </label>
+    <label class="entera" *ngIf="formEvento.meeting_url">
+      <input type="checkbox" [(ngModel)]="formEvento.invite_bot" />
+      Invitar al bot de reuniones de Acten (graba, transcribe y genera el acta)
     </label>
     <label>Notas
       <textarea rows="3" [(ngModel)]="formEvento.description"></textarea>

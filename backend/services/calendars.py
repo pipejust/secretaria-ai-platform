@@ -364,6 +364,7 @@ def eventos(
                 "location": "" if reservado else e.location,
                 "start_at": e.start_at, "end_at": e.end_at, "all_day": e.all_day,
                 "kind": "evento", "meeting_url": "" if reservado else e.meeting_url,
+                "bot_invited": e.attendees_json not in ("", "[]", None),
                 "project_id": e.project_id, "session_id": e.session_id,
                 "external_uid": e.external_uid, "external_error": e.external_error,
                 "editable": puede(cal["permission"], "editar") and not cal["read_only"],

@@ -29,7 +29,7 @@ from urllib.parse import quote, urlencode
 
 import httpx
 
-from services.calendar_providers import PROVEEDORES, zoho_dominios
+from services.calendar_providers import descripcion, PROVEEDORES, zoho_dominios
 
 logger = logging.getLogger(__name__)
 
@@ -243,9 +243,9 @@ def _cuerpo(ev: dict) -> dict:
             return _zfecha(datetime.fromisoformat((v or "").replace("Z", "+00:00")))
         except ValueError:
             return ""
-    return {
+    cuerpo = {
         "title": ev.get("title") or "(sin título)",
-        "description": ev.get("description") or "",
+        "description": descripcion(ev),
         "location": ev.get("location") or "",
         "dateandtime": {
             "start": z(ev.get("start_at", "")),
@@ -254,6 +254,9 @@ def _cuerpo(ev: dict) -> dict:
         },
         "isallday": bool(ev.get("all_day")),
     }
+    if ev.get("attendees"):
+        cuerpo["attendees"] = [{"email": a} for a in ev["attendees"]]
+    return cuerpo
 
 
 async def crear_evento(

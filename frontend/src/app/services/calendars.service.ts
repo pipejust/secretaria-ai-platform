@@ -53,6 +53,7 @@ export interface EventoAgenda {
   kind: 'sesion' | 'tarea' | 'festivo' | 'evento' | 'externo';
   editable?: boolean;
   meeting_url?: string;
+  bot_invited?: boolean;
   url?: string;
   owner?: string;
   status?: string;
@@ -147,7 +148,7 @@ export class CalendarsService {
   crearEvento(cuerpo: {
     calendar?: string; title: string; description?: string; location?: string;
     start_at: string; end_at?: string; all_day?: boolean; meeting_url?: string;
-    project_id?: number | null;
+    invite_bot?: boolean; project_id?: number | null;
   }) {
     return this.http.post<{ event: any }>(`${this.base}/eventos`, cuerpo);
   }
