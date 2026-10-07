@@ -20,6 +20,9 @@ interface EditorForm {
     meeting_source: 'fireflies' | 'owned_bot' | 'both';
     /** Vacío = los días del plan; 0 = sin límite. */
     video_days: number | null;
+    /** Cuentas autenticadas de Skribby propias de la empresa; vacío = las de Acten. */
+    auth_meet: string;
+    auth_teams: string;
 }
 
 /** Asignación manual de plan por empresa (contratos, cortesías, Enterprise). */
@@ -79,7 +82,7 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
 
     private emptyForm(): EditorForm {
         return { plan_key: '', addons: new Set<string>(), status: 'active', period_end: '', notes: '',
-                 meeting_source: 'fireflies', video_days: null };
+                 meeting_source: 'fireflies', video_days: null, auth_meet: '', auth_teams: '' };
     }
 
     private pickRow(): void {
@@ -93,11 +96,20 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
             notes: r?.notes ?? '',
             meeting_source: (r?.meeting_source as EditorForm['meeting_source']) ?? 'fireflies',
             video_days: r?.video_retention_override ?? null,
+            auth_meet: r?.auth_accounts?.['gmeet'] ?? '',
+            auth_teams: r?.auth_accounts?.['teams'] ?? '',
         };
         this.cdr.detectChanges();
     }
 
     isAddonOn(key: string): boolean { return this.form.addons.has(key); }
+
+    private authAccounts(): Record<string, string> {
+        const out: Record<string, string> = {};
+        if (this.form.auth_meet.trim()) { out['gmeet'] = this.form.auth_meet.trim(); }
+        if (this.form.auth_teams.trim()) { out['teams'] = this.form.auth_teams.trim(); }
+        return out;
+    }
 
     /** El bot como origen exige su add-on (o un plan que ya lo traiga). */
     get botAvailable(): boolean {
@@ -132,6 +144,7 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
             notes: this.form.notes.trim(),
             meeting_source: this.botAvailable ? this.form.meeting_source : 'fireflies',
             video_retention_days: this.videoDaysValue(),
+            ...(this.botAvailable ? { auth_accounts: this.authAccounts() } : {}),
         };
         this.saving = true;
         this.billing.updateTenantSubscription(this.tenantId, body).pipe(takeUntil(this.destroy$)).subscribe({
@@ -142,6 +155,7 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
                         billing_mode: me.entitlements.billing_mode, period_end: me.entitlements.period_end, notes: body.notes,
                         meeting_source: body.meeting_source ?? r.meeting_source,
                         video_retention_override: body.video_retention_days ?? null,
+                        auth_accounts: body.auth_accounts ?? r.auth_accounts,
                         video_retention_days: me.entitlements.video_retention_days }
                     : r);
                 this.row = this.rows.find((r) => r.tenant_id === this.tenantId) ?? null;

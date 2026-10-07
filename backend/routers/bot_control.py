@@ -220,6 +220,29 @@ def bot_name_of(db, tenant_id):
     return cfg.get("bot_name") or DEFAULT_BOT_NAME
 
 
+AUTH_PLATFORMS = ("gmeet", "teams", "zoom")
+
+
+def auth_accounts_of(db, tenant_id) -> dict:
+    """Cuentas autenticadas de Skribby propias de la empresa, por plataforma.
+    Vacío = el bot usa las cuentas de Acten. Las fija el superadmin."""
+    row = config_row(db, tenant_id)
+    cfg = json.loads(row.config_json) if row else {}
+    raw = cfg.get("auth_accounts") or {}
+    return {k: v.strip() for k, v in raw.items() if k in AUTH_PLATFORMS and isinstance(v, str) and v.strip()}
+
+
+def set_auth_accounts(db, tenant_id, cuentas: dict) -> dict:
+    row = config_row(db, tenant_id)
+    if not row:
+        raise HTTPException(409, "La empresa no tiene el bot configurado")
+    cfg = json.loads(row.config_json)
+    limpias = {k: v.strip() for k, v in cuentas.items() if k in AUTH_PLATFORMS and isinstance(v, str) and v.strip()}
+    row.config_json = json.dumps({**cfg, "auth_accounts": limpias})
+    db.add(row); db.commit()
+    return limpias
+
+
 async def _copy_name_to_mail_policy(db, tenant_id: int, name: str) -> None:
     """Las invitaciones por correo las programa el bot solo: si ya hay una
     política guardada, se le copia el nombre nuevo. Que el bot no responda no
@@ -240,6 +263,7 @@ async def _copy_name_to_mail_policy(db, tenant_id: int, name: str) -> None:
                     "extra_senders": policy.get("extra_senders", []),
                     "video": policy.get("video", False),
                     **({"realtime": policy["realtime"]} if "realtime" in policy else {}),
+                    **({"auth_accounts": policy["auth_accounts"]} if "auth_accounts" in policy else {}),
                     "recording_authorized": policy["recording_authorized"],
                     "timezone": policy["timezone"],
                     "bot_name": name,

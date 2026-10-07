@@ -11,6 +11,7 @@ import pytest
 from sqlmodel import Session, select
 
 import database
+from routers import bot_control
 from auth_utils import create_access_token, get_password_hash
 from models import IntegrationSetting, Payment, Role, Subscription, Tenant, User
 from services import billing_catalog as cat
@@ -226,3 +227,23 @@ def test_firma_de_evento_con_valores_anidados_y_booleanos():
     body["signature"]["checksum"] = hashlib.sha256(b"atrue57s3cr3t").hexdigest()
     assert wompi.verificar_evento(body, "s3cr3t") is True
     assert wompi.verificar_evento(body, "otro") is False
+
+
+def test_superadmin_fija_cuentas_autenticadas_del_bot(client, catalogo, db_session):
+    duenio = db_session.exec(select(Tenant).where(Tenant.slug == "acten")).first() or _empresa(db_session, slug="acten")
+    sa = _token(db_session, duenio, superadmin=True)
+    t = _empresa(db_session, dias=100)
+    cuerpo = {"plan_key": "enterprise", "addons": [], "auth_accounts": {"gmeet": "id-meet"}}
+    # Sin bot configurado no hay dónde guardarlas.
+    assert client.put(f"/api/billing/tenants/{t.id}", headers=sa, json=cuerpo).status_code == 409
+    db_session.add(IntegrationSetting(tenant_id=t.id, provider_name="owned_bot", is_active=True,
+                                      config_json=json.dumps({"service_url": "https://bot.test", "client_key": ""})))
+    db_session.commit()
+    assert client.put(f"/api/billing/tenants/{t.id}", headers=sa, json=cuerpo).status_code == 200
+    fila = next(x for x in client.get("/api/billing/tenants", headers=sa).json()["items"] if x["tenant_id"] == t.id)
+    assert fila["auth_accounts"] == {"gmeet": "id-meet"}
+    assert client.put(f"/api/billing/tenants/{t.id}", headers=sa,
+                      json={**cuerpo, "auth_accounts": {"webex": "x"}}).status_code == 422
+    # {} vuelve a las cuentas de Acten; ausente no toca nada.
+    client.put(f"/api/billing/tenants/{t.id}", headers=sa, json={**cuerpo, "auth_accounts": {}})
+    assert bot_control.auth_accounts_of(db_session, t.id) == {}

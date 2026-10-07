@@ -65,6 +65,20 @@
             </div>
         </div>
 
+        <div class="ba-grid" *ngIf="botAvailable">
+            <div class="ba-field">
+                <label for="ba-auth-meet">{{ 'tenants.billing_auth_meet' | translate }}</label>
+                <input id="ba-auth-meet" type="text" [(ngModel)]="form.auth_meet" name="auth_meet" maxlength="80" autocomplete="off"
+                       [placeholder]="'tenants.billing_auth_default' | translate" />
+            </div>
+            <div class="ba-field">
+                <label for="ba-auth-teams">{{ 'tenants.billing_auth_teams' | translate }}</label>
+                <input id="ba-auth-teams" type="text" [(ngModel)]="form.auth_teams" name="auth_teams" maxlength="80" autocomplete="off"
+                       [placeholder]="'tenants.billing_auth_default' | translate" />
+                <p class="ba-hint">{{ 'tenants.billing_auth_hint' | translate }}</p>
+            </div>
+        </div>
+
         <div class="ba-field">
             <label for="ba-notes">{{ 'tenants.billing_notes' | translate }}</label>
             <textarea id="ba-notes" [(ngModel)]="form.notes" name="notes" maxlength="2000"></textarea>

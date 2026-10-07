@@ -390,6 +390,8 @@ async def _invitacion_por_calendario(db: Session, tenant_id: int) -> dict:
     return {
         "email": caps.get("invitation_email"),
         "enabled": bool(caps.get("invitation_email") and policy and policy.get("recording_authorized")),
+        # Plataformas donde el bot entra con cuenta propia (sin tocar la puerta en Meet).
+        "authenticated_platforms": caps.get("authenticated_platforms") or [],
     }
 
 

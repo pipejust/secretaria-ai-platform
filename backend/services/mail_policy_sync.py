@@ -59,7 +59,7 @@ async def sincronizar(db: Session, tenant_id: int, extra: list[str] | None = Non
     política previa y sin `extra`, no hay nada que sincronizar. Devuelve
     `None` cuando no hubo nada que escribir.
     """
-    from routers.bot_control import bot_call, bot_name_of
+    from routers.bot_control import auth_accounts_of, bot_call, bot_name_of
 
     estado = await bot_call(db, tenant_id, "GET", "/v1/mail-policy")
     actual = estado.get("policy") if isinstance(estado, dict) else None
@@ -91,6 +91,9 @@ async def sincronizar(db: Session, tenant_id: int, extra: list[str] | None = Non
     en_vivo = entitlements.tiene(db, tenant_id, F_REALTIME)
     if en_vivo or "realtime" in (actual or {}):
         body["realtime"] = en_vivo
+    # Cuentas autenticadas propias de la empresa; solo si el bot ya las entiende.
+    if "auth_accounts" in (actual or {}):
+        body["auth_accounts"] = auth_accounts_of(db, tenant_id)
     # Corre cada pocos minutos: si nada cambió, no se escribe.
     if actual is not None and all(actual.get(k) == v for k, v in body.items()):
         return None

@@ -95,7 +95,10 @@ Alcance `sessions:read`.
   "realtime": true,
   "video_retention_days": 90,
   "upload": true,
-  "calendar_invitation": {"email": "bot@acten.app", "enabled": true}
+  "calendar_invitation": {
+    "email": "bot@acten.app", "enabled": true,
+    "authenticated_platforms": ["gmeet", "teams"]
+  }
 }
 ```
 
@@ -110,6 +113,7 @@ Alcance `sessions:read`.
 | `upload` | Subida de archivos disponible (siempre `true`) |
 | `calendar_invitation.email` | Dirección a la que se invita al bot desde el calendario |
 | `calendar_invitation.enabled` | La empresa ya autorizó las invitaciones por correo |
+| `calendar_invitation.authenticated_platforms` | Plataformas (`gmeet`, `teams`, `zoom`) donde el bot entra con una cuenta propia en vez de como invitado anónimo. Vacío = siempre invitado anónimo |
 
 ---
 
@@ -158,12 +162,17 @@ la empresa) · `422` nombre vacío o de más de 50 caracteres, u origen
 desconocido · `503` se quiere cambiar el nombre y la empresa no tiene el bot
 configurado.
 
-**Sobre el nombre del bot.** Microsoft Teams marca como «bot no verificado»
-a los invitados que parecen automáticos y le pide confirmación al
-organizador antes de admitirlo. El nombre es una de las señales: palabras
-como *Asistente*, *Bot*, *Notetaker*, *Recorder* o *AI* aumentan la
-probabilidad. Un nombre del estilo «Notas de Acme» o «Acme · Reuniones» la
-reduce, sin garantía. El aviso no impide grabar: basta con admitirlo.
+**Sobre el aviso de «bot no verificado» y la admisión.** Teams y Meet
+tratan con recelo a cualquier participante que entra sin cuenta: Teams lo
+marca «no verificado» y pide confirmación al organizador; Meet lo deja
+tocando la puerta hasta que alguien lo admite. Por eso Acten hace entrar al
+bot **con una cuenta propia** cuando la plataforma aparece en
+`capabilities.calendar_invitation.authenticated_platforms`: en Meet, al ir
+invitado al evento con esa cuenta, entra sin pedir permiso; en Teams deja
+de ser un invitado anónimo, aunque Microsoft puede seguir marcando bots
+externos según su política. Con cuenta, el nombre que se ve es el de la
+cuenta y no el `bot_name`. Sin cuenta para esa plataforma, el bot entra
+como invitado y hay que admitirlo; el aviso no impide grabar.
 
 **Con `both`, si los dos graban la misma reunión queda una sola sesión: la
 del bot.** Acten reconoce que son la misma reunión comparando las
@@ -220,8 +229,9 @@ servicio de transcripción falló (se puede reintentar).
 
 ### 6.2 Mandar el bot a una reunión — `POST /api/v1/meetings/live`
 
-Alcance `sessions:write`. El bot pide entrar a la reunión; **alguien de la
-reunión tiene que admitirlo**.
+Alcance `sessions:write`. El bot pide entrar a la reunión. Si la plataforma
+no está en `authenticated_platforms`, **alguien de la reunión tiene que
+admitirlo**.
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -520,4 +530,4 @@ que el proyecto no conoce se deja como estaba.
 - [ ] Enviar `scheduled_start` con zona horaria.
 - [ ] Pedir una URL nueva de vídeo cada vez que se abre el reproductor.
 - [ ] Tratar los `state` y los tipos de mensaje desconocidos sin fallar.
-- [ ] Avisar al usuario de que tiene que admitir al bot en la reunión.
+- [ ] Avisar al usuario de que tiene que admitir al bot en la reunión cuando la plataforma no está en `authenticated_platforms`.

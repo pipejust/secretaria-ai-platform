@@ -140,6 +140,8 @@ export interface TenantSubscriptionRow {
     video_retention_days: number | null;
     /** Ajuste propio de la empresa; null = usa el del plan, 0 = sin límite. */
     video_retention_override: number | null;
+    /** Cuentas autenticadas de Skribby propias ({ gmeet, teams }); vacío = las de Acten. */
+    auth_accounts?: Record<string, string>;
 }
 
 export interface TenantSubscriptionInput {
@@ -151,6 +153,8 @@ export interface TenantSubscriptionInput {
     meeting_source?: 'fireflies' | 'owned_bot' | 'both';
     /** null = los días del plan; 0 = sin límite. */
     video_retention_days?: number | null;
+    /** Ausente = no se toca; {} = volver a las cuentas de Acten. */
+    auth_accounts?: Record<string, string>;
 }
 
 export interface WompiConfigState {

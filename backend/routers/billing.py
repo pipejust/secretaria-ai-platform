@@ -413,6 +413,7 @@ def put_addon(key: str, body: AddOnIn, _u: User = Depends(require_superadmin),
 @router.get("/tenants")
 def list_tenant_subscriptions(_u: User = Depends(require_superadmin),
                               db: Session = Depends(get_session)):
+    from routers.bot_control import auth_accounts_of
     out = []
     for t in db.exec(select(Tenant).order_by(Tenant.id)).all():
         e = ent.de_empresa(db, t.id)
@@ -428,6 +429,7 @@ def list_tenant_subscriptions(_u: User = Depends(require_superadmin),
             "realtime": e.tiene(cat.F_REALTIME),
             "video_retention_days": e.video_retention_days,
             "video_retention_override": sub.video_retention_days if sub else None,
+            "auth_accounts": auth_accounts_of(db, t.id),
         })
     return {"items": out}
 
@@ -443,6 +445,9 @@ class AssignIn(BaseModel):
     meeting_source: Optional[Literal["fireflies", "owned_bot", "both"]] = None
     # Días de vídeo propios de la empresa: null = los del plan, 0 = sin límite.
     video_retention_days: Optional[int] = Field(default=None, ge=0, le=3650)
+    # Cuentas autenticadas de Skribby propias de la empresa ({"gmeet": id, "teams": id}).
+    # Ausente = no se toca; {} = volver a las cuentas de Acten.
+    auth_accounts: Optional[dict[Literal["gmeet", "teams", "zoom"], str]] = None
 
 
 @router.put("/tenants/{tenant_id}")
@@ -485,6 +490,9 @@ async def assign_subscription(tenant_id: int, body: AssignIn, _u: User = Depends
             meeting_source.cambiar(db, tenant_id, body.meeting_source)
         except PermissionError as exc:
             raise HTTPException(422, str(exc)) from exc
+    if body.auth_accounts is not None:
+        from routers.bot_control import set_auth_accounts
+        set_auth_accounts(db, tenant_id, body.auth_accounts)
     # Remitentes y vídeo de las invitaciones por correo dependen de lo anterior.
     try:
         await mail_policy_sync.sincronizar(db, tenant_id)

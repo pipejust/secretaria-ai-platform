@@ -74,3 +74,29 @@ def test_apagar_el_bot_sin_remitentes_extra_retira_la_autorizacion(empresa, db_s
     assert bot["puts"][-1]["recording_authorized"] is False
     assert bot["puts"][-1]["allowed_senders"] == [f"ana-{suf}@s.test"]  # el bot no admite lista vacía
     assert sync(db_session, t.id) is None and len(bot["puts"]) == 1
+
+
+def test_las_cuentas_autenticadas_de_la_empresa_viajan_con_la_politica(empresa, db_session):
+    """El superadmin fija cuentas de Skribby propias; la política las lleva al bot
+    solo cuando el bot ya las entiende (la clave viene en su política)."""
+    import json
+
+    from models import IntegrationSetting
+
+    t, _suf, bot, _usuario = empresa
+    db_session.add(IntegrationSetting(
+        tenant_id=t.id, provider_name="owned_bot", is_active=True,
+        config_json=json.dumps({"service_url": "https://bot.test", "client_key": "", "bot_name": "Notas"})))
+    db_session.commit()
+
+    # Bot viejo: su política no conoce auth_accounts → no se manda la clave.
+    bot["policy"] = {"allowed_senders": ["x@s.test"], "recording_authorized": True,
+                     "timezone": "America/Bogota", "bot_name": "Notas", "video": False}
+    asyncio.run(mail_policy_sync.sincronizar(db_session, t.id))
+    assert "auth_accounts" not in bot["puts"][-1]
+
+    # Bot nuevo con cuentas propias guardadas por el superadmin.
+    bot_control.set_auth_accounts(db_session, t.id, {"gmeet": " cuenta-meet ", "teams": "", "webex": "no"})
+    bot["policy"] = {**bot["policy"], "auth_accounts": {}}
+    asyncio.run(mail_policy_sync.sincronizar(db_session, t.id))
+    assert bot["puts"][-1]["auth_accounts"] == {"gmeet": "cuenta-meet"}
