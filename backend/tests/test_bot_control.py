@@ -487,7 +487,7 @@ def test_public_api_sends_the_bot_to_a_live_meeting(control):
     assert estado.status_code == 200, estado.text
     assert estado.json() == {"id": live["id"], "external_id": "altum-1", "state": "joining",
                              "title": "Reunión", "scheduled_start": None, "error_code": None,
-                             "realtime_url": "wss://realtime.skribby.test/solo-lectura",
+                             "realtime_url": "wss://realtime.skribby.test/solo-lectura", "meeting_url": None,
                              "project_external_id": "ext-p", "acten_session_id": session_id}
     assert client.get(f"/api/v1/meetings/live/{uuid.uuid4()}", headers=h).status_code == 404
 
@@ -609,3 +609,25 @@ def test_the_bot_does_not_start_for_a_company_that_only_uses_fireflies(control):
     assert r.status_code == 409 and "Bot propio" in r.json()["detail"]
     assert start(client, external="tampoco").status_code == 409        # la grabación web también es del bot
     assert len([c for c in calls if c.method == "POST"]) == antes       # nada llegó al bot
+
+
+def test_acten_crea_la_sala_de_vocem_cuando_se_lo_piden(control, monkeypatch):
+    """`create_room` sin enlace: Acten crea la sala y el bot recibe ese enlace."""
+    from services import vocem
+
+    client, engine, calls = control
+    h = _api_key(engine, ["sessions:read", "sessions:write", "org:read"])
+    monkeypatch.setattr(vocem, "configurada", lambda db, t: True)
+    monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
+        "room_id": "!sala", "meeting_url": "https://call.vocem.softnexus.co/room/#/!sala"})
+    cuerpo = {"title": "Comité", "recording_authorized": True, "create_room": True}
+    r = client.post("/api/v1/meetings/live", headers=h, json=cuerpo)
+    assert r.status_code == 202, r.text
+    assert r.json()["meeting_url"] == "https://call.vocem.softnexus.co/room/#/!sala"
+    sent = json.loads([c for c in calls if c.url.path == "/v1/meetings" and c.method == "POST"][-1].content)
+    assert sent["meeting_url"] == "https://call.vocem.softnexus.co/room/#/!sala" and "create_room" not in sent
+    # Sin enlace y sin pedir la sala: 422. Sin Vocem configurado: 409.
+    assert client.post("/api/v1/meetings/live", headers=h,
+                       json={"title": "x", "recording_authorized": True}).status_code == 422
+    monkeypatch.setattr(vocem, "configurada", lambda db, t: False)
+    assert client.post("/api/v1/meetings/live", headers=h, json={**cuerpo, "external_id": "otra"}).status_code == 409

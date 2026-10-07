@@ -89,5 +89,38 @@
                 {{ (saving ? 'common.saving' : 'tenants.billing_save') | translate }}
             </button>
         </div>
+
+        <!-- Vocem: servidor Matrix/Element Call propio. Se guarda aparte: lleva un token. -->
+        <section class="ba-vocem" *ngIf="botAvailable">
+            <h4>{{ 'tenants.billing_vocem' | translate }}
+                <span class="ba-pill" [class.ba-pill--on]="row?.vocem?.configured">{{ (row?.vocem?.configured ? 'settings.configured' : 'settings.not_configured') | translate }}</span>
+            </h4>
+            <p class="ba-hint">{{ 'tenants.billing_vocem_hint' | translate }}</p>
+            <div class="ba-grid">
+                <div class="ba-field">
+                    <label for="ba-vo-hs">{{ 'tenants.billing_vocem_homeserver' | translate }}</label>
+                    <input id="ba-vo-hs" type="url" [(ngModel)]="vocem.homeserver" name="vo_homeserver" placeholder="https://matrix.empresa.com" autocomplete="off" />
+                </div>
+                <div class="ba-field">
+                    <label for="ba-vo-user">{{ 'tenants.billing_vocem_user' | translate }}</label>
+                    <input id="ba-vo-user" type="text" [(ngModel)]="vocem.user_id" name="vo_user" placeholder="@integraciones:empresa.com" autocomplete="off" />
+                </div>
+                <div class="ba-field">
+                    <label for="ba-vo-call">{{ 'tenants.billing_vocem_call' | translate }}</label>
+                    <input id="ba-vo-call" type="url" [(ngModel)]="vocem.call_base_url" name="vo_call" placeholder="https://call.empresa.com" autocomplete="off" />
+                </div>
+                <div class="ba-field">
+                    <label for="ba-vo-token">{{ 'tenants.billing_vocem_token' | translate }}</label>
+                    <input id="ba-vo-token" type="password" [(ngModel)]="vocem.access_token" name="vo_token" autocomplete="new-password"
+                           [placeholder]="row?.vocem?.access_token_hint || ('tenants.billing_vocem_token_hint' | translate)" />
+                </div>
+            </div>
+            <div class="ba-actions">
+                <button type="button" class="ba-btn" (click)="clearVocem()" [disabled]="savingVocem || !row?.vocem?.configured">{{ 'tenants.billing_vocem_clear' | translate }}</button>
+                <button type="button" class="ba-btn ba-btn--primary" (click)="saveVocem()" [disabled]="savingVocem">
+                    {{ (savingVocem ? 'common.saving' : 'tenants.billing_vocem_save') | translate }}
+                </button>
+            </div>
+        </section>
     </ng-container>
 </article>

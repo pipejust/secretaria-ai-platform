@@ -1832,3 +1832,6 @@
 
 /* Sesión archivada por duplicada: la ganó la grabación del bot. */
 .row-dup { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: #92400e; background: #fef3c7; }
+
+.mt-live-link-row { display: flex; gap: 8px; align-items: center; }
+.mt-live-link-row .ap-input { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }

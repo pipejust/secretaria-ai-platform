@@ -85,7 +85,9 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     showNewMenu = false;
     showLiveModal = false;
     isJoining = false;
-    liveForm = { url: '', title: '', language: 'es', projectId: '', authorized: false };
+    liveForm = { url: '', title: '', language: 'es', projectId: '', authorized: false, createRoom: false };
+    /** Enlace de la sala que acaba de crear Acten en Element, para compartirlo. */
+    liveCreatedUrl = '';
     /** Reuniones que el bot tiene en curso (entrando o grabando). */
     liveMeetings: BotMeeting[] = [];
     /** La que se está viendo en vivo; la URL se conserva aunque la lista se refresque. */
@@ -952,32 +954,48 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         const lang = (this.branding.brand().default_language || 'es').toLowerCase();
         this.liveForm = {
             url: '', title: '', language: ['es', 'en', 'ca'].includes(lang) ? lang : 'es',
-            projectId: '', authorized: false,
+            projectId: '', authorized: false, createRoom: false,
         };
+        this.liveCreatedUrl = '';
         this.showNewMenu = false;
         this.showLiveModal = true;
     }
 
     closeLiveModal(): void { if (!this.isJoining) this.showLiveModal = false; }
 
+    async copyCreatedUrl(): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(this.liveCreatedUrl);
+            this.toast.success(this.translate.instant('meeting_bot.link_copied'));
+        } catch {
+            this.toast.warning(this.liveCreatedUrl);
+        }
+    }
+
     async submitLive(): Promise<void> {
         const url = this.liveForm.url.trim();
-        if (!url) { this.toast.warning(this.translate.instant('meetings_list.toast_link_required')); return; }
+        const createRoom = this.liveForm.createRoom && !url;
+        if (!url && !createRoom) { this.toast.warning(this.translate.instant('meetings_list.toast_link_required')); return; }
         if (!this.liveForm.authorized) {
             this.toast.warning(this.translate.instant('meeting_bot.error_confirm_authorization'));
             return;
         }
         this.isJoining = true;
         try {
-            await this.bot.startCapture('meeting', {
+            const started = await this.bot.startCapture('meeting', {
                 external_id: 'web:' + crypto.randomUUID(),
                 title: this.liveForm.title.trim() || this.translate.instant('meeting_bot.default_title'),
                 language: this.liveForm.language,
-                meeting_url: url,
+                ...(createRoom ? { create_room: true } : { meeting_url: url }),
                 recording_authorized: true,
                 ...(this.liveForm.projectId ? { project_id: Number(this.liveForm.projectId) } : {}),
             });
-            this.showLiveModal = false;
+            if (createRoom && started?.meeting_url) {
+                // La sala existe: se deja el enlace a la vista para repartirlo.
+                this.liveCreatedUrl = started.meeting_url;
+            } else {
+                this.showLiveModal = false;
+            }
             this.toast.success(this.translate.instant('meeting_bot.notice_join_requested'));
             void this.loadLiveNow();
         } catch (err: any) {

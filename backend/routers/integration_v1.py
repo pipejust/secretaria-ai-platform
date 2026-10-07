@@ -28,6 +28,7 @@ from date_utils import is_valid_due_date, normalize_due_date
 from models import ActionItem, MeetingSession, Project, ProjectContact
 from services.api_key_auth import IntegrationContext, require_scopes
 from services import task_events
+from services import vocem as _vocem
 
 logger = logging.getLogger(__name__)
 
@@ -370,6 +371,10 @@ async def get_capabilities(
         "video_retention_days": e.video_retention_days,
         # Subir una grabación o un texto (POST /sessions) va con cualquier plan.
         "upload": True,
+        # Plataformas a las que entra el bot. `element` solo si la empresa tiene
+        # Vocem configurado; entonces POST /meetings/live admite `create_room`.
+        "platforms": (["gmeet", "teams", "zoom"] + (["element"] if _vocem.configurada(db, ctx.tenant.id) else [])) if bot else [],
+        "vocem": bot and _vocem.configurada(db, ctx.tenant.id),
         # Invitar al bot desde el calendario: correo al que se invita y si la
         # empresa ya autorizó las invitaciones.
         "calendar_invitation": await _invitacion_por_calendario(db, ctx.tenant.id) if bot

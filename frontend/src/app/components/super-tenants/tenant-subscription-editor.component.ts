@@ -6,8 +6,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import {
-    AddOn, BillingService, Catalog, Plan, TenantSubscriptionInput, TenantSubscriptionRow,
-} from '../../services/billing.service';
+    AddOn, BillingService, Catalog, Plan, TenantSubscriptionInput, TenantSubscriptionRow, VocemInput } from '../../services/billing.service';
 import { ToastService } from '../../services/toast.service';
 
 interface EditorForm {
@@ -48,6 +47,9 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
     form: EditorForm = this.emptyForm();
     loading = true;
     saving = false;
+    savingVocem = false;
+    vocem: { homeserver: string; user_id: string; call_base_url: string; access_token: string } =
+        { homeserver: '', user_id: '', call_base_url: '', access_token: '' };
     error = '';
 
     ngOnInit(): void {
@@ -99,10 +101,53 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
             auth_meet: r?.auth_accounts?.['gmeet'] ?? '',
             auth_teams: r?.auth_accounts?.['teams'] ?? '',
         };
+        this.vocem = {
+            homeserver: r?.vocem?.homeserver ?? '', user_id: r?.vocem?.user_id ?? '',
+            call_base_url: r?.vocem?.call_base_url ?? '', access_token: '',
+        };
         this.cdr.detectChanges();
     }
 
     isAddonOn(key: string): boolean { return this.form.addons.has(key); }
+
+    saveVocem(): void {
+        if (this.savingVocem) { return; }
+        const body: VocemInput = {
+            homeserver: this.vocem.homeserver.trim(), user_id: this.vocem.user_id.trim(),
+            call_base_url: this.vocem.call_base_url.trim(),
+            ...(this.vocem.access_token.trim() ? { access_token: this.vocem.access_token.trim() } : {}),
+        };
+        this.savingVocem = true;
+        this.billing.updateTenantVocem(this.tenantId, body).pipe(takeUntil(this.destroy$)).subscribe({
+            next: (st) => {
+                this.savingVocem = false;
+                this.vocem.access_token = '';
+                this.rows = this.rows.map((r) => r.tenant_id === this.tenantId ? { ...r, vocem: st } : r);
+                this.row = this.rows.find((r) => r.tenant_id === this.tenantId) ?? null;
+                this.toast.success(this.translate.instant('tenants.billing_vocem_saved'));
+                this.cdr.detectChanges();
+            },
+            error: (e) => {
+                this.savingVocem = false;
+                this.toast.error(e?.error?.detail || this.translate.instant('common.error_generic'));
+                this.cdr.detectChanges();
+            },
+        });
+    }
+
+    clearVocem(): void {
+        this.savingVocem = true;
+        this.billing.updateTenantVocem(this.tenantId, { clear: true }).pipe(takeUntil(this.destroy$)).subscribe({
+            next: (st) => {
+                this.savingVocem = false;
+                this.rows = this.rows.map((r) => r.tenant_id === this.tenantId ? { ...r, vocem: st } : r);
+                this.row = this.rows.find((r) => r.tenant_id === this.tenantId) ?? null;
+                this.vocem = { homeserver: '', user_id: '', call_base_url: '', access_token: '' };
+                this.cdr.detectChanges();
+            },
+            error: () => { this.savingVocem = false; this.cdr.detectChanges(); },
+        });
+    }
 
     private authAccounts(): Record<string, string> {
         const out: Record<string, string> = {};

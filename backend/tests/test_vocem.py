@@ -1,0 +1,55 @@
+"""Vocem (Element Call): Acten crea la sala y manda el bot; el cliente no configura nada."""
+
+from __future__ import annotations
+
+import json
+import uuid
+
+import httpx
+import pytest
+from sqlmodel import select
+
+from models import IntegrationSetting, Tenant
+from services import vocem
+from services.cifrado import cifrar
+
+
+@pytest.fixture()
+def empresa(db_session):
+    t = Tenant(slug=f"vo-{uuid.uuid4().hex[:8]}", name="Vocem", meeting_source="both")
+    db_session.add(t); db_session.commit(); db_session.refresh(t)
+    return t
+
+
+def test_guardar_cifra_el_token_y_el_estado_no_lo_muestra(db_session, empresa):
+    est = vocem.guardar(db_session, empresa.id, {
+        "homeserver": "https://matrix.softnexus.co/", "user_id": "@integraciones:softnexus.co",
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "syt_secreto_123456"})
+    assert est["configured"] is True and est["homeserver"] == "https://matrix.softnexus.co"
+    assert "syt_secreto" not in json.dumps(est)
+    fila = db_session.exec(select(IntegrationSetting).where(
+        IntegrationSetting.tenant_id == empresa.id, IntegrationSetting.provider_name == "vocem")).first()
+    assert "syt_secreto" not in fila.config_json and "fer1:" in fila.config_json
+    # Volver a guardar sin token conserva el anterior.
+    vocem.guardar(db_session, empresa.id, {"user_id": "@bot:softnexus.co"})
+    assert vocem.cargar(db_session, empresa.id)["access_token"] == "syt_secreto_123456"
+    vocem.guardar(db_session, empresa.id, {"clear": True})
+    assert vocem.configurada(db_session, empresa.id) is False
+
+
+def test_crear_sala_sin_cifrado_y_con_invitados(db_session, empresa, monkeypatch):
+    vocem.guardar(db_session, empresa.id, {
+        "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+    enviado = {}
+
+    def falso(method, url, json=None, timeout=None, headers=None):
+        enviado.update(method=method, url=url, body=json, auth=headers["Authorization"])
+        return httpx.Response(200, json={"room_id": "!abc"}, request=httpx.Request(method, url))
+    monkeypatch.setattr(vocem.httpx, "request", falso)
+    sala = vocem.crear_sala(db_session, empresa.id, "Comité", ["@ana:softnexus.co", "@integraciones:softnexus.co", "no-es-id"])
+    assert sala == {"room_id": "!abc", "meeting_url": "https://call.vocem.softnexus.co/room/#/!abc"}
+    assert enviado["url"].endswith("/_matrix/client/v3/createRoom") and enviado["auth"] == "Bearer tok"
+    assert enviado["body"]["invite"] == ["@ana:softnexus.co"]
+    assert all(st["type"] != "m.room.encryption" for st in enviado["body"]["initial_state"])
+    assert enviado["body"]["initial_state"][0]["content"]["guest_access"] == "can_join"

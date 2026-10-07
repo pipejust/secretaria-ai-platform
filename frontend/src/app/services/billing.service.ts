@@ -142,6 +142,25 @@ export interface TenantSubscriptionRow {
     video_retention_override: number | null;
     /** Cuentas autenticadas de Skribby propias ({ gmeet, teams }); vacío = las de Acten. */
     auth_accounts?: Record<string, string>;
+    /** Servidor Matrix/Element Call propio de la empresa (Vocem). */
+    vocem?: VocemState;
+}
+
+export interface VocemState {
+    configured: boolean;
+    homeserver: string;
+    user_id: string;
+    call_base_url: string;
+    access_token_hint: string;
+}
+
+export interface VocemInput {
+    homeserver?: string;
+    user_id?: string;
+    call_base_url?: string;
+    /** Vacío = conservar el actual. */
+    access_token?: string;
+    clear?: boolean;
 }
 
 export interface TenantSubscriptionInput {
@@ -260,5 +279,9 @@ export class BillingService {
 
     updateTenantSubscription(tenantId: number, body: TenantSubscriptionInput): Observable<BillingMe> {
         return this.http.put<BillingMe>(`${this.baseUrl}/tenants/${tenantId}`, body, this.opts());
+    }
+
+    updateTenantVocem(tenantId: number, body: VocemInput): Observable<VocemState> {
+        return this.http.put<VocemState>(`${this.baseUrl}/tenants/${tenantId}/vocem`, body, this.opts());
     }
 }

@@ -1026,9 +1026,22 @@
             </button>
         </header>
 
+        <div class="ap-modal-body mt-live-created" *ngIf="liveCreatedUrl; else liveFormTpl">
+            <p class="ap-label">{{ 'meeting_bot.created_link_label' | translate }}</p>
+            <div class="mt-live-link-row">
+                <input class="ap-input" type="text" readonly [value]="liveCreatedUrl" (focus)="$any($event.target).select()" />
+                <button type="button" class="ap-btn ap-btn-secondary" (click)="copyCreatedUrl()">{{ 'meeting_bot.copy_link' | translate }}</button>
+            </div>
+            <p class="mt-live-hint">{{ 'meeting_bot.create_room_hint' | translate }}</p>
+        </div>
+        <ng-template #liveFormTpl>
         <form class="ap-modal-body" (ngSubmit)="submitLive()" id="live-form">
             <p class="mt-live-intro">{{ 'meeting_bot.entry_live_text' | translate }}</p>
-            <div class="ap-field">
+            <label class="mt-check">
+                <input type="checkbox" name="live-create-room" [(ngModel)]="liveForm.createRoom" [disabled]="isJoining" />
+                <span>{{ 'meeting_bot.create_room_label' | translate }}</span>
+            </label>
+            <div class="ap-field" *ngIf="!liveForm.createRoom">
                 <label class="ap-label" for="live-url">{{ 'meeting_bot.meeting_url_label' | translate }} <span class="ap-required">*</span></label>
                 <input class="ap-input" id="live-url" name="live-url" type="url" inputmode="url" autocomplete="off"
                        [(ngModel)]="liveForm.url" [disabled]="isJoining"
@@ -1069,13 +1082,17 @@
             <p class="mt-live-hint">{{ 'meeting_bot.waiting_room_hint' | translate }}</p>
             <p class="mt-live-hint" *ngIf="usesBothSources">{{ 'meeting_bot.both_sources_hint' | translate }}</p>
         </form>
+        </ng-template>
 
-        <footer class="ap-modal-foot">
+        <footer class="ap-modal-foot" *ngIf="liveCreatedUrl">
+            <button type="button" class="ap-btn ap-btn-primary" (click)="showLiveModal = false">{{ 'meeting_bot.done' | translate }}</button>
+        </footer>
+        <footer class="ap-modal-foot" *ngIf="!liveCreatedUrl">
             <button type="button" class="ap-btn ap-btn-secondary" (click)="closeLiveModal()" [disabled]="isJoining">
                 {{ 'common.cancel' | translate }}
             </button>
             <button type="submit" form="live-form" class="ap-btn ap-btn-primary"
-                    [disabled]="isJoining || !liveForm.url.trim() || !liveForm.authorized">
+                    [disabled]="isJoining || (!liveForm.createRoom && !liveForm.url.trim()) || !liveForm.authorized">
                 {{ (isJoining ? 'meetings_list.live_sending' : 'meeting_bot.join_button') | translate }}
             </button>
         </footer>

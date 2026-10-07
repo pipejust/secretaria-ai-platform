@@ -123,7 +123,7 @@ def test_capacidades_reflejan_la_suscripcion(client, api, db_session):
     # Empresa recién creada: en prueba, todavía por Fireflies.
     assert r.json() == {"plan": None, "status": "trialing", "meeting_source": "fireflies",
                         "fireflies": True, "owned_bot": False, "video": False, "realtime": False,
-                        "video_retention_days": 30, "upload": True,
+                        "video_retention_days": 30, "upload": True, "platforms": [], "vocem": False,
                         "calendar_invitation": {"email": None, "enabled": False}}
     t = db_session.get(Tenant, api["tenant"])
     t.meeting_source = "both"

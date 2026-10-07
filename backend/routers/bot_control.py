@@ -357,6 +357,8 @@ class StartCapture(BaseModel):
     max_duration_minutes: int = PField(default=480, ge=5, le=720)
     vocabulary: list[str] = PField(default_factory=list, max_length=100)
     recording_authorized: Literal[True]
+    # «Acten gestiona todo»: crea la sala en Vocem (Element) y pone el enlace.
+    create_room: bool = False
     # Obsoleto y sin efecto: el vídeo lo decide la suscripción de la empresa
     # (función `meetings.video`), no quien pide la captura. Se sigue
     # aceptando para no romper pantallas abiertas con la versión anterior.
@@ -393,6 +395,17 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
 
     if not meeting_source.admite(db, tenant_id, meeting_source.OWNED_BOT):
         raise HTTPException(409, meeting_source.mensaje_rechazo(meeting_source.OWNED_BOT))
+    sala = None
+    if kind == "meeting" and body.create_room and not body.meeting_url:
+        from services import vocem
+
+        if not vocem.configurada(db, tenant_id):
+            raise HTTPException(409, "Esta empresa no tiene Vocem (Element) configurado.")
+        try:
+            sala = vocem.crear_sala(db, tenant_id, body.title, [])
+        except vocem.VocemError as exc:
+            raise HTTPException(502, str(exc)) from exc
+        body = body.model_copy(update={"meeting_url": sala["meeting_url"]})
     if kind == "meeting" and not body.meeting_url:
         raise HTTPException(422, "Indica el enlace de la reunión")
     if body.project_id is not None:
@@ -425,7 +438,7 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
                 409, "Solicitud simultánea; reintenta con el mismo identificador"
             ) from exc
     payload = body.model_dump(
-        mode="json", exclude={"meeting_url", "mime_type", "video", "project_id"}
+        mode="json", exclude={"meeting_url", "mime_type", "video", "project_id", "create_room"}
     )
     payload["analysis_scope"] = "base"
     if kind == "meeting":
@@ -461,6 +474,8 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
     row.meeting_id = mid
     db.add(row)
     db.commit()
+    if sala:
+        result = {**result, "meeting_url": sala["meeting_url"], "room_id": sala["room_id"]}
     return result
 
 
@@ -850,7 +865,10 @@ class LiveMeeting(BaseModel):
     """Cuerpo de POST /api/v1/meetings/live."""
 
     model_config = ConfigDict(extra="forbid")
-    meeting_url: str = PField(min_length=1, max_length=4096)
+    # Enlace directo de Meet, Teams, Zoom o Element Call. Puede faltar si
+    # `create_room` es true: entonces Acten crea la sala en Vocem y lo devuelve.
+    meeting_url: str | None = PField(default=None, min_length=1, max_length=4096)
+    create_room: bool = False
     title: str = PField(default="Reunión", min_length=1, max_length=300)
     language: Literal["es", "en", "ca"] = "es"
     # Idempotencia: repetir la llamada con el mismo valor no manda otro bot.
@@ -923,11 +941,14 @@ async def live_start(
     ).first()
     if owner is None:
         raise HTTPException(503, "La empresa no tiene usuarios activos.")
+    if not body.meeting_url and not body.create_room:
+        raise HTTPException(422, "Indica `meeting_url` o pide `create_room: true`.")
     capture = StartCapture(
         external_id=body.external_id or f"api-{secrets.token_hex(12)}",
         title=body.title,
         language=body.language,
         meeting_url=body.meeting_url,
+        create_room=body.create_room and not body.meeting_url,
         recording_authorized=True,
         project_id=project_id,
         scheduled_start=body.scheduled_start,
@@ -1061,6 +1082,8 @@ def _live_public(result: dict, session_id: int | None, project_external_id: str 
         # Stream de solo lectura de la transcripción en vivo (WebSocket); solo
         # mientras el bot está en la reunión y si la suscripción lo incluye.
         "realtime_url": result.get("live_url"),
+        # Enlace de la reunión; lo devuelve Acten cuando creó la sala (Vocem).
+        "meeting_url": result.get("meeting_url") or (result.get("request") or {}).get("meeting_url"),
         "project_external_id": project_external_id,
         "acten_session_id": session_id,
     }

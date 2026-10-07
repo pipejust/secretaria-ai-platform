@@ -95,6 +95,8 @@ Alcance `sessions:read`.
   "realtime": true,
   "video_retention_days": 90,
   "upload": true,
+  "platforms": ["gmeet", "teams", "zoom", "element"],
+  "vocem": true,
   "calendar_invitation": {
     "email": "bot@acten.app", "enabled": true,
     "authenticated_platforms": ["gmeet", "teams"]
@@ -113,6 +115,8 @@ Alcance `sessions:read`.
 | `upload` | Subida de archivos disponible (siempre `true`) |
 | `calendar_invitation.email` | Dirección a la que se invita al bot desde el calendario |
 | `calendar_invitation.enabled` | La empresa ya autorizó las invitaciones por correo |
+| `platforms` | Plataformas a las que entra el bot: `gmeet`, `teams`, `zoom` y, si la empresa tiene Vocem, `element` |
+| `vocem` | La empresa tiene su servidor Element (Vocem): `POST /meetings/live` admite `create_room` |
 | `calendar_invitation.authenticated_platforms` | Plataformas (`gmeet`, `teams`, `zoom`) donde el bot entra con una cuenta propia en vez de como invitado anónimo. Vacío = siempre invitado anónimo |
 
 ---
@@ -236,7 +240,8 @@ admitirlo**.
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `meeting_url` | string | **Obligatorio.** Enlace directo de Google Meet, Microsoft Teams o Zoom |
+| `meeting_url` | string | Enlace directo de Google Meet, Microsoft Teams, Zoom o Element Call (`https://call.…/room/#/!id`). Obligatorio salvo con `create_room` |
+| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element, invita al bot y devuelve `meeting_url` para repartir. Sin enlace y sin esto: `422` |
 | `recording_authorized` | `true` | **Obligatorio y literal.** Quien llama declara que los asistentes saben que se graba |
 | `scheduled_start` | ISO 8601 con zona | Reunión programada: el bot entra a esa hora (`2026-11-02T09:00:00-05:00`). Sin zona → `422`. Ausente = entra ahora. Hasta un año hacia adelante |
 | `title` | string | Título de la sesión. Por defecto «Reunión» |
@@ -286,7 +291,7 @@ invitado más del evento en Google Calendar u Outlook.
   sincronizan solos) y los remitentes extra que su administrador añada en
   Acten. La invitación de cualquier otro remitente se ignora.
 - **Qué debe traer el evento**: fecha y hora, y un enlace directo de Meet,
-  Teams o Zoom. Los eventos de día completo se ignoran.
+  Teams, Zoom o Element Call. Los eventos de día completo se ignoran.
 - **Cambios y cancelaciones**: el calendario manda la actualización y el bot
   la sigue. Los eventos recurrentes se programan solos, ocurrencia por
   ocurrencia.

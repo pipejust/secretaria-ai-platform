@@ -24,6 +24,7 @@ from database import get_session
 from models import AddOn, MeetingSession, Payment, Plan, Subscription, Tenant, User
 from routers.auth import get_current_tenant, require_admin, require_superadmin
 from services import billing_catalog as cat
+from services import vocem as _vocem
 from services import entitlements as ent
 from services import wompi
 
@@ -430,8 +431,33 @@ def list_tenant_subscriptions(_u: User = Depends(require_superadmin),
             "video_retention_days": e.video_retention_days,
             "video_retention_override": sub.video_retention_days if sub else None,
             "auth_accounts": auth_accounts_of(db, t.id),
+            "vocem": _vocem.estado(db, t.id),
         })
     return {"items": out}
+
+
+class VocemIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    homeserver: Optional[str] = Field(default=None, max_length=300)
+    user_id: Optional[str] = Field(default=None, max_length=200)
+    call_base_url: Optional[str] = Field(default=None, max_length=300)
+    access_token: Optional[str] = Field(default=None, max_length=4000)
+    clear: bool = False
+
+
+@router.put("/tenants/{tenant_id}/vocem")
+def set_vocem(tenant_id: int, body: VocemIn, _u: User = Depends(require_superadmin),
+              db: Session = Depends(get_session)):
+    """Servidor Matrix/Element Call propio de la empresa. El token se guarda cifrado."""
+    if not db.get(Tenant, tenant_id):
+        raise HTTPException(404, "Empresa no encontrada")
+    for campo in ("homeserver", "call_base_url"):
+        v = getattr(body, campo)
+        if v and not v.startswith("https://"):
+            raise HTTPException(422, f"{campo} debe empezar por https://")
+    if body.user_id and not (body.user_id.startswith("@") and ":" in body.user_id):
+        raise HTTPException(422, "user_id debe tener la forma @usuario:servidor")
+    return _vocem.guardar(db, tenant_id, body.model_dump())
 
 
 class AssignIn(BaseModel):

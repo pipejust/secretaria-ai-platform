@@ -60,6 +60,8 @@ export interface BotMeeting {
   stop_requested?: boolean;
   error_code: string | null;
   delivery_status?: string | null;
+  /** Enlace de la reunión cuando Acten creó la sala. */
+  meeting_url?: string | null;
   created_at?: number;
   updated_at?: number;
   result_url?: string;
@@ -165,6 +167,8 @@ export interface StartCapturePayload {
   video?: boolean;
   /** Proyecto de la sesión; sin él, Acten lo deduce al procesarla. */
   project_id?: number;
+  /** «Acten gestiona todo»: crea la sala en Vocem (Element) y devuelve `meeting_url`. */
+  create_room?: boolean;
 }
 
 /** Cuerpo de POST /recordings/{id}/finish; espejo de bot_control.py `Finish`. */
