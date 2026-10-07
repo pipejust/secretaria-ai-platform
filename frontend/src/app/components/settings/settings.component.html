@@ -796,11 +796,12 @@
                                 <span class="st-field-label">{{ 'settings.smtp_security' | translate }}</span>
                                 <div class="st-field-input">
                                     <select [(ngModel)]="smtpSettings.security">
-                                        <option value="ssl">SSL/TLS (465)</option>
                                         <option value="starttls">STARTTLS (587)</option>
+                                        <option value="ssl">SSL/TLS (465)</option>
                                         <option value="none">{{ 'settings.smtp_no_security' | translate }}</option>
                                     </select>
                                 </div>
+                                <span class="st-field-hint">{{ 'settings.smtp_port_hint' | translate }}</span>
                             </label>
                             <label class="st-field">
                                 <span class="st-field-label">{{ 'settings.smtp_username' | translate }}</span>

@@ -59,7 +59,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // ============================================================
   smtpSettings = {
     provider: 'Resend', apiKey: '', senderEmail: '',
-    host: '', port: 465, username: '', password: '', security: 'ssl',
+    host: '', port: 587, username: '', password: '', security: 'starttls',
   };
 
   get isSmtp(): boolean { return this.smtpSettings.provider === 'SMTP'; }

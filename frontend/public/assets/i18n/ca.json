@@ -1657,6 +1657,7 @@
     "smtp_username": "Usuari",
     "smtp_password": "Contrasenya",
     "smtp_hint": "Indica el servidor i l'usuari de la bústia que enviarà els correus de la plataforma (p. ex. Zoho, Google Workspace, Microsoft 365).",
+    "smtp_port_hint": "Recomanat: port 587 amb STARTTLS. Els ports 25 i 465 solen estar bloquejats al núvol.",
     "generic_smtp": "SMTP genèric",
     "test_email_send": "Prova enviament de correu",
     "test_smtp_hint": "Verifica que la teva configuració SMTP i el branding funcionen correctament.",

@@ -1657,6 +1657,7 @@
     "smtp_username": "Username",
     "smtp_password": "Password",
     "smtp_hint": "Enter the server and the mailbox user that will send the platform emails (e.g. Zoho, Google Workspace, Microsoft 365).",
+    "smtp_port_hint": "Recommended: port 587 with STARTTLS. Ports 25 and 465 are usually blocked in the cloud.",
     "generic_smtp": "Generic SMTP",
     "test_email_send": "Test email send",
     "test_smtp_hint": "Verify your SMTP and branding configuration works correctly.",

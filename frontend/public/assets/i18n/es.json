@@ -1657,6 +1657,7 @@
     "smtp_username": "Usuario",
     "smtp_password": "Contraseña",
     "smtp_hint": "Indica servidor y usuario del buzón que enviará los correos de la plataforma (p. ej. Zoho, Google Workspace, Microsoft 365).",
+    "smtp_port_hint": "Recomendado: puerto 587 con STARTTLS. Los puertos 25 y 465 suelen estar bloqueados en la nube.",
     "generic_smtp": "SMTP genérico",
     "test_email_send": "Probar envío de correo",
     "test_smtp_hint": "Verifica que tu configuración SMTP y el branding funcionan correctamente.",

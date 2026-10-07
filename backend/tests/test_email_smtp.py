@@ -71,6 +71,15 @@ def test_envia_por_smtp_con_adjunto(db_session, empresa_smtp):
     assert partes["application/pdf"].get_payload(decode=True) == b"%PDF-1.4 prueba"
 
 
+def test_conexion_bloqueada_explica_el_puerto(db_session, empresa_smtp, monkeypatch):
+    def bloqueado(*a, **k):
+        raise TimeoutError("timed out")
+    monkeypatch.setattr(smtplib, "SMTP_SSL", bloqueado)
+    servicio = EmailService(db=db_session, tenant_id=empresa_smtp.id)
+    with pytest.raises(RuntimeError, match="smtp.zoho.com:465 .*587 con STARTTLS"):
+        asyncio.run(servicio._send_html_email("ana@cliente.test", "Hola", "<p>x</p>"))
+
+
 def test_starttls_y_sin_servidor_no_hay_envio(db_session, empresa_smtp, monkeypatch):
     fila = db_session.exec(__import__("sqlmodel").select(IntegrationSetting).where(
         IntegrationSetting.tenant_id == empresa_smtp.id)).first()

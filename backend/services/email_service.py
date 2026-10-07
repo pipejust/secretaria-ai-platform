@@ -249,10 +249,17 @@ class EmailService:
             principal, sub = tipo.split("/", 1)
             msg.add_attachment(contenido or b"", maintype=principal, subtype=sub, filename=nombre)
         cfg = self.smtp
-        if cfg["security"] == "ssl":
-            servidor = smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=30)
-        else:
-            servidor = smtplib.SMTP(cfg["host"], cfg["port"], timeout=30)
+        try:
+            if cfg["security"] == "ssl":
+                servidor = smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=30)
+            else:
+                servidor = smtplib.SMTP(cfg["host"], cfg["port"], timeout=30)
+        except (TimeoutError, OSError) as e:
+            # Los puertos 25 y 465 suelen estar bloqueados en la nube; 587 casi nunca.
+            raise RuntimeError(
+                f"No se pudo conectar a {cfg['host']}:{cfg['port']} ({e}). "
+                "Prueba el puerto 587 con STARTTLS."
+            ) from e
         with servidor:
             if cfg["security"] == "starttls":
                 servidor.starttls()
