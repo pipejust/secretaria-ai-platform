@@ -240,14 +240,16 @@ Analiza la transcripción y devuelve un JSON con EXACTAMENTE estas tres claves,
 cada una un texto Markdown con UNA viñeta por elemento:
 
 {{
-  "decisions": "- **[Tema]** Decisión concreta — Responsable: <Nombre>",
-  "risks": "- **[Severidad alta/media/baja]** Riesgo concreto — Responsable de seguimiento: <Nombre>",
-  "agreements": "- **[Tema]** Acuerdo concreto — Partes: <Nombres>"
+  "decisions": "texto Markdown; cada viñeta: - **[Tema]** qué se decidió, con el detalle que dijo la reunión — Responsable: <Nombre>",
+  "risks": "texto Markdown; cada viñeta: - **[Alta|Media|Baja]** qué puede salir mal y por qué — Responsable de seguimiento: <Nombre>",
+  "agreements": "texto Markdown; cada viñeta: - **[Tema]** qué se acordó hacer, cuándo y entre quiénes — Partes: <Nombres>"
 }}
 
-Reglas: nunca párrafos largos, siempre viñetas `- ...`. Si la reunión no toca
-alguno de los tres, pon `- Sin elementos relevantes en esta reunión.` Nunca
-inventes responsables, hechos ni cifras. Escribe en {lang}.
+Reglas: nunca párrafos largos, siempre viñetas `- ...`. Recoge TODAS las
+decisiones, riesgos y acuerdos que aparezcan, no solo los primeros. No copies
+las palabras de la plantilla: cada viñeta describe el hecho real. Si la reunión
+no toca alguno de los tres, pon `- Sin elementos relevantes en esta reunión.`
+Nunca inventes responsables, hechos ni cifras. Escribe en {lang}.
 
 Transcripción:
 {transcript}
