@@ -57,7 +57,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // ============================================================
   // Settings reales del backend (preservadas tal cual)
   // ============================================================
-  smtpSettings = { provider: 'Resend', apiKey: '', senderEmail: '' };
+  smtpSettings = {
+    provider: 'Resend', apiKey: '', senderEmail: '',
+    host: '', port: 465, username: '', password: '', security: 'ssl',
+  };
+
+  get isSmtp(): boolean { return this.smtpSettings.provider === 'SMTP'; }
+
+  /** Hay con qué enviar: llave de Resend o servidor SMTP con usuario. */
+  get emailReady(): boolean {
+    return this.isSmtp
+      ? !!(this.smtpSettings.host && this.smtpSettings.username)
+      : !!this.smtpSettings.apiKey;
+  }
   firefliesSettings: { apiKey: string; webhookUrl: string; webhook_token: string } =
     { apiKey: '', webhookUrl: '', webhook_token: '' };
   trelloSettings = { apiKey: '', apiToken: '', boardId: '', isActive: false };

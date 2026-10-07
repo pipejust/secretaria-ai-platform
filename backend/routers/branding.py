@@ -619,5 +619,5 @@ async def test_email(
         "status": "ok" if ok else "queued",
         "to": target,
         "company": company,
-        "smtp_configured": bool(email_service.api_key),
+        "smtp_configured": email_service.configured,
     }

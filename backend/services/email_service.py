@@ -159,6 +159,9 @@ class EmailService:
         self.jinja_env.filters['markdown'] = filter_markdown
 
         self.api_key = None
+        # Servidor SMTP propio de la empresa (alternativa a Resend): host,
+        # port, username, password, security = ssl | starttls | none.
+        self.smtp: dict | None = None
         self.from_email = DEFAULT_FROM_EMAIL
         # Branding (white-label) — siempre presente en el contexto de Jinja
         # incluso si la DB no está disponible.
@@ -185,10 +188,19 @@ class EmailService:
                 if setting and setting.is_active:
                     try:
                         config = json.loads(setting.config_json)
-                        if config.get("apiKey"):
-                            self.api_key = descifrar(config.get("apiKey"))
                         if config.get("senderEmail"):
                             self.from_email = config.get("senderEmail")
+                        if (config.get("provider") or "").upper() == "SMTP":
+                            if config.get("host") and config.get("username"):
+                                self.smtp = {
+                                    "host": config["host"].strip(),
+                                    "port": int(config.get("port") or 465),
+                                    "username": config["username"].strip(),
+                                    "password": descifrar(config.get("password") or ""),
+                                    "security": (config.get("security") or "ssl").lower(),
+                                }
+                        elif config.get("apiKey"):
+                            self.api_key = descifrar(config.get("apiKey"))
                     except Exception as e:
                         print(f"Error parsing local SMTP settings: {e}")
                 # Cargamos branding del tenant correcto.
@@ -210,8 +222,56 @@ class EmailService:
         if self.api_key:
             resend.api_key = self.api_key
 
+    @property
+    def configured(self) -> bool:
+        """Hay con qué enviar: una llave de Resend o un servidor SMTP completo."""
+        return bool(self.api_key or self.smtp)
+
+    def _send_smtp(self, to_email: str, subject: str, html_content: str, attachments: list | None) -> None:
+        """Envío por SMTP clásico. Corre en un hilo: smtplib bloquea."""
+        import base64
+        import mimetypes
+        import smtplib
+        from email.message import EmailMessage
+
+        msg = EmailMessage()
+        msg["From"], msg["To"], msg["Subject"] = self.from_email, to_email, subject
+        msg.set_content("Este correo se ve mejor en un cliente con HTML.")
+        msg.add_alternative(html_content, subtype="html")
+        for a in attachments or []:
+            contenido = a.get("content")
+            if isinstance(contenido, str):
+                contenido = base64.b64decode(contenido)
+            elif isinstance(contenido, list):
+                contenido = bytes(contenido)
+            nombre = a.get("filename") or "adjunto"
+            tipo = mimetypes.guess_type(nombre)[0] or "application/octet-stream"
+            principal, sub = tipo.split("/", 1)
+            msg.add_attachment(contenido or b"", maintype=principal, subtype=sub, filename=nombre)
+        cfg = self.smtp
+        if cfg["security"] == "ssl":
+            servidor = smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=30)
+        else:
+            servidor = smtplib.SMTP(cfg["host"], cfg["port"], timeout=30)
+        with servidor:
+            if cfg["security"] == "starttls":
+                servidor.starttls()
+            if cfg["password"]:
+                servidor.login(cfg["username"], cfg["password"])
+            servidor.send_message(msg)
+
     async def _send_html_email(self, to_email: str, subject: str, html_content: str, attachments: list = None):
-        """Método interno para despachar el correo utilizando Resend. Imprime el HTML en modo dev."""
+        """Despacha el correo por el servidor SMTP de la empresa o por Resend. Imprime el HTML en modo dev."""
+        if self.smtp:
+            import asyncio
+
+            try:
+                await asyncio.to_thread(self._send_smtp, to_email, subject, html_content, attachments)
+                logger.info("Correo enviado por SMTP (%s) a %s", self.smtp["host"], to_email)
+                return True
+            except Exception as e:
+                logger.error("Fallo enviando por SMTP a %s: %s", to_email, e)
+                raise
         if self.api_key:
             try:
                 payload = {

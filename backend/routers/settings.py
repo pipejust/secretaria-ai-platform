@@ -173,8 +173,10 @@ def get_all_settings(
             # La llave del SMTP vive cifrada; el administrador la ve como
             # la escribió. Lo guardado en claro antes pasa tal cual, así
             # que no hubo que reescribir ninguna fila a mano.
-            if s.provider_name == "smtp" and cfg.get("apiKey"):
-                cfg["apiKey"] = descifrar(cfg["apiKey"])
+            if s.provider_name == "smtp":
+                for secreto in ("apiKey", "password"):
+                    if cfg.get(secreto):
+                        cfg[secreto] = descifrar(cfg[secreto])
             result[s.provider_name] = cfg
         except (json.JSONDecodeError, TypeError):
             logger.warning(
@@ -235,8 +237,8 @@ def save_settings(
         #
         # `cifrar` es idempotente: volver a guardar algo ya cifrado no lo
         # cifra dos veces.
-        if provider_name == "smtp" and config_obj.get("apiKey"):
-            config_obj = {**config_obj, "apiKey": cifrar(config_obj["apiKey"])}
+        if provider_name == "smtp":
+            config_obj = {**config_obj, **{k: cifrar(config_obj[k]) for k in ("apiKey", "password") if config_obj.get(k)}}
 
         # Para Fireflies: el `webhook_token` SOLO lo genera el servidor.
         # Nunca aceptamos el valor que envía el cliente — eso permitiría a un

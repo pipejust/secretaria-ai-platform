@@ -740,8 +740,8 @@
                         <!-- Sin llave no sale ningún correo. Antes la pantalla se
                              veía igual con llave y sin ella, así que cuatro empresas
                              llevaban meses sin enviar nada sin saberlo. -->
-                        <span class="st-pill" [attr.data-tone]="smtpSettings.apiKey ? 'green' : 'red'">
-                            {{ smtpSettings.apiKey ? 'Envío activo' : 'Sin llave: no se envían correos' }}
+                        <span class="st-pill" [attr.data-tone]="emailReady ? 'green' : 'red'">
+                            {{ (emailReady ? 'settings.email_active' : 'settings.email_inactive') | translate }}
                         </span>
                     </header>
                     <div class="st-card-body">
@@ -756,12 +756,11 @@
                                     </svg>
                                     <select [(ngModel)]="smtpSettings.provider">
                                         <option value="Resend">Resend</option>
-                                        <option value="SendGrid">SendGrid</option>
                                         <option value="SMTP">{{ 'settings.generic_smtp' | translate }}</option>
                                     </select>
                                 </div>
                             </label>
-                            <label class="st-field">
+                            <label class="st-field" *ngIf="!isSmtp">
                                 <span class="st-field-label">API Key</span>
                                 <div class="st-pw-wrap">
                                     <input [type]="isPwVisible('smtp_key') ? 'text' : 'password'"
@@ -773,14 +772,54 @@
                                     </button>
                                 </div>
                                 <span class="st-field-hint" *ngIf="!smtpSettings.apiKey" style="color: var(--st-red, #b91c1c)">
-                                    Sin esta llave los correos no se envían: ni avisos de tareas ni
-                                    actas. La da tu proveedor de envío (Resend).
+                                    {{ 'settings.resend_key_hint' | translate }}
                                 </span>
+                            </label>
+                            <label class="st-field" *ngIf="isSmtp">
+                                <span class="st-field-label">{{ 'settings.smtp_host' | translate }}</span>
+                                <input type="text" class="st-input" [(ngModel)]="smtpSettings.host"
+                                       placeholder="smtp.zoho.com" autocomplete="off" />
                             </label>
                             <label class="st-field">
                                 <span class="st-field-label">{{ 'settings.sender_email' | translate }}</span>
                                 <input type="email" class="st-input" [(ngModel)]="smtpSettings.senderEmail"
                                        placeholder="notificaciones@tuempresa.com" />
+                            </label>
+                        </div>
+                        <!-- Servidor SMTP propio: solo cuando el proveedor es SMTP. -->
+                        <div class="st-grid st-grid-3" *ngIf="isSmtp" style="margin-top: 14px">
+                            <label class="st-field">
+                                <span class="st-field-label">{{ 'settings.smtp_port' | translate }}</span>
+                                <input type="number" class="st-input" [(ngModel)]="smtpSettings.port" min="1" max="65535" />
+                            </label>
+                            <label class="st-field">
+                                <span class="st-field-label">{{ 'settings.smtp_security' | translate }}</span>
+                                <div class="st-field-input">
+                                    <select [(ngModel)]="smtpSettings.security">
+                                        <option value="ssl">SSL/TLS (465)</option>
+                                        <option value="starttls">STARTTLS (587)</option>
+                                        <option value="none">{{ 'settings.smtp_no_security' | translate }}</option>
+                                    </select>
+                                </div>
+                            </label>
+                            <label class="st-field">
+                                <span class="st-field-label">{{ 'settings.smtp_username' | translate }}</span>
+                                <input type="text" class="st-input" [(ngModel)]="smtpSettings.username"
+                                       placeholder="bot@tuempresa.com" autocomplete="off" />
+                            </label>
+                            <label class="st-field">
+                                <span class="st-field-label">{{ 'settings.smtp_password' | translate }}</span>
+                                <div class="st-pw-wrap">
+                                    <input [type]="isPwVisible('smtp_pass') ? 'text' : 'password'"
+                                           class="st-input" [(ngModel)]="smtpSettings.password" autocomplete="new-password" />
+                                    <button type="button" class="st-pw-toggle" (click)="togglePassword('smtp_pass')">
+                                        <svg *ngIf="!isPwVisible('smtp_pass')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg *ngIf="isPwVisible('smtp_pass')" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                                <span class="st-field-hint" *ngIf="!emailReady" style="color: var(--st-red, #b91c1c)">
+                                    {{ 'settings.smtp_hint' | translate }}
+                                </span>
                             </label>
                         </div>
 
