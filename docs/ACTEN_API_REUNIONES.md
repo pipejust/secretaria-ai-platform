@@ -1,6 +1,6 @@
 # Acten API — Guía de integración de reuniones
 
-**Versión del 2 de octubre de 2026.** Para el equipo que integra Acten en su
+**Versión del 7 de octubre de 2026.** Para el equipo que integra Acten en su
 plataforma. Cubre todo el ciclo de una reunión: crearla (subiendo un
 archivo, mandando el bot o programándolo), seguirla en vivo, y leer el acta,
 la transcripción y el vídeo.
