@@ -88,7 +88,9 @@ def _resolve_tenant_logo_url(branding: dict, tenant_id: int | None) -> str:
         # NO renderizan data URLs.
         api_base = (os.environ.get("PUBLIC_BASE_URL") or "").strip().rstrip("/")
         if api_base.startswith("https://"):
-            return f"{api_base}/branding/{tenant_id}/logo.png"
+            # La ruta pública es /api/branding/...; PUBLIC_BASE_URL no lleva /api.
+            prefijo = "" if api_base.endswith("/api") else "/api"
+            return f"{api_base}{prefijo}/branding/{tenant_id}/logo.png"
         # Fallback: si el API no está accesible públicamente (dev), usamos
         # el logo default de Acten para que el email igual tenga marca.
         return _get_default_logo_url()
