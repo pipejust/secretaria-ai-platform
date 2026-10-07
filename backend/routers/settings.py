@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 import logging
 import os
 import secrets
@@ -239,6 +240,21 @@ def save_settings(
         # cifra dos veces.
         if provider_name == "smtp":
             config_obj = {**config_obj, **{k: cifrar(config_obj[k]) for k in ("apiKey", "password") if config_obj.get(k)}}
+
+        # Curación automática: al pasar de apagada a encendida se anota desde
+        # cuándo rige, para que el cron no despache las sesiones pendientes
+        # anteriores (ver cron_service._auto_curation_since).
+        if provider_name == "autoCuration":
+            previa = {}
+            if existing:
+                try:
+                    previa = json.loads(existing.config_json or "{}")
+                except (json.JSONDecodeError, TypeError):
+                    previa = {}
+            if config_obj.get("isEnabled") and not previa.get("isEnabled"):
+                config_obj = {**config_obj, "enabledSince": datetime.now().isoformat()}
+            elif config_obj.get("isEnabled") and previa.get("enabledSince"):
+                config_obj = {**config_obj, "enabledSince": previa["enabledSince"]}
 
         # Para Fireflies: el `webhook_token` SOLO lo genera el servidor.
         # Nunca aceptamos el valor que envía el cliente — eso permitiría a un

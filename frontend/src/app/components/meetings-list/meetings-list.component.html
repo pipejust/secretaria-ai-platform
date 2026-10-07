@@ -353,6 +353,10 @@
                                (click)="onTitleClick(s, $event)">
                                 {{ s.title || ('meetings.no_title' | translate) }}
                             </a>
+                            <span class="row-dup" *ngIf="s.duplicate_of"
+                                  [attr.title]="'meetings_list.duplicate_of' | translate:{ n: s.duplicate_of }">
+                                {{ 'meetings_list.duplicate_badge' | translate }}
+                            </span>
                             <span class="row-video" *ngIf="s.recording_video_key"
                                   [attr.title]="'meetings_list.has_video' | translate"
                                   [attr.aria-label]="'meetings_list.has_video' | translate">
@@ -1063,6 +1067,7 @@
                 <span>{{ 'meeting_bot.consent' | translate }}</span>
             </label>
             <p class="mt-live-hint">{{ 'meeting_bot.waiting_room_hint' | translate }}</p>
+            <p class="mt-live-hint" *ngIf="usesBothSources">{{ 'meeting_bot.both_sources_hint' | translate }}</p>
         </form>
 
         <footer class="ap-modal-foot">

@@ -171,6 +171,10 @@
                 </div>
 
                 <!-- Metadata: labels + badges -->
+                <p class="cp-dup-note" *ngIf="meetingData?.duplicate_of">
+                    {{ 'curation.duplicate_note' | translate:{ n: meetingData.duplicate_of } }}
+                    <a [routerLink]="['/admin/curation', meetingData.duplicate_of]">{{ 'curation.duplicate_open' | translate }}</a>
+                </p>
                 <ul class="cp-meta" [attr.aria-label]="'curation.session_info_aria' | translate">
                     <li>
                         <span class="cp-meta-label">{{ 'curation.date_label' | translate }}</span>

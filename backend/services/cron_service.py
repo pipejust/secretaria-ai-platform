@@ -65,6 +65,24 @@ def _load_auto_curation_config(session: Session, tenant_id: int) -> Optional[tup
     return is_enabled, max(timeout_minutes / 60.0, 0.0)  # devolvemos horas para no romper firmas existentes
 
 
+def _auto_curation_since(session: Session, tenant_id: int) -> Optional[str]:
+    """Desde cuándo rige la curación automática (ISO) o None si no consta.
+
+    Al encenderla en una empresa con cientos de sesiones pendientes antiguas,
+    sin esta marca el cron las despacharía todas de golpe: correos y tareas de
+    reuniones de hace meses. Solo entran las sesiones creadas después.
+    """
+    setting = session.exec(
+        select(IntegrationSetting)
+        .where(IntegrationSetting.provider_name == "autoCuration")
+        .where(IntegrationSetting.tenant_id == tenant_id)
+    ).first()
+    try:
+        return (json.loads(setting.config_json or "{}") if setting else {}).get("enabledSince") or None
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
 def _hours_since(created_at_iso: str) -> Optional[float]:
     """Diferencia en horas entre `now()` (sin tz) y la fecha ISO de creación."""
     if not created_at_iso:
@@ -518,6 +536,7 @@ def check_and_dispatch_pending_sessions() -> None:
         # Cache de configuración por tenant (evita N queries cuando hay muchas
         # sesiones del mismo tenant en cola).
         config_cache: dict[int, tuple[bool, float]] = {}
+        since_cache: dict[int, Optional[str]] = {}
 
         for ms in pending_sessions:
             # GATE de seguridad: si el pipeline IA dejó error, la sesión
@@ -542,6 +561,10 @@ def check_and_dispatch_pending_sessions() -> None:
             )
             if not enabled:
                 continue
+            if tid not in since_cache:
+                since_cache[tid] = _auto_curation_since(session, tid)
+            if since_cache[tid] and (ms.created_at or "") < since_cache[tid]:
+                continue  # anterior a la activación: la despacha un curador a mano
 
             delta = _hours_since(ms.created_at)
             if delta is None or delta < timeout_hours:

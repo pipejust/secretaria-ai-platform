@@ -1323,3 +1323,6 @@
     outline: none;
 }
 .cp-video-hint { margin: 2px 0 0; font-size: 0.75rem; color: var(--color-fg-soft); }
+
+.cp-dup-note { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: #fef3c7; color: #92400e; font-size: 14px; }
+.cp-dup-note a { color: inherit; font-weight: 600; margin-left: 6px; }

@@ -26,6 +26,7 @@ interface ActionItem {
 }
 
 interface MeetingData {
+    duplicate_of?: number | null;
   id?: number;
   title: string;
   date: string;

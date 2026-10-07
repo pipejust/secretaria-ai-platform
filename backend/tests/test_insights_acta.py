@@ -46,3 +46,30 @@ def test_una_respuesta_completa_o_una_reunion_minima_no_se_repiten():
     saludo = Modelo([VACIO])
     pedir(saludo, "Hola, prueba de micrófono.")
     assert saludo.llamadas == 1
+
+
+class ModeloConActa(Modelo):
+    """Como el de producción: en transcripciones largas omite el acta, pero la da si se pide sola."""
+
+    def __init__(self, respuestas, acta):
+        super().__init__(respuestas)
+        self.acta, self.pedidas_acta = acta, 0
+
+    async def acta_only(self, transcript, output_language=None):
+        self.pedidas_acta += 1
+        return self.acta
+
+
+def test_si_falta_el_acta_se_pide_por_separado_sin_repetir_todo():
+    sin_claves = {"themes": [{"theme_name": "Obra"}], "attendees": []}
+    modelo = ModeloConActa([sin_claves], {"decisions": "- **[Obra]** Seguir — Responsable: Ana",
+                                          "risks": "- Sin elementos relevantes en esta reunión.", "agreements": "- Pagar"})
+    r = pedir(modelo)
+    assert modelo.llamadas == 1 and modelo.pedidas_acta == 1
+    assert r["themes"] and r["decisions"].startswith("- **[Obra]**") and not tp._acta_vacia(r)
+
+
+def test_si_el_acta_separada_tambien_vuelve_vacia_se_repite_como_antes():
+    modelo = ModeloConActa([VACIO], {})
+    r = pedir(modelo)
+    assert modelo.pedidas_acta == 1 and modelo.llamadas == 1 + tp._REINTENTOS_ACTA_VACIA and tp._acta_vacia(r)

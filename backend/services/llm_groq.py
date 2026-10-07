@@ -226,6 +226,43 @@ Transcripción:
 
         return await self._post_with_retries(payload, fallback=self._empty_payload())
 
+    async def acta_only(self, transcript: str, output_language: Optional[str] = None) -> Dict[str, Any]:
+        """Solo decisiones, riesgos y acuerdos.
+
+        En transcripciones largas el modelo a veces devuelve asistentes y temas
+        y omite estas tres claves. Pedidas solas, con el mismo formato, sí llegan.
+        """
+        if not transcript or not transcript.strip() or not self.api_key:
+            return {}
+        lang = output_language or "Español"
+        user_prompt = f"""
+Analiza la transcripción y devuelve un JSON con EXACTAMENTE estas tres claves,
+cada una un texto Markdown con UNA viñeta por elemento:
+
+{{
+  "decisions": "- **[Tema]** Decisión concreta — Responsable: <Nombre>",
+  "risks": "- **[Severidad alta/media/baja]** Riesgo concreto — Responsable de seguimiento: <Nombre>",
+  "agreements": "- **[Tema]** Acuerdo concreto — Partes: <Nombres>"
+}}
+
+Reglas: nunca párrafos largos, siempre viñetas `- ...`. Si la reunión no toca
+alguno de los tres, pon `- Sin elementos relevantes en esta reunión.` Nunca
+inventes responsables, hechos ni cifras. Escribe en {lang}.
+
+Transcripción:
+{transcript}
+""".strip()
+        payload = {
+            "model": self.MODEL,
+            "messages": [
+                {"role": "system", "content": "Eres un secretario de actas corporativas. Respondes SOLO JSON."},
+                {"role": "user", "content": user_prompt},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.2,
+        }
+        return await self._post_with_retries(payload, fallback={})
+
     async def deduce_project(
         self, summary_or_transcript: str, projects: List[Dict[str, Any]]
     ) -> Optional[int]:

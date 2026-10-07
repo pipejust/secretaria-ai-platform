@@ -151,3 +151,27 @@ def test_la_clave_del_emparejamiento_sirve_para_todo_el_ciclo(client, api, db_se
     # El código es de un solo uso.
     otra_vez = client.post("/api/v1/pair/redeem", json={"codigo": codigo.json()["codigo"], "plataforma": "Altum"})
     assert otra_vez.status_code == 400
+
+
+def test_youtube_por_api(client, api, monkeypatch):
+    """`youtube_url` es la tercera entrada: excluyente con `file` y `text_content`."""
+    from routers import integration_v1
+    import routers.sessions_upload as su
+
+    recibido = {}
+
+    async def falsa(db, tenant, background_tasks, **kw):
+        recibido.update(kw)
+        s = MeetingSession(tenant_id=tenant.id, fireflies_id=f"yt-{uuid.uuid4().hex[:8]}", title=kw["title"], date="2026-10-01T10:00:00", status="processing",
+                           raw_transcript="", raw_summary="", processing_error="")
+        db.add(s); db.commit(); db.refresh(s)
+        return s
+    monkeypatch.setattr(su, "create_uploaded_session", falsa)
+
+    post = lambda data: client.post("/api/v1/sessions", headers=api["h"], data=data)  # noqa: E731
+    assert post({"title": "T", "youtube_url": "https://youtu.be/abc123", "text_content": "x" * 30}).status_code == 422
+    assert post({"title": "T", "youtube_url": "https://vimeo.com/123"}).status_code == 422
+    r = post({"title": "T", "youtube_url": " https://www.youtube.com/watch?v=dQw4w9WgXcQ "})
+    assert r.status_code == 202, r.text
+    assert recibido["youtube_url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    assert recibido["text_content"] is None and recibido["file"] is None

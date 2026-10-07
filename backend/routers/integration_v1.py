@@ -407,14 +407,16 @@ async def create_session_from_upload(
     language: Optional[Literal["es", "en", "ca"]] = Form(None),
     project_external_id: Optional[str] = Form(None, max_length=200),
     text_content: Optional[str] = Form(None),
+    youtube_url: Optional[str] = Form(None, max_length=2048),
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("sessions:write")),
 ):
-    """Crea una sesión a partir de una grabación o de una transcripción ya hecha.
+    """Crea una sesión a partir de una grabación, de una transcripción ya hecha o de un vídeo de YouTube.
 
     `multipart/form-data` con **uno** de `file` (audio o vídeo: se
-    transcribe; cualquier otro archivo se lee como texto) o `text_content`.
+    transcribe; cualquier otro archivo se lee como texto), `text_content`
+    o `youtube_url` (se descarga el audio y se transcribe).
     Responde en cuanto la sesión existe; el acta, las decisiones y las
     tareas se generan después: consultar `GET /sessions/{id}` hasta que
     `status` deje de ser `processing`.
@@ -423,8 +425,13 @@ async def create_session_from_upload(
 
     tiene_archivo = bool(file and file.filename)
     tiene_texto = bool(text_content and text_content.strip())
-    if tiene_archivo == tiene_texto:
-        raise HTTPException(422, "Envía un archivo (`file`) o el texto (`text_content`), uno de los dos.")
+    tiene_youtube = bool(youtube_url and youtube_url.strip())
+    if tiene_archivo + tiene_texto + tiene_youtube != 1:
+        raise HTTPException(422, "Envía un archivo (`file`), el texto (`text_content`) o un enlace (`youtube_url`), solo uno.")
+    if tiene_youtube:
+        from services.youtube_ingest import is_youtube_url
+        if not is_youtube_url(youtube_url.strip()):
+            raise HTTPException(422, "`youtube_url` no es un enlace de YouTube.")
     if date:
         try:
             datetime.fromisoformat(date.replace("Z", "+00:00"))
@@ -442,6 +449,7 @@ async def create_session_from_upload(
         db, ctx.tenant, background_tasks, title=title.strip(), date=date,
         language=_IDIOMA_SUBIDA.get(language or ""), project_id=project_id,
         text_content=text_content if tiene_texto else None,
+        youtube_url=youtube_url.strip() if tiene_youtube else None,
         file=file if tiene_archivo else None,
     )
     return {

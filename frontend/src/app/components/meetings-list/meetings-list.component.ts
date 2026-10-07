@@ -930,6 +930,11 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
         return (fuente === 'owned_bot' || fuente === 'both') && enPlan;
     }
 
+    /** Fireflies y el bot activos a la vez: si ambos graban, Acten conserva la del bot. */
+    get usesBothSources(): boolean {
+        return this.authService.currentUserValue?.tenant?.meeting_source === 'both';
+    }
+
     get canRecordVideo(): boolean {
         const features: unknown = this.authService.currentUserValue?.tenant?.entitlements?.features;
         return Array.isArray(features) && features.includes('meetings.video');

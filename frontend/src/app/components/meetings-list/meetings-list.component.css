@@ -1829,3 +1829,6 @@
 .dt-participants .avatar:focus-within {
     z-index: 60;
 }
+
+/* Sesión archivada por duplicada: la ganó la grabación del bot. */
+.row-dup { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: #92400e; background: #fef3c7; }

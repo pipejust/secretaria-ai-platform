@@ -199,6 +199,7 @@ Alcance `sessions:write`. Cuerpo en **`multipart/form-data`**, con **uno** de
 | `title` | string | **Obligatorio.** Máx. 300 |
 | `file` | archivo | Audio o vídeo (`.mp3 .wav .m4a .mp4 .mpeg .mpga .webm .flac .ogg`): Acten lo transcribe. Cualquier otro archivo se lee como texto. Máximo 100 MB |
 | `text_content` | string | Transcripción o notas ya escritas, en lugar de `file` |
+| `youtube_url` | string | Enlace de YouTube: se descarga el audio y se transcribe, en lugar de `file` |
 | `date` | ISO 8601 | Fecha de la reunión. Por defecto, el momento de la subida |
 | `language` | `es` \| `en` \| `ca` | Si falta, Acten lo detecta |
 | `project_external_id` | string | La sesión nace en ese proyecto |

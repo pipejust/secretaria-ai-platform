@@ -104,6 +104,12 @@ async def insights_con_acta(groq, transcript, project_contacts, tenant_lang, *, 
         )
 
     insights = await pedir()
+    if _acta_vacia(insights) and len(transcript) > _MIN_CHARS_ACTA and hasattr(groq, "acta_only"):
+        # Transcripciones largas: el modelo devuelve temas y asistentes pero se
+        # come el acta. Pedida sola sí llega; es más barato que repetir todo.
+        logger.warning("%s: el análisis volvió sin acta; se pide el acta por separado.", etiqueta)
+        acta = await _call_with_retry(etiqueta + ".acta", lambda: groq.acta_only(transcript, output_language=tenant_lang))
+        insights = {**insights, **{k: v for k, v in (acta or {}).items() if k in _CAMPOS_ACTA}}
     for intento in range(1, _REINTENTOS_ACTA_VACIA + 1):
         if not _acta_vacia(insights) or len(transcript) <= _MIN_CHARS_ACTA:
             break
