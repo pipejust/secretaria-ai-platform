@@ -78,3 +78,33 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
     assert enviado["body"]["preset"] == "public_chat" and enviado["body"]["visibility"] == "private"
     assert enviado["body"]["creation_content"] == {"m.federate": False}
     assert "initial_state" not in enviado["body"]  # ni cifrado ni invitados anónimos
+
+
+def test_las_invitaciones_salen_a_la_hora_de_la_sesion(db_session, empresa, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    vocem.guardar(db_session, empresa.id, {
+        "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+    invitadas = []
+    monkeypatch.setattr(vocem, "cuentas_de_usuarios", lambda db, t, cfg: ["@felipe:softnexus.co"])
+
+    def falso(method, url, json=None, timeout=None, headers=None):
+        invitadas.append((url.rsplit("/rooms/", 1)[1].split("/")[0], json["user_id"]))
+        return httpx.Response(200, json={}, request=httpx.Request(method, url))
+    monkeypatch.setattr(vocem.httpx, "request", falso)
+
+    ahora = datetime.now(timezone.utc)
+    # Sesión ahora (o sin hora): invitación inmediata.
+    assert vocem.programar_invitaciones(db_session, empresa.id, "!ya", None) == "ahora"
+    assert vocem.programar_invitaciones(db_session, empresa.id, "!pronto", ahora + timedelta(minutes=5)) == "ahora"
+    # Sesión en tres días: queda pendiente y el cron no la toca todavía.
+    assert vocem.programar_invitaciones(db_session, empresa.id, "!luego", ahora + timedelta(days=3)) == "programada"
+    assert [r for r, _ in invitadas] == ["%21ya", "%21pronto"]
+    assert vocem.enviar_invitaciones_pendientes(db_session) == 0
+    # Cuando falta menos de la antelación, el cron invita y la marca hecha.
+    fila = db_session.exec(select(vocem.VocemInvite).where(vocem.VocemInvite.room_id == "!luego")).first()
+    fila.invite_at = (ahora - timedelta(seconds=1)).isoformat(); db_session.add(fila); db_session.commit()
+    assert vocem.enviar_invitaciones_pendientes(db_session) == 1
+    assert invitadas[-1] == ("%21luego", "@felipe:softnexus.co")
+    assert vocem.enviar_invitaciones_pendientes(db_session) == 0

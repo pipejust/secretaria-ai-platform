@@ -1023,6 +1023,24 @@ def refrescar_calendarios() -> None:
         logger.exception("El refresco de calendarios falló entero: %s", exc)
 
 
+def vocem_invitaciones() -> None:
+    """Invita a la gente a las llamadas de Element diez minutos antes de la hora."""
+    from services import vocem
+
+    try:
+        with Session(engine) as session:
+            n = vocem.enviar_invitaciones_pendientes(session)
+        if n:
+            logger.info("Vocem: invitaciones enviadas para %s sala(s).", n)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Vocem: el envío de invitaciones falló: %s", exc)
+
+
+scheduler.add_job(
+    vocem_invitaciones, "interval", minutes=1, max_instances=1, coalesce=True, id="vocem_invitaciones",
+)
+
+
 # Catálogo de proyectos cada 3 min: un proyecto nuevo aparece casi de
 # inmediato aunque nadie nos avise. Es 1 petición, 20 a la hora.
 scheduler.add_job(

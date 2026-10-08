@@ -209,3 +209,70 @@ def enlace_de_sala(cfg: dict, room_id: str) -> str:
     from urllib.parse import quote as _q
 
     return f"{cfg['call_base_url'].rstrip('/')}/room/#?roomId={_q(room_id, safe='')}&viaServers={servidor_de(cfg)}"
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Invitaciones a la hora de la sesión
+# ──────────────────────────────────────────────────────────────────────────
+# Invitar al crear la sala hacía aparecer la llamada en el chat de todos aunque
+# la sesión fuera en tres días. La invitación sale `ANTELACION` antes de la hora
+# (o de inmediato si la sesión es ahora); así aparece cuando sirve.
+
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+from sqlmodel import Field, SQLModel  # noqa: E402
+
+ANTELACION = timedelta(minutes=10)
+
+
+class VocemInvite(SQLModel, table=True):
+    """Invitación pendiente a la sala de una sesión programada."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    room_id: str
+    invite_at: str = Field(index=True)  # ISO UTC
+    done_at: str | None = None
+
+
+def _ahora() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def invitar(db: Session, tenant_id: int, room_id: str, cuentas: list[str] | None = None) -> list[str]:
+    """Invita a la sala a las cuentas dadas (o a los usuarios de la empresa con cuenta)."""
+    cfg = cargar(db, tenant_id)
+    if not configurada(db, tenant_id):
+        return []
+    cuentas = cuentas if cuentas is not None else cuentas_de_usuarios(db, tenant_id, cfg)
+    hechas = []
+    for cuenta in cuentas:
+        try:
+            _llamar(cfg, "POST", f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}/invite", {"user_id": cuenta})
+            hechas.append(cuenta)
+        except VocemError as exc:
+            logger.info("No se pudo invitar a %s a %s: %s", cuenta, room_id, exc)
+    return hechas
+
+
+def programar_invitaciones(db: Session, tenant_id: int, room_id: str, inicio: datetime | None) -> str:
+    """Invita ya si la sesión es ahora o muy pronto; si no, deja la invitación para antes de la hora."""
+    if inicio is None or inicio.tzinfo is None or inicio - _ahora() <= ANTELACION:
+        invitar(db, tenant_id, room_id)
+        return "ahora"
+    db.add(VocemInvite(tenant_id=tenant_id, room_id=room_id, invite_at=(inicio - ANTELACION).isoformat()))
+    db.commit()
+    return "programada"
+
+
+def enviar_invitaciones_pendientes(db: Session) -> int:
+    """Cron: manda las invitaciones cuya hora llegó. Devuelve cuántas salas se invitaron."""
+    limite = _ahora().isoformat()
+    filas = db.exec(select(VocemInvite).where(VocemInvite.done_at == None, VocemInvite.invite_at <= limite)).all()  # noqa: E711
+    for fila in filas:
+        invitar(db, fila.tenant_id, fila.room_id)
+        fila.done_at = _ahora().isoformat()
+        db.add(fila)
+    if filas:
+        db.commit()
+    return len(filas)

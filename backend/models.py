@@ -1201,3 +1201,6 @@ class Payment(SQLModel, table=True):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     approved_at: Optional[str] = Field(default=None)
     raw_event_json: str = Field(default="{}")
+
+# Tabla auxiliar de Vocem (invitaciones a la hora de la sesión); vive en services/vocem.py.
+from services.vocem import VocemInvite  # noqa: E402,F401
