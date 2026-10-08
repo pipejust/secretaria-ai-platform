@@ -183,23 +183,27 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
         "preset": "public_chat",
         "visibility": "private",
         "creation_content": {"m.federate": False},
+        # Element Call exige que cada participante publique su propio estado de
+        # llamada; con el nivel por defecto (50) entran y se caen («Connection lost»).
+        "power_level_content_override": {
+            "events": {"m.rtc.member": 0, "org.matrix.msc3401.call.member": 0, "io.element.video.member": 0}
+        },
         "invite": list(dict.fromkeys(explicitos + cuentas_de_usuarios(db, tenant_id, cfg))),
     }
     datos = _llamar(cfg, "POST", "/_matrix/client/v3/createRoom", cuerpo)
     room_id = datos.get("room_id")
     if not room_id:
         raise VocemError("Vocem no devolvió el id de la sala")
-    return {
-        "room_id": room_id,
-        # Para el bot: Element Call directo.
-        "meeting_url": f"{cfg['call_base_url'].rstrip('/')}/room/#/{room_id}",
-        # Para las personas: abre la sala en el chat donde ya tienen sesión.
-        "join_url": enlace_para_personas(cfg, room_id),
-    }
+    enlace = enlace_de_sala(cfg, room_id)
+    # Un solo enlace para el bot y para las personas: Element Call con `roomId`.
+    return {"room_id": room_id, "meeting_url": enlace, "join_url": enlace}
 
 
-def enlace_para_personas(cfg: dict, room_id: str) -> str:
-    chat = (cfg.get("chat_base_url") or "").rstrip("/")
-    if chat:
-        return f"{chat}/#/room/{room_id}"
-    return f"{cfg['call_base_url'].rstrip('/')}/room/#/{room_id}"
+def enlace_de_sala(cfg: dict, room_id: str) -> str:
+    """`https://call.…/room/#?roomId=%21id&viaServers=servidor`, el formato que Element Call entiende.
+
+    El id va tal cual lo devuelve el servidor (sin añadirle `:dominio`), urlencoded.
+    """
+    from urllib.parse import quote as _q
+
+    return f"{cfg['call_base_url'].rstrip('/')}/room/#?roomId={_q(room_id, safe='')}&viaServers={servidor_de(cfg)}"

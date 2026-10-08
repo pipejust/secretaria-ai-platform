@@ -110,10 +110,6 @@
                     <input id="ba-vo-call" type="url" [(ngModel)]="vocem.call_base_url" name="vo_call" placeholder="https://call.empresa.com" autocomplete="off" />
                 </div>
                 <div class="ba-field">
-                    <label for="ba-vo-chat">{{ 'tenants.billing_vocem_chat' | translate }}</label>
-                    <input id="ba-vo-chat" type="url" [(ngModel)]="vocem.chat_base_url" name="vo_chat" placeholder="https://chat.empresa.com" autocomplete="off" />
-                </div>
-                <div class="ba-field">
                     <label for="ba-vo-token">{{ 'tenants.billing_vocem_token' | translate }}</label>
                     <input id="ba-vo-token" type="password" [(ngModel)]="vocem.access_token" name="vo_token" autocomplete="new-password"
                            [placeholder]="row?.vocem?.access_token_hint || ('tenants.billing_vocem_token_hint' | translate)" />

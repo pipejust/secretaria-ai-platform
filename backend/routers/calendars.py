@@ -599,8 +599,9 @@ async def borrar_evento(
 
 
 def _es_sala_propia(e: CalendarEntry) -> bool:
-    """El enlace lo creó Acten en el chat de Element: el bot ya va programado."""
-    return "/#/room/!" in (e.meeting_url or "")
+    """El enlace lo creó Acten (Element Call con roomId): el bot ya va programado."""
+    url = e.meeting_url or ""
+    return "/room/#" in url and "roomId=" in url
 
 
 def _evento(e: CalendarEntry, cal: Calendar) -> dict:

@@ -387,8 +387,9 @@ def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana
     from services import vocem
 
     monkeypatch.setattr(vocem, "configurada", lambda db, t: True)
+    enlace = "https://call.vocem.test/room/#?roomId=%21s&viaServers=vocem.test"
     monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
-        "room_id": "!s", "meeting_url": "https://call.vocem.test/room/#/!s", "join_url": "https://vocem.test/#/room/!s"})
+        "room_id": "!s", "meeting_url": enlace, "join_url": enlace})
     programado = {}
 
     async def falso_start(db, tenant_id, owner_id, kind, body):
@@ -402,8 +403,8 @@ def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana
         "create_room": True})
     assert r.status_code == 201, r.text
     ev = r.json()["event"]
-    assert ev["meeting_url"] == "https://vocem.test/#/room/!s" and ev["bot_invited"] is True and ev["attendees"] == []
-    assert programado["url"] == "https://call.vocem.test/room/#/!s" and programado["kind"] == "meeting"
+    assert ev["meeting_url"] == enlace and ev["bot_invited"] is True and ev["attendees"] == []
+    assert programado["url"] == enlace and programado["kind"] == "meeting"
     assert programado["inicio"].isoformat().startswith("2026-11-02T14:00:00") and programado["titulo"] == "Comité"
 
     # Sin Vocem configurado: 409. Con enlace pegado, create_room no hace nada.

@@ -66,11 +66,9 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
         return httpx.Response(200, json={"room_id": "!abc"}, request=httpx.Request(method, url))
     monkeypatch.setattr(vocem.httpx, "request", falso)
     sala = vocem.crear_sala(db_session, empresa.id, "Comité", ["@ana:softnexus.co", "@integraciones:softnexus.co", "no-es-id"])
-    assert sala == {"room_id": "!abc", "meeting_url": "https://call.vocem.softnexus.co/room/#/!abc",
-                    "join_url": "https://call.vocem.softnexus.co/room/#/!abc"}
-    # Con chat web configurado, el enlace para las personas abre la sala en su sesión del chat.
-    vocem.guardar(db_session, empresa.id, {"chat_base_url": "https://vocem.softnexus.co/"})
-    assert vocem.crear_sala(db_session, empresa.id, "Comité")["join_url"] == "https://vocem.softnexus.co/#/room/!abc"
+    enlace = "https://call.vocem.softnexus.co/room/#?roomId=%21abc&viaServers=softnexus.co"
+    assert sala == {"room_id": "!abc", "meeting_url": enlace, "join_url": enlace}
+    assert enviado["body"]["power_level_content_override"]["events"]["m.rtc.member"] == 0
     assert enviado["url"].endswith("/_matrix/client/v3/createRoom") and enviado["auth"] == "Bearer tok"
     # Explícitos + usuarios activos con cuenta en el servidor (por la parte local del correo), sin repetir ni al bot.
     assert enviado["body"]["invite"] == ["@ana:softnexus.co", "@danny:softnexus.co", "@felipe:softnexus.co"]
