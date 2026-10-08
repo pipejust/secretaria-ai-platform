@@ -3,15 +3,16 @@
 La empresa trae su propio servidor Matrix con Element Call. Acten guarda las
 credenciales del usuario de servicio cifradas y, cuando alguien pide «Acten
 gestiona todo», crea la sala sin cifrado extremo a extremo (el bot tiene que
-oír el audio), con acceso para invitados y con el bot dentro.
+oír el audio). El servidor está cerrado a sus propias cuentas: la sala es
+`public_chat` (quien tenga el enlace entra sin invitación), `visibility:
+private` (no sale en el directorio) y no federa (`m.federate: false`), así
+que un enlace reenviado fuera no sirve. No hay invitados anónimos.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from urllib.parse import quote
-
 import httpx
 from sqlmodel import Session, select
 
@@ -109,34 +110,20 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
     """Crea la sala de la reunión y devuelve `{room_id, meeting_url}`.
 
     Sin `m.room.encryption`: el bot entra como participante y necesita oír.
-    `guest_access = can_join` para que los externos entren solo a esa sala.
+    Sin `guest_access`: el servidor no admite invitados anónimos.
     """
     cfg = cargar(db, tenant_id)
     if not configurada(db, tenant_id):
         raise VocemError("Esta empresa no tiene Vocem configurado.")
     cuerpo = {
         "name": titulo.strip()[:200] or "Reunión",
-        "preset": "private_chat",
+        "preset": "public_chat",
         "visibility": "private",
+        "creation_content": {"m.federate": False},
         "invite": [u for u in (invitados or []) if u.startswith("@") and ":" in u and u != cfg["user_id"]],
-        "initial_state": [
-            {"type": "m.room.guest_access", "state_key": "", "content": {"guest_access": "can_join"}},
-        ],
     }
     datos = _llamar(cfg, "POST", "/_matrix/client/v3/createRoom", cuerpo)
     room_id = datos.get("room_id")
     if not room_id:
         raise VocemError("Vocem no devolvió el id de la sala")
     return {"room_id": room_id, "meeting_url": f"{cfg['call_base_url'].rstrip('/')}/room/#/{room_id}"}
-
-
-def cerrar_acceso(db: Session, tenant_id: int, room_id: str) -> None:
-    """Al terminar: ya nadie entra con el enlace."""
-    cfg = cargar(db, tenant_id)
-    if not configurada(db, tenant_id):
-        return
-    try:
-        _llamar(cfg, "PUT", f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}/state/m.room.guest_access/",
-                {"guest_access": "forbidden"})
-    except VocemError as exc:
-        logger.warning("No se pudo cerrar la sala %s: %s", room_id, exc)

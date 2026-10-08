@@ -37,7 +37,7 @@ def test_guardar_cifra_el_token_y_el_estado_no_lo_muestra(db_session, empresa):
     assert vocem.configurada(db_session, empresa.id) is False
 
 
-def test_crear_sala_sin_cifrado_y_con_invitados(db_session, empresa, monkeypatch):
+def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeypatch):
     vocem.guardar(db_session, empresa.id, {
         "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
         "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
@@ -51,5 +51,6 @@ def test_crear_sala_sin_cifrado_y_con_invitados(db_session, empresa, monkeypatch
     assert sala == {"room_id": "!abc", "meeting_url": "https://call.vocem.softnexus.co/room/#/!abc"}
     assert enviado["url"].endswith("/_matrix/client/v3/createRoom") and enviado["auth"] == "Bearer tok"
     assert enviado["body"]["invite"] == ["@ana:softnexus.co"]
-    assert all(st["type"] != "m.room.encryption" for st in enviado["body"]["initial_state"])
-    assert enviado["body"]["initial_state"][0]["content"]["guest_access"] == "can_join"
+    assert enviado["body"]["preset"] == "public_chat" and enviado["body"]["visibility"] == "private"
+    assert enviado["body"]["creation_content"] == {"m.federate": False}
+    assert "initial_state" not in enviado["body"]  # ni cifrado ni invitados anónimos
