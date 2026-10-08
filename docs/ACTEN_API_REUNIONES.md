@@ -324,6 +324,14 @@ exacto que documenta Vocem (`preset: public_chat`, `visibility: private`,
 `creation_content.m.federate: false`, `power_level_content_override` con
 `m.rtc.member`, `org.matrix.msc3401.call.member` e `io.element.video.member` a
 0) y luego mandar el bot con ese enlace.
+
+**Cuándo le aparece la llamada a la gente.** Con `create_room` Acten no
+invita a nadie al crear la sala: el enlace es lo que se reparte. La llamada
+aparece en el chat de los usuarios de la empresa con cuenta **dos minutos
+antes de `scheduled_start`**, o de inmediato si la sesión es ahora o falta
+menos de dos minutos. Así una sesión de dentro de tres días no aparece hoy
+en el chat de nadie. Lo mismo vale para los eventos que se crean desde el
+calendario de Acten con «Crear la reunión en Element».
 - **Cambios y cancelaciones**: el calendario manda la actualización y el bot
   la sigue. Los eventos recurrentes se programan solos, ocurrencia por
   ocurrencia.
