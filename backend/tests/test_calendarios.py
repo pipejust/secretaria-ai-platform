@@ -390,6 +390,8 @@ def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana
     enlace = "https://call.vocem.test/room/#?roomId=%21s&viaServers=vocem.test"
     monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
         "room_id": "!s", "meeting_url": enlace, "join_url": enlace})
+    invitaciones = []
+    monkeypatch.setattr(vocem, "programar_invitaciones", lambda db, t, room, inicio: invitaciones.append((room, inicio)))
     programado = {}
 
     async def falso_start(db, tenant_id, owner_id, kind, body):
@@ -406,6 +408,8 @@ def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana
     assert ev["meeting_url"] == enlace and ev["bot_invited"] is True and ev["attendees"] == []
     assert programado["url"] == enlace and programado["kind"] == "meeting"
     assert programado["inicio"].isoformat().startswith("2026-11-02T14:00:00") and programado["titulo"] == "Comité"
+    # La invitación al chat queda programada con la hora del evento, no al crearlo.
+    assert len(invitaciones) == 1 and invitaciones[0][0] == "!s" and invitaciones[0][1].isoformat().startswith("2026-11-02T14:00:00")
 
     # Sin Vocem configurado: 409. Con enlace pegado, create_room no hace nada.
     monkeypatch.setattr(vocem, "configurada", lambda db, t: False)

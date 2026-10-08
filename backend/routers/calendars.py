@@ -470,6 +470,8 @@ async def _sala_element(db: Session, user: User, cuerpo: "EventoNuevo") -> dict 
     inicio = _fecha(cuerpo.start_at)
     if cuerpo.all_day or inicio is None:
         return sala  # sin hora no hay a qué programar el bot; la sala queda creada
+    # La llamada aparece en el chat de la gente dos minutos antes de la hora.
+    vocem.programar_invitaciones(db, user.tenant_id, sala["room_id"], inicio)
     await start_capture(db, user.tenant_id, user.id, "meeting", StartCapture(
         external_id=f"cal-{uuid.uuid4().hex[:12]}", title=cuerpo.title.strip(),
         meeting_url=sala["meeting_url"], recording_authorized=True,
