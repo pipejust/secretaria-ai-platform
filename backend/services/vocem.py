@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import httpx
+from urllib.parse import quote
 from sqlmodel import Session, select
 
 from models import IntegrationSetting
@@ -106,21 +107,80 @@ def _llamar(cfg: dict, method: str, path: str, body: dict | None = None) -> dict
         raise VocemError("Vocem devolvió una respuesta ilegible") from exc
 
 
+def servidor_de(cfg: dict) -> str:
+    """`@integraciones:softnexus.co` → `softnexus.co`."""
+    return cfg["user_id"].split(":", 1)[1] if ":" in cfg.get("user_id", "") else ""
+
+
+def _existe(cfg: dict, user_id: str) -> bool:
+    try:
+        _llamar(cfg, "GET", f"/_matrix/client/v3/profile/{quote(user_id, safe='')}")
+        return True
+    except VocemError:
+        return False
+
+
+def _llano(texto: str) -> str:
+    import unicodedata
+
+    t = unicodedata.normalize("NFKD", texto or "").encode("ascii", "ignore").decode()
+    return " ".join(t.lower().split())
+
+
+def _por_nombre(cfg: dict, nombre: str, servidor: str) -> str | None:
+    """Busca en el directorio por nombre visible; vale solo si coincide exactamente uno."""
+    if not _llano(nombre):
+        return None
+    try:
+        datos = _llamar(cfg, "POST", "/_matrix/client/v3/user_directory/search", {"search_term": nombre, "limit": 10})
+    except VocemError:
+        return None
+    iguales = [r["user_id"] for r in datos.get("results", [])
+               if _llano(r.get("display_name", "")) == _llano(nombre) and r["user_id"].endswith(":" + servidor)]
+    return iguales[0] if len(iguales) == 1 else None
+
+
+def cuentas_de_usuarios(db: Session, tenant_id: int, cfg: dict) -> list[str]:
+    """Cuentas Matrix de los usuarios activos de la empresa que existen en el servidor.
+
+    Primero por la parte local del correo (`felipe@acme.com` → `@felipe:servidor`);
+    si no existe, por el nombre completo en el directorio (`Felipe Cortés` →
+    `@felipe:servidor`). Así la sala les aparece en el chat de Vocem con el
+    botón de llamada, sin iniciar sesión aparte en Element Call.
+    """
+    from models import User
+
+    servidor = servidor_de(cfg)
+    if not servidor:
+        return []
+    usuarios = db.exec(select(User).where(User.tenant_id == tenant_id, User.is_active == True)).all()  # noqa: E712
+    cuentas: list[str] = []
+    for u in usuarios:
+        local = (u.email or "").split("@")[0].strip().lower()
+        candidato = f"@{local}:{servidor}" if local else None
+        cuenta = candidato if candidato and _existe(cfg, candidato) else _por_nombre(cfg, u.full_name or "", servidor)
+        if cuenta and cuenta != cfg["user_id"] and cuenta not in cuentas:
+            cuentas.append(cuenta)
+    return sorted(cuentas)
+
+
 def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | None = None) -> dict:
     """Crea la sala de la reunión y devuelve `{room_id, meeting_url}`.
 
     Sin `m.room.encryption`: el bot entra como participante y necesita oír.
-    Sin `guest_access`: el servidor no admite invitados anónimos.
+    Sin `guest_access`: el servidor no admite invitados anónimos. Se invita a
+    los usuarios de la empresa con cuenta en el servidor, además de `invitados`.
     """
     cfg = cargar(db, tenant_id)
     if not configurada(db, tenant_id):
         raise VocemError("Esta empresa no tiene Vocem configurado.")
+    explicitos = [u for u in (invitados or []) if u.startswith("@") and ":" in u and u != cfg["user_id"]]
     cuerpo = {
         "name": titulo.strip()[:200] or "Reunión",
         "preset": "public_chat",
         "visibility": "private",
         "creation_content": {"m.federate": False},
-        "invite": [u for u in (invitados or []) if u.startswith("@") and ":" in u and u != cfg["user_id"]],
+        "invite": list(dict.fromkeys(explicitos + cuentas_de_usuarios(db, tenant_id, cfg))),
     }
     datos = _llamar(cfg, "POST", "/_matrix/client/v3/createRoom", cuerpo)
     room_id = datos.get("room_id")
