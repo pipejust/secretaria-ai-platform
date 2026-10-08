@@ -148,7 +148,7 @@ export class CalendarsService {
   crearEvento(cuerpo: {
     calendar?: string; title: string; description?: string; location?: string;
     start_at: string; end_at?: string; all_day?: boolean; meeting_url?: string;
-    invite_bot?: boolean; project_id?: number | null;
+    invite_bot?: boolean; create_room?: boolean; project_id?: number | null;
   }) {
     return this.http.post<{ event: any }>(`${this.base}/eventos`, cuerpo);
   }

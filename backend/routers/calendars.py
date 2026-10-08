@@ -449,6 +449,33 @@ class EventoNuevo(BaseModel):
     invite_bot: bool = Field(
         default=True,
         description="Invitar al bot de reuniones de Acten si hay enlace y la empresa lo admite.")
+    # «Acten gestiona todo»: crea la sala en Element (Vocem), pone el enlace del
+    # chat en el evento y programa el bot para la hora de inicio.
+    create_room: bool = False
+
+
+async def _sala_element(db: Session, user: User, cuerpo: "EventoNuevo") -> dict | None:
+    """Crea la sala y programa el bot; devuelve la sala o None si no aplica."""
+    if not cuerpo.create_room or cuerpo.meeting_url.strip():
+        return None
+    from services import vocem
+    from routers.bot_control import StartCapture, start_capture
+
+    if not vocem.configurada(db, user.tenant_id):
+        raise HTTPException(409, "Esta empresa no tiene Vocem (Element) configurado.")
+    try:
+        sala = vocem.crear_sala(db, user.tenant_id, cuerpo.title, [])
+    except vocem.VocemError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    inicio = _fecha(cuerpo.start_at)
+    if cuerpo.all_day or inicio is None:
+        return sala  # sin hora no hay a qué programar el bot; la sala queda creada
+    await start_capture(db, user.tenant_id, user.id, "meeting", StartCapture(
+        external_id=f"cal-{uuid.uuid4().hex[:12]}", title=cuerpo.title.strip(),
+        meeting_url=sala["meeting_url"], recording_authorized=True,
+        project_id=cuerpo.project_id, scheduled_start=inicio,
+    ))
+    return sala
 
 
 async def _correo_del_bot(db: Session, tenant_id: int) -> str:
@@ -487,14 +514,18 @@ async def crear_evento(
             403, "Ese calendario es de solo lectura para tu cuenta: lo dice el "
                  "proveedor, no Acten.")
 
+    sala = await _sala_element(db, user, cuerpo)
+    # Con sala propia el enlace del evento es el del chat (abre con la sesión que
+    # la gente ya tiene) y el bot va programado por API, no como invitado.
+    enlace = sala["join_url"] if sala else cuerpo.meeting_url.strip()
     entrada = CalendarEntry(
         tenant_id=user.tenant_id, calendar_id=cal.id, title=cuerpo.title.strip(),
         description=cuerpo.description, location=cuerpo.location,
         start_at=cuerpo.start_at, end_at=cuerpo.end_at, all_day=cuerpo.all_day,
-        meeting_url=cuerpo.meeting_url.strip(), project_id=cuerpo.project_id,
+        meeting_url=enlace, project_id=cuerpo.project_id,
         created_by_user_id=user.id,
         attendees_json=json.dumps(
-            await _asistentes(db, user.tenant_id, cuerpo.meeting_url.strip(), cuerpo.invite_bot)),
+            [] if sala else await _asistentes(db, user.tenant_id, enlace, cuerpo.invite_bot)),
     )
     db.add(entrada); db.commit(); db.refresh(entrada)
     await calendar_write.crear(db, cal, entrada)
@@ -567,6 +598,11 @@ async def borrar_evento(
     return {"status": "borrado"}
 
 
+def _es_sala_propia(e: CalendarEntry) -> bool:
+    """El enlace lo creó Acten en el chat de Element: el bot ya va programado."""
+    return "/#/room/!" in (e.meeting_url or "")
+
+
 def _evento(e: CalendarEntry, cal: Calendar) -> dict:
     return {
         "id": e.id, "calendar": cal.key, "title": e.title,
@@ -574,7 +610,7 @@ def _evento(e: CalendarEntry, cal: Calendar) -> dict:
         "start_at": e.start_at, "end_at": e.end_at, "all_day": e.all_day,
         "meeting_url": e.meeting_url, "project_id": e.project_id,
         "attendees": json.loads(e.attendees_json or "[]"),
-        "bot_invited": e.attendees_json not in ("", "[]"),
+        "bot_invited": e.attendees_json not in ("", "[]") or _es_sala_propia(e),
         "external_uid": e.external_uid, "external_error": e.external_error,
     }
 

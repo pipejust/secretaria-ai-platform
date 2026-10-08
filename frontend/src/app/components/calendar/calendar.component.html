@@ -180,11 +180,15 @@
     <label>Lugar
       <input type="text" [(ngModel)]="formEvento.location" placeholder="Sala 2" />
     </label>
-    <label>Enlace de la reunión
+    <label class="entera" *ngIf="!formEvento.id">
+      <input type="checkbox" [(ngModel)]="formEvento.create_room" />
+      Crear la reunión en Element (Acten crea la sala, pone el enlace y programa el bot)
+    </label>
+    <label *ngIf="!formEvento.create_room || formEvento.id">Enlace de la reunión
       <input type="url" [(ngModel)]="formEvento.meeting_url"
              placeholder="https://teams.microsoft.com/… · meet.google.com/… · zoom.us/… · call.…/room/#/!…" />
     </label>
-    <label class="entera" *ngIf="formEvento.meeting_url">
+    <label class="entera" *ngIf="formEvento.meeting_url && !formEvento.create_room">
       <input type="checkbox" [(ngModel)]="formEvento.invite_bot" />
       Invitar al bot de reuniones de Acten (graba, transcribe y genera el acta)
     </label>

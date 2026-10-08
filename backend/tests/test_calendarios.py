@@ -378,3 +378,39 @@ def test_los_proveedores_reciben_al_invitado_y_el_enlace():
     z = calendar_zoho._cuerpo(ev)
     assert z["attendees"] == [{"email": "bot@acten.app"}]
     assert "sendUpdates" in str(calendar_google._AVISAR)
+
+
+def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana, monkeypatch):
+    """`create_room`: Acten crea la sala, guarda el enlace del chat y programa el bot a la hora del evento."""
+    import routers.calendars as rc
+    from routers import bot_control
+    from services import vocem
+
+    monkeypatch.setattr(vocem, "configurada", lambda db, t: True)
+    monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
+        "room_id": "!s", "meeting_url": "https://call.vocem.test/room/#/!s", "join_url": "https://vocem.test/#/room/!s"})
+    programado = {}
+
+    async def falso_start(db, tenant_id, owner_id, kind, body):
+        programado.update(kind=kind, url=body.meeting_url, inicio=body.scheduled_start, titulo=body.title)
+        return {"id": "m1"}
+    monkeypatch.setattr(bot_control, "start_capture", falso_start)
+    monkeypatch.setattr(rc.meeting_source, "admite", lambda db, t, f: True)
+
+    r = client.post("/api/v1/calendars/eventos", headers=ana, json={
+        "title": "Comité", "start_at": "2026-11-02T14:00:00-05:00", "end_at": "2026-11-02T15:00:00-05:00",
+        "create_room": True})
+    assert r.status_code == 201, r.text
+    ev = r.json()["event"]
+    assert ev["meeting_url"] == "https://vocem.test/#/room/!s" and ev["bot_invited"] is True and ev["attendees"] == []
+    assert programado["url"] == "https://call.vocem.test/room/#/!s" and programado["kind"] == "meeting"
+    assert programado["inicio"].isoformat().startswith("2026-11-02T14:00:00") and programado["titulo"] == "Comité"
+
+    # Sin Vocem configurado: 409. Con enlace pegado, create_room no hace nada.
+    monkeypatch.setattr(vocem, "configurada", lambda db, t: False)
+    assert client.post("/api/v1/calendars/eventos", headers=ana, json={
+        "title": "x", "start_at": "2026-11-02T14:00:00-05:00", "create_room": True}).status_code == 409
+    r = client.post("/api/v1/calendars/eventos", headers=ana, json={
+        "title": "x", "start_at": "2026-11-02T14:00:00-05:00", "create_room": True,
+        "meeting_url": "https://meet.google.com/abc-defg-hij", "invite_bot": False})
+    assert r.status_code == 201 and r.json()["event"]["meeting_url"] == "https://meet.google.com/abc-defg-hij"

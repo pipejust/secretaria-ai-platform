@@ -79,7 +79,7 @@ export class CalendarComponent implements OnInit {
   formEvento = {
     id: null as number | null, calendar: '', title: '', description: '',
     location: '', fecha: '', hora: '09:00', horaFin: '10:00', all_day: false,
-    meeting_url: '', invite_bot: true,
+    meeting_url: '', invite_bot: true, create_room: false,
   };
   formSuscribir = { url: '', name: '' };
   formNuevo = { name: '', color: COLORES[0], origin: 'propio' as 'propio' | 'equipo' };
@@ -375,7 +375,7 @@ export class CalendarComponent implements OnInit {
     this.formEvento = {
       id: null, calendar: destino.key, title: '', description: '', location: '',
       fecha: this.clave(f), hora: '09:00', horaFin: '10:00', all_day: false,
-      meeting_url: '', invite_bot: true,
+      meeting_url: '', invite_bot: true, create_room: false,
     };
     this.modal.set('evento');
   }
@@ -399,7 +399,7 @@ export class CalendarComponent implements OnInit {
       location: e.location ?? '', fecha: d ? this.clave(d) : '',
       hora: d ? this.hhmm(d) : '09:00', horaFin: fin ? this.hhmm(fin) : '',
       all_day: !!e.all_day,
-      meeting_url: e.meeting_url ?? '', invite_bot: e.bot_invited ?? true,
+      meeting_url: e.meeting_url ?? '', invite_bot: e.bot_invited ?? true, create_room: false,
     };
     this.modal.set('evento');
   }
@@ -418,7 +418,8 @@ export class CalendarComponent implements OnInit {
     const cuerpo = {
       calendar: f.calendar, title: f.title.trim(), description: f.description,
       location: f.location, start_at: inicio, end_at: fin, all_day: f.all_day,
-      meeting_url: f.meeting_url.trim(), invite_bot: f.invite_bot,
+      meeting_url: f.create_room && !f.id ? '' : f.meeting_url.trim(), invite_bot: f.invite_bot,
+      ...(f.create_room && !f.id ? { create_room: true } : {}),
     };
     this.guardando.set(true);
     const peticion = f.id
@@ -429,6 +430,9 @@ export class CalendarComponent implements OnInit {
         this.guardando.set(false);
         this.modal.set(null);
         this.cargarEventos();
+        if (cuerpo.create_room && r?.event?.meeting_url) {
+          this.toast.success(`Sala creada en Element: ${r.event.meeting_url}`);
+        }
         if (cuerpo.meeting_url && cuerpo.invite_bot && !r?.event?.bot_invited) {
           this.toast.warning('El bot de reuniones no fue invitado: la empresa no lo tiene activo o autorizado.');
         }
