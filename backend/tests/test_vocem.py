@@ -70,8 +70,11 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
     assert sala == {"room_id": "!abc", "meeting_url": enlace, "join_url": enlace}
     assert enviado["body"]["power_level_content_override"]["events"]["m.rtc.member"] == 0
     assert enviado["url"].endswith("/_matrix/client/v3/createRoom") and enviado["auth"] == "Bearer tok"
-    # Explícitos + usuarios activos con cuenta en el servidor (por la parte local del correo), sin repetir ni al bot.
-    assert enviado["body"]["invite"] == ["@ana:softnexus.co", "@danny:softnexus.co", "@felipe:softnexus.co"]
+    # Solo invitados explícitos (sin el bot ni ids inválidos); a nadie más le aparece la llamada en el chat.
+    assert enviado["body"]["invite"] == ["@ana:softnexus.co"]
+    # La resolución de cuentas sigue disponible para quien la pida explícitamente.
+    assert vocem.cuentas_de_usuarios(db_session, empresa.id, vocem.cargar(db_session, empresa.id)) == [
+        "@ana:softnexus.co", "@danny:softnexus.co", "@felipe:softnexus.co"]
     assert enviado["body"]["preset"] == "public_chat" and enviado["body"]["visibility"] == "private"
     assert enviado["body"]["creation_content"] == {"m.federate": False}
     assert "initial_state" not in enviado["body"]  # ni cifrado ni invitados anónimos

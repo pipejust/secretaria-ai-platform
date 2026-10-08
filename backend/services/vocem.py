@@ -188,7 +188,9 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
         "power_level_content_override": {
             "events": {"m.rtc.member": 0, "org.matrix.msc3401.call.member": 0, "io.element.video.member": 0}
         },
-        "invite": list(dict.fromkeys(explicitos + cuentas_de_usuarios(db, tenant_id, cfg))),
+        # Solo invitados explícitos. Invitar a todos los usuarios hacía aparecer la
+        # llamada en el chat de cada uno; la gente entra con el enlace y nada más.
+        "invite": explicitos,
     }
     datos = _llamar(cfg, "POST", "/_matrix/client/v3/createRoom", cuerpo)
     room_id = datos.get("room_id")
