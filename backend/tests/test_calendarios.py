@@ -389,7 +389,7 @@ def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana
     monkeypatch.setattr(vocem, "configurada", lambda db, t: True)
     enlace = "https://call.vocem.test/room/#?roomId=%21s&viaServers=vocem.test"
     monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
-        "room_id": "!s", "meeting_url": enlace, "join_url": enlace})
+        "room_id": "!s", "meeting_url": enlace, "join_url": enlace, "app_url": "https://matrix.to/#/%21s?via=vocem.test"})
     invitaciones = []
     monkeypatch.setattr(vocem, "programar_invitaciones", lambda db, t, room, inicio: invitaciones.append((room, inicio)))
     programado = {}
@@ -406,6 +406,7 @@ def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana
     assert r.status_code == 201, r.text
     ev = r.json()["event"]
     assert ev["meeting_url"] == enlace and ev["bot_invited"] is True and ev["attendees"] == []
+    assert "Abrir en la app del celular: https://matrix.to/#/%21s?via=vocem.test" in ev["description"]
     assert programado["url"] == enlace and programado["kind"] == "meeting"
     assert programado["inicio"].isoformat().startswith("2026-11-02T14:00:00") and programado["titulo"] == "Comité"
     # La invitación al chat queda programada con la hora del evento, no al crearlo.

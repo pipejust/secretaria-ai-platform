@@ -333,6 +333,7 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE subscription ADD COLUMN IF NOT EXISTS video_retention_days INTEGER",
             # Reunión grabada por el bot y por Fireflies: la duplicada apunta a la que queda.
             "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS duplicate_of INTEGER REFERENCES meetingsession(id) ON DELETE SET NULL",
+            "ALTER TABLE voceminvite ADD COLUMN IF NOT EXISTS cuentas VARCHAR NOT NULL DEFAULT ''",
         ]
 
     from sqlalchemy import text

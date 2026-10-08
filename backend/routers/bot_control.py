@@ -6,7 +6,7 @@ import json
 import re
 import secrets
 import time
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -359,6 +359,9 @@ class StartCapture(BaseModel):
     recording_authorized: Literal[True]
     # «Acten gestiona todo»: crea la sala en Vocem (Element) y pone el enlace.
     create_room: bool = False
+    # Cuentas de Vocem (`@usuario:servidor`) a las que avisar cuando toque; sin
+    # ellas, los usuarios de la empresa con cuenta en el servidor.
+    invite: list[str] = PField(default_factory=list, max_length=100)
     # Obsoleto y sin efecto: el vídeo lo decide la suscripción de la empresa
     # (función `meetings.video`), no quien pide la captura. Se sigue
     # aceptando para no romper pantallas abiertas con la versión anterior.
@@ -407,7 +410,7 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
             raise HTTPException(502, str(exc)) from exc
         body = body.model_copy(update={"meeting_url": sala["meeting_url"]})
         # La llamada aparece en el chat de la gente cuando toca, no al crearla.
-        vocem.programar_invitaciones(db, tenant_id, sala["room_id"], body.scheduled_start)
+        vocem.programar_invitaciones(db, tenant_id, sala["room_id"], body.scheduled_start, body.invite or None)
     if kind == "meeting" and not body.meeting_url:
         raise HTTPException(422, "Indica el enlace de la reunión")
     if body.project_id is not None:
@@ -440,7 +443,7 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
                 409, "Solicitud simultánea; reintenta con el mismo identificador"
             ) from exc
     payload = body.model_dump(
-        mode="json", exclude={"meeting_url", "mime_type", "video", "project_id", "create_room"}
+        mode="json", exclude={"meeting_url", "mime_type", "video", "project_id", "create_room", "invite"}
     )
     payload["analysis_scope"] = "base"
     if kind == "meeting":
@@ -477,7 +480,8 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
     db.add(row)
     db.commit()
     if sala:
-        result = {**result, "meeting_url": sala["meeting_url"], "join_url": sala["join_url"], "room_id": sala["room_id"]}
+        result = {**result, "meeting_url": sala["meeting_url"], "join_url": sala["join_url"],
+                  "app_url": sala["app_url"], "room_id": sala["room_id"]}
     return result
 
 
@@ -871,6 +875,10 @@ class LiveMeeting(BaseModel):
     # `create_room` es true: entonces Acten crea la sala en Vocem y lo devuelve.
     meeting_url: str | None = PField(default=None, min_length=1, max_length=4096)
     create_room: bool = False
+    # Con create_room: cuentas de Vocem a las que avisar (invitación + mensaje) dos
+    # minutos antes de `scheduled_start`. Sin ellas, los usuarios de la empresa.
+    invite: list[Annotated[str, PField(pattern=r"^@[^:\s]+:[^\s]+$", max_length=200)]] = PField(
+        default_factory=list, max_length=100)
     title: str = PField(default="Reunión", min_length=1, max_length=300)
     language: Literal["es", "en", "ca"] = "es"
     # Idempotencia: repetir la llamada con el mismo valor no manda otro bot.
@@ -951,6 +959,7 @@ async def live_start(
         language=body.language,
         meeting_url=body.meeting_url,
         create_room=body.create_room and not body.meeting_url,
+        invite=body.invite,
         recording_authorized=True,
         project_id=project_id,
         scheduled_start=body.scheduled_start,
@@ -1088,6 +1097,8 @@ def _live_public(result: dict, session_id: int | None, project_external_id: str 
         "meeting_url": result.get("meeting_url") or (result.get("request") or {}).get("meeting_url"),
         # Enlace para repartir a las personas (abre la sala en su chat de Element); solo con create_room.
         "join_url": result.get("join_url"),
+        # Enlace matrix.to para abrir la sala en la app del celular; solo con create_room.
+        "app_url": result.get("app_url"),
         "project_external_id": project_external_id,
         "acten_session_id": session_id,
     }

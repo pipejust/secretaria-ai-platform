@@ -520,9 +520,13 @@ async def crear_evento(
     # Con sala propia el enlace del evento es el del chat (abre con la sesión que
     # la gente ya tiene) y el bot va programado por API, no como invitado.
     enlace = sala["join_url"] if sala else cuerpo.meeting_url.strip()
+    descripcion = cuerpo.description
+    if sala:
+        extra = f"Abrir en la app del celular: {sala['app_url']}"
+        descripcion = f"{descripcion}\n\n{extra}" if descripcion else extra
     entrada = CalendarEntry(
         tenant_id=user.tenant_id, calendar_id=cal.id, title=cuerpo.title.strip(),
-        description=cuerpo.description, location=cuerpo.location,
+        description=descripcion, location=cuerpo.location,
         start_at=cuerpo.start_at, end_at=cuerpo.end_at, all_day=cuerpo.all_day,
         meeting_url=enlace, project_id=cuerpo.project_id,
         created_by_user_id=user.id,

@@ -64,6 +64,8 @@ export interface BotMeeting {
   meeting_url?: string | null;
   /** Enlace para repartir a las personas (abre la sala en su chat de Element). */
   join_url?: string | null;
+  /** Enlace matrix.to: abre la sala en la app del celular (Element X). */
+  app_url?: string | null;
   created_at?: number;
   updated_at?: number;
   result_url?: string;

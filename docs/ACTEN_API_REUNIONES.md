@@ -241,7 +241,8 @@ admitirlo**.
 | Campo | Tipo | Notas |
 |---|---|---|
 | `meeting_url` | string | Enlace directo de Google Meet, Microsoft Teams, Zoom o Element Call (`https://call.<dominio>/room/#?roomId=…&viaServers=…`). Obligatorio salvo con `create_room` |
-| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element lista para la llamada, invita a los usuarios de la empresa con cuenta, mete al bot y devuelve el enlace en `meeting_url` y `join_url` (el mismo; ver «El enlace de Element» en 6.3). Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
+| `invite` | string[] | Con `create_room`: cuentas de Vocem (`@usuario:servidor`) a las que avisar dos minutos antes de `scheduled_start`. Sin esto, los usuarios de la empresa en Acten con cuenta en Vocem |
+| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element lista para la llamada, invita a los usuarios de la empresa con cuenta, mete al bot y devuelve el enlace en `meeting_url` y `join_url` (el mismo) y `app_url` para el celular; ver «El enlace de Element» en 6.3. Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
 | `recording_authorized` | `true` | **Obligatorio y literal.** Quien llama declara que los asistentes saben que se graba |
 | `scheduled_start` | ISO 8601 con zona | Reunión programada: el bot entra a esa hora (`2026-11-02T09:00:00-05:00`). Sin zona → `422`. Ausente = entra ahora. Hasta un año hacia adelante |
 | `title` | string | Título de la sesión. Por defecto «Reunión» |
@@ -325,13 +326,48 @@ exacto que documenta Vocem (`preset: public_chat`, `visibility: private`,
 `m.rtc.member`, `org.matrix.msc3401.call.member` e `io.element.video.member` a
 0) y luego mandar el bot con ese enlace.
 
-**Cuándo le aparece la llamada a la gente.** Con `create_room` Acten no
-invita a nadie al crear la sala: el enlace es lo que se reparte. La llamada
-aparece en el chat de los usuarios de la empresa con cuenta **dos minutos
-antes de `scheduled_start`**, o de inmediato si la sesión es ahora o falta
-menos de dos minutos. Así una sesión de dentro de tres días no aparece hoy
-en el chat de nadie. Lo mismo vale para los eventos que se crean desde el
-calendario de Acten con «Crear la reunión en Element».
+**Cómo y cuándo se avisa a la gente.** Crear la sala no avisa a nadie: el
+enlace es lo que se reparte. El aviso lo emite Acten **dos minutos antes de
+`scheduled_start`** (o de inmediato si la sesión es ahora o falta menos de dos
+minutos), y consiste en dos cosas, hechas con la cuenta de servicio de Vocem:
+
+1. **Invitación a la sala** a cada cuenta de la lista. Es una notificación
+   push de las apps móviles (suena con el sonido por defecto) y la sala
+   aparece en el chat de escritorio y web.
+2. **Un mensaje en la sala** que menciona a todos (`@room`) con los dos
+   enlaces: «Unirse desde el computador» y «Abrir en la app del celular».
+   Notifica a quien ya está en la sala.
+
+A quién: el campo `invite` de `POST /meetings/live` (lista de cuentas de Vocem,
+`@usuario:servidor`, hasta 100). Sin `invite`, a los usuarios de la empresa en
+Acten que tienen cuenta en el servidor de Vocem; **para las personas de Altum
+que no sean usuarios de Acten hay que mandar `invite`**. Una sesión de dentro
+de tres días no avisa hoy: queda pendiente y sale a la hora.
+
+Lo que Acten **no** hace: no envía timbre de «llamada entrante» (`ring`). Las
+reglas de timbre de Vocem se activan cuando un cliente de Element inicia la
+llamada, no desde Acten.
+
+**Qué ve cada cliente** (según Vocem; el aviso depende de que la persona tenga
+la app instalada con sesión iniciada y las notificaciones permitidas):
+
+| Cliente | Qué recibe |
+|---|---|
+| Móvil: Element X (iOS/Android) y Element clásico | Push con la invitación y con el mensaje `@room`. Funciona con la app cerrada, si el push está registrado en ese dispositivo. |
+| Escritorio (Element) | Notificación del sistema con la invitación y el mensaje; al pulsarla se abre la sala (la llamada se une desde el enlace). |
+| Web (`vocem.softnexus.co`) | Aviso dentro de la página y notificación del navegador si la persona la autorizó; con la pestaña cerrada no es fiable. |
+
+**Si una persona no recibe el aviso**, que revise: que haya iniciado sesión en
+la app al menos una vez (sin eso no hay dispositivo de push registrado), que
+las notificaciones de la app estén permitidas en el sistema, que su cuenta
+figure en `invite`, y que la versión de Element sea reciente.
+
+`POST /meetings/live` con `create_room` devuelve además `app_url`
+(`https://matrix.to/#/<room_id>?via=<dominio>`): es el único enlace que abre la
+app del celular (Element Call abre el navegador). En la invitación del
+calendario conviene poner los dos: `join_url` y `app_url`. Lo mismo vale para
+los eventos creados desde el calendario de Acten con «Crear la reunión en
+Element» (el enlace de la app va en la descripción).
 - **Cambios y cancelaciones**: el calendario manda la actualización y el bot
   la sigue. Los eventos recurrentes se programan solos, ocurrencia por
   ocurrencia.

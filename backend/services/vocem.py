@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 import httpx
 from urllib.parse import quote
 from sqlmodel import Session, select
@@ -198,7 +199,12 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
         raise VocemError("Vocem no devolvió el id de la sala")
     enlace = enlace_de_sala(cfg, room_id)
     # Un solo enlace para el bot y para las personas: Element Call con `roomId`.
-    return {"room_id": room_id, "meeting_url": enlace, "join_url": enlace}
+    return {"room_id": room_id, "meeting_url": enlace, "join_url": enlace, "app_url": enlace_app(cfg, room_id)}
+
+
+def enlace_app(cfg: dict, room_id: str) -> str:
+    """Enlace universal matrix.to: el único que abre la app del celular (Element X)."""
+    return f"https://matrix.to/#/{quote(room_id, safe='')}?via={servidor_de(cfg)}"
 
 
 def enlace_de_sala(cfg: dict, room_id: str) -> str:
@@ -233,18 +239,49 @@ class VocemInvite(SQLModel, table=True):
     room_id: str
     invite_at: str = Field(index=True)  # ISO UTC
     done_at: str | None = None
+    cuentas: str = Field(default="")  # JSON: cuentas a avisar; vacío = usuarios de la empresa
 
 
 def _ahora() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _nombre_de_sala(cfg: dict, room_id: str) -> str:
+    try:
+        return _llamar(cfg, "GET", f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}/state/m.room.name/").get("name", "")
+    except VocemError:
+        return ""
+
+
+def avisar(cfg: dict, room_id: str) -> None:
+    """Mensaje en la sala con el enlace, mencionando a todos (`@room`).
+
+    Es lo que dispara el aviso en quien ya está en la sala: una invitación sola
+    solo avisa a quien se invita. Los dos enlaces: Element Call para el
+    computador y matrix.to para abrir la app del celular.
+    """
+    nombre = _nombre_de_sala(cfg, room_id) or "La sesión"
+    unirse = enlace_de_sala(cfg, room_id)
+    app = enlace_app(cfg, room_id)
+    cuerpo = (
+        f"@room «{nombre}» empieza en un momento.\n"
+        f"Unirse desde el computador: {unirse}\n"
+        f"Abrir en la app del celular: {app}"
+    )
+    _llamar(cfg, "PUT", f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}/send/m.room.message/{uuid.uuid4()}",
+            {"msgtype": "m.text", "body": cuerpo, "m.mentions": {"room": True}})
+
+
 def invitar(db: Session, tenant_id: int, room_id: str, cuentas: list[str] | None = None) -> list[str]:
-    """Invita a la sala a las cuentas dadas (o a los usuarios de la empresa con cuenta)."""
+    """Avisa a la gente de la sesión: invitación (con push) y mensaje `@room` con el enlace.
+
+    `cuentas`: las que indicó quien creó la sesión; sin ellas, los usuarios de la
+    empresa con cuenta en el servidor.
+    """
     cfg = cargar(db, tenant_id)
     if not configurada(db, tenant_id):
         return []
-    cuentas = cuentas if cuentas is not None else cuentas_de_usuarios(db, tenant_id, cfg)
+    cuentas = cuentas if cuentas else cuentas_de_usuarios(db, tenant_id, cfg)
     hechas = []
     for cuenta in cuentas:
         try:
@@ -252,15 +289,21 @@ def invitar(db: Session, tenant_id: int, room_id: str, cuentas: list[str] | None
             hechas.append(cuenta)
         except VocemError as exc:
             logger.info("No se pudo invitar a %s a %s: %s", cuenta, room_id, exc)
+    try:
+        avisar(cfg, room_id)
+    except VocemError as exc:
+        logger.info("No se pudo publicar el aviso en %s: %s", room_id, exc)
     return hechas
 
 
-def programar_invitaciones(db: Session, tenant_id: int, room_id: str, inicio: datetime | None) -> str:
-    """Invita ya si la sesión es ahora o muy pronto; si no, deja la invitación para antes de la hora."""
+def programar_invitaciones(db: Session, tenant_id: int, room_id: str, inicio: datetime | None,
+                           cuentas: list[str] | None = None) -> str:
+    """Avisa ya si la sesión es ahora o muy pronto; si no, deja el aviso para antes de la hora."""
     if inicio is None or inicio.tzinfo is None or inicio - _ahora() <= ANTELACION:
-        invitar(db, tenant_id, room_id)
+        invitar(db, tenant_id, room_id, cuentas)
         return "ahora"
-    db.add(VocemInvite(tenant_id=tenant_id, room_id=room_id, invite_at=(inicio - ANTELACION).isoformat()))
+    db.add(VocemInvite(tenant_id=tenant_id, room_id=room_id, invite_at=(inicio - ANTELACION).isoformat(),
+                       cuentas=json.dumps(cuentas or [])))
     db.commit()
     return "programada"
 
@@ -270,7 +313,11 @@ def enviar_invitaciones_pendientes(db: Session) -> int:
     limite = _ahora().isoformat()
     filas = db.exec(select(VocemInvite).where(VocemInvite.done_at == None, VocemInvite.invite_at <= limite)).all()  # noqa: E711
     for fila in filas:
-        invitar(db, fila.tenant_id, fila.room_id)
+        try:
+            cuentas = json.loads(fila.cuentas or "[]")
+        except (json.JSONDecodeError, TypeError):
+            cuentas = []
+        invitar(db, fila.tenant_id, fila.room_id, cuentas)
         fila.done_at = _ahora().isoformat()
         db.add(fila)
     if filas:

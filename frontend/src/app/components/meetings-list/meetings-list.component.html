@@ -1032,6 +1032,13 @@
                 <input class="ap-input" type="text" readonly [value]="liveCreatedUrl" (focus)="$any($event.target).select()" />
                 <button type="button" class="ap-btn ap-btn-secondary" (click)="copyCreatedUrl()">{{ 'meeting_bot.copy_link' | translate }}</button>
             </div>
+            <ng-container *ngIf="liveCreatedAppUrl">
+                <p class="ap-label">{{ 'meeting_bot.created_app_label' | translate }}</p>
+                <div class="mt-live-link-row">
+                    <input class="ap-input" type="text" readonly [value]="liveCreatedAppUrl" (focus)="$any($event.target).select()" />
+                    <button type="button" class="ap-btn ap-btn-secondary" (click)="copyCreatedUrl(true)">{{ 'meeting_bot.copy_link' | translate }}</button>
+                </div>
+            </ng-container>
             <p class="mt-live-hint">{{ 'meeting_bot.create_room_hint' | translate }}</p>
         </div>
         <ng-template #liveFormTpl>

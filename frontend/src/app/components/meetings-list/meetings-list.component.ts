@@ -88,6 +88,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
     liveForm = { url: '', title: '', language: 'es', projectId: '', authorized: false, createRoom: false };
     /** Enlace de la sala que acaba de crear Acten en Element, para compartirlo. */
     liveCreatedUrl = '';
+    liveCreatedAppUrl = '';
     /** Reuniones que el bot tiene en curso (entrando o grabando). */
     liveMeetings: BotMeeting[] = [];
     /** La que se está viendo en vivo; la URL se conserva aunque la lista se refresque. */
@@ -957,18 +958,20 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             projectId: '', authorized: false, createRoom: false,
         };
         this.liveCreatedUrl = '';
+        this.liveCreatedAppUrl = '';
         this.showNewMenu = false;
         this.showLiveModal = true;
     }
 
     closeLiveModal(): void { if (!this.isJoining) this.showLiveModal = false; }
 
-    async copyCreatedUrl(): Promise<void> {
+    async copyCreatedUrl(app = false): Promise<void> {
+        const url = app ? this.liveCreatedAppUrl : this.liveCreatedUrl;
         try {
-            await navigator.clipboard.writeText(this.liveCreatedUrl);
+            await navigator.clipboard.writeText(url);
             this.toast.success(this.translate.instant('meeting_bot.link_copied'));
         } catch {
-            this.toast.warning(this.liveCreatedUrl);
+            this.toast.warning(url);
         }
     }
 
@@ -994,6 +997,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                 // La sala existe: se deja el enlace a la vista para repartirlo. El de
                 // personas abre la sala en el chat donde ya tienen sesión.
                 this.liveCreatedUrl = started.join_url || started.meeting_url || '';
+                this.liveCreatedAppUrl = started.app_url || '';
             } else {
                 this.showLiveModal = false;
             }

@@ -487,7 +487,7 @@ def test_public_api_sends_the_bot_to_a_live_meeting(control):
     assert estado.status_code == 200, estado.text
     assert estado.json() == {"id": live["id"], "external_id": "altum-1", "state": "joining",
                              "title": "Reunión", "scheduled_start": None, "error_code": None,
-                             "realtime_url": "wss://realtime.skribby.test/solo-lectura", "meeting_url": None, "join_url": None,
+                             "realtime_url": "wss://realtime.skribby.test/solo-lectura", "meeting_url": None, "join_url": None, "app_url": None,
                              "project_external_id": "ext-p", "acten_session_id": session_id}
     assert client.get(f"/api/v1/meetings/live/{uuid.uuid4()}", headers=h).status_code == 404
 
@@ -620,12 +620,19 @@ def test_acten_crea_la_sala_de_vocem_cuando_se_lo_piden(control, monkeypatch):
     monkeypatch.setattr(vocem, "configurada", lambda db, t: True)
     monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
         "room_id": "!sala", "meeting_url": "https://call.vocem.softnexus.co/room/#/!sala",
-        "join_url": "https://vocem.softnexus.co/#/room/!sala"})
+        "join_url": "https://vocem.softnexus.co/#/room/!sala", "app_url": "https://matrix.to/#/%21sala?via=softnexus.co"})
+    avisos = []
+    monkeypatch.setattr(vocem, "programar_invitaciones",
+                        lambda db, t, room, inicio, cuentas=None: avisos.append((room, cuentas)))
     cuerpo = {"title": "Comité", "recording_authorized": True, "create_room": True}
-    r = client.post("/api/v1/meetings/live", headers=h, json=cuerpo)
+    r = client.post("/api/v1/meetings/live", headers=h, json={**cuerpo, "invite": ["@ana:softnexus.co"]})
     assert r.status_code == 202, r.text
+    assert avisos == [("!sala", ["@ana:softnexus.co"])]  # a quién avisar, cuando toque
     assert r.json()["meeting_url"] == "https://call.vocem.softnexus.co/room/#/!sala"
     assert r.json()["join_url"] == "https://vocem.softnexus.co/#/room/!sala"
+    assert r.json()["app_url"] == "https://matrix.to/#/%21sala?via=softnexus.co"
+    # Cuentas a avisar: formato @usuario:servidor.
+    assert client.post("/api/v1/meetings/live", headers=h, json={**cuerpo, "external_id": "inv", "invite": ["felipe"]}).status_code == 422
     sent = json.loads([c for c in calls if c.url.path == "/v1/meetings" and c.method == "POST"][-1].content)
     assert sent["meeting_url"] == "https://call.vocem.softnexus.co/room/#/!sala" and "create_room" not in sent
     # Sin enlace y sin pedir la sala: 422. Sin Vocem configurado: 409.

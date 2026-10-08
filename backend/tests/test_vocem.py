@@ -67,7 +67,8 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
     monkeypatch.setattr(vocem.httpx, "request", falso)
     sala = vocem.crear_sala(db_session, empresa.id, "Comité", ["@ana:softnexus.co", "@integraciones:softnexus.co", "no-es-id"])
     enlace = "https://call.vocem.softnexus.co/room/#?roomId=%21abc&viaServers=softnexus.co"
-    assert sala == {"room_id": "!abc", "meeting_url": enlace, "join_url": enlace}
+    assert sala == {"room_id": "!abc", "meeting_url": enlace, "join_url": enlace,
+                    "app_url": "https://matrix.to/#/%21abc?via=softnexus.co"}
     assert enviado["body"]["power_level_content_override"]["events"]["m.rtc.member"] == 0
     assert enviado["url"].endswith("/_matrix/client/v3/createRoom") and enviado["auth"] == "Bearer tok"
     # Solo invitados explícitos (sin el bot ni ids inválidos); a nadie más le aparece la llamada en el chat.
@@ -86,25 +87,36 @@ def test_las_invitaciones_salen_a_la_hora_de_la_sesion(db_session, empresa, monk
     vocem.guardar(db_session, empresa.id, {
         "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
         "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
-    invitadas = []
+    llamadas = []
     monkeypatch.setattr(vocem, "cuentas_de_usuarios", lambda db, t, cfg: ["@felipe:softnexus.co"])
 
     def falso(method, url, json=None, timeout=None, headers=None):
-        invitadas.append((url.rsplit("/rooms/", 1)[1].split("/")[0], json["user_id"]))
-        return httpx.Response(200, json={}, request=httpx.Request(method, url))
+        llamadas.append((method, url.split("/_matrix/client/v3", 1)[1], json))
+        cuerpo = {"name": "Comité"} if url.endswith("/state/m.room.name/") else {}
+        return httpx.Response(200, json=cuerpo, request=httpx.Request(method, url))
     monkeypatch.setattr(vocem.httpx, "request", falso)
 
+    def invitadas():
+        return [(p.split("/rooms/")[1].split("/")[0], j["user_id"]) for m, p, j in llamadas if p.endswith("/invite")]
+
     ahora = datetime.now(timezone.utc)
-    # Sesión ahora (o sin hora): invitación inmediata.
+    # Sesión ahora (o sin hora): aviso inmediato a los usuarios de la empresa.
     assert vocem.programar_invitaciones(db_session, empresa.id, "!ya", None) == "ahora"
     assert vocem.programar_invitaciones(db_session, empresa.id, "!pronto", ahora + timedelta(minutes=1)) == "ahora"
-    # Sesión en tres días: queda pendiente y el cron no la toca todavía.
-    assert vocem.programar_invitaciones(db_session, empresa.id, "!luego", ahora + timedelta(days=3)) == "programada"
-    assert [r for r, _ in invitadas] == ["%21ya", "%21pronto"]
+    # Sesión en tres días con lista explícita: pendiente; el cron no la toca todavía.
+    assert vocem.programar_invitaciones(db_session, empresa.id, "!luego", ahora + timedelta(days=3),
+                                        ["@ana:softnexus.co", "@luis:softnexus.co"]) == "programada"
+    assert invitadas() == [("%21ya", "@felipe:softnexus.co"), ("%21pronto", "@felipe:softnexus.co")]
     assert vocem.enviar_invitaciones_pendientes(db_session) == 0
-    # Cuando falta menos de la antelación, el cron invita y la marca hecha.
+    # Cuando falta menos de la antelación, el cron avisa a la lista explícita, no a todos.
     fila = db_session.exec(select(vocem.VocemInvite).where(vocem.VocemInvite.room_id == "!luego")).first()
     fila.invite_at = (ahora - timedelta(seconds=1)).isoformat(); db_session.add(fila); db_session.commit()
     assert vocem.enviar_invitaciones_pendientes(db_session) == 1
-    assert invitadas[-1] == ("%21luego", "@felipe:softnexus.co")
+    assert invitadas()[-2:] == [("%21luego", "@ana:softnexus.co"), ("%21luego", "@luis:softnexus.co")]
+    # Mensaje en la sala: menciona a todos y trae los dos enlaces (computador y app).
+    mensajes = [j for m, p, j in llamadas if "/send/m.room.message/" in p]
+    assert len(mensajes) == 3
+    ultimo = mensajes[-1]
+    assert ultimo["m.mentions"] == {"room": True} and ultimo["body"].startswith("@room «Comité»")
+    assert "roomId=%21luego&viaServers=softnexus.co" in ultimo["body"] and "https://matrix.to/#/%21luego?via=softnexus.co" in ultimo["body"]
     assert vocem.enviar_invitaciones_pendientes(db_session) == 0
