@@ -241,7 +241,7 @@ admitirlo**.
 | Campo | Tipo | Notas |
 |---|---|---|
 | `meeting_url` | string | Enlace directo de Google Meet, Microsoft Teams, Zoom o Element Call (`https://call.…/room/#/!id`). Obligatorio salvo con `create_room` |
-| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element, invita a los usuarios de la empresa con cuenta, mete al bot y devuelve `meeting_url` (Element Call, para el bot) y `join_url` (abre la sala en el chat de la empresa: el que se reparte a las personas). Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
+| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element, invita a los usuarios de la empresa con cuenta, mete al bot y devuelve `meeting_url` (Element Call, para el bot) y `join_url` (chat: el que se reparte a las personas; ver «Los dos enlaces de Element» en 6.3). Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
 | `recording_authorized` | `true` | **Obligatorio y literal.** Quien llama declara que los asistentes saben que se graba |
 | `scheduled_start` | ISO 8601 con zona | Reunión programada: el bot entra a esa hora (`2026-11-02T09:00:00-05:00`). Sin zona → `422`. Ausente = entra ahora. Hasta un año hacia adelante |
 | `title` | string | Título de la sesión. Por defecto «Reunión» |
@@ -296,6 +296,17 @@ invitado más del evento en Google Calendar u Outlook.
 - **Element**: la sala tiene que existir antes y estar creada sin cifrado
   extremo a extremo y con `join_rule: public` (así la crea Vocem por API); el
   bot entra por el id de sala. Las salas «por nombre» de Element Call no sirven.
+
+**Los dos enlaces de Element.** Una misma sala tiene dos direcciones y no son
+intercambiables para las personas:
+
+| Enlace | Forma | Para quién |
+|---|---|---|
+| Element Call | `https://call.<dominio>/room/#/!id` | **El bot.** Es el que devuelve `meeting_url` en `POST /meetings/live` y el que va en `meeting_url` al mandar el bot. Para una persona exige iniciar sesión aparte en `call.<dominio>`; sin esa sesión muestra «Call not found». |
+| Chat (Element Web) | `https://<chat>/#/room/!id` | **Las personas.** Abre la sala en el chat donde ya tienen sesión, con el botón de llamada. Es el que devuelve `join_url` y el que hay que poner en la invitación del calendario y repartir. |
+
+El bot acepta cualquiera de los dos en `meeting_url` y en las invitaciones de
+calendario. Regla práctica: a la gente, siempre el del chat.
 - **Cambios y cancelaciones**: el calendario manda la actualización y el bot
   la sigue. Los eventos recurrentes se programan solos, ocurrencia por
   ocurrencia.
