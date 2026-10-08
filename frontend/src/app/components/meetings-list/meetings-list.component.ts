@@ -990,9 +990,10 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
                 recording_authorized: true,
                 ...(this.liveForm.projectId ? { project_id: Number(this.liveForm.projectId) } : {}),
             });
-            if (createRoom && started?.meeting_url) {
-                // La sala existe: se deja el enlace a la vista para repartirlo.
-                this.liveCreatedUrl = started.meeting_url;
+            if (createRoom && (started?.join_url || started?.meeting_url)) {
+                // La sala existe: se deja el enlace a la vista para repartirlo. El de
+                // personas abre la sala en el chat donde ya tienen sesión.
+                this.liveCreatedUrl = started.join_url || started.meeting_url || '';
             } else {
                 this.showLiveModal = false;
             }

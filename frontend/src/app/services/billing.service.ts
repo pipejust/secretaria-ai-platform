@@ -151,6 +151,7 @@ export interface VocemState {
     homeserver: string;
     user_id: string;
     call_base_url: string;
+    chat_base_url?: string;
     access_token_hint: string;
 }
 
@@ -158,6 +159,7 @@ export interface VocemInput {
     homeserver?: string;
     user_id?: string;
     call_base_url?: string;
+    chat_base_url?: string;
     /** Vacío = conservar el actual. */
     access_token?: string;
     clear?: boolean;

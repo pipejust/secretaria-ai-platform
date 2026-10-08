@@ -441,6 +441,7 @@ class VocemIn(BaseModel):
     homeserver: Optional[str] = Field(default=None, max_length=300)
     user_id: Optional[str] = Field(default=None, max_length=200)
     call_base_url: Optional[str] = Field(default=None, max_length=300)
+    chat_base_url: Optional[str] = Field(default=None, max_length=300)
     access_token: Optional[str] = Field(default=None, max_length=4000)
     clear: bool = False
 
@@ -451,7 +452,7 @@ def set_vocem(tenant_id: int, body: VocemIn, _u: User = Depends(require_superadm
     """Servidor Matrix/Element Call propio de la empresa. El token se guarda cifrado."""
     if not db.get(Tenant, tenant_id):
         raise HTTPException(404, "Empresa no encontrada")
-    for campo in ("homeserver", "call_base_url"):
+    for campo in ("homeserver", "call_base_url", "chat_base_url"):
         v = getattr(body, campo)
         if v and not v.startswith("https://"):
             raise HTTPException(422, f"{campo} debe empezar por https://")

@@ -754,6 +754,7 @@
     "billing_vocem_homeserver": "Matrix server",
     "billing_vocem_user": "Bot user",
     "billing_vocem_call": "Element Call URL",
+    "billing_vocem_chat": "Web chat URL (Element Web)",
     "billing_vocem_token": "Access token",
     "billing_vocem_token_hint": "Empty = keep the current one",
     "billing_vocem_save": "Save Vocem",

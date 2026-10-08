@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 PROVIDER = "vocem"
 CAMPOS = ("homeserver", "user_id", "call_base_url")
+# Chat web (Element Web) de la empresa: con él se arma el enlace que abre la
+# sala en la sesión que la gente ya tiene, con el botón de llamada. Opcional.
+OPCIONALES = ("chat_base_url",)
 
 
 def _fila(db: Session, tenant_id: int) -> IntegrationSetting | None:
@@ -58,7 +61,7 @@ def estado(db: Session, tenant_id: int) -> dict:
     cfg = cargar(db, tenant_id)
     return {
         "configured": configurada(db, tenant_id),
-        **{c: cfg.get(c, "") for c in CAMPOS},
+        **{c: cfg.get(c, "") for c in CAMPOS + OPCIONALES},
         "access_token_hint": enmascarar(cfg.get("access_token", "")),
     }
 
@@ -73,7 +76,7 @@ def guardar(db: Session, tenant_id: int, datos: dict) -> dict:
         except (json.JSONDecodeError, TypeError):
             actual = {}
     nuevo = dict(actual)
-    for c in CAMPOS:
+    for c in CAMPOS + OPCIONALES:
         if datos.get(c) is not None:
             nuevo[c] = str(datos[c]).strip().rstrip("/") if c != "user_id" else str(datos[c]).strip()
     if datos.get("access_token"):
@@ -186,4 +189,17 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
     room_id = datos.get("room_id")
     if not room_id:
         raise VocemError("Vocem no devolvió el id de la sala")
-    return {"room_id": room_id, "meeting_url": f"{cfg['call_base_url'].rstrip('/')}/room/#/{room_id}"}
+    return {
+        "room_id": room_id,
+        # Para el bot: Element Call directo.
+        "meeting_url": f"{cfg['call_base_url'].rstrip('/')}/room/#/{room_id}",
+        # Para las personas: abre la sala en el chat donde ya tienen sesión.
+        "join_url": enlace_para_personas(cfg, room_id),
+    }
+
+
+def enlace_para_personas(cfg: dict, room_id: str) -> str:
+    chat = (cfg.get("chat_base_url") or "").rstrip("/")
+    if chat:
+        return f"{chat}/#/room/{room_id}"
+    return f"{cfg['call_base_url'].rstrip('/')}/room/#/{room_id}"

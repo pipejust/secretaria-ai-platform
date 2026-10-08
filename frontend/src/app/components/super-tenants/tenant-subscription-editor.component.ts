@@ -48,8 +48,8 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
     loading = true;
     saving = false;
     savingVocem = false;
-    vocem: { homeserver: string; user_id: string; call_base_url: string; access_token: string } =
-        { homeserver: '', user_id: '', call_base_url: '', access_token: '' };
+    vocem: { homeserver: string; user_id: string; call_base_url: string; chat_base_url: string; access_token: string } =
+        { homeserver: '', user_id: '', call_base_url: '', chat_base_url: '', access_token: '' };
     error = '';
 
     ngOnInit(): void {
@@ -103,7 +103,7 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
         };
         this.vocem = {
             homeserver: r?.vocem?.homeserver ?? '', user_id: r?.vocem?.user_id ?? '',
-            call_base_url: r?.vocem?.call_base_url ?? '', access_token: '',
+            call_base_url: r?.vocem?.call_base_url ?? '', chat_base_url: r?.vocem?.chat_base_url ?? '', access_token: '',
         };
         this.cdr.detectChanges();
     }
@@ -114,7 +114,7 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
         if (this.savingVocem) { return; }
         const body: VocemInput = {
             homeserver: this.vocem.homeserver.trim(), user_id: this.vocem.user_id.trim(),
-            call_base_url: this.vocem.call_base_url.trim(),
+            call_base_url: this.vocem.call_base_url.trim(), chat_base_url: this.vocem.chat_base_url.trim(),
             ...(this.vocem.access_token.trim() ? { access_token: this.vocem.access_token.trim() } : {}),
         };
         this.savingVocem = true;
@@ -142,7 +142,7 @@ export class TenantSubscriptionEditorComponent implements OnInit, OnChanges, OnD
                 this.savingVocem = false;
                 this.rows = this.rows.map((r) => r.tenant_id === this.tenantId ? { ...r, vocem: st } : r);
                 this.row = this.rows.find((r) => r.tenant_id === this.tenantId) ?? null;
-                this.vocem = { homeserver: '', user_id: '', call_base_url: '', access_token: '' };
+                this.vocem = { homeserver: '', user_id: '', call_base_url: '', chat_base_url: '', access_token: '' };
                 this.cdr.detectChanges();
             },
             error: () => { this.savingVocem = false; this.cdr.detectChanges(); },

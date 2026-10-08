@@ -475,7 +475,7 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
     db.add(row)
     db.commit()
     if sala:
-        result = {**result, "meeting_url": sala["meeting_url"], "room_id": sala["room_id"]}
+        result = {**result, "meeting_url": sala["meeting_url"], "join_url": sala["join_url"], "room_id": sala["room_id"]}
     return result
 
 
@@ -1084,6 +1084,8 @@ def _live_public(result: dict, session_id: int | None, project_external_id: str 
         "realtime_url": result.get("live_url"),
         # Enlace de la reunión; lo devuelve Acten cuando creó la sala (Vocem).
         "meeting_url": result.get("meeting_url") or (result.get("request") or {}).get("meeting_url"),
+        # Enlace para repartir a las personas (abre la sala en su chat de Element); solo con create_room.
+        "join_url": result.get("join_url"),
         "project_external_id": project_external_id,
         "acten_session_id": session_id,
     }

@@ -241,7 +241,7 @@ admitirlo**.
 | Campo | Tipo | Notas |
 |---|---|---|
 | `meeting_url` | string | Enlace directo de Google Meet, Microsoft Teams, Zoom o Element Call (`https://call.…/room/#/!id`). Obligatorio salvo con `create_room` |
-| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element, mete al bot y devuelve `meeting_url` para repartir. Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
+| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element, invita a los usuarios de la empresa con cuenta, mete al bot y devuelve `meeting_url` (Element Call, para el bot) y `join_url` (abre la sala en el chat de la empresa: el que se reparte a las personas). Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
 | `recording_authorized` | `true` | **Obligatorio y literal.** Quien llama declara que los asistentes saben que se graba |
 | `scheduled_start` | ISO 8601 con zona | Reunión programada: el bot entra a esa hora (`2026-11-02T09:00:00-05:00`). Sin zona → `422`. Ausente = entra ahora. Hasta un año hacia adelante |
 | `title` | string | Título de la sesión. Por defecto «Reunión» |

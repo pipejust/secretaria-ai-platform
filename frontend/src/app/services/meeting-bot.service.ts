@@ -62,6 +62,8 @@ export interface BotMeeting {
   delivery_status?: string | null;
   /** Enlace de la reunión cuando Acten creó la sala. */
   meeting_url?: string | null;
+  /** Enlace para repartir a las personas (abre la sala en su chat de Element). */
+  join_url?: string | null;
   created_at?: number;
   updated_at?: number;
   result_url?: string;
