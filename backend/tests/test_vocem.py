@@ -76,6 +76,10 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
     # La resolución de cuentas sigue disponible para quien la pida explícitamente.
     assert vocem.cuentas_de_usuarios(db_session, empresa.id, vocem.cargar(db_session, empresa.id)) == [
         "@ana:softnexus.co", "@danny:softnexus.co", "@felipe:softnexus.co"]
+    # El mapa correo → cuenta gana: «Nadie Conocido» entra con otro usuario de Vocem.
+    vocem.guardar(db_session, empresa.id, {"cuentas": {"Nadie@Softnexus.io": "@nadie.real:softnexus.co"}})
+    assert "@nadie.real:softnexus.co" in vocem.cuentas_de_usuarios(db_session, empresa.id, vocem.cargar(db_session, empresa.id))
+    assert vocem.estado(db_session, empresa.id)["cuentas"] == {"nadie@softnexus.io": "@nadie.real:softnexus.co"}
     assert enviado["body"]["preset"] == "public_chat" and enviado["body"]["visibility"] == "private"
     assert enviado["body"]["creation_content"] == {"m.federate": False}
     assert "initial_state" not in enviado["body"]  # ni cifrado ni invitados anónimos

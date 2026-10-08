@@ -443,6 +443,9 @@ class VocemIn(BaseModel):
     call_base_url: Optional[str] = Field(default=None, max_length=300)
     chat_base_url: Optional[str] = Field(default=None, max_length=300)
     access_token: Optional[str] = Field(default=None, max_length=4000)
+    # Correo del usuario en Acten → cuenta de Vocem, para quien entra con su correo
+    # pero tiene otro nombre de usuario. Reemplaza el mapa completo.
+    cuentas: Optional[dict[str, str]] = None
     clear: bool = False
 
 
@@ -458,6 +461,9 @@ def set_vocem(tenant_id: int, body: VocemIn, _u: User = Depends(require_superadm
             raise HTTPException(422, f"{campo} debe empezar por https://")
     if body.user_id and not (body.user_id.startswith("@") and ":" in body.user_id):
         raise HTTPException(422, "user_id debe tener la forma @usuario:servidor")
+    for correo, cuenta in (body.cuentas or {}).items():
+        if "@" not in correo or not (cuenta.startswith("@") and ":" in cuenta):
+            raise HTTPException(422, f"«{correo}» → «{cuenta}»: se espera correo → @usuario:servidor")
     return _vocem.guardar(db, tenant_id, body.model_dump())
 
 

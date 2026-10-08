@@ -63,6 +63,7 @@ def estado(db: Session, tenant_id: int) -> dict:
     return {
         "configured": configurada(db, tenant_id),
         **{c: cfg.get(c, "") for c in CAMPOS + OPCIONALES},
+        "cuentas": cfg.get("cuentas") or {},
         "access_token_hint": enmascarar(cfg.get("access_token", "")),
     }
 
@@ -82,6 +83,9 @@ def guardar(db: Session, tenant_id: int, datos: dict) -> dict:
             nuevo[c] = str(datos[c]).strip().rstrip("/") if c != "user_id" else str(datos[c]).strip()
     if datos.get("access_token"):
         nuevo["access_token"] = cifrar(str(datos["access_token"]).strip())
+    if datos.get("cuentas") is not None:
+        # correo del usuario en Acten → cuenta de Vocem (`@usuario:servidor`)
+        nuevo["cuentas"] = {k.strip().lower(): v.strip() for k, v in datos["cuentas"].items() if k.strip() and v.strip()}
     if datos.get("clear"):
         nuevo = {}
     if not fila:
@@ -147,9 +151,10 @@ def _por_nombre(cfg: dict, nombre: str, servidor: str) -> str | None:
 def cuentas_de_usuarios(db: Session, tenant_id: int, cfg: dict) -> list[str]:
     """Cuentas Matrix de los usuarios activos de la empresa que existen en el servidor.
 
-    Primero por la parte local del correo (`felipe@acme.com` → `@felipe:servidor`);
-    si no existe, por el nombre completo en el directorio (`Felipe Cortés` →
-    `@felipe:servidor`). Así la sala les aparece en el chat de Vocem con el
+    Primero el mapa correo → cuenta de la configuración (`cuentas`), que cubre a quien
+    entra con su correo pero tiene otro nombre de usuario; luego la parte local del
+    correo (`felipe@acme.com` → `@felipe:servidor`); por último el nombre completo en
+    el directorio (`Felipe Cortés` → `@felipe:servidor`). Así la sala les aparece en el chat de Vocem con el
     botón de llamada, sin iniciar sesión aparte en Element Call.
     """
     from models import User
@@ -158,11 +163,14 @@ def cuentas_de_usuarios(db: Session, tenant_id: int, cfg: dict) -> list[str]:
     if not servidor:
         return []
     usuarios = db.exec(select(User).where(User.tenant_id == tenant_id, User.is_active == True)).all()  # noqa: E712
+    mapa = cfg.get("cuentas") or {}
     cuentas: list[str] = []
     for u in usuarios:
         local = (u.email or "").split("@")[0].strip().lower()
         candidato = f"@{local}:{servidor}" if local else None
-        cuenta = candidato if candidato and _existe(cfg, candidato) else _por_nombre(cfg, u.full_name or "", servidor)
+        cuenta = mapa.get((u.email or "").strip().lower())
+        if not cuenta:
+            cuenta = candidato if candidato and _existe(cfg, candidato) else _por_nombre(cfg, u.full_name or "", servidor)
         if cuenta and cuenta != cfg["user_id"] and cuenta not in cuentas:
             cuentas.append(cuenta)
     return sorted(cuentas)
