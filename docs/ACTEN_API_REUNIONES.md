@@ -240,8 +240,8 @@ admitirlo**.
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `meeting_url` | string | Enlace directo de Google Meet, Microsoft Teams, Zoom o Element Call (`https://call.…/room/#/!id`). Obligatorio salvo con `create_room` |
-| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element, invita a los usuarios de la empresa con cuenta, mete al bot y devuelve `meeting_url` (Element Call, para el bot) y `join_url` (chat: el que se reparte a las personas; ver «Los dos enlaces de Element» en 6.3). Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
+| `meeting_url` | string | Enlace directo de Google Meet, Microsoft Teams, Zoom o Element Call (`https://call.<dominio>/room/#?roomId=…&viaServers=…`). Obligatorio salvo con `create_room` |
+| `create_room` | boolean | Si la empresa tiene Vocem (`capabilities.vocem`), Acten crea la sala de Element lista para la llamada, invita a los usuarios de la empresa con cuenta, mete al bot y devuelve el enlace en `meeting_url` y `join_url` (el mismo; ver «El enlace de Element» en 6.3). Quien abra el enlace necesita una cuenta en el servidor Element de la empresa; no hay acceso anónimo. Sin enlace y sin esto: `422` |
 | `recording_authorized` | `true` | **Obligatorio y literal.** Quien llama declara que los asistentes saben que se graba |
 | `scheduled_start` | ISO 8601 con zona | Reunión programada: el bot entra a esa hora (`2026-11-02T09:00:00-05:00`). Sin zona → `422`. Ausente = entra ahora. Hasta un año hacia adelante |
 | `title` | string | Título de la sesión. Por defecto «Reunión» |
@@ -291,22 +291,39 @@ invitado más del evento en Google Calendar u Outlook.
   sincronizan solos) y los remitentes extra que su administrador añada en
   Acten. La invitación de cualquier otro remitente se ignora.
 - **Qué debe traer el evento**: fecha y hora, y un enlace directo de Meet,
-  Teams, Zoom o Element (`https://call.…/room/#/!id` o `https://<chat>/#/room/!id`).
+  Teams, Zoom o Element (`https://call.<dominio>/room/#?roomId=…&viaServers=…`).
   Los eventos de día completo se ignoran.
 - **Element**: la sala tiene que existir antes y estar creada sin cifrado
   extremo a extremo y con `join_rule: public` (así la crea Vocem por API); el
   bot entra por el id de sala. Las salas «por nombre» de Element Call no sirven.
 
-**Los dos enlaces de Element.** Una misma sala tiene dos direcciones y no son
-intercambiables para las personas:
+**El enlace de Element.** Una sesión de Element se comparte con **un solo
+enlace**, el de Element Call con el id de la sala en la query:
 
-| Enlace | Forma | Para quién |
-|---|---|---|
-| Element Call | `https://call.<dominio>/room/#/!id` | **El bot.** Es el que devuelve `meeting_url` en `POST /meetings/live` y el que va en `meeting_url` al mandar el bot. Para una persona exige iniciar sesión aparte en `call.<dominio>`; sin esa sesión muestra «Call not found». |
-| Chat (Element Web) | `https://<chat>/#/room/!id` | **Las personas.** Abre la sala en el chat donde ya tienen sesión, con el botón de llamada. Es el que devuelve `join_url` y el que hay que poner en la invitación del calendario y repartir. |
+```text
+https://call.<dominio>/room/#?roomId=<room_id urlencoded>&viaServers=<dominio>
+```
 
-El bot acepta cualquiera de los dos en `meeting_url` y en las invitaciones de
-calendario. Regla práctica: a la gente, siempre el del chat.
+Ejemplo: `https://call.vocem.softnexus.co/room/#?roomId=%21XB9gW1Qlq…&viaServers=softnexus.co`.
+Es el que devuelven `meeting_url` y `join_url` en `POST /meetings/live` con
+`create_room`, el que va en `meeting_url` al mandar el bot, y el que se pone
+en la invitación del calendario para la gente. Quien lo abre inicia sesión
+con su cuenta del servidor y entra a la antesala con el botón **Join call**.
+
+Lo que **no** sirve: el enlace del chat (`https://<chat>/#/room/!id`, abre el
+chat y no la llamada), las salas «por nombre» de Element Call
+(`https://call.<dominio>/<nombre>`, crean otra sala sin el bot) y añadir
+`:dominio` al id de sala (los ids de este servidor no lo llevan).
+
+**Crear la sala.** Lo más simple es `create_room: true` en `POST /meetings/live`:
+Acten crea la sala como la exige Element Call (pública dentro del servidor, sin
+federación, sin cifrado extremo a extremo, con los niveles de poder que la
+llamada necesita), invita a los usuarios de la empresa con cuenta y mete al
+bot. Si Altum prefiere crear la sala por la API de Vocem, debe usar el cuerpo
+exacto que documenta Vocem (`preset: public_chat`, `visibility: private`,
+`creation_content.m.federate: false`, `power_level_content_override` con
+`m.rtc.member`, `org.matrix.msc3401.call.member` e `io.element.video.member` a
+0) y luego mandar el bot con ese enlace.
 - **Cambios y cancelaciones**: el calendario manda la actualización y el bot
   la sigue. Los eventos recurrentes se programan solos, ocurrencia por
   ocurrencia.
