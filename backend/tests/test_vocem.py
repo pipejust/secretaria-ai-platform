@@ -97,7 +97,7 @@ def test_las_invitaciones_salen_a_la_hora_de_la_sesion(db_session, empresa, monk
     ahora = datetime.now(timezone.utc)
     # Sesión ahora (o sin hora): invitación inmediata.
     assert vocem.programar_invitaciones(db_session, empresa.id, "!ya", None) == "ahora"
-    assert vocem.programar_invitaciones(db_session, empresa.id, "!pronto", ahora + timedelta(minutes=5)) == "ahora"
+    assert vocem.programar_invitaciones(db_session, empresa.id, "!pronto", ahora + timedelta(minutes=1)) == "ahora"
     # Sesión en tres días: queda pendiente y el cron no la toca todavía.
     assert vocem.programar_invitaciones(db_session, empresa.id, "!luego", ahora + timedelta(days=3)) == "programada"
     assert [r for r, _ in invitadas] == ["%21ya", "%21pronto"]

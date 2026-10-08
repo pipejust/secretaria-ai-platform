@@ -222,7 +222,7 @@ from datetime import datetime, timedelta, timezone  # noqa: E402
 
 from sqlmodel import Field, SQLModel  # noqa: E402
 
-ANTELACION = timedelta(minutes=10)
+ANTELACION = timedelta(minutes=2)
 
 
 class VocemInvite(SQLModel, table=True):

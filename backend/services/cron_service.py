@@ -1024,7 +1024,7 @@ def refrescar_calendarios() -> None:
 
 
 def vocem_invitaciones() -> None:
-    """Invita a la gente a las llamadas de Element diez minutos antes de la hora."""
+    """Invita a la gente a las llamadas de Element dos minutos antes de la hora."""
     from services import vocem
 
     try:
