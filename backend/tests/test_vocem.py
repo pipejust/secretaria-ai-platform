@@ -9,7 +9,7 @@ import httpx
 import pytest
 from sqlmodel import select
 
-from models import IntegrationSetting, Tenant
+from models import IntegrationSetting, Tenant, VocemInvite
 from services import vocem
 from services.cifrado import cifrar
 
@@ -109,7 +109,7 @@ def test_las_invitaciones_salen_a_la_hora_de_la_sesion(db_session, empresa, monk
     assert invitadas() == [("%21ya", "@felipe:softnexus.co"), ("%21pronto", "@felipe:softnexus.co")]
     assert vocem.enviar_invitaciones_pendientes(db_session) == 0
     # Cuando falta menos de la antelación, el cron avisa a la lista explícita, no a todos.
-    fila = db_session.exec(select(vocem.VocemInvite).where(vocem.VocemInvite.room_id == "!luego")).first()
+    fila = db_session.exec(select(VocemInvite).where(VocemInvite.room_id == "!luego")).first()
     fila.invite_at = (ahora - timedelta(seconds=1)).isoformat(); db_session.add(fila); db_session.commit()
     assert vocem.enviar_invitaciones_pendientes(db_session) == 1
     assert invitadas()[-2:] == [("%21luego", "@ana:softnexus.co"), ("%21luego", "@luis:softnexus.co")]

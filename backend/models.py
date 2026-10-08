@@ -1202,5 +1202,13 @@ class Payment(SQLModel, table=True):
     approved_at: Optional[str] = Field(default=None)
     raw_event_json: str = Field(default="{}")
 
-# Tabla auxiliar de Vocem (invitaciones a la hora de la sesión); vive en services/vocem.py.
-from services.vocem import VocemInvite  # noqa: E402,F401
+
+class VocemInvite(SQLModel, table=True):
+    """Aviso pendiente a la sala de una sesión programada (ver services/vocem.py)."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tenant_id: int = Field(foreign_key="tenant.id", index=True)
+    room_id: str
+    invite_at: str = Field(index=True)  # ISO UTC
+    done_at: Optional[str] = None
+    cuentas: str = Field(default="")  # JSON: cuentas a avisar; vacío = usuarios de la empresa

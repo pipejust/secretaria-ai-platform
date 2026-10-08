@@ -18,7 +18,7 @@ import httpx
 from urllib.parse import quote
 from sqlmodel import Session, select
 
-from models import IntegrationSetting
+from models import IntegrationSetting, VocemInvite
 from services.cifrado import cifrar, descifrar, enmascarar
 
 logger = logging.getLogger(__name__)
@@ -226,20 +226,7 @@ def enlace_de_sala(cfg: dict, room_id: str) -> str:
 
 from datetime import datetime, timedelta, timezone  # noqa: E402
 
-from sqlmodel import Field, SQLModel  # noqa: E402
-
 ANTELACION = timedelta(minutes=2)
-
-
-class VocemInvite(SQLModel, table=True):
-    """Invitación pendiente a la sala de una sesión programada."""
-
-    id: int | None = Field(default=None, primary_key=True)
-    tenant_id: int = Field(foreign_key="tenant.id", index=True)
-    room_id: str
-    invite_at: str = Field(index=True)  # ISO UTC
-    done_at: str | None = None
-    cuentas: str = Field(default="")  # JSON: cuentas a avisar; vacío = usuarios de la empresa
 
 
 def _ahora() -> datetime:
