@@ -291,7 +291,11 @@ invitado más del evento en Google Calendar u Outlook.
   sincronizan solos) y los remitentes extra que su administrador añada en
   Acten. La invitación de cualquier otro remitente se ignora.
 - **Qué debe traer el evento**: fecha y hora, y un enlace directo de Meet,
-  Teams, Zoom o Element Call. Los eventos de día completo se ignoran.
+  Teams, Zoom o Element (`https://call.…/room/#/!id` o `https://<chat>/#/room/!id`).
+  Los eventos de día completo se ignoran.
+- **Element**: la sala tiene que existir antes y estar creada sin cifrado
+  extremo a extremo y con `join_rule: public` (así la crea Vocem por API); el
+  bot entra por el id de sala. Las salas «por nombre» de Element Call no sirven.
 - **Cambios y cancelaciones**: el calendario manda la actualización y el bot
   la sigue. Los eventos recurrentes se programan solos, ocurrencia por
   ocurrencia.
