@@ -418,32 +418,37 @@ async def _auto_dispatch_session(session_id: int) -> None:
             return
 
         try:
-            await dispatch_emails(
+            email_result = await dispatch_emails(
                 session_id,
                 DispatchEmailsRequest(
-                    action_item_ids=action_item_ids, attach_document=True
+                    action_item_ids=action_item_ids, attach_document=True, only_unsent=True
                 ),
                 db,
                 tenant,
             )
-            emails_ok = True
+            emails_ok = all(r["status"] in {"success", "skipped"} for r in email_result["results"])
         except Exception:
             logger.exception(
                 "auto-curación: dispatch_emails falló para sesión %s", session_id
             )
 
-        try:
-            await dispatch_platforms(
-                session_id,
-                DispatchPlatformsRequest(action_item_ids=action_item_ids),
-                db,
-                tenant,
-            )
-            platforms_ok = True
-        except Exception:
-            logger.exception(
-                "auto-curación: dispatch_platforms falló para sesión %s", session_id
-            )
+        from routers.fireflies import _routings_for_project_dispatch
+        routings = _routings_for_project_dispatch(db, ms_for_tenant.project_id) if ms_for_tenant.project_id else []
+        if not routings:
+            platforms_ok = True  # Las integraciones externas son opcionales.
+        else:
+            try:
+                platform_result = await dispatch_platforms(
+                    session_id,
+                    DispatchPlatformsRequest(action_item_ids=action_item_ids),
+                    db,
+                    tenant,
+                )
+                platforms_ok = all(r["status"] == "success" for r in platform_result["results"])
+            except Exception:
+                logger.exception(
+                    "auto-curación: dispatch_platforms falló para sesión %s", session_id
+                )
 
         if emails_ok and platforms_ok:
             session_obj = db.get(MeetingSession, session_id)

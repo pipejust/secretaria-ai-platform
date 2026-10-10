@@ -1405,6 +1405,7 @@ async def create_uploaded_session(
 
 class DispatchEmailsRequest(BaseModel):
     action_item_ids: list[int]
+    only_unsent: bool = False
     custom_pdf_b64: str = None
     attach_document: bool = False
 
@@ -1653,6 +1654,9 @@ async def dispatch_emails(
             continue
             
         email = item.owner_email.lower().strip()
+        if request.only_unsent and item.email_sent_at and item.email_sent_to == email:
+            results.append({"id": item.id, "status": "skipped"})
+            continue
         if email not in tasks_by_email:
             tasks_by_email[email] = {
                 "owner_name": item.owner_name if item.owner_name else email.split('@')[0],
@@ -1714,7 +1718,7 @@ async def dispatch_emails(
             })
             
         try:
-            await email_service.send_action_items_batch_email(
+            sent = await email_service.send_action_items_batch_email(
                 to_email=email,
                 owner_name=data["owner_name"],
                 tasks=data["items"],
@@ -1729,8 +1733,14 @@ async def dispatch_emails(
                 # adjunto NO la incluye (esto se ve solo dentro del email).
                 raw_transcript=session_obj.raw_transcript,
             )
+            if not sent:
+                raise RuntimeError("El correo no se envió")
             for item in data["items"]:
+                item.email_sent_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                item.email_sent_to = email
+                db.add(item)
                 results.append({"id": item.id, "status": "success"})
+            db.commit()
                 
             # Resend Free limit is 2 requests per second. Sleep 0.6s to stay strictly below limit.
             await asyncio.sleep(0.6)

@@ -938,6 +938,8 @@ class ActionItem(SQLModel, table=True):
 
     owner_name: str
     owner_email: str
+    email_sent_at: str = Field(default="")
+    email_sent_to: str = Field(default="")
     title: str
     description: str = Field(default="")
     due_date: Optional[str] = Field(default=None)

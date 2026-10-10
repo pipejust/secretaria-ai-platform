@@ -72,6 +72,8 @@ def _apply_lightweight_migrations() -> None:
     """ALTER TABLE idempotentes para columnas añadidas después del schema inicial."""
     if _is_sqlite:
         statements = [
+            "ALTER TABLE actionitem ADD COLUMN email_sent_at TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE actionitem ADD COLUMN email_sent_to TEXT NOT NULL DEFAULT ''",
             'ALTER TABLE meetingsession ADD COLUMN ai_fields_regenerated BOOLEAN DEFAULT 0 NOT NULL',
             'ALTER TABLE meetingsession ADD COLUMN ai_tasks_regenerated  BOOLEAN DEFAULT 0 NOT NULL',
             "ALTER TABLE meetingsession ADD COLUMN processing_error TEXT NOT NULL DEFAULT ''",
@@ -116,6 +118,8 @@ def _apply_lightweight_migrations() -> None:
         ]
     else:
         statements = [
+            "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS email_sent_at TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE actionitem ADD COLUMN IF NOT EXISTS email_sent_to TEXT NOT NULL DEFAULT ''",
             'ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ai_fields_regenerated BOOLEAN DEFAULT FALSE NOT NULL',
             'ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ai_tasks_regenerated  BOOLEAN DEFAULT FALSE NOT NULL',
             # Salud del pipeline IA — Sprint Estabilidad
