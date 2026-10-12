@@ -613,3 +613,13 @@ que el proyecto no conoce se deja como estaba.
 - [ ] Pedir una URL nueva de vídeo cada vez que se abre el reproductor.
 - [ ] Tratar los `state` y los tipos de mensaje desconocidos sin fallar.
 - [ ] Avisar al usuario de que tiene que admitir al bot en la reunión cuando la plataforma no está en `authenticated_platforms`.
+
+### Moderación de sesiones Vocem (12 de octubre de 2026)
+
+Al crear una sala, Acten asigna nivel 50 a quien la genera y publica el enlace en el chat. La cuenta de Vocem del organizador debe estar vinculada explícitamente en el mapa `cuentas` de la configuración de la empresa. No se adivina por nombre ni se asigna al primer usuario.
+
+Para `POST /meetings/live` con `create_room: true`, enviar `X-On-Behalf-Of` con el UUID del empleado real que genera la sesión. `*` representa a la empresa y no identifica a la persona: se rechaza con 422 para crear una sala. Esto debe respetarse también en proxies externos cuando la persona tiene permisos de administración; usar `*` para consultas globales no implica usarlo para crear una sesión personal. Las capturas con un enlace existente no cambian su contrato.
+
+Matrix v12 no permite incluir al creador en `power_level_content_override.users`; sus privilegios son implícitos. Las salas nuevas indican `room_version: 12`, organizador 50 y `kick`/`ban` a 50. Se mantiene la publicación de membresías RTC a nivel 0. No se alteran roles históricos sin identificar al organizador.
+
+Vocem tiene el panel «Participantes y enlace» para copiar, silenciar y desconectar. El primer iniciador recibe rol de llamada; entrar después no lo da. Sacar no bloquea la cuenta ni expulsa del chat, y el participante puede volver si conserva acceso. Android/iPhone requieren configurar la URL propia de Element Call en cada dispositivo. Operación y pruebas en `Mensajería/docs/MODERACION-LLAMADAS.md`.

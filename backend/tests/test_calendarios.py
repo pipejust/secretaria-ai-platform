@@ -387,8 +387,9 @@ def test_el_evento_puede_crear_la_sala_en_element_y_programar_el_bot(client, ana
     from services import vocem
 
     monkeypatch.setattr(vocem, "configurada", lambda db, t: True)
+    monkeypatch.setattr(vocem, "cuenta_del_organizador", lambda db, t, owner: "@ana:softnexus.co")
     enlace = "https://call.vocem.test/room/#?roomId=%21s&viaServers=vocem.test"
-    monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
+    monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv, organizador=None: {
         "room_id": "!s", "meeting_url": enlace, "join_url": enlace, "app_url": "https://matrix.to/#/%21s?via=vocem.test"})
     invitaciones = []
     monkeypatch.setattr(vocem, "programar_invitaciones", lambda db, t, room, inicio: invitaciones.append((room, inicio)))

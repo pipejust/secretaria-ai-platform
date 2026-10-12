@@ -464,7 +464,8 @@ async def _sala_element(db: Session, user: User, cuerpo: "EventoNuevo") -> dict 
     if not vocem.configurada(db, user.tenant_id):
         raise HTTPException(409, "Esta empresa no tiene Vocem (Element) configurado.")
     try:
-        sala = vocem.crear_sala(db, user.tenant_id, cuerpo.title, [])
+        sala = vocem.crear_sala(db, user.tenant_id, cuerpo.title, [],
+                                organizador=vocem.cuenta_del_organizador(db, user.tenant_id, user.id))
     except vocem.VocemError as exc:
         raise HTTPException(502, str(exc)) from exc
     inicio = _fecha(cuerpo.start_at)

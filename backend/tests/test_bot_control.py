@@ -618,13 +618,22 @@ def test_acten_crea_la_sala_de_vocem_cuando_se_lo_piden(control, monkeypatch):
     client, engine, calls = control
     h = _api_key(engine, ["sessions:read", "sessions:write", "org:read"])
     monkeypatch.setattr(vocem, "configurada", lambda db, t: True)
-    monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv: {
+    monkeypatch.setattr(vocem, "cuenta_del_organizador", lambda db, t, owner: "@ana:softnexus.co")
+    monkeypatch.setattr(vocem, "crear_sala", lambda db, t, titulo, inv, organizador=None: {
         "room_id": "!sala", "meeting_url": "https://call.vocem.softnexus.co/room/#/!sala",
         "join_url": "https://vocem.softnexus.co/#/room/!sala", "app_url": "https://matrix.to/#/%21sala?via=softnexus.co"})
     avisos = []
     monkeypatch.setattr(vocem, "programar_invitaciones",
                         lambda db, t, room, inicio, cuentas=None: avisos.append((room, cuentas)))
     cuerpo = {"title": "Comité", "recording_authorized": True, "create_room": True}
+    anon = {**h, "X-On-Behalf-Of": "*"}
+    assert client.post("/api/v1/meetings/live", headers=anon, json=cuerpo).status_code == 422
+    actor_ref = str(uuid.uuid4())
+    with Session(engine) as db:
+        actor = db.get(User, 1)
+        actor.external_ref = actor_ref
+        db.add(actor); db.commit()
+    h = {**h, "X-On-Behalf-Of": actor_ref}
     r = client.post("/api/v1/meetings/live", headers=h, json={**cuerpo, "invite": ["@ana:softnexus.co"]})
     assert r.status_code == 202, r.text
     assert avisos == [("!sala", ["@ana:softnexus.co"])]  # a quién avisar, cuando toque

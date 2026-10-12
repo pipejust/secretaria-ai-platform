@@ -62,17 +62,19 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
             # dvera@ no existe como cuenta, pero «Danny Vera» sí está en el directorio.
             res = [{"user_id": "@danny:softnexus.co", "display_name": "Danny  Vera"}] if "danny" in json["search_term"].lower() else []
             return httpx.Response(200, json={"results": res, "limited": False}, request=httpx.Request(method, url))
-        enviado.update(method=method, url=url, body=json, auth=headers["Authorization"])
+        if url.endswith("/createRoom"):
+            enviado.update(method=method, url=url, body=json, auth=headers["Authorization"])
         return httpx.Response(200, json={"room_id": "!abc"}, request=httpx.Request(method, url))
     monkeypatch.setattr(vocem.httpx, "request", falso)
-    sala = vocem.crear_sala(db_session, empresa.id, "Comité", ["@ana:softnexus.co", "@integraciones:softnexus.co", "no-es-id"])
+    sala = vocem.crear_sala(db_session, empresa.id, "Comité", ["@ana:softnexus.co", "@integraciones:softnexus.co", "no-es-id"], organizador="@felipe:softnexus.co")
     enlace = "https://call.vocem.softnexus.co/room/#?roomId=%21abc&viaServers=softnexus.co"
     assert sala == {"room_id": "!abc", "meeting_url": enlace, "join_url": enlace,
                     "app_url": "https://matrix.to/#/%21abc?via=softnexus.co"}
     assert enviado["body"]["power_level_content_override"]["events"]["m.rtc.member"] == 0
     assert enviado["url"].endswith("/_matrix/client/v3/createRoom") and enviado["auth"] == "Bearer tok"
     # Solo invitados explícitos (sin el bot ni ids inválidos); a nadie más le aparece la llamada en el chat.
-    assert enviado["body"]["invite"] == ["@ana:softnexus.co"]
+    assert enviado["body"]["invite"] == ["@ana:softnexus.co", "@felipe:softnexus.co"]
+    assert enviado["body"]["power_level_content_override"]["users"]["@felipe:softnexus.co"] == 50
     # La resolución de cuentas sigue disponible para quien la pida explícitamente.
     assert vocem.cuentas_de_usuarios(db_session, empresa.id, vocem.cargar(db_session, empresa.id)) == [
         "@ana:softnexus.co", "@danny:softnexus.co", "@felipe:softnexus.co"]
@@ -82,7 +84,7 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
     assert vocem.estado(db_session, empresa.id)["cuentas"] == {"nadie@softnexus.io": "@nadie.real:softnexus.co"}
     assert enviado["body"]["preset"] == "public_chat" and enviado["body"]["visibility"] == "private"
     assert enviado["body"]["creation_content"] == {"m.federate": False}
-    assert "initial_state" not in enviado["body"]  # ni cifrado ni invitados anónimos
+    assert enviado["body"]["initial_state"] == [{"type": "co.vocem.session", "state_key": "", "content": {"organizer": "@felipe:softnexus.co"}}]
 
 
 def test_las_invitaciones_salen_a_la_hora_de_la_sesion(db_session, empresa, monkeypatch):
@@ -124,3 +126,31 @@ def test_las_invitaciones_salen_a_la_hora_de_la_sesion(db_session, empresa, monk
     assert ultimo["m.mentions"] == {"room": True} and ultimo["body"].startswith("@room «Comité»")
     assert "roomId=%21luego&viaServers=softnexus.co" in ultimo["body"] and "https://matrix.to/#/%21luego?via=softnexus.co" in ultimo["body"]
     assert vocem.enviar_invitaciones_pendientes(db_session) == 0
+
+
+def test_crear_sala_rechaza_organizador_tecnico_o_ausente(db_session, empresa, monkeypatch):
+    vocem.guardar(db_session, empresa.id, {"homeserver": "https://matrix.softnexus.co",
+        "user_id": "@integraciones:softnexus.co", "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+    llamadas = []
+    monkeypatch.setattr(vocem, "_llamar", lambda *args: llamadas.append(args))
+    for organizador in (None, "@integraciones:softnexus.co", "@alguien:otro.co"):
+        with pytest.raises(vocem.VocemError):
+            vocem.crear_sala(db_session, empresa.id, "Sesión", organizador=organizador)
+    assert llamadas == []
+
+
+def test_organizador_exige_vinculo_administrado_y_tenant_correcto(db_session, empresa, monkeypatch):
+    from models import User
+    actor = User(email=f"organizador-{uuid.uuid4().hex}@softnexus.co", full_name="Organizador", hashed_password="unused", tenant_id=empresa.id)
+    db_session.add(actor); db_session.commit(); db_session.refresh(actor)
+    vocem.guardar(db_session, empresa.id, {"homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co", "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+    monkeypatch.setattr(vocem, "_existe", lambda *args: True)
+    with pytest.raises(vocem.VocemError):
+        vocem.cuenta_del_organizador(db_session, empresa.id, actor.id)
+    vocem.guardar(db_session, empresa.id, {"cuentas": {actor.email: "@felipe:softnexus.co"}})
+    assert vocem.cuenta_del_organizador(db_session, empresa.id, actor.id) == "@felipe:softnexus.co"
+    with pytest.raises(vocem.VocemError):
+        vocem.cuenta_del_organizador(db_session, empresa.id + 1000, actor.id)
+    actor.is_active = False; db_session.add(actor); db_session.commit()
+    with pytest.raises(vocem.VocemError):
+        vocem.cuenta_del_organizador(db_session, empresa.id, actor.id)

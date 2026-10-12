@@ -405,7 +405,8 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
         if not vocem.configurada(db, tenant_id):
             raise HTTPException(409, "Esta empresa no tiene Vocem (Element) configurado.")
         try:
-            sala = vocem.crear_sala(db, tenant_id, body.title, [])
+            sala = vocem.crear_sala(db, tenant_id, body.title, [],
+                                    organizador=vocem.cuenta_del_organizador(db, tenant_id, owner_id))
         except vocem.VocemError as exc:
             raise HTTPException(502, str(exc)) from exc
         body = body.model_copy(update={"meeting_url": sala["meeting_url"]})
@@ -944,6 +945,8 @@ async def live_start(
         project_id = project.id
     # La captura necesita un dueño en Acten. Si la persona de la otra
     # plataforma aún no tiene cuenta aquí, se atribuye al primer usuario activo.
+    if body.create_room and not body.meeting_url and ctx.acting_user is None:
+        raise HTTPException(422, "Crear una sesión Vocem requiere identificar al organizador con X-On-Behalf-Of.")
     owner = ctx.acting_user or db.exec(
         select(User)
         .where(User.tenant_id == tenant_id, User.is_active == True)  # noqa: E712

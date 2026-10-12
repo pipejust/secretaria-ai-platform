@@ -176,7 +176,24 @@ def cuentas_de_usuarios(db: Session, tenant_id: int, cfg: dict) -> list[str]:
     return sorted(cuentas)
 
 
-def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | None = None) -> dict:
+def cuenta_del_organizador(db: Session, tenant_id: int, owner_id: int) -> str:
+    """Resuelve al actor mediante el vínculo administrado; nombres y prefijos no prueban identidad."""
+    from models import User
+
+    usuario = db.get(User, owner_id)
+    if not usuario or usuario.tenant_id != tenant_id or not usuario.is_active:
+        raise VocemError("No se pudo identificar al organizador de esta empresa.")
+    cfg = cargar(db, tenant_id)
+    servidor = servidor_de(cfg)
+    correo = (usuario.email or "").strip().lower()
+    cuenta = (cfg.get("cuentas") or {}).get(correo)
+    if not cuenta or not cuenta.endswith(":" + servidor) or cuenta == cfg.get("user_id") or not _existe(cfg, cuenta):
+        raise VocemError("El organizador necesita una cuenta Vocem vinculada a su usuario.")
+    return cuenta
+
+
+def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | None = None,
+               organizador: str | None = None) -> dict:
     """Crea la sala de la reunión y devuelve `{room_id, meeting_url}`.
 
     Sin `m.room.encryption`: el bot entra como participante y necesita oír.
@@ -186,26 +203,36 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
     cfg = cargar(db, tenant_id)
     if not configurada(db, tenant_id):
         raise VocemError("Esta empresa no tiene Vocem configurado.")
+    if not organizador or not organizador.startswith("@") or not organizador.endswith(":" + servidor_de(cfg)) or organizador == cfg["user_id"]:
+        raise VocemError("Indica la cuenta Vocem del organizador humano.")
     explicitos = [u for u in (invitados or []) if u.startswith("@") and ":" in u and u != cfg["user_id"]]
     cuerpo = {
         "name": titulo.strip()[:200] or "Reunión",
         "preset": "public_chat",
         "visibility": "private",
+        "room_version": "12",
         "creation_content": {"m.federate": False},
         # Element Call exige que cada participante publique su propio estado de
         # llamada; con el nivel por defecto (50) entran y se caen («Connection lost»).
         "power_level_content_override": {
-            "events": {"m.rtc.member": 0, "org.matrix.msc3401.call.member": 0, "io.element.video.member": 0}
+            "users": {organizador: 50},
+            "users_default": 0, "kick": 50, "ban": 50,
+            "events": {"m.rtc.member": 0, "org.matrix.msc3401.call.member": 0,
+                       "io.element.video.member": 0, "co.vocem.session": 100}
         },
+        "initial_state": [{"type": "co.vocem.session", "state_key": "",
+                           "content": {"organizer": organizador}}],
         # Solo invitados explícitos. Invitar a todos los usuarios hacía aparecer la
         # llamada en el chat de cada uno; la gente entra con el enlace y nada más.
-        "invite": explicitos,
+        "invite": sorted(set(explicitos + [organizador])),
     }
     datos = _llamar(cfg, "POST", "/_matrix/client/v3/createRoom", cuerpo)
     room_id = datos.get("room_id")
     if not room_id:
         raise VocemError("Vocem no devolvió el id de la sala")
     enlace = enlace_de_sala(cfg, room_id)
+    _llamar(cfg, "PUT", f"/_matrix/client/v3/rooms/{quote(room_id, safe='')}/send/m.room.message/{uuid.uuid4()}",
+            {"msgtype": "m.text", "body": f"Enlace de la sesión: {enlace}\nAbrir en la app: {enlace_app(cfg, room_id)}"})
     # Un solo enlace para el bot y para las personas: Element Call con `roomId`.
     return {"room_id": room_id, "meeting_url": enlace, "join_url": enlace, "app_url": enlace_app(cfg, room_id)}
 
