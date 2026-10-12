@@ -150,3 +150,53 @@ def test_platform_retry_does_not_resend_successful_emails(db_session, test_engin
     db_session.refresh(meeting)
     assert meeting.status == 'processed'
     assert sends == ['a@example.test', 'b@example.test']
+
+
+def test_missing_email_does_not_block_other_session_recipients(db_session, test_engine, monkeypatch):
+    tenant, meeting = setup_session(db_session)
+    item = db_session.exec(select(ActionItem).where(ActionItem.session_id == meeting.id)).first()
+    item.owner_email = ''; db_session.add(item); db_session.commit()
+    monkeypatch.setattr(cron_service, 'engine', test_engine)
+    emailed = []
+    notices = []
+
+    async def notice(*args):
+        notices.append(args[0])
+
+    async def emails(sid, request, db, tenant):
+        emailed.extend(request.action_item_ids)
+        return {'results': [{'status': 'success'} for _ in request.action_item_ids]}
+
+    monkeypatch.setattr(cron_service, '_send_auto_dispatch_blocked_notice', notice)
+    monkeypatch.setattr(cron_service, '_send_auto_dispatch_done_notice', notice)
+    monkeypatch.setattr(sessions_upload, 'dispatch_emails', emails)
+    asyncio.run(cron_service._auto_dispatch_session(meeting.id))
+    db_session.refresh(meeting)
+    assert meeting.status == 'processed'
+    assert item.id not in emailed
+    assert len(emailed) == 1
+
+
+def test_missing_email_notice_only_to_tenant_owner_once(db_session, test_engine, monkeypatch):
+    from models import User, Role, Notification
+    tenant, meeting = setup_session(db_session)
+    role = db_session.exec(select(Role).where(Role.name == 'admin')).first()
+    if not role:
+        role = Role(name='admin'); db_session.add(role); db_session.commit(); db_session.refresh(role)
+    users = []
+    for name in ['owner', 'other']:
+        user = User(tenant_id=tenant.id, email=name + '@' + tenant.slug + '.test',
+                    full_name=name, hashed_password='test', role_id=role.id)
+        db_session.add(user); db_session.commit(); db_session.refresh(user); users.append(user)
+    tenant.owner_user_id = users[0].id; db_session.add(tenant); db_session.commit()
+    sent = []
+    async def send(self, **kwargs):
+        sent.append(kwargs['to_email']); return True
+    monkeypatch.setattr(EmailService, 'send_auto_dispatch_blocked_email', send)
+    monkeypatch.setattr(cron_service, 'engine', test_engine)
+    for _ in range(2):
+        asyncio.run(cron_service._send_auto_dispatch_blocked_notice(meeting.id, tenant.id, 1, 1, 60))
+    assert sent == [users[0].email]
+    notices = db_session.exec(select(Notification).where(Notification.entity_id == meeting.id,
+                              Notification.tenant_id == tenant.id)).all()
+    assert [n.user_id for n in notices] == [users[0].id]

@@ -145,6 +145,20 @@ def _count_missing_emails(db: Session, session_id: int) -> tuple[int, int]:
     return missing_tasks, missing_participants
 
 
+def _dispatch_notice_admin(db, tenant_id):
+    """Administrador principal de la empresa; nunca todos los miembros."""
+    from models import User, Role, Tenant
+    tenant = db.get(Tenant, tenant_id)
+    admin = db.get(User, tenant.owner_user_id) if tenant and tenant.owner_user_id else None
+    if not admin or admin.tenant_id != tenant_id or not admin.is_active or not admin.email:
+        admin = db.exec(
+            select(User).join(Role, User.role_id == Role.id)
+            .where(User.tenant_id == tenant_id, User.is_active == True, Role.name == "admin")
+            .order_by(User.id)
+        ).first()
+    return admin
+
+
 async def _send_auto_dispatch_blocked_notice(
     session_id: int,
     tenant_id: int,
@@ -152,46 +166,23 @@ async def _send_auto_dispatch_blocked_notice(
     missing_participants: int,
     timeout_minutes: int,
 ) -> None:
-    """Email + notif in-app cuando el cron decide NO despachar por emails
-    faltantes. Dedupe vía `auto_dispatch_warning_at` (re-envío ≥24h)."""
+    """Aviso único al administrador; los correos faltantes no bloquean el despacho."""
     import os
     from services.email_service import EmailService
-    from services.notification_service import notify_admins
+    from services.notification_service import notify_user
 
     with Session(engine) as db:
         ms = db.get(MeetingSession, session_id)
         if not ms:
             return
 
-        # Dedup: si ya hubo un warning hace menos de WARNING_REPEAT_HOURS, skip.
-        last = (ms.auto_dispatch_warning_at or "").strip()
-        if last:
-            try:
-                last_dt = datetime.fromisoformat(last)
-                hours_since = (datetime.now() - last_dt).total_seconds() / 3600.0
-                if hours_since < WARNING_REPEAT_HOURS:
-                    return
-            except ValueError:
-                pass  # parse error → tratar como "nunca enviado"
-
-        # Identifica destinatarios admin.
-        from models import User, Role
-        admins = db.exec(
-            select(User)
-            .where(User.tenant_id == tenant_id)
-            .where(User.is_active == True)  # noqa: E712
-        ).all()
-        recipients: list[tuple[str, str]] = []
-        for u in admins:
-            role_name = ""
-            if u.role_id:
-                r = db.get(Role, u.role_id)
-                role_name = (r.name if r else "").lower()
-            if "admin" in role_name or getattr(u, "is_platform_admin", False):
-                if u.email:
-                    recipients.append((u.email, u.full_name or ""))
-        if not recipients:
+        # Aviso informativo único por sesión, dirigido al administrador de la empresa.
+        if (ms.auto_dispatch_warning_at or "").strip():
             return
+        admin = _dispatch_notice_admin(db, tenant_id)
+        if not admin or not admin.email:
+            return
+        recipients = [(admin.email, admin.full_name or "")]
 
         project_name = "General"
         if ms.project_id:
@@ -232,10 +223,7 @@ async def _send_auto_dispatch_blocked_notice(
             ms2 = db.get(MeetingSession, session_id)
             if ms2:
                 ms2.auto_dispatch_warning_at = datetime.now().isoformat()
-                ms2.auto_dispatch_blocked_reason = (
-                    "missing_task_emails" if missing_task_emails
-                    else "missing_participants"
-                )
+                ms2.auto_dispatch_blocked_reason = ""
                 db.add(ms2)
                 db.commit()
 
@@ -246,12 +234,13 @@ async def _send_auto_dispatch_blocked_notice(
                 bits.append(f"{missing_task_emails} tarea(s) sin correo")
             if missing_participants:
                 bits.append(f"{missing_participants} participante(s) sin correo")
-            notify_admins(
+            notify_user(
                 db,
                 tenant_id=tenant_id,
+                user_id=admin.id,
                 kind="auto_dispatch_blocked",
-                title=f"No se pueden enviar tareas automáticamente: «{ms.title or 'Sin título'}»",
-                body="El envío automático está bloqueado. Falta: " + "; ".join(bits) + ".",
+                title=f"Correos faltantes en la sesión: «{ms.title or 'Sin título'}»",
+                body="Se omiten los destinatarios sin correo. Falta: " + "; ".join(bits) + ".",
                 link_to=f"/admin/curation/{session_id}",
                 entity_type="session",
                 entity_id=session_id,
@@ -269,29 +258,16 @@ async def _send_auto_dispatch_done_notice(
     sesión (justo antes de marcarla 'processed')."""
     import os
     from services.email_service import EmailService
-    from services.notification_service import notify_admins
+    from services.notification_service import notify_user
 
     with Session(engine) as db:
         ms = db.get(MeetingSession, session_id)
         if not ms:
             return
-        from models import User, Role
-        admins = db.exec(
-            select(User)
-            .where(User.tenant_id == tenant_id)
-            .where(User.is_active == True)  # noqa: E712
-        ).all()
-        recipients: list[tuple[str, str]] = []
-        for u in admins:
-            role_name = ""
-            if u.role_id:
-                r = db.get(Role, u.role_id)
-                role_name = (r.name if r else "").lower()
-            if "admin" in role_name or getattr(u, "is_platform_admin", False):
-                if u.email:
-                    recipients.append((u.email, u.full_name or ""))
-        if not recipients:
+        admin = _dispatch_notice_admin(db, tenant_id)
+        if not admin or not admin.email:
             return
+        recipients = [(admin.email, admin.full_name or "")]
 
         project_name = "General"
         if ms.project_id:
@@ -320,9 +296,10 @@ async def _send_auto_dispatch_done_notice(
                 )
 
         try:
-            notify_admins(
+            notify_user(
                 db,
                 tenant_id=tenant_id,
+                user_id=admin.id,
                 kind="auto_dispatch_done",
                 title=f"Tareas enviadas automáticamente: «{ms.title or 'Sin título'}»",
                 body=f"{total_tasks} tarea(s) notificadas a responsables y plataformas.",
@@ -339,10 +316,9 @@ async def _send_auto_dispatch_done_notice(
 async def _auto_dispatch_session(session_id: int) -> None:
     """Llama a los endpoints internos de dispatch.
 
-    PRE-GATE: antes de despachar, contamos cuántas tareas tienen email del
-    responsable. Si faltan correos, NO despachamos y mandamos un correo +
-    notif al admin diciendo "completá los correos para que esto pueda salir
-    solo". Si todo está OK, despachamos y marcamos status='processed'.
+    Los correos faltantes se notifican al administrador sin bloquear a los
+    responsables con correo. Cada envío contiene solo tareas de esta sesión;
+    los destinatarios ya notificados no se repiten en los reintentos.
     """
     # Imports adentro de la función para evitar ciclo: cron_service ←→ sessions_upload.
     from routers.sessions_upload import (
@@ -373,26 +349,22 @@ async def _auto_dispatch_session(session_id: int) -> None:
                     1, int(float(p.auto_dispatch_timeout_hours) * 60),
                 )
 
-        # --- PRE-GATE: ¿faltan correos en tareas o participantes? ---
+        # Los datos faltantes no bloquean al resto de destinatarios de esta sesión.
+        import re
+        email_re = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
+        email_item_ids = [it.id for it in action_items if email_re.fullmatch((it.owner_email or "").strip())]
         missing_tasks, missing_participants = _count_missing_emails(db, session_id)
-        if missing_tasks > 0 or missing_participants > 0:
-            logger.warning(
-                "Auto-dispatch sesión %s BLOQUEADO: %d tareas y %d participantes sin correo. "
-                "Mandando aviso al admin.",
-                session_id, missing_tasks, missing_participants,
-            )
+        if missing_tasks or missing_participants:
             await _send_auto_dispatch_blocked_notice(
-                session_id, tenant_id,
-                missing_tasks, missing_participants,
-                timeout_minutes_for_copy,
+                session_id, tenant_id, missing_tasks, missing_participants, timeout_minutes_for_copy,
             )
-            return  # No despachamos. Esperamos a que el admin complete.
 
         # Si ya había warning previo y ahora los correos están completos,
         # limpiamos el flag para no confundir el estado.
         if (ms_for_tenant.auto_dispatch_blocked_reason or "").strip():
             ms_for_tenant.auto_dispatch_blocked_reason = ""
-            ms_for_tenant.auto_dispatch_warning_at = ""
+            if not (missing_tasks or missing_participants):
+                ms_for_tenant.auto_dispatch_warning_at = ""
             db.add(ms_for_tenant)
             db.commit()
 
@@ -421,7 +393,7 @@ async def _auto_dispatch_session(session_id: int) -> None:
             email_result = await dispatch_emails(
                 session_id,
                 DispatchEmailsRequest(
-                    action_item_ids=action_item_ids, attach_document=True, only_unsent=True
+                    action_item_ids=email_item_ids, attach_document=True, only_unsent=True
                 ),
                 db,
                 tenant,
@@ -462,7 +434,7 @@ async def _auto_dispatch_session(session_id: int) -> None:
             )
             # Correo + notif "todo enviado, no tenés que hacer nada".
             await _send_auto_dispatch_done_notice(
-                session_id, tenant_id, len(action_item_ids),
+                session_id, tenant_id, len(email_item_ids),
             )
         else:
             logger.warning(

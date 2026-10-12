@@ -524,16 +524,9 @@ class EmailService:
         missing_participants: int,
         timeout_minutes: int,
     ):
-        """Email cuando el cron llega al timeout y NO puede auto-despachar
-        porque faltan correos en tareas o en participantes.
-
-        Lo envía el job `check_and_dispatch_pending_sessions` y se manda una
-        sola vez cada `WARNING_REPEAT_HOURS` (default 24h) por sesión, para no
-        spamear al admin. El admin tiene que entrar a la curación, agregar los
-        correos faltantes, y entonces el cron va a poder auto-despachar.
-        """
+        """Aviso único al administrador sobre destinatarios omitidos en esta sesión."""
         platform_name = self.branding.get("platform_name") or "Acten"
-        subject = f"[Bloqueado] No se puede auto-enviar tareas: {session_title or 'Sin título'}"
+        subject = f"[Aviso al administrador] Destinatarios sin correo: {session_title or 'Sin título'}"
         template = self.jinja_env.get_template('email_auto_dispatch_blocked.html')
         html_content = template.render(
             admin_name=admin_name or '',

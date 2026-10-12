@@ -7,3 +7,5 @@ La curación automática considera opcionales las rutas externas. El envío de c
 Las columnas se añaden con las migraciones ligeras de arranque para SQLite y PostgreSQL. Para sesiones afectadas antes del despliegue, registrar únicamente destinatarios cuyos envíos estén confirmados en el proveedor; no volver a enviarles para cerrar el proceso.
 
 Verificación: pruebas de ausencia de rutas, fallos parciales, remitente sin configurar, reasignación y reintento de integración sin repetir correos. La copia de vídeos sigue en el cron independiente y no bloquea la curación.
+
+Los correos faltantes de asistentes o responsables no bloquean a los demás destinatarios. Se omiten los correos ausentes o inválidos y se envían solo las tareas de la sesión a sus responsables configurados. Los avisos administrativos se dirigen al administrador principal (owner de la empresa, o primer admin activo si no existe); el aviso de datos faltantes se emite una sola vez por sesión.
