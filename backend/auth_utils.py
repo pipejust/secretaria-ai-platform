@@ -64,17 +64,26 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_password_reset_token(email: str) -> str:
+def create_password_reset_token(email: str, tenant_id: Optional[int] = None) -> str:
+    """El token lleva la empresa: el mismo correo puede existir en varias."""
     expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode = {"exp": expire, "sub": email, "type": "reset"}
+    if tenant_id is not None:
+        to_encode["tid"] = tenant_id
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
 def verify_password_reset_token(token: str) -> Optional[str]:
+    claims = password_reset_claims(token)
+    return claims[0] if claims else None
+
+
+def password_reset_claims(token: str) -> Optional[tuple[str, Optional[int]]]:
+    """(correo, empresa) del token, o None si es inválido o caducó."""
     try:
         decoded_token = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if decoded_token.get("type") != "reset":
+        if decoded_token.get("type") != "reset" or not decoded_token.get("sub"):
             return None
-        return decoded_token.get("sub")
+        return decoded_token["sub"], decoded_token.get("tid")
     except JWTError:
         return None

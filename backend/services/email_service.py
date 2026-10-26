@@ -103,6 +103,7 @@ class EmailService:
         marca se leen de ESE tenant. Si no, fallback al tenant default.
         """
         self.tenant_id = tenant_id
+        self._db = db
         # Configurar Jinja2 para cargar plantillas desde el directorio local `templates`
         current_dir = os.path.dirname(os.path.abspath(__file__))
         templates_dir = os.path.join(os.path.dirname(current_dir), 'templates')
@@ -626,12 +627,28 @@ class EmailService:
             subject = f"Código de verificación · {company}"
         return await self._send_html_email(to_email, subject, html_content)
 
+    def _base_url_empresa(self) -> str:
+        """Dirección web de la empresa: su dominio propio si lo tiene, si no `FRONTEND_URL/t/<slug>`.
+
+        Con la dirección genérica, quien restablecía la contraseña quedaba luego en la
+        puerta de `acten` y el login le decía «contraseña incorrecta».
+        """
+        from models import Tenant
+
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip("/")
+        tenant = self._db.get(Tenant, self.tenant_id) if (self._db is not None and self.tenant_id) else None
+        if tenant is None or tenant.slug == "acten":
+            return frontend_url
+        dominios = [d.strip().lower() for d in (tenant.domain or "").split(",") if d.strip()]
+        if dominios:
+            return f"https://{dominios[0]}"
+        return f"{frontend_url}/t/{tenant.slug}"
+
     async def send_forgot_password_email(self, to_email: str, user_name: str, reset_token: str):
         # Bug histórico: faltaba cargar el template — el render usaba `template`
         # del scope previo (NameError en el primer envío). Lo cargamos aquí.
         template = self.jinja_env.get_template('email_forgot_password.html')
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:4200").rstrip('/')
-        reset_url = f"{frontend_url}/reset-password?token={reset_token}"
+        reset_url = f"{self._base_url_empresa()}/reset-password?token={reset_token}"
         html_content = template.render(
             user_name=user_name,
             reset_url=reset_url,

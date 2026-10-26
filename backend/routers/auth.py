@@ -155,6 +155,28 @@ def _resolve_tenant(db: Session, slug: Optional[str]) -> Tenant:
     return tenant
 
 
+def _tenant_y_usuario(db: Session, slug: Optional[str], email: str) -> tuple[Tenant, Optional[User]]:
+    """La empresa pedida y el usuario con ese correo en ella.
+
+    Quien entra por la puerta genérica (`acten.app`, empresa `acten`) con una cuenta de
+    otra empresa —por ejemplo desde el enlace de un correo— recibía «contraseña
+    incorrecta» porque el usuario no existe en `acten`. En ese caso, y solo si el correo
+    pertenece a una única empresa activa, se entra a esa. Con varias, se queda en la pedida.
+    """
+    tenant = _resolve_tenant(db, slug)
+    user = db.exec(select(User).where(User.email == email).where(User.tenant_id == tenant.id)).first()
+    if user is None and tenant.slug == DEFAULT_TENANT_SLUG:
+        candidatos = db.exec(
+            select(User, Tenant)
+            .join(Tenant, Tenant.id == User.tenant_id)
+            .where(User.email == email)
+            .where(Tenant.is_active == True)  # noqa: E712
+        ).all()
+        if len(candidatos) == 1:
+            user, tenant = candidatos[0]
+    return tenant, user
+
+
 def get_tenant_from_request(
     db: Session = Depends(get_session),
     x_tenant_slug: Optional[str] = Header(default=None, alias="X-Tenant-Slug"),
@@ -321,14 +343,8 @@ def login_for_access_token(
     request: Request,
     db: Session = Depends(get_session),
 ):
-    tenant = _resolve_tenant(db, login_req.tenant_slug)
-
     # Lookup tenant-scoped: el mismo email puede existir en varios tenants.
-    user = db.exec(
-        select(User)
-        .where(User.email == login_req.username)
-        .where(User.tenant_id == tenant.id)
-    ).first()
+    tenant, user = _tenant_y_usuario(db, login_req.tenant_slug, login_req.username)
     if not user or not verify_password(login_req.password, user.hashed_password):
         try:
             from services import audit as _audit
@@ -384,12 +400,7 @@ def verify_login_2fa(
 ):
     """Completa el login cuando el usuario tiene 2FA activo. Recibe el
     código que llegó por email y devuelve el access_token real."""
-    tenant = _resolve_tenant(db, body.tenant_slug)
-    user = db.exec(
-        select(User)
-        .where(User.email == body.username)
-        .where(User.tenant_id == tenant.id)
-    ).first()
+    tenant, user = _tenant_y_usuario(db, body.tenant_slug, body.username)
     if not user or not user.two_factor_enabled:
         raise HTTPException(status_code=400, detail="Sesión inválida. Reinicia el login.")
 
@@ -1467,12 +1478,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
     from auth_utils import create_password_reset_token
     from services.email_service import EmailService
 
-    tenant = _resolve_tenant(db, req.tenant_slug)
-    user = db.exec(
-        select(User)
-        .where(User.email == req.email)
-        .where(User.tenant_id == tenant.id)
-    ).first()
+    tenant, user = _tenant_y_usuario(db, req.tenant_slug, req.email)
     # Mensaje genérico (en español) que devolvemos en ambos casos para no
     # filtrar si el correo está o no registrado en el workspace.
     generic_response = {
@@ -1482,7 +1488,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_
     if not user:
         return generic_response
 
-    token = create_password_reset_token(user.email)
+    token = create_password_reset_token(user.email, tenant.id)
 
     try:
         email_svc = EmailService(db=db, tenant_id=tenant.id)
@@ -1504,13 +1510,17 @@ class ResetPasswordRequest(BaseModel):
 
 @router.post("/reset-password")
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_session)):
-    from auth_utils import verify_password_reset_token, get_password_hash
+    from auth_utils import password_reset_claims, get_password_hash
 
-    email = verify_password_reset_token(req.token)
-    if not email:
+    claims = password_reset_claims(req.token)
+    if not claims:
         raise HTTPException(status_code=400, detail="Token inválido o expirado.")
+    email, tenant_id = claims
 
-    user = db.exec(select(User).where(User.email == email)).first()
+    consulta = select(User).where(User.email == email)
+    if tenant_id is not None:  # tokens nuevos: la empresa que pidió el restablecimiento
+        consulta = consulta.where(User.tenant_id == tenant_id)
+    user = db.exec(consulta).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
 
