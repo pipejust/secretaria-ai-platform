@@ -76,33 +76,9 @@
       </p>
     </div>
 
-    {# Warning de correos/participantes faltantes — solo si modo automático
-       está activo. Si es manual, no hay urgencia. #}
-    {% if auto_dispatch_enabled and (missing_task_emails > 0 or missing_participants > 0) %}
-      <div class="box" style="border-left-color: #F59E0B; background: #FFFBEB;">
-        <p class="box-title" style="color: #92400E;">
-          Faltan datos para el envío automático
-        </p>
-        <p class="box-text">
-          {% if missing_task_emails > 0 %}
-            <strong>{{ missing_task_emails }}</strong>
-            tarea{{ 's' if missing_task_emails != 1 else '' }} sin correo del
-            responsable.<br>
-          {% endif %}
-          {% if missing_participants > 0 %}
-            <strong>{{ missing_participants }}</strong>
-            participante{{ 's' if missing_participants != 1 else '' }} sin
-            correo registrado.<br>
-          {% endif %}
-        </p>
-        <p class="box-text" style="margin-top: 12px;">
-          Tienes <strong>{{ timeout_minutes }} minutos</strong> desde que
-          recibes este correo para completar los datos. Si al cumplirse el
-          plazo aún faltan correos, <strong>NO se enviará nada</strong>
-          automáticamente y recibirás otro aviso indicando el bloqueo.
-        </p>
-      </div>
-    {% elif auto_dispatch_enabled %}
+    {# Los correos faltantes se avisan una sola vez, en el aviso al
+       administrador (email_auto_dispatch_blocked); aquí no se repiten. #}
+    {% if auto_dispatch_enabled %}
       <p>
         El <strong>envío automático de tareas y correos</strong> está activo.
         Tienes <strong>{{ timeout_minutes }} minutos</strong> para revisar la
