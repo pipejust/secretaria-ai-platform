@@ -294,9 +294,18 @@ invitado más del evento en Google Calendar u Outlook.
 - **Qué debe traer el evento**: fecha y hora, y un enlace directo de Meet,
   Teams, Zoom o Element (`https://call.<dominio>/room/#?roomId=…&viaServers=…`).
   Los eventos de día completo se ignoran.
-- **Element**: la sala tiene que existir antes y estar creada sin cifrado
-  extremo a extremo y con `join_rule: public` (así la crea Vocem por API); el
-  bot entra por el id de sala. Las salas «por nombre» de Element Call no sirven.
+- **Element**: la sala tiene que existir antes y estar **sin cifrado extremo a
+  extremo**; el bot entra por el id de sala. Si la sala es de invitación, el
+  bot acepta la invitación al entrar. Desde el 30 de octubre de 2026 las salas
+  nuevas de Vocem nacen sin cifrado; las anteriores siguen cifradas y no se
+  pueden transcribir (`room_encrypted`). Las salas «por nombre» de Element Call
+  no sirven.
+- **Cuándo sale solo el bot de una sala de Element**: cuando no queda ninguna
+  persona (aparte del bot) durante 150 segundos, y entonces procesa lo grabado
+  igual que con `stop`. Si nadie entra en 15 minutos, también se retira. El tope
+  de duración por reunión es `max_duration_minutes` (480 por defecto) y se
+  cuenta desde la hora de entrada del bot, no desde que se registró la
+  invitación.
 
 **El enlace de Element.** Una sesión de Element se comparte con **un solo
 enlace**, el de Element Call con el id de la sala en la query:
@@ -419,6 +428,7 @@ Alcance `sessions:read`. Misma forma que la respuesta de creación.
 Traten cualquier valor desconocido como «en curso». Motivos frecuentes en
 `error_code`: `capture_not_admitted` (nadie admitió al bot en 10 minutos),
 `capture_no_speech` (no hubo voz que transcribir),
+`room_encrypted` (la sala de Element está cifrada; créenla de nuevo, sin cifrado),
 `scheduled_start_missed` (no pudo entrar en los 15 minutos siguientes a la
 hora programada).
 
