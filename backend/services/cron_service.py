@@ -18,7 +18,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -1069,10 +1069,12 @@ def refrescar_precios_cop() -> None:
 # contenedor estuvo apagado.
 scheduler.add_job(
     refrescar_precios_cop, "cron", hour=6, minute=15, max_instances=1,
-    coalesce=True, id="precios_cop_trm",
+    coalesce=True, misfire_grace_time=3600, id="precios_cop_trm",
 )
+# Con tolerancia: con la de un segundo por defecto, el arranque la daba por perdida.
 scheduler.add_job(
-    refrescar_precios_cop, "date", run_date=datetime.now(), id="precios_cop_trm_arranque",
+    refrescar_precios_cop, "date", run_date=datetime.now() + timedelta(seconds=30),
+    misfire_grace_time=600, id="precios_cop_trm_arranque",
 )
 
 
