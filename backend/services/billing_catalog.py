@@ -15,8 +15,9 @@ from sqlmodel import Session, select
 
 from models import AddOn, Plan, Subscription, Tenant
 
-# Tasa solo para sembrar el precio en COP la primera vez. Editable después.
-TASA_USD_COP_SIEMBRA = 4000
+# Tasa solo para sembrar el precio en COP la primera vez; después lo actualiza la TRM
+# (services/trm.py).
+TASA_USD_COP_SIEMBRA = 3200
 
 # Días de prueba con todo activo para una empresa nueva sin plan asignado.
 DIAS_PRUEBA = 14

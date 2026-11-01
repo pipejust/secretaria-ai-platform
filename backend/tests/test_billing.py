@@ -169,7 +169,7 @@ def test_checkout_firma_y_evento_activan_la_suscripcion(client, catalogo, db_ses
                     json={"plan_key": "business", "addons": ["owned_bot", "video_recording"]})
     assert r.status_code == 201, r.text
     c = r.json()
-    esperado = 8000 * 4000 + (1500 + 800) * 4000
+    esperado = (8000 + 1500 + 800) * cat.TASA_USD_COP_SIEMBRA
     assert c["amount_in_cents"] == esperado and c["currency"] == "COP"
     assert c["public_key"] == "pub_test_abc" and "prv_" not in r.text and "secret" not in r.text
     assert c["signature_integrity"] == hashlib.sha256(

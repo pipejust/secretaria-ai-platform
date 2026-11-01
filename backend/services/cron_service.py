@@ -1057,6 +1057,25 @@ scheduler.add_job(
 )
 
 
+def refrescar_precios_cop() -> None:
+    """Precios en COP al día con la TRM del Banco de la República."""
+    from services.trm import actualizar_precios_cop
+
+    with Session(engine) as db:
+        actualizar_precios_cop(db)
+
+
+# La TRM nueva rige desde la madrugada; una vez al día, y al arrancar por si el
+# contenedor estuvo apagado.
+scheduler.add_job(
+    refrescar_precios_cop, "cron", hour=6, minute=15, max_instances=1,
+    coalesce=True, id="precios_cop_trm",
+)
+scheduler.add_job(
+    refrescar_precios_cop, "date", run_date=datetime.now(), id="precios_cop_trm_arranque",
+)
+
+
 def purgar_videos_vencidos() -> None:
     from database import engine
     from services import media_storage

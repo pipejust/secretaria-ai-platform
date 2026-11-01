@@ -1,6 +1,6 @@
 # Precios y costos del bot de Acten
 
-Actualizado: 1 de noviembre de 2026. Precios en USD, sin impuestos. Wompi cobra en COP con la tasa de referencia del catálogo (4 000 COP por USD, editable).
+Actualizado: 1 de noviembre de 2026. Precios en USD, sin impuestos. Wompi cobra en COP con la TRM del Banco de la República (31 de octubre de 2026: 3 182,99 COP por USD).
 
 Los costos de proveedores salen de sus páginas de precios públicas. **Los costos fijos son una estimación**: falta confirmarlos con la facturación de cada proveedor (Hetzner, almacenamiento, correo, dominios), a la que no se pudo entrar desde el navegador sin una sesión iniciada.
 
@@ -40,7 +40,7 @@ En los últimos 45 días el bot grabó 27 reuniones y 18,5 horas: 15,2 h de Soft
 
 ## Precios (definidos el 1 de noviembre de 2026)
 
-El bot viene **incluido en los planes** (antes era un add-on de 29 USD, más 19 de vídeo y 19 de transcripción en vivo). Todo en dólares; Wompi cobra el equivalente en pesos.
+El bot viene **incluido en los planes** (antes era un add-on de 29 USD, más 19 de vídeo y 19 de transcripción en vivo). Todo en dólares; Wompi cobra el equivalente en pesos con la TRM oficial del día (ver más abajo).
 
 | Plan | USD / mes | Reuniones | Incluye | Costo variable máximo | Margen bruto mínimo |
 |---|---|---|---|---|---|
@@ -76,6 +76,10 @@ El catálogo limita por reuniones al mes, no por horas. Un exceso debería cobra
 - **acten**: empresa base, no se bloquea nunca; sin cambios.
 - **xkape** y **ccis**: pasan a Starter.
 - **telar**, **softnexus** y **singular**: Business.
+
+## Precio en pesos: TRM automática
+
+El precio en COP de cada plan y add-on se calcula con la **TRM oficial** que publica el Banco de la República ([datos abiertos](https://www.datos.gov.co/resource/32sa-8pi3.json), sin llave). `services/trm.py` la lee cada día a las 6:15 (hora del servidor) y al arrancar, y redondea a miles de pesos. Si la fuente falla, se conservan los precios del día anterior. El precio en COP ya no se edita a mano: se cambia el de USD. Ejemplo con la TRM de 3 182,99: Starter 64 000 COP y Business 255 000 COP.
 
 ## Cómo se aplica
 
