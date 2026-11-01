@@ -413,7 +413,7 @@ def test_video_follows_the_subscription_not_the_client(control):
         t.created_at = (datetime.now() - timedelta(days=60)).isoformat()
         t.meeting_source = "both"
         db.add(t)
-        db.add(Subscription(tenant_id=1, plan_key="business", status="active",
+        db.add(Subscription(tenant_id=1, plan_key="starter", status="active",
                             billing_mode="manual", addons_json=json.dumps(["owned_bot"])))
         db.commit()
     assert client.put("/api/owned-bot/mail-policy", json={**policy, "video": True}).status_code == 200
