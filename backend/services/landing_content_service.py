@@ -112,13 +112,13 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             {"label": {"es": "Enterprise ready", "ca": "Enterprise ready", "en": "Enterprise ready"}, "icon": "building"},
         ],
         # Mockup (decorativo, ilustrativo — no editable fino).
-        "mockup_eyebrow": "Q2 Product Roadmap",
+        "mockup_eyebrow": "Ejemplo ilustrativo",
         "mockup_title": {
-            "es": "Reunión de planificación · Q2",
-            "ca": "Reunió de planificació · Q2",
-            "en": "Planning meeting · Q2",
+            "es": "Reunión de seguimiento",
+            "ca": "Reunió de seguiment",
+            "en": "Follow-up meeting",
         },
-        "mockup_meta": "16 may, 2024 · 10:00 a. m. · 45 min · 6 participantes",
+        "mockup_meta": "Ejemplo ilustrativo · 45 min · 6 participantes",
     },
 
     # ─── Trust logos (clientes / empresas) ──────────────────────────────
@@ -434,6 +434,17 @@ DEFAULT_CONTENT: Dict[str, Any] = {
                 "featured": False,
             },
         ],
+        "addons": {
+            "title": {"es": 'Add-ons para Starter', "ca": 'Add-ons per a Starter', "en": 'Add-ons for Starter'},
+            "subtitle": {"es": 'Todo esto ya viene incluido en Business.', "ca": 'Tot això ja ve inclòs a Business.', "en": 'All of this is already included in Business.'},
+            "items": [
+                {"name": {"es": 'Grabación de vídeo', "ca": 'Gravació de vídeo', "en": 'Video recording'}, "price": '+$8'},
+                {"name": {"es": 'Transcripción en vivo', "ca": 'Transcripció en directe', "en": 'Live transcription'}, "price": '+$7'},
+                {"name": {"es": 'Pregúntale a la IA', "ca": 'Pregunta a la IA', "en": 'Ask the AI'}, "price": '+$9'},
+                {"name": {"es": 'Integraciones', "ca": 'Integracions', "en": 'Integrations'}, "price": '+$19'},
+                {"name": {"es": 'Plantillas por proyecto', "ca": 'Plantilles per projecte', "en": 'Templates per project'}, "price": '+$5'}
+            ],
+        },
         "footnote": {
             "es": "El bot de Acten es el modo principal. Si prefieres Fireflies u otro proveedor, también funciona. Precios sin impuestos.",
             "ca": "El bot d'Acten és el mode principal. Si prefereixes Fireflies o un altre proveïdor, també funciona. Preus sense impostos.",
@@ -822,13 +833,17 @@ DEFAULT_CONTENT: Dict[str, Any] = {
 
     # ─── /empresa  ─── (case studies grid) ───────────────────────────────
     "case_studies": {
-        "eyebrow": {"es": "Empresas", "ca": "Empreses", "en": "Companies"},
+        "eyebrow": {"es": "Clientes", "ca": "Clients", "en": "Customers"},
         "title": {
-            "es": "Historias reales que confían en Acten.",
-            "ca": "Històries reals que confien en Acten.",
-            "en": "Real stories that trust Acten.",
+            "es": "Equipos que ya trabajan con Acten.",
+            "ca": "Equips que ja treballen amb Acten.",
+            "en": "Teams already working with Acten.",
         },
-        "subtitle": {"es": "", "ca": "", "en": ""},
+        "subtitle": {
+            "es": "Cifras reales de uso, a 1 de noviembre de 2026.",
+            "ca": "Xifres reals d'ús, a 1 de novembre de 2026.",
+            "en": "Real usage figures, as of November 1, 2026.",
+        },
         "items": [
             {
                 "slug": "softnexus",
@@ -1021,11 +1036,10 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "ca": "Gràcies! T'avisarem quan tinguem novetats.",
             "en": "Thanks! We'll let you know when something good drops.",
         },
+        # Acten es un producto de Softnexus; solo los canales verificados de su sitio.
         "social_links": [
-            {"label": "LinkedIn", "icon": "linkedin", "url": "https://linkedin.com/company/acten"},
-            {"label": "X", "icon": "x", "url": "https://x.com/acten_app"},
-            {"label": "YouTube", "icon": "youtube", "url": "https://youtube.com/@acten"},
-            {"label": "GitHub", "icon": "github", "url": "https://github.com/acten"},
+            {"label": "WhatsApp", "icon": "whatsapp", "url": "https://wa.me/573001886615"},
+            {"label": "Softnexus", "icon": "web", "url": "https://www.softnexus.co"},
         ],
         # Columnas del footer — solo enlaces a secciones REALES del landing,
         # rutas existentes (/privacy, /terms) o el formulario de contacto.
@@ -1045,7 +1059,7 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             {
                 "title": {"es": "Empresa", "ca": "Empresa", "en": "Company"},
                 "links": [
-                    {"label": {"es": "Quiénes somos", "ca": "Qui som", "en": "About us"}, "url": "#testimonials"},
+                    {"label": {"es": "Clientes", "ca": "Clients", "en": "Customers"}, "url": "#clients"},
                     {"label": {"es": "Contacto", "ca": "Contacte", "en": "Contact"}, "url": "#contact"},
                     {"label": {"es": "Iniciar sesión", "ca": "Inicia sessió", "en": "Log in"}, "url": "/login"},
                 ],
@@ -1061,8 +1075,6 @@ DEFAULT_CONTENT: Dict[str, Any] = {
         "legal_links": [
             {"label": {"es": "Privacidad", "ca": "Privadesa", "en": "Privacy"}, "url": "/privacy"},
             {"label": {"es": "Términos", "ca": "Termes", "en": "Terms"}, "url": "/terms"},
-            {"label": {"es": "Seguridad", "ca": "Seguretat", "en": "Security"}, "url": "/privacy"},
-            {"label": {"es": "Cookies", "ca": "Galetes", "en": "Cookies"}, "url": "/privacy"},
         ],
         "language_label": {
             "es": "Español (ES)",
@@ -1070,9 +1082,9 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "en": "English (EN)",
         },
         "copyright": {
-            "es": "Acten.ai. Todos los derechos reservados.",
-            "ca": "Acten.ai. Tots els drets reservats.",
-            "en": "Acten.ai. All rights reserved.",
+            "es": "Acten, un producto de Softnexus. Todos los derechos reservados.",
+            "ca": "Acten, un producte de Softnexus. Tots els drets reservats.",
+            "en": "Acten, a Softnexus product. All rights reserved.",
         },
     },
 }

@@ -2102,3 +2102,48 @@ section[id] { scroll-margin-top: 88px; }
     transition-duration: 0ms !important;
   }
 }
+
+
+/* ── Clientes (cifras reales de uso) ───────────────────────────────── */
+.al-clients { padding: 88px 0; background: var(--ac-bg-soft, #f8fafc); }
+.al-clients__head { text-align: center; max-width: 720px; margin: 0 auto 44px; }
+.al-clients__head .al-section-title { margin: 12px 0 14px; }
+.al-clients__grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;
+}
+.al-clients__card {
+  background: #fff; border: 1px solid var(--ac-border); border-radius: 18px;
+  padding: 26px 24px; display: flex; flex-direction: column; gap: 8px;
+  transition: all 200ms var(--ac-ease);
+}
+.al-clients__card:hover { border-color: var(--ac-blue); box-shadow: 0 14px 34px -14px rgba(20, 93, 255, 0.25); }
+.al-clients__name { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--ac-fg); }
+.al-clients__tag { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ac-blue); }
+.al-clients__summary { margin: 4px 0 14px; font-size: 14.5px; line-height: 1.55; color: var(--ac-fg-muted); }
+.al-clients__kpis {
+  margin: auto 0 0; padding-top: 16px; border-top: 1px solid var(--ac-border-soft);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.al-clients__kpi dt { font-size: 11px; color: var(--ac-fg-muted); line-height: 1.3; }
+.al-clients__kpi dd { margin: 4px 0 0; font-size: 1.35rem; font-weight: 700; color: var(--ac-fg); }
+
+/* ── Add-ons en precios ────────────────────────────────────────────── */
+.al-pricing__addons { max-width: 760px; margin: 44px auto 0; text-align: center; }
+.al-pricing__addons-title { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--ac-fg); }
+.al-pricing__addons-sub { margin: 6px 0 18px; font-size: 14px; color: var(--ac-fg-muted); }
+.al-pricing__addons-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+}
+.al-pricing__addons-list li {
+  display: inline-flex; gap: 10px; align-items: baseline;
+  background: #fff; border: 1px solid var(--ac-border); border-radius: 999px;
+  padding: 8px 16px; font-size: 14px; color: var(--ac-fg);
+}
+.al-pricing__addons-list strong { color: var(--ac-blue); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .al-clients { padding: 64px 0; }
+  .al-clients__kpis { grid-template-columns: repeat(3, 1fr); }
+}

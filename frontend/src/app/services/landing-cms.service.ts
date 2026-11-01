@@ -142,6 +142,7 @@ export interface LandingContent {
     subtitle: string;
     plans: PricingPlan[];
     footnote: string;
+    addons?: { title: string; subtitle: string; items: { name: string; price: string }[] };
   };
   resources: {
     eyebrow: string;

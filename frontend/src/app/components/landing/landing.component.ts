@@ -285,6 +285,10 @@ export class LandingComponent implements OnInit {
      */
     integrationKey(name: string): string {
         const n = (name || '').toLowerCase();
+        if (n.includes('meet')) return 'meet';
+        if (n.includes('teams')) return 'teams';
+        if (n.includes('zoom')) return 'zoom';
+        if (n.includes('vocem')) return 'vocem';
         if (n.includes('jira')) return 'jira';
         if (n.includes('trello')) return 'trello';
         if (n.includes('clickup')) return 'clickup';
