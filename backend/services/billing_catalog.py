@@ -50,12 +50,12 @@ FEATURES = {
 
 PLANES = [
     {
-        "key": "starter", "name": "Starter", "price_usd_cents": 2900, "sort_order": 1,
+        "key": "starter", "name": "Starter", "price_usd_cents": 2000, "sort_order": 1,
         "meetings_per_month": 20, "users_included": 5, "video_retention_days": 30,
         "features": [F_FIREFLIES, F_OWNED_BOT, F_DOCUMENTS, F_REPORTS, F_CALENDAR],
     },
     {
-        "key": "business", "name": "Business", "price_usd_cents": 9900, "sort_order": 2,
+        "key": "business", "name": "Business", "price_usd_cents": 8000, "sort_order": 2,
         "meetings_per_month": 100, "users_included": None, "video_retention_days": 90,
         "features": [F_FIREFLIES, F_OWNED_BOT, F_VIDEO, F_REALTIME, F_DOCUMENTS, F_REPORTS,
                      F_CALENDAR, F_TEMPLATES, F_INTEGRATIONS, F_ASK],
@@ -71,11 +71,11 @@ PLANES = [
 # Precios en USD con el costo variable por hora de reunión de docs/PRECIOS_Y_COSTOS.md.
 # El bot ya viene en los planes; el add-on queda para quien lo tenía contratado aparte.
 ADDONS = [
-    {"key": "owned_bot", "name": "Bot propio de Acten", "price_usd_cents": 1900,
+    {"key": "owned_bot", "name": "Bot propio de Acten", "price_usd_cents": 1500,
      "features": [F_OWNED_BOT], "requires": [], "sort_order": 1},
-    {"key": "video_recording", "name": "Grabación de vídeo", "price_usd_cents": 900,
+    {"key": "video_recording", "name": "Grabación de vídeo", "price_usd_cents": 800,
      "features": [F_VIDEO], "requires": ["owned_bot"], "sort_order": 2},
-    {"key": "realtime_transcription", "name": "Transcripción en vivo", "price_usd_cents": 900,
+    {"key": "realtime_transcription", "name": "Transcripción en vivo", "price_usd_cents": 700,
      "features": [F_REALTIME], "requires": ["owned_bot"], "sort_order": 6},
     {"key": "ask_ai", "name": "Pregúntale a la IA", "price_usd_cents": 900,
      "features": [F_ASK], "requires": [], "sort_order": 3},

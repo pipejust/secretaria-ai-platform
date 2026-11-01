@@ -381,7 +381,7 @@ DEFAULT_CONTENT: Dict[str, Any] = {
         "plans": [
             {
                 "name": 'Starter',
-                "price": '$29',
+                "price": '$20',
                 "billing": {"es": 'USD / mes', "ca": 'USD / mes', "en": 'USD / month'},
                 "description": {"es": 'Para equipos que empiezan: el bot de Acten en tus reuniones y actas listas.', "ca": "Per a equips que comencen: el bot d'Acten a les teves reunions i actes llestes.", "en": 'For teams getting started: the Acten bot in your meetings and minutes ready to send.'},
                 "features": [
@@ -399,7 +399,7 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             },
             {
                 "name": 'Business',
-                "price": '$99',
+                "price": '$80',
                 "billing": {"es": 'USD / mes', "ca": 'USD / mes', "en": 'USD / month'},
                 "description": {"es": 'Para equipos en crecimiento: vídeo, transcripción en vivo e integraciones.', "ca": 'Per a equips en creixement: vídeo, transcripció en directe i integracions.', "en": 'For growing teams: video, live transcription and integrations.'},
                 "features": [
