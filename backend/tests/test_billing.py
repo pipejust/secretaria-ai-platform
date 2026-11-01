@@ -49,6 +49,20 @@ def catalogo(test_engine, monkeypatch, db_session: Session):
     return db_session
 
 
+def plan_sin_bot(db):
+    """Plan de prueba sin el bot: el catálogo vigente lo incluye en todos los planes públicos."""
+    import json as _json
+
+    from models import Plan
+    if db.get(Plan, "solo_fireflies"):
+        return
+    db.add(Plan(key="solo_fireflies", name="Solo Fireflies", price_usd_cents=1000,
+                price_cop_cents=4000000, sort_order=9, meetings_per_month=20, users_included=5,
+                video_retention_days=30, is_public=False,
+                features_json=_json.dumps([cat.F_FIREFLIES, cat.F_DOCUMENTS])))
+    db.commit()
+
+
 def test_catalogo_sembrado_y_editable(client, catalogo, db_session):
     duenio = db_session.exec(select(Tenant).where(Tenant.slug == "acten")).first() or _empresa(db_session, slug="acten")
     sa = _token(db_session, duenio, superadmin=True)
@@ -78,14 +92,15 @@ def test_empresa_nueva_en_prueba_y_luego_sin_plan(catalogo, db_session):
     creadas = cat.asegurar_suscripciones_existentes(db_session)
     assert creadas >= 1
     e = entitlements.de_empresa(db_session, vieja.id)
-    assert e.plan_key == "business" and e.tiene(cat.F_ASK) and not e.tiene(cat.F_OWNED_BOT)
+    assert e.plan_key == "business" and e.tiene(cat.F_ASK) and e.tiene(cat.F_OWNED_BOT)
     assert entitlements.de_empresa(db_session, nueva.id).status == "trialing"
 
 
 def test_plan_limita_el_origen_de_reuniones_y_el_bot(client, catalogo, db_session):
     t = _empresa(db_session, dias=cat.DIAS_PRUEBA + 1)
     admin = _token(db_session, t)
-    db_session.add(Subscription(tenant_id=t.id, plan_key="starter", status="active", billing_mode="manual"))
+    plan_sin_bot(db_session)
+    db_session.add(Subscription(tenant_id=t.id, plan_key="solo_fireflies", status="active", billing_mode="manual"))
     db_session.commit()
     estado = client.get("/api/settings/meeting-source", headers=admin).json()
     assert estado["allowed"] == ["fireflies"]
@@ -154,7 +169,7 @@ def test_checkout_firma_y_evento_activan_la_suscripcion(client, catalogo, db_ses
                     json={"plan_key": "business", "addons": ["owned_bot", "video_recording"]})
     assert r.status_code == 201, r.text
     c = r.json()
-    esperado = 14900 * 4000 + (2900 + 1900) * 4000
+    esperado = 9900 * 4000 + (1900 + 900) * 4000
     assert c["amount_in_cents"] == esperado and c["currency"] == "COP"
     assert c["public_key"] == "pub_test_abc" and "prv_" not in r.text and "secret" not in r.text
     assert c["signature_integrity"] == hashlib.sha256(

@@ -307,10 +307,10 @@ def test_retencion_propia_de_la_empresa_manda_sobre_el_plan(client, db_session, 
     _configurar(db_session)
     cat.sembrar_catalogo(db_session)
     sa = _token(db_session, _duenio(db_session), superadmin=True)
-    client.put("/api/billing/catalog/plans/business", headers=sa, json={"video_retention_days": 90})
+    client.put("/api/billing/catalog/plans/starter", headers=sa, json={"video_retention_days": 90})
     t = _empresa(db_session, dias=cat.DIAS_PRUEBA + 1)
     asignar = lambda **extra: client.put(f"/api/billing/tenants/{t.id}", headers=sa, json={  # noqa: E731
-        "plan_key": "business", "addons": ["owned_bot", "video_recording"], **extra})
+        "plan_key": "starter", "addons": ["owned_bot", "video_recording"], **extra})
     de = __import__("services.entitlements", fromlist=["x"]).de_empresa
 
     r = asignar(meeting_source="both")
@@ -333,8 +333,14 @@ def test_retencion_propia_de_la_empresa_manda_sobre_el_plan(client, db_session, 
     assert fila["owned_bot"] and fila["video"] and fila["video_retention_days"] == 90
     assert fila["video_retention_override"] is None and fila["meeting_source"] == "both"
     # Sin el add-on del bot no se puede elegir el bot como origen.
+    from models import Plan
+    if not db_session.get(Plan, "solo_fireflies"):
+        db_session.add(Plan(key="solo_fireflies", name="Solo Fireflies", price_usd_cents=1000,
+                            price_cop_cents=4000000, sort_order=9, is_public=False,
+                            features_json='["meetings.fireflies"]'))
+        db_session.commit()
     r = client.put(f"/api/billing/tenants/{t.id}", headers=sa,
-                   json={"plan_key": "business", "addons": [], "meeting_source": "owned_bot"})
+                   json={"plan_key": "solo_fireflies", "addons": [], "meeting_source": "owned_bot"})
     assert r.status_code == 422
 
 
