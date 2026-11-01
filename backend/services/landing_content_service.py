@@ -603,12 +603,12 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "ca": "Et responem en menys de 24h hàbils amb una demo personalitzada per al teu equip.",
             "en": "We reply within 24 business hours with a personalized demo for your team.",
         },
-        "email": "hola@acten.app",
-        "phone": "",
+        "email": "fcortes@softnexus.io",
+        "phone": "+57 300 188 66 15",
         "address": {
-            "es": "Bogotá, Colombia · Remoto LATAM",
-            "ca": "Bogotà, Colòmbia · Remot LATAM",
-            "en": "Bogotá, Colombia · Remote LATAM",
+            "es": "Softnexus S.A.S. · Calle 20 # 101A-37, Oficina 101, Cali, Colombia",
+            "ca": "Softnexus S.A.S. · Calle 20 # 101A-37, Oficina 101, Cali, Colòmbia",
+            "en": "Softnexus S.A.S. · Calle 20 # 101A-37, Office 101, Cali, Colombia",
         },
         "form_name_label": {"es": "Nombre", "ca": "Nom", "en": "Name"},
         "form_email_label": {"es": "Correo corporativo", "ca": "Correu corporatiu", "en": "Business email"},
@@ -626,9 +626,9 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "en": "Message received! We'll be in touch within 24 business hours.",
         },
         "form_error": {
-            "es": "No pudimos enviar tu mensaje. Escríbenos directo a hola@acten.app.",
-            "ca": "No hem pogut enviar el teu missatge. Escriu-nos directament a hola@acten.app.",
-            "en": "We couldn't send your message. Write us directly at hola@acten.app.",
+            "es": "No pudimos enviar tu mensaje. Escríbenos directo a fcortes@softnexus.io.",
+            "ca": "No hem pogut enviar el teu missatge. Escriu-nos directament a fcortes@softnexus.io.",
+            "en": "We couldn't send your message. Write us directly at fcortes@softnexus.io.",
         },
     },
 
@@ -959,9 +959,9 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "en": "We got your request! We'll be in touch within 24 business hours.",
         },
         "form_error": {
-            "es": "No pudimos enviar tu mensaje. Escríbenos directo a hola@acten.app.",
-            "ca": "No hem pogut enviar el teu missatge. Escriu-nos directament a hola@acten.app.",
-            "en": "We couldn't send your message. Write us directly at hola@acten.app.",
+            "es": "No pudimos enviar tu mensaje. Escríbenos directo a fcortes@softnexus.io.",
+            "ca": "No hem pogut enviar el teu missatge. Escriu-nos directament a fcortes@softnexus.io.",
+            "en": "We couldn't send your message. Write us directly at fcortes@softnexus.io.",
         },
         "privacy_label": {
             "es": "Acepto la Política de Privacidad",
@@ -985,8 +985,8 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "en": "We're here to help.",
         },
         "channels": [
-            {"label": {"es": "Ventas",   "ca": "Vendes",  "en": "Sales"},     "value": "ventas@acten.app",  "icon": "mail"},
-            {"label": {"es": "Soporte",  "ca": "Suport",  "en": "Support"},   "value": "soporte@acten.app", "icon": "support"},
+            {"label": {"es": "Correo", "ca": "Correu", "en": "Email"}, "value": "fcortes@softnexus.io", "icon": "mail"},
+            {"label": {"es": "WhatsApp", "ca": "WhatsApp", "en": "WhatsApp"}, "value": "+57 300 188 66 15", "icon": "whatsapp"},
         ],
         "offices_title": {"es": "Oficinas", "ca": "Oficines", "en": "Offices"},
         "offices": [],
@@ -1001,9 +1001,9 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "en": "Message sent! We'll reply soon.",
         },
         "form_error": {
-            "es": "No pudimos enviar tu mensaje. Intenta de nuevo o escríbenos a hola@acten.app.",
-            "ca": "No hem pogut enviar el teu missatge. Torna-ho a provar o escriu-nos a hola@acten.app.",
-            "en": "We couldn't send your message. Try again or write us at hola@acten.app.",
+            "es": "No pudimos enviar tu mensaje. Intenta de nuevo o escríbenos a fcortes@softnexus.io.",
+            "ca": "No hem pogut enviar el teu missatge. Torna-ho a provar o escriu-nos a fcortes@softnexus.io.",
+            "en": "We couldn't send your message. Try again or write us at fcortes@softnexus.io.",
         },
         "privacy_label": {
             "es": "Acepto la Política de Privacidad",
@@ -1036,8 +1036,10 @@ DEFAULT_CONTENT: Dict[str, Any] = {
             "ca": "Gràcies! T'avisarem quan tinguem novetats.",
             "en": "Thanks! We'll let you know when something good drops.",
         },
-        # Acten es un producto de Softnexus; solo los canales verificados de su sitio.
+        # Acten es un producto de Softnexus: los canales son los de softnexus.co.
         "social_links": [
+            {"label": "LinkedIn", "icon": "linkedin", "url": "https://www.linkedin.com/company/107660468/"},
+            {"label": "Instagram", "icon": "instagram", "url": "https://www.instagram.com/softnexus_io/"},
             {"label": "WhatsApp", "icon": "whatsapp", "url": "https://wa.me/573001886615"},
             {"label": "Softnexus", "icon": "web", "url": "https://www.softnexus.co"},
         ],

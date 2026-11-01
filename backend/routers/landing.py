@@ -36,6 +36,9 @@ from services import landing_content_service
 
 logger = logging.getLogger(__name__)
 
+# Todo lo que llega del landing de Acten va a Softnexus (quien opera el producto).
+CONTACT_FALLBACK_EMAIL = "fcortes@softnexus.io"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Router 1 — público (no auth)
@@ -442,7 +445,7 @@ async def submit_contact_form(
 
     - Honeypot anti-bot
     - Rate limit por IP
-    - Email destino: `contact.email` del CMS (defaultea a hola@acten.app)
+    - Email destino: `contact.email` del CMS (defaultea a fcortes@softnexus.io)
     """
     # Honeypot: si el bot rellenó el campo invisible, devolvemos 200 sin
     # hacer nada (no le damos pista de que detectamos el ataque).
@@ -456,7 +459,7 @@ async def submit_contact_form(
     tenant = _resolve_acten_tenant(db)
     content = landing_content_service.get_landing_content(db, tenant.id)
     contact_block = content.get("contact", {}) or {}
-    target_email = (contact_block.get("email") or "").strip() or "hola@acten.app"
+    target_email = (contact_block.get("email") or "").strip() or CONTACT_FALLBACK_EMAIL
 
     subject = f"[Contacto Landing] {payload.name} — {payload.company or 'Sin empresa'}"
 
@@ -574,7 +577,7 @@ async def landing_email_test_send(
     from services.email_service import EmailService
     es = EmailService(db=db, tenant_id=tenant.id)
     content = landing_content_service.get_landing_content(db, tenant.id)
-    default_target = (content.get("contact", {}).get("email") or "").strip() or "hola@acten.app"
+    default_target = (content.get("contact", {}).get("email") or "").strip() or CONTACT_FALLBACK_EMAIL
     target = (to or default_target).strip()
 
     # Validación mínima de email para no llamar Resend con basura
@@ -646,7 +649,7 @@ def landing_email_status(db: Session = Depends(get_session)) -> Dict[str, Any]:
     from services.email_service import EmailService
     es = EmailService(db=db, tenant_id=tenant.id)
     content = landing_content_service.get_landing_content(db, tenant.id)
-    target = (content.get("contact", {}).get("email") or "").strip() or "hola@acten.app"
+    target = (content.get("contact", {}).get("email") or "").strip() or CONTACT_FALLBACK_EMAIL
     return {
         "tenant_slug": tenant.slug,
         "tenant_id": tenant.id,
