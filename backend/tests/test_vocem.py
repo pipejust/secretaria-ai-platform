@@ -154,3 +154,123 @@ def test_organizador_exige_vinculo_administrado_y_tenant_correcto(db_session, em
     actor.is_active = False; db_session.add(actor); db_session.commit()
     with pytest.raises(vocem.VocemError):
         vocem.cuenta_del_organizador(db_session, empresa.id, actor.id)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Detector de enlaces de reunión
+# ──────────────────────────────────────────────────────────────────────────
+
+ROOM = "!5fFLP-0eq0iIaqWaxagXPAwrSVM-veo-0REnCch_oIs"
+QID = "%215fFLP-0eq0iIaqWaxagXPAwrSVM-veo-0REnCch_oIs"
+
+
+@pytest.mark.parametrize("enlace,esperado", [
+    (f"https://matrix.to/#/{ROOM}?via=softnexus.co", "element"),
+    (f"https://matrix.to/#/{QID}?via=softnexus.co", "element"),
+    (f"https://call.vocem.softnexus.co/room/#?roomId={QID}&viaServers=softnexus.co", "element"),
+    (f"https://call.vocem.softnexus.co/room/#/{ROOM}", "element"),
+    (f"https://call.vocem.softnexus.co/room/#/reunion-acme?roomId={QID}", "element"),
+    ("https://matrix.to/#/@felipe:softnexus.co", None),
+    ("https://meet.google.com/abc-defg-hij", "gmeet"),
+    ("https://softnexus.zoom.us/j/123", "zoom"),
+    ("https://teams.microsoft.com/l/meetup-join/x", "teams"),
+    ("https://teams.live.com/meet/999", "teams"),
+    ("https://example.com/loquesea", None),
+    ("no es una url", None),
+    ("", None),
+])
+def test_clasificar_enlace_cubre_los_tres_formatos_de_element_y_rechaza_otros(enlace, esperado):
+    assert vocem.clasificar_enlace(enlace) == esperado
+
+
+def test_id_de_sala_devuelve_el_mismo_id_sin_dominio_en_los_tres_formatos():
+    for enlace in (
+        f"https://matrix.to/#/{ROOM}",
+        f"https://matrix.to/#/{QID}",
+        f"https://call.vocem.softnexus.co/room/#?roomId={QID}&viaServers=softnexus.co",
+        f"https://call.vocem.softnexus.co/room/#/{ROOM}",
+    ):
+        assert vocem.id_de_sala(enlace) == ROOM
+
+
+def test_es_enlace_de_persona_distingue_arroba_de_bang():
+    assert vocem.es_enlace_de_persona("https://matrix.to/#/@felipe:softnexus.co") is True
+    assert vocem.es_enlace_de_persona(f"https://matrix.to/#/{ROOM}") is False
+    assert vocem.es_enlace_de_persona(f"https://example.com/#/@felipe") is False
+
+
+def test_enlace_canonico_normaliza_tres_variantes_al_mismo():
+    cfg = {"call_base_url": "https://call.vocem.softnexus.co",
+           "user_id": "@integraciones:softnexus.co"}
+    canonico = f"https://call.vocem.softnexus.co/room/#?roomId={QID}&viaServers=softnexus.co"
+    for enlace in (
+        f"https://matrix.to/#/{ROOM}?via=softnexus.co",
+        f"https://call.vocem.softnexus.co/room/#/{ROOM}",
+        canonico,
+    ):
+        assert vocem.enlace_canonico_de(cfg, enlace) == canonico
+    # URL no-Element: se devuelve como está (trimmed).
+    assert vocem.enlace_canonico_de(cfg, "https://meet.google.com/abc") == "https://meet.google.com/abc"
+
+
+def test_preparar_enlace_reunion_normaliza_element_tras_join_ok(db_session, empresa, monkeypatch):
+    vocem.guardar(db_session, empresa.id, {
+        "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+    hecho = {}
+
+    def falso_post(url, headers=None, json=None, timeout=None):
+        hecho["join_url"] = url
+        return httpx.Response(200, json={"room_id": ROOM}, request=httpx.Request("POST", url))
+
+    def falso_llamar(cfg, method, path, body=None):
+        # m.room.encryption: 404 = sala sin cifrado (el caso bueno).
+        raise vocem.VocemError("Vocem respondió 404: {}")
+
+    monkeypatch.setattr(vocem.httpx, "post", falso_post)
+    monkeypatch.setattr(vocem, "_llamar", falso_llamar)
+    canonico = vocem.preparar_enlace_reunion(db_session, empresa.id, f"https://matrix.to/#/{ROOM}?via=softnexus.co")
+    assert canonico == f"https://call.vocem.softnexus.co/room/#?roomId={QID}&viaServers=softnexus.co"
+    assert f"/join/{QID}" in hecho["join_url"] and "server_name=softnexus.co" in hecho["join_url"]
+
+
+def test_preparar_enlace_reunion_lanza_error_code_por_cada_caso(db_session, empresa, monkeypatch):
+    vocem.guardar(db_session, empresa.id, {
+        "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+
+    def code_of(enlace, post_status=None, encryption_200=False):
+        def post(url, headers=None, json=None, timeout=None):
+            return httpx.Response(post_status, json={}, request=httpx.Request("POST", url))
+
+        def llamar(cfg, method, path, body=None):
+            if "encryption" in path and encryption_200:
+                return {"algorithm": "m.megolm.v1.aes-sha2"}
+            raise vocem.VocemError("Vocem respondió 404: {}")
+        if post_status is not None:
+            monkeypatch.setattr(vocem.httpx, "post", post)
+        monkeypatch.setattr(vocem, "_llamar", llamar)
+        try:
+            vocem.preparar_enlace_reunion(db_session, empresa.id, enlace)
+        except vocem.EnlaceReunionError as e:
+            return e.code
+        return None
+
+    # URL vacía
+    assert code_of("") == "enlace_vacio"
+    # Enlace de persona (@)
+    assert code_of("https://matrix.to/#/@felipe:softnexus.co") == "enlace_es_usuario"
+    # URL de otra cosa
+    assert code_of("https://example.com/loquesea") == "enlace_no_reconocido"
+    # Sala de solo invitación → 403 = falta_invitar
+    assert code_of(f"https://matrix.to/#/{ROOM}", post_status=403) == "sala_falta_invitar"
+    # Sala inexistente → 404 = no_existe
+    assert code_of(f"https://matrix.to/#/{ROOM}", post_status=404) == "sala_no_existe"
+    # Sala cifrada → encryption devuelve 200 con algorithm
+    assert code_of(f"https://matrix.to/#/{ROOM}", post_status=200, encryption_200=True) == "sala_cifrada"
+
+
+def test_enlace_reunion_error_viaja_como_http_422_con_error_code(db_session, empresa):
+    err = vocem.EnlaceReunionError("sala_cifrada")
+    assert err.status_code == 422
+    assert err.detail == {"error_code": "sala_cifrada", "message": vocem.MENSAJES_ERROR["sala_cifrada"]}

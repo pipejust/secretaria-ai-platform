@@ -2811,7 +2811,7 @@
     "entry_live_title": "Afegir en directe",
     "entry_live_text": "Enganxa l'enllaç de Google Meet, Microsoft Teams, Zoom o Element, o deixa que Acten creï la sala. El bot demanarà entrar a la reunió.",
     "meeting_url_label": "Enllaç de la reunió",
-    "meeting_url_placeholder": "https://meet.google.com/… · teams.microsoft.com/… · zoom.us/… · call.…/room/#/!…",
+    "meeting_url_placeholder": "https://meet.google.com/… · teams.microsoft.com/… · zoom.us/… · matrix.to/#/!… · call.vocem…/room/#…",
     "join_button": "Afegir el bot ara",
     "both_sources_hint": "Fireflies també està actiu en aquesta empresa. Si tots dos graven la mateixa reunió, Acten conserva la del bot i arxiva l'altra com a duplicada.",
     "create_room_label": "Acten crea la sala a Element i ho gestiona tot",
@@ -2926,7 +2926,12 @@
     "bot_name_hint": "Així apareix a Meet, Teams, Zoom i Element, tant si entra per enllaç com per invitació de correu. Màxim 50 caràcters.",
     "video_label": "Enregistrar vídeo de la reunió",
     "video_hint": "El bot enregistra imatge a més d'àudio. El vídeo es desa a l'emmagatzematge d'Acten i es reprodueix des del detall de la sessió.",
-    "policy_video": "Gravar també vídeo a les reunions a què es convidi el bot per correu."
+    "policy_video": "Gravar també vídeo a les reunions a què es convidi el bot per correu.",
+    "link_unrecognized": "No reconeixem aquest enllaç. Enganxa un de Google Meet, Teams, Zoom, o el d'una sala de Vocem (matrix.to/#/!… o call.vocem.softnexus.co/room/#…).",
+    "link_is_user": "Aquest enllaç és d'una persona, no d'una sala. A Element, obre la sala, toca el seu nom i copia l'enllaç de la sala.",
+    "error_waiting_invite": "Falta convidar el bot a la sala. A Element, escriu a la sala: /invite @integraciones:softnexus.co i torna a enviar el bot.",
+    "error_room_encrypted": "Aquesta sala està xifrada i el bot no pot llegir-la. Utilitza una sala sense xifratge o demana'n una de nova a l'administrador de Vocem.",
+    "error_room_not_found": "Cap sala correspon a aquest enllaç. Torna'l a copiar des d'Element sense editar-lo."
   },
   "billing": {
     "title": "Subscripció",

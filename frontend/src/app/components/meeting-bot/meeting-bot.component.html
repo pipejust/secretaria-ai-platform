@@ -18,9 +18,10 @@
       <ul *ngIf="receipts.length"><li *ngFor="let receipt of receipts">{{ receipt.created_at * 1000 | date:'short' }} · {{ receipt.state }} <small>{{ receipt.error }}</small></li></ul>
     </article>
     <article class="panel"><span class="number">02</span><h2>{{ 'meeting_bot.entry_live_title' | translate }}</h2><p>{{ 'meeting_bot.entry_live_text' | translate }}</p>
-      <label>{{ 'meeting_bot.meeting_url_label' | translate }}<input type="url" [(ngModel)]="meetingUrl" [placeholder]="'meeting_bot.meeting_url_placeholder' | translate" maxlength="4096"></label>
+      <label>{{ 'meeting_bot.meeting_url_label' | translate }}<input type="url" [(ngModel)]="meetingUrl" [placeholder]="'meeting_bot.meeting_url_placeholder' | translate" maxlength="4096" [attr.aria-invalid]="linkErrorKey ? 'true' : null" [attr.aria-describedby]="linkErrorKey ? 'meetingUrlError' : null"></label>
+      <p class="error" id="meetingUrlError" role="alert" *ngIf="linkErrorKey">{{ linkErrorKey | translate }}</p>
       <p class="muted" *ngIf="canRecordVideo">{{ 'meeting_bot.video_included' | translate }}</p>
-      <button (click)="join()" [disabled]="busy || !authorized || !caps?.meetings_ready || !meetingUrl">{{ 'meeting_bot.join_button' | translate }}</button>
+      <button (click)="join()" [disabled]="busy || !authorized || !caps?.meetings_ready || !isMeetingUrlValid">{{ 'meeting_bot.join_button' | translate }}</button>
       <p class="muted">{{ 'meeting_bot.waiting_room_hint' | translate }}</p>
     </article>
     <article class="panel" [class.live]="recorder.active"><span class="number">03</span><h2>{{ 'meeting_bot.entry_web_title' | translate }}</h2><p>{{ 'meeting_bot.entry_web_text' | translate }}</p>

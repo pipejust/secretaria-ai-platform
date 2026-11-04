@@ -412,8 +412,8 @@ async def start_capture(db, tenant_id: int, owner_id: int, kind: str, body: Star
         body = body.model_copy(update={"meeting_url": sala["meeting_url"]})
         # La llamada aparece en el chat de la gente cuando toca, no al crearla.
         vocem.programar_invitaciones(db, tenant_id, sala["room_id"], body.scheduled_start, body.invite or None)
-    if kind == "meeting" and not body.meeting_url:
-        raise HTTPException(422, "Indica el enlace de la reunión")
+    if kind == "meeting" and not body.create_room:
+        from services import vocem as _v; body = body.model_copy(update={"meeting_url": _v.preparar_enlace_reunion(db, tenant_id, body.meeting_url)})
     if body.project_id is not None:
         project = db.get(Project, body.project_id)
         if not project or project.tenant_id != tenant_id:
