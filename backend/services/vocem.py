@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 import httpx
-from urllib.parse import quote
+from fastapi import HTTPException
+from urllib.parse import quote, unquote, urlparse
 from sqlmodel import Session, select
 
 from models import IntegrationSetting, VocemInvite
@@ -345,3 +347,207 @@ def enviar_invitaciones_pendientes(db: Session) -> int:
     if filas:
         db.commit()
     return len(filas)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Detector de enlaces y acceso del bot a una sala existente
+# ──────────────────────────────────────────────────────────────────────────
+# Element entrega tres formatos distintos de enlace para la misma sala. Los
+# tres se clasifican como "element" y se normalizan al canónico antes de pedir
+# captura. Si el enlace apunta a una persona (`matrix.to/#/@...`) se rechaza
+# con `enlace_es_usuario` para que la UI lo diferencie de un enlace basura.
+
+GMEET_HOST = "meet.google.com"
+TEAMS_HOSTS = ("teams.microsoft.com", "teams.live.com")
+ZOOM_HOST = "zoom.us"
+
+_ROOM_ID_PARAM = re.compile(r"[#?&]roomId=([^&]+)")
+
+
+def id_de_sala(enlace: str | None) -> str | None:
+    """`!abc` si la URL contiene un room id Matrix; None en cualquier otro caso."""
+    texto = (enlace or "").strip()
+    if not texto:
+        return None
+    try:
+        url = urlparse(texto)
+    except ValueError:
+        return None
+    if not url.scheme or not url.netloc:
+        return None
+    m = _ROOM_ID_PARAM.search(texto)
+    if m:
+        try:
+            ident = unquote(m.group(1))
+        except Exception:  # noqa: BLE001 — unquote es defensivo
+            return None
+        return ident if ident.startswith("!") else None
+    frag = url.fragment
+    if frag.startswith("/"):
+        frag = frag[1:]
+    try:
+        primero = unquote(frag.split("?", 1)[0].split("/", 1)[0])
+    except Exception:  # noqa: BLE001
+        return None
+    return primero if primero.startswith("!") else None
+
+
+def clasificar_enlace(enlace: str | None) -> str | None:
+    """Plataforma: `gmeet`, `teams`, `zoom`, `element`, o None si no se reconoce."""
+    texto = (enlace or "").strip()
+    try:
+        host = urlparse(texto).hostname or ""
+    except ValueError:
+        return None
+    host = host.lower()
+    if not host:
+        return None
+    if host == GMEET_HOST:
+        return "gmeet"
+    if any(host == h or host.endswith("." + h) for h in TEAMS_HOSTS):
+        return "teams"
+    if host == ZOOM_HOST or host.endswith("." + ZOOM_HOST):
+        return "zoom"
+    if id_de_sala(texto):
+        return "element"
+    return None
+
+
+def es_enlace_de_persona(enlace: str | None) -> bool:
+    """`https://matrix.to/#/@usuario:servidor` → True."""
+    texto = (enlace or "").strip()
+    try:
+        url = urlparse(texto)
+    except ValueError:
+        return False
+    if (url.hostname or "").lower() != "matrix.to":
+        return False
+    frag = url.fragment
+    if frag.startswith("/"):
+        frag = frag[1:]
+    try:
+        return unquote(frag).startswith("@")
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def enlace_canonico_de(cfg: dict, enlace: str) -> str:
+    """Si la URL es de Element, devuelve el canónico de Element Call;
+    cualquier otra URL se devuelve sin cambios (trimmed)."""
+    rid = id_de_sala(enlace)
+    if not rid:
+        return (enlace or "").strip()
+    return (
+        f"{cfg['call_base_url'].rstrip('/')}/room/#?roomId={quote(rid, safe='')}"
+        f"&viaServers={servidor_de(cfg)}"
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Códigos de resultado de `unir_bot_a_sala`. Mapean 1 a 1 a los `error_code`
+# que la API expone a Altum y a la pantalla de Acten.
+# ──────────────────────────────────────────────────────────────────────────
+JOIN_OK = "ok"
+JOIN_FALTA_INVITAR = "sala_falta_invitar"
+JOIN_SALA_CIFRADA = "sala_cifrada"
+JOIN_SALA_NO_EXISTE = "sala_no_existe"
+
+
+# Mensajes expuestos en la respuesta. Claves estables para que Altum y la
+# pantalla tengan un contrato predecible y los puedan mapear a su propia UI.
+MENSAJES_ERROR = {
+    "enlace_vacio": "Indica el enlace de la reunión",
+    "enlace_no_reconocido": "No reconocemos ese enlace. Pega uno de Google Meet, Teams, Zoom, o el de una sala de Vocem.",
+    "enlace_es_usuario": "Ese enlace es de una persona, no de una sala.",
+    JOIN_FALTA_INVITAR: "Falta invitar al bot a la sala. /invite @integraciones:softnexus.co y vuelve a mandar el bot.",
+    JOIN_SALA_CIFRADA: "Esa sala está cifrada y el bot no puede leerla.",
+    JOIN_SALA_NO_EXISTE: "No existe ninguna sala con ese enlace. Vuelve a copiarlo desde Element sin editarlo.",
+}
+
+
+class EnlaceReunionError(HTTPException):
+    """Preflight del `meeting_url` falló. Se expone con `error_code` estable
+    y mensaje accionable, para que Altum y la pantalla mapeen a su UI.
+
+    ponytail: hereda HTTPException para que un single-line call-site en el
+    router no tenga que crecer a 4 líneas de try/except (bot_control.py ya
+    está al tope de tamaño). Upgrade path: cuando se parta ese router, mover
+    a Exception puro y convertirlo en el router.
+    """
+
+    def __init__(self, code: str):
+        self.code = code
+        self.message = MENSAJES_ERROR.get(code, code)
+        super().__init__(status_code=422, detail={"error_code": code, "message": self.message})
+
+
+def preparar_enlace_reunion(db: Session, tenant_id: int, meeting_url: str | None) -> str:
+    """Clasifica, normaliza y —si es Element— une al bot a la sala.
+
+    Devuelve el `meeting_url` listo para pasar al bot upstream. Lanza
+    `EnlaceReunionError` (= HTTPException 422) con `error_code` estable si el
+    enlace no es aceptable. Enlaces de Meet/Teams/Zoom se dejan como están.
+    """
+    if not (meeting_url or "").strip():
+        raise EnlaceReunionError("enlace_vacio")
+    plataforma = clasificar_enlace(meeting_url)
+    if plataforma is None:
+        if es_enlace_de_persona(meeting_url):
+            raise EnlaceReunionError("enlace_es_usuario")
+        raise EnlaceReunionError("enlace_no_reconocido")
+    if plataforma != "element":
+        return (meeting_url or "").strip()
+    cfg = cargar(db, tenant_id)
+    canonico = enlace_canonico_de(cfg, meeting_url)
+    room_id = id_de_sala(meeting_url)
+    if room_id is None:
+        # Defensa: `plataforma == 'element'` ya implica room_id, pero una URL
+        # ambigua podría pasar el detector; mejor rechazar que seguir.
+        raise EnlaceReunionError("enlace_no_reconocido")
+    codigo = unir_bot_a_sala(db, tenant_id, room_id)
+    if codigo in (JOIN_FALTA_INVITAR, JOIN_SALA_CIFRADA, JOIN_SALA_NO_EXISTE):
+        raise EnlaceReunionError(codigo)
+    return canonico
+
+
+def unir_bot_a_sala(db: Session, tenant_id: int, room_id: str) -> str:
+    """Mete al bot en la sala y comprueba que no esté cifrada.
+
+    Devuelve uno de los códigos `JOIN_*`. Es idempotente: si el bot ya está
+    dentro, el `join` responde 200 y se sigue con la comprobación de cifrado.
+    Si la sala está cifrada, sale (`leave`) para no quedar dentro de una sala
+    que no puede transcribir.
+    """
+    cfg = cargar(db, tenant_id)
+    if not configurada(db, tenant_id):
+        raise VocemError("Esta empresa no tiene Vocem (Element) configurado.")
+    rid = quote(room_id, safe="")
+    url = cfg["homeserver"].rstrip("/") + f"/_matrix/client/v3/join/{rid}?server_name={servidor_de(cfg)}"
+    headers = {"Authorization": "Bearer " + cfg["access_token"]}
+    try:
+        r = httpx.post(url, headers=headers, json={}, timeout=20)
+    except httpx.RequestError as exc:
+        raise VocemError(
+            f"No se pudo hablar con el servidor de Vocem: {exc.__class__.__name__}"
+        ) from exc
+    if r.status_code == 403:
+        return JOIN_FALTA_INVITAR
+    if r.status_code == 404:
+        return JOIN_SALA_NO_EXISTE
+    if not r.is_success:
+        raise VocemError(f"Vocem respondió {r.status_code} al unirse: {r.text[:200]}")
+    # Sala con `m.room.encryption` configurado = cifrada. El bot sale y reporta.
+    try:
+        cipher = _llamar(cfg, "GET", f"/_matrix/client/v3/rooms/{rid}/state/m.room.encryption")
+    except VocemError as exc:
+        # 404 significa que no está cifrada — es el caso bueno.
+        if "404" in str(exc):
+            return JOIN_OK
+        raise
+    if cipher.get("algorithm"):
+        try:
+            _llamar(cfg, "POST", f"/_matrix/client/v3/rooms/{rid}/leave", {})
+        except VocemError as exc:
+            logger.info("No se pudo salir de la sala cifrada %s: %s", room_id, exc)
+        return JOIN_SALA_CIFRADA
+    return JOIN_OK

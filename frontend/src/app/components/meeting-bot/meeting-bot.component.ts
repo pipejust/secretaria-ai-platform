@@ -10,6 +10,7 @@ import {
 } from '../../services/meeting-bot.service';
 import { LiveTranscriptComponent } from './live-transcript.component';
 import { BrowserRecording, RecordingMeta } from './browser-recording';
+import { clasificarEnlace, enlaceCanonico, esEnlaceDePersona } from '../../services/vocem-link.util';
 
 /** Forma mínima de un error HTTP (HttpErrorResponse) o de un Error normal
  *  para extraer un mensaje sin asumir la clase concreta. */
@@ -161,10 +162,25 @@ export class MeetingBotComponent implements OnInit, OnDestroy {
     try { await work(); } catch (error) { this.error = this.message(error); }
     finally { this.busy = false; await this.loadPending(); this.cd.markForCheck(); }
   }
+  /** Clave i18n del error de enlace cuando `meetingUrl` no es aceptable;
+   *  vacío si aún no hay URL o si la URL es válida. */
+  get linkErrorKey(): string {
+    const url = (this.meetingUrl || '').trim();
+    if (!url) return '';
+    if (esEnlaceDePersona(url)) return 'meeting_bot.link_is_user';
+    return clasificarEnlace(url) ? '' : 'meeting_bot.link_unrecognized';
+  }
+
+  get isMeetingUrlValid(): boolean {
+    return !!(this.meetingUrl || '').trim() && clasificarEnlace(this.meetingUrl) !== null;
+  }
+
   async join(): Promise<void> {
     if (!this.authorized) { this.error = this.translate.instant('meeting_bot.error_confirm_authorization'); return; }
+    if (!this.isMeetingUrlValid) { this.error = this.translate.instant(this.linkErrorKey || 'meeting_bot.link_unrecognized'); return; }
+    const url = enlaceCanonico(this.meetingUrl);
     await this.action(async () => {
-      await this.startCapture('meeting', { ...this.payload(), meeting_url: this.meetingUrl });
+      await this.startCapture('meeting', { ...this.payload(), meeting_url: url });
       this.notice = this.translate.instant('meeting_bot.notice_join_requested');
       await this.refresh();
     });

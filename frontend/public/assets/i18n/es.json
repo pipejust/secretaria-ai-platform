@@ -2811,7 +2811,7 @@
     "entry_live_title": "Añadir en vivo",
     "entry_live_text": "Pega el enlace de Google Meet, Microsoft Teams, Zoom o Element, o deja que Acten cree la sala. El bot solicitará entrar a la reunión.",
     "meeting_url_label": "Enlace de reunión",
-    "meeting_url_placeholder": "https://meet.google.com/… · teams.microsoft.com/… · zoom.us/… · call.…/room/#/!…",
+    "meeting_url_placeholder": "https://meet.google.com/… · teams.microsoft.com/… · zoom.us/… · matrix.to/#/!… · call.vocem…/room/#…",
     "join_button": "Añadir bot ahora",
     "both_sources_hint": "Fireflies también está activo en esta empresa. Si los dos graban la misma reunión, Acten conserva la del bot y archiva la otra como duplicada.",
     "create_room_label": "Acten crea la sala en Element y gestiona todo",
@@ -2926,7 +2926,12 @@
     "bot_name_hint": "Así aparece en Meet, Teams, Zoom y Element, tanto al entrar por enlace como por invitación de correo. Máximo 50 caracteres.",
     "video_label": "Grabar vídeo de la reunión",
     "video_hint": "El bot graba imagen además de audio. El vídeo se guarda en el almacenamiento de Acten y se reproduce desde el detalle de la sesión.",
-    "policy_video": "Grabar también vídeo en las reuniones a las que se invite al bot por correo."
+    "policy_video": "Grabar también vídeo en las reuniones a las que se invite al bot por correo.",
+    "link_unrecognized": "No reconocemos ese enlace. Pega uno de Google Meet, Teams, Zoom, o el de una sala de Vocem (matrix.to/#/!… o call.vocem.softnexus.co/room/#…).",
+    "link_is_user": "Ese enlace es de una persona, no de una sala. En Element, abre la sala, toca su nombre y copia el enlace de la sala.",
+    "error_waiting_invite": "Falta invitar al bot a la sala. En Element, escribe en la sala: /invite @integraciones:softnexus.co y vuelve a mandar el bot.",
+    "error_room_encrypted": "Esa sala está cifrada y el bot no puede leerla. Usa una sala sin cifrado o pide una nueva al administrador de Vocem.",
+    "error_room_not_found": "No existe ninguna sala con ese enlace. Vuelve a copiarlo desde Element sin editarlo."
   },
   "billing": {
     "title": "Suscripción",
