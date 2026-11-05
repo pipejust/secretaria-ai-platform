@@ -49,7 +49,7 @@ cat ~/.ssh/id_ed25519.pub
 | **Networking** | Public IPv4 + IPv6 (default) |
 | **SSH key** | Pega tu `id_ed25519.pub` |
 | **Volumes** | Ninguno por ahora (el SSD de 40 GB sobra para empezar) |
-| **Firewall** | Crea uno y abre puertos `22, 80, 443` (al final) |
+| **Firewall** | Crea uno con inbound `tcp/22, tcp/80, tcp/443, udp/443` desde `0.0.0.0/0` y `::/0`. Es crítico: es la única capa que filtra los puertos Docker (ver Paso 3) |
 | **Backups** | ⚠️ **Activa los backups automáticos** (€0.90/mes extra) |
 | **Name** | `acten-prod` |
 
@@ -104,7 +104,28 @@ sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 systemctl restart ssh
 
-# Firewall (UFW). Solo abrimos 22, 80, 443.
+# Firewall en dos capas.
+#
+# Capa 1 (crítica): Hetzner Cloud Firewall, externo al servidor. Es la
+# única capa que filtra los puertos que Docker publica (80, 443, 6001,
+# 6002, 8080), porque `docker-proxy` escribe reglas en la chain
+# DOCKER-USER que se evalúa ANTES que UFW, así que UFW no puede
+# bloquearlos. El Cloud Firewall sí, porque corre upstream del servidor.
+#
+# Se crea desde Console Hetzner → Firewalls → Create, o por API:
+#   hcloud firewall create --name acten-prod-perimeter --rules-file rules.json
+#   hcloud firewall apply-to-resource acten-prod-perimeter --type server --server acten-prod
+# Reglas inbound mínimas (source 0.0.0.0/0 + ::/0):
+#   tcp 22  (ssh)
+#   tcp 80  (http + Let's Encrypt ACME HTTP-01)
+#   tcp 443 (https)
+#   udp 443 (http3/quic)
+# Outbound: todo abierto. Ping (icmp): opcional, útil para monitoreo.
+#
+# Capa 2 (defensa en profundidad): UFW en el host, cierra cualquier
+# servicio NO-Docker que escuche fuera de 22/80/443. No cubre los
+# puertos Docker (ver nota arriba) pero sí cualquier systemd service
+# que alguien exponga en el futuro.
 ufw allow OpenSSH
 ufw allow 80/tcp
 ufw allow 443/tcp
@@ -144,10 +165,7 @@ En **Settings → Instance Settings**:
 - "Instance's Domain": `coolify.tudominio.com`
 - Click **Save** y **Generate SSL Certificate**
 
-Espera 1–2 min. Ahora puedes entrar por `https://coolify.tudominio.com` (con SSL automático). Cierra el `:8000` directo en UFW si quieres:
-```bash
-sudo ufw delete allow 8000
-```
+Espera 1–2 min. Ahora puedes entrar por `https://coolify.tudominio.com` (con SSL automático). No hace falta cerrar `:8000` — Coolify ya lo bindea en `127.0.0.1:8000`, no en `0.0.0.0`, así que nunca estuvo expuesto a internet. Además, el Hetzner Cloud Firewall ya bloquea cualquier puerto fuera de 22/80/443.
 
 ---
 
