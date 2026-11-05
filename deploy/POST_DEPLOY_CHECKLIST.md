@@ -50,7 +50,8 @@ Antes de invitar al primer usuario real, verifica que todo funcione:
 - [ ] `JWT_SECRET_KEY` en producción es DIFERENTE al de dev
 - [ ] `POSTGRES_PASSWORD` es aleatorio (no "notiva_local_dev")
 - [ ] `BCRYPT_ROUNDS=12` (verifica con `docker exec acten-backend env | grep BCRYPT`)
-- [ ] Firewall UFW solo abre 22, 80, 443
+- [ ] Hetzner Cloud Firewall aplicado al servidor (inbound: tcp 22, 80, 443 + udp 443). Única capa que cierra los puertos Docker (6001, 6002, 8080). Verificar con `curl http://<IP>:8080` desde fuera — debe dar timeout.
+- [ ] UFW en el host instalado y activo con allow 22/80/443. Defensa en profundidad para servicios no-Docker. `ufw status` debe mostrar `active`.
 - [ ] SSH solo por llave (no password)
 
 ## Monitoreo
