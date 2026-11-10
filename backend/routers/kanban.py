@@ -8,8 +8,8 @@ tablero, solo la lista de pendientes.
 eje aparte: si la columna y el estado fueran cosas distintas, un mismo
 pendiente podría estar «hecho» en la lista y «en curso» en el tablero, y
 nadie sabría cuál creer. Arrastrar una tarjeta cambia el estado, con las
-mismas reglas de transición que aplica la API — `cancelada` es terminal y
-se rechaza con un mensaje claro en vez de moverse a medias.
+mismas reglas de transición que aplica la API — una cancelada solo puede
+reabrirse en `pending`, conservando su identidad e historial.
 
 `kanban_order` guarda la posición dentro de la columna. `kanban_column`
 se sigue respetando para la plataforma externa, que sí puede tener
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/kanban", tags=["Kanban"])
 
 # Orden de izquierda a derecha. `cancelled` va al final porque es donde
-# muere una tarea, no donde se trabaja.
+# se aparta una tarea, no donde se trabaja.
 COLUMNAS = [
     {"key": "pending",   "titulo": "Por hacer"},
     {"key": "blocked",   "titulo": "Bloqueada"},
@@ -310,10 +310,11 @@ def mover(
         raise HTTPException(
             409,
             f"No se puede pasar de «{origen}» a «{destino}». "
-            + ("Una tarea cancelada no vuelve; crea otra."
+            + ("Una tarea cancelada solo puede reabrirse en «pending»."
                if origen == "cancelled" else "Transición no permitida."),
         )
 
+    antes = task_events.instantanea(item)
     item.status = destino
     item.completed_at = datetime.now().isoformat() if destino == "done" else None
     if payload.orden is not None:

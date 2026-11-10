@@ -107,3 +107,79 @@ def test_converted_no_rompe_pendientes_ni_kanban(client, escenario, db_session):
     from datetime import datetime
     assert pendientes._classify(item, datetime.now()) == "convertido"
     assert "converted" in kanban.CLAVES and "converted" in kanban.CLOSED_STATES
+
+
+def test_reabrir_cancelada_conserva_identidad_vinculo_e_historial(client, escenario, db_session, monkeypatch):
+    from models import TaskEvent
+
+    enviados = []
+    monkeypatch.setattr('services.webhook_sender.send_event_bg',
+                        lambda tipo, cuerpo, **kw: enviados.append((tipo, cuerpo)))
+    e = escenario
+    item = db_session.get(ActionItem, e['task'])
+    item.external_id = 'altum-item-existente'
+    db_session.add(item); db_session.commit(); db_session.refresh(item)
+    original = item.model_dump()
+    url = f"/api/v1/tasks/{item.id}"
+    assert client.patch(url, headers=e['h'], json={'status': 'cancelled'}).status_code == 200
+    r = client.patch(url, headers=e['h'], json={'status': 'pending'})
+    assert r.status_code == 200, r.text
+    assert r.json()['id'] == e['task']
+    assert r.json()['source_session_id'] == e['session']
+    assert r.json()['status'] == 'pending'
+    db_session.expire_all()
+    item = db_session.get(ActionItem, e['task'])
+    assert item.external_id == 'altum-item-existente'
+    assert {k: v for k, v in item.model_dump().items() if k != "updated_at"} == {
+        k: v for k, v in original.items() if k != "updated_at"
+    }
+    assert item.completed_at is None
+    eventos = db_session.exec(select(TaskEvent).where(TaskEvent.task_id == item.id)).all()
+    assert len(eventos) == 2
+    cambios = [json.loads(ev.changes_json)['status'] for ev in eventos]
+    assert {'from': 'cancelled', 'to': 'pending'} in cambios
+    assert enviados[-1][0] == 'task.updated'
+    assert enviados[-1][1]['changes']['status'] == {'from': 'cancelled', 'to': 'pending'}
+    assert enviados[-1][1]['task_id'] == item.id
+    # Reintentar la petición no duplica la tarea ni el evento del historial.
+    assert client.patch(url, headers=e['h'], json={'status': 'pending'}).status_code == 200
+    assert len(enviados) == 2
+
+
+def test_reabrir_cancelada_exige_scope_y_no_habilita_otros_destinos(client, escenario, db_session, monkeypatch):
+    from services import task_events
+    monkeypatch.setattr(task_events, '_mandar', lambda *a, **kw: None)
+    e = escenario
+    url = f"/api/v1/tasks/{e['task']}"
+    assert client.patch(url, headers=e['h'], json={'status': 'cancelled'}).status_code == 200
+    for destino in ['blocked', 'done', 'converted']:
+        assert client.patch(url, headers=e['h'], json={'status': destino}).status_code == 409
+    clave = db_session.exec(select(ApiKey).where(
+        ApiKey.hashed_key == hashlib.sha256(e['h']['X-API-Key'].encode()).hexdigest())).one()
+    clave.scopes = json.dumps(['tasks:read', 'org:read'])
+    db_session.add(clave); db_session.commit()
+    assert client.patch(url, headers=e['h'], json={'status': 'pending'}).status_code == 403
+    db_session.expire_all()
+    assert db_session.get(ActionItem, e['task']).status == 'cancelled'
+
+
+def test_kanban_reabre_cancelada_con_el_mismo_historial(client, escenario, db_session, monkeypatch):
+    from auth_utils import create_access_token
+    from models import TaskEvent
+    from services import task_events
+    monkeypatch.setattr(task_events, '_mandar', lambda *a, **kw: None)
+    e = escenario
+    assert client.patch(f"/api/v1/tasks/{e['task']}", headers=e['h'],
+                        json={'status': 'cancelled'}).status_code == 200
+    clave = db_session.exec(select(ApiKey).where(
+        ApiKey.hashed_key == hashlib.sha256(e['h']['X-API-Key'].encode()).hexdigest())).one()
+    user = db_session.get(User, clave.user_id)
+    token = create_access_token({'sub': user.email, 'tenant_id': user.tenant_id})
+    r = client.patch(f"/api/kanban/{e['task']}", json={'columna': 'pending'},
+                     headers={'Authorization': 'Bearer ' + token})
+    assert r.status_code == 200, r.text
+    eventos = db_session.exec(select(TaskEvent).where(TaskEvent.task_id == e['task'])).all()
+    assert len(eventos) == 2
+    assert any(ev.actor_user_id == user.id and
+               json.loads(ev.changes_json)['status'] == {'from': 'cancelled', 'to': 'pending'}
+               for ev in eventos)

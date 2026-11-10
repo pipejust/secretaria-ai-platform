@@ -44,7 +44,7 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
     "pending":   {"blocked", "done", "cancelled", "converted"},
     "blocked":   {"pending", "done", "cancelled", "converted"},
     "done":      {"pending", "converted"},   # reabrir; o la que ya marcaron done al convertir
-    "cancelled": set(),                      # terminal
+    "cancelled": {"pending"},                # retomar la misma tarea, con historial
     "converted": {"pending"},                # deshacer la conversión
 }
 

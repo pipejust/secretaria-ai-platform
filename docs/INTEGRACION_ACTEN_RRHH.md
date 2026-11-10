@@ -766,7 +766,7 @@ y en el Kanban de Acten. La sesión de origen conserva su proyecto.
         │  ▲
         ▼  │
    ┌─────────┐               ┌───────────┐
-   │ blocked │ ────────────► │ cancelled │   (terminal)
+   │ blocked │ ────────────► │ cancelled │   (reabrir → pending)
    └─────────┘               └───────────┘
 ```
 
@@ -775,11 +775,55 @@ y en el Kanban de Acten. La sesión de origen conserva su proyecto.
 | **`pending`** | — | ✅ | ✅ | ✅ | ✅ |
 | **`blocked`** | ✅ | — | ✅ | ✅ | ✅ |
 | **`done`** | ✅ | ❌ | — | ❌ | ✅ |
-| **`cancelled`** | ❌ | ❌ | ❌ | — | ❌ |
+| **`cancelled`** | ✅ | ❌ | ❌ | — | ❌ |
 | **`converted`** | ✅ | ❌ | ❌ | ❌ | — |
 
-`cancelled` es terminal. Transición inválida → `409` con el estado actual.
+Una tarea `cancelled` solo puede reabrirse en `pending` (véase el estado
+de publicación abajo). Otras transiciones inválidas → `409` con el estado actual.
 Al pasar a `done`, Acten sella `completed_at` automáticamente.
+
+### Retomar una tarea cancelada
+
+> Habilitación incluida en la entrega del 10 de noviembre de 2026.
+> La versión anterior (`cda04c1`) rechazaba esta transición con `409`.
+
+La transición `cancelled → pending` conserva la misma tarea, su sesión de
+origen, proyecto, responsable y enlaces externos. No requiere crear otra tarea.
+Gestum envía:
+
+```http
+PATCH /api/v1/tasks/123
+X-API-Key: <clave de integración con tasks:write>
+X-On-Behalf-Of: <UUID del empleado que la retoma>
+Content-Type: application/json
+
+{"status":"pending"}
+```
+
+La clave debe estar vigente, pertenecer a una empresa activa y tener
+`tasks:write`. Con un empleado en `X-On-Behalf-Of`, la sesión debe estar
+entre sus proyectos visibles; tareas de otra empresa o fuera de esa
+visibilidad responden `404`. Usar `*` exige además `org:read` y registra
+como actor a la integración. Actualmente el PATCH no exige técnicamente
+`X-On-Behalf-Of` cuando se omite, pero Gestum debe enviarlo para atribuir
+el cambio a la persona; sin esa cabecera queda atribuido a la integración.
+
+Responde `200` con el mismo `id` y `source_session_id`, `status: pending`
+y `updated_at` actualizado. Se conserva el historial y se añade el cambio
+`status: {from: cancelled, to: pending}`, con actor y fecha. Se emite
+`task.updated` por el mecanismo de webhook existente. Repetir el mismo
+estado no crea otra tarea ni duplica ese evento. El historial se consulta
+con `GET /api/v1/tasks/{id}/history` y alcance `tasks:read`.
+
+**Conversión a Altum:** Acten no crea, elimina ni cambia automáticamente
+el tipo, padre o estado del elemento de proyecto al reabrir la tarea.
+Sí notifica `task.updated`; Gestum/Altum deben tratarlo como actualización
+de la tarea original, conservar su vínculo y evitar convertirla otra vez.
+Si sigue existiendo el elemento y la conversión sigue siendo válida,
+conviene conservar `converted` en Acten. `converted → pending` ya estaba
+permitido para deshacer la conversión; no elimina el elemento remoto.
+Los efectos adicionales del receptor del webhook dependen de su propia
+implementación y no están certificados por esta revisión de Acten.
 
 **`converted`**: la tarea de la sesión se convirtió en un ítem de trabajo en
 otro sistema (Altum). Sale de las abiertas de Acten —no aparece en el
