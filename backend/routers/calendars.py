@@ -357,9 +357,9 @@ async def suscribir(
     """
     try:
         texto, etag = await to_thread.run_sync(calendar_ics.descargar, cuerpo.url)
+        eventos = calendar_ics.parsear(texto or "")
     except calendar_ics.IcsError as e:
         raise HTTPException(400, str(e))
-    eventos = calendar_ics.parsear(texto or "")
 
     cal = Calendar(
         key=uuid.uuid4().hex, tenant_id=user.tenant_id,
@@ -370,7 +370,9 @@ async def suscribir(
     )
     db.add(cal); db.commit(); db.refresh(cal)
 
-    await calendar_sync.sincronizar_calendario(db, cal)
+    # Importar el cuerpo que acabamos de descargar. Volver a pedirlo con
+    # su ETag puede responder 304 antes de que exista una sola copia local.
+    await calendar_sync.sincronizar_calendario(db, cal, ics_snapshot=(texto or "", etag))
     return {"calendar": _uno(db, user, cal), "eventos_leidos": len(eventos)}
 
 

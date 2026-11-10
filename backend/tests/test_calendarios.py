@@ -161,7 +161,22 @@ END:VEVENT
 END:VCALENDAR"""
 
 
-def test_una_reunion_semanal_sale_las_cuatro_veces(client, ana, monkeypatch):
+@pytest.fixture()
+def reloj_ics(monkeypatch):
+    # La sincronización importa una ventana móvil. La serie de septiembre
+    # debe quedar dentro de ella aunque la suite se ejecute años después.
+    from services import calendar_sync
+
+    class Reloj(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            instante = datetime(2026, 9, 15, tzinfo=timezone.utc)
+            return instante.astimezone(tz) if tz else instante.replace(tzinfo=None)
+
+    monkeypatch.setattr(calendar_sync, "datetime", Reloj)
+
+
+def test_una_reunion_semanal_sale_las_cuatro_veces(client, ana, monkeypatch, reloj_ics):
     from services import calendar_ics
     monkeypatch.setattr(calendar_ics, "descargar",
                         lambda url, etag="": (ICS, 'W/"1"'))
@@ -178,6 +193,49 @@ def test_una_reunion_semanal_sale_las_cuatro_veces(client, ana, monkeypatch):
     suyos = [e for e in evs if e["calendar"] == cal["key"]]
     assert len(suyos) == 4, "sin expandir la RRULE saldría una sola vez"
     assert all(e["editable"] is False for e in suyos)
+
+
+def test_suscripcion_importa_el_cuerpo_inicial_sin_descargar_dos_veces(
+    client, ana, monkeypatch, reloj_ics,
+):
+    from services import calendar_ics
+    peticiones = []
+
+    def descargar(url, etag=""):
+        peticiones.append(etag)
+        return (None, etag) if etag else (ICS, 'W/"1"')
+
+    monkeypatch.setattr(calendar_ics, "descargar", descargar)
+    r = client.post("/api/v1/calendars/suscribir", headers=ana,
+                    json={"url": "https://cal.cliente.test/etag.ics"})
+    assert r.status_code == 201
+    clave = r.json()["calendar"]["key"]
+    assert peticiones == [""]
+
+    def eventos():
+        r = client.get("/api/v1/calendars/eventos"
+                       "?desde=2026-09-01T00:00:00Z&hasta=2026-10-15T00:00:00Z",
+                       headers=ana)
+        return [e for e in r.json()["events"] if e["calendar"] == clave]
+
+    assert len(eventos()) == 4
+    r = client.post(f"/api/v1/calendars/{clave}/sincronizar", headers=ana)
+    assert r.status_code == 200
+    assert r.json()["eventos"] == 4
+    assert len(eventos()) == 4, "304 conserva los eventos importados"
+
+    for invalido in ("<html>Error temporal</html>", ICS.replace("END:VEVENT", "")):
+        monkeypatch.setattr(calendar_ics, "descargar",
+                            lambda url, etag="": (invalido, 'W/"error"'))
+        r = client.post(f"/api/v1/calendars/{clave}/sincronizar", headers=ana)
+        assert r.status_code == 502
+        assert len(eventos()) == 4, "una descarga inválida no borra la copia válida"
+
+    monkeypatch.setattr(calendar_ics, "descargar",
+                        lambda url, etag="": ("BEGIN:VCALENDAR\nEND:VCALENDAR", 'W/"2"'))
+    r = client.post(f"/api/v1/calendars/{clave}/sincronizar", headers=ana)
+    assert r.status_code == 200
+    assert eventos() == [], "un calendario ahora vacío retira sus eventos anteriores"
 
 
 def test_el_ics_no_deja_pedir_direcciones_internas():

@@ -165,14 +165,22 @@ def _limpiar(v: str) -> str:
 
 def parsear(texto: str) -> list[dict]:
     """Los VEVENT del archivo, sin expandir repeticiones todavía."""
+    lineas = _desplegar(texto.lstrip("\ufeff"))
+    marcas = [linea.strip().upper() for linea in lineas if linea.strip()]
+    if (not marcas or marcas[0] != "BEGIN:VCALENDAR"
+            or marcas[-1] != "END:VCALENDAR"
+            or marcas.count("BEGIN:VEVENT") != marcas.count("END:VEVENT")):
+        # Una página de error o una descarga truncada no es un calendario
+        # vacío: nunca debe borrar los eventos de la última copia válida.
+        raise IcsError("El servidor no devolvió un calendario iCalendar completo.")
     eventos: list[dict] = []
     dentro = False
     actual: dict = {}
-    for linea in _desplegar(texto):
-        if linea.strip() == "BEGIN:VEVENT":
+    for linea in lineas:
+        if linea.strip().upper() == "BEGIN:VEVENT":
             dentro, actual = True, {}
             continue
-        if linea.strip() == "END:VEVENT":
+        if linea.strip().upper() == "END:VEVENT":
             if dentro and actual.get("start"):
                 eventos.append(actual)
             dentro = False

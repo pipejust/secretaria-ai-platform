@@ -157,7 +157,9 @@ async def descubrir_calendarios(db: Session, cuenta: CalendarAccount, user: User
 # Traer los eventos
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def sincronizar_calendario(db: Session, cal: Calendar) -> int:
+async def sincronizar_calendario(
+    db: Session, cal: Calendar, *, ics_snapshot: Optional[tuple[str, str]] = None,
+) -> int:
     """Relee un calendario. Devuelve cuántas entradas quedaron.
 
     Lo que nació aquí y se llevó allá vuelve en esta lectura: si no se
@@ -171,7 +173,7 @@ async def sincronizar_calendario(db: Session, cal: Calendar) -> int:
         if cal.origin == "suscrito":
             # `descargar` usa httpx síncrono y puede tardar hasta 20 s: en el
             # bucle de eventos dejaría la API entera parada mientras espera.
-            eventos = await to_thread.run_sync(_leer_ics, cal, desde, hasta)
+            eventos = await to_thread.run_sync(_leer_ics, cal, desde, hasta, ics_snapshot)
         else:
             eventos = await _leer_proveedor(db, cal, desde, hasta)
     except Exception as e:  # noqa: BLE001
@@ -180,6 +182,15 @@ async def sincronizar_calendario(db: Session, cal: Calendar) -> int:
         db.add(cal); db.commit()
         logger.warning("Sync de «%s» falló: %s", cal.name, e)
         raise
+
+    if eventos is None:
+        # 304 no es un calendario vacío: conserva la copia anterior.
+        cal.sync_error = ""
+        cal.last_synced_at = _ahora()
+        db.add(cal); db.commit()
+        return len(db.exec(
+            select(ExternalEvent).where(ExternalEvent.calendar_id == cal.id)
+        ).all())
 
     # Los uid que ya son nuestros: su copia de fuera se descarta.
     mios = {
@@ -213,7 +224,7 @@ async def sincronizar_calendario(db: Session, cal: Calendar) -> int:
 
     # Lo que ya no está allá se va de aquí: si no, un evento cancelado
     # seguiría ocupando la hora en la pantalla de todo el mundo.
-    if vistos:
+    if vistos or cal.origin == "suscrito":
         for viejo in db.exec(
             select(ExternalEvent).where(ExternalEvent.calendar_id == cal.id)
         ).all():
@@ -226,12 +237,15 @@ async def sincronizar_calendario(db: Session, cal: Calendar) -> int:
     return len(vistos)
 
 
-def _leer_ics(cal: Calendar, desde: datetime, hasta: datetime) -> list[dict]:
-    texto, etag = calendar_ics.descargar(cal.ics_url, cal.sync_token)
+def _leer_ics(
+    cal: Calendar, desde: datetime, hasta: datetime,
+    snapshot: Optional[tuple[str, str]] = None,
+) -> Optional[list[dict]]:
+    texto, etag = snapshot if snapshot is not None else calendar_ics.descargar(cal.ics_url, cal.sync_token)
     if texto is None:
-        return []           # 304: no cambió
-    cal.sync_token = etag or ""
+        return None         # 304: no cambió
     crudos = calendar_ics.parsear(texto)
+    cal.sync_token = etag or ""
     salida = []
     for ev in calendar_ics.expandir(crudos, desde, hasta):
         salida.append({
