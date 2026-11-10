@@ -29,6 +29,7 @@ FROM nginx:alpine AS runtime
 # Angular 17+ produce dist/<project>/browser/
 COPY --from=build /build/dist /tmp/dist
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/acten-security-headers.conf
 
 # Detecta el path real del bundle (varía si el project name cambia) y lo
 # mueve a /usr/share/nginx/html.

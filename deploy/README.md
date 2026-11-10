@@ -1,93 +1,55 @@
-# Deployment de Acten
+# Despliegue de Acten
 
-Esta carpeta contiene **todo lo necesario** para subir Acten a un servidor
-de producción con **despliegue continuo desde GitHub**.
+El stack de producción contiene frontend Angular/Nginx, backend FastAPI y Gotenberg. Puede usar PostgreSQL 17 con pgvector en el mismo servidor o una base externa Supabase. El bot de reuniones se configura aparte.
 
----
+## Coolify
 
-## TL;DR — La opción recomendada
+La instalación verificada usa el repositorio `pipejust/secretaria-ai-platform`, rama `redesign/acten-v1`, Base Directory `/` y Compose Location `/deploy/docker-compose.prod.yml`. Configurar dominio HTTPS para frontend (80) y backend (8000); PostgreSQL y Gotenberg permanecen internos.
 
-> **Hetzner Cloud (CX22, ~€4,5/mes) + Coolify**
->
-> Un solo servidor, todo el stack (backend + frontend + Postgres +
-> Gotenberg + reverse proxy con SSL automático), auto-deploy en cada
-> `git push` a `main`, panel web para administrar.
+- Variables: partir de `.env.production.example`, sin publicar credenciales en Git.
+- Marcar `PUBLIC_BASE_URL` como variable de build: se compila en el frontend.
+- En una instalación nueva, establecer `ACTEN_COOLIFY_UUID` con el UUID del recurso. Las etiquetas Traefik interpolan esa variable. El valor de respaldo conserva el recurso existente, no identifica recursos nuevos.
+- Usar un solo worker del backend: el scheduler vive dentro del proceso. Varios workers duplicarían jobs sin coordinación adicional.
+- Confirmar salud, dominios, certificados y backups después de desplegar. Un healthcheck no garantiza por sí solo despliegues sin interrupción ni rollback automático de Compose.
 
-| Tema | Costo | Por qué |
-|------|-------|---------|
-| Hetzner CX22 | **€4,51/mes** (≈ COP 18 000) | 2 vCPU, 4 GB RAM, 40 GB SSD. Suficiente para los primeros 50–100 usuarios. |
-| Dominio | ~€10/año | Cualquier registrar. Cloudflare registrar es el más barato. |
-| Coolify | **€0** | Self-hosted, open source. La alternativa libre a Vercel/Heroku. |
-| **Total** | **~€5/mes** + dominio | Versus Render Pro €19+/mes |
+La guía de instalación está en [HETZNER_COOLIFY.md](HETZNER_COOLIFY.md) y las verificaciones en [POST_DEPLOY_CHECKLIST.md](POST_DEPLOY_CHECKLIST.md). Las cifras históricas de capacidad y precios de la guía no constituyen una cotización vigente.
 
-Sigue **[`HETZNER_COOLIFY.md`](./HETZNER_COOLIFY.md)** paso a paso.
+## Compose manual
 
----
+Ejecutar desde la raíz del repositorio. Conservar el `.env` de desarrollo; crear un archivo separado para producción:
 
-## ¿Por qué esta opción y no otras?
+```bash
+cp -n deploy/.env.production.example .env.production
+# Editar .env.production con URLs y credenciales reales.
+./deploy/compose.sh prod config --quiet
+# Ejecutar únicamente cuando se quiera desplegar:
+./deploy/compose.sh prod up -d --build
+```
 
-### Render
-- ✅ Cero ops.
-- ❌ €19/mes el plan Pro (€7 web service + €7 DB + €5 background worker + huevos).
-- ❌ Cold starts en planes baratos.
-- ❌ 4× más caro para el mismo hardware.
+El wrapper fija `--project-directory` a la raíz para resolver `./backend` y `./frontend` correctamente. Puede invocarse desde otro directorio. Equivalente explícito desde la raíz:
 
-### Vercel + Backend en Hetzner
-- ✅ Frontend con CDN global gratis.
-- ❌ 2 superficies que mantener (Vercel + Hetzner) y configurar CORS.
-- ❌ Para una app interna B2B, el CDN no aporta tanto como sí lo haría
-  para una landing pública.
-- 👉 Si más adelante quieres mover el frontend a Vercel, es trivial:
-  el build de Angular ya es estático y solo hay que apuntar
-  `NG_APP_API_URL` al backend.
+```bash
+docker compose --project-directory . --env-file .env.production \
+  -f deploy/docker-compose.prod.yml config --quiet
+```
 
-### Contabo VPS
-- ✅ Más barato (€3–4/mes por specs similares).
-- ❌ Red más lenta y con más quejas de uptime que Hetzner.
-- ❌ IPv4 cuesta extra en algunos planes.
-- 👉 Funciona si el presupuesto es muy ajustado, pero por €1/mes más,
-  Hetzner es más fiable.
+Configurar un reverse proxy HTTPS aparte: el Compose solo declara puertos internos. Las etiquetas para Coolify no crean por sí solas routers manuales.
 
-### Self-hosted en tu propia máquina
-- ❌ La máquina tiene que estar 24/7 con IP pública o túnel.
-- ❌ Cualquier corte de luz/internet → la plataforma cae.
-- ❌ No es viable para clientes externos.
+Para Supabase, completar `DATABASE_URL`, activar la extensión `vector` y usar:
 
----
+```bash
+./deploy/compose.sh supabase config --quiet
+./deploy/compose.sh supabase up -d --build
+```
 
-## Archivos en esta carpeta
+El volumen `acten_uploads` conserva los archivos subidos en ambas variantes. Si una instalación anterior de Supabase tenía uploads dentro del contenedor, respaldarlos y migrarlos al volumen antes de recrearlo. Un volumen vacío no recupera archivos antiguos.
 
-| Archivo | Para qué |
-|---------|----------|
-| [`HETZNER_COOLIFY.md`](./HETZNER_COOLIFY.md) | **Guía principal**: setup completo paso a paso. |
-| [`docker-compose.prod.yml`](./docker-compose.prod.yml) | Compose de producción (sin volúmenes de dev, sin reload, con healthchecks). |
-| [`.env.production.example`](./.env.production.example) | Template con TODAS las variables que necesitas. |
-| [`POST_DEPLOY_CHECKLIST.md`](./POST_DEPLOY_CHECKLIST.md) | Qué probar después del primer deploy. |
+`ACTEN_ENV_FILE=/ruta/archivo.env` permite usar otro archivo sin sobrescribir el local.
 
----
+## Configuración posterior
 
-## Despliegue continuo (CD)
+Crear el administrador según la guía; configurar Groq por empresa desde la aplicación. La variable de entorno `GROQ_API_KEY` no habilita por sí sola el procesamiento de una empresa. OpenAI sigue usando `OPENAI_API_KEY` para embeddings/audio.
 
-Coolify hace esto out-of-the-box:
+Conservar la clave de cifrado al restaurar datos: `CALENDAR_SECRET_KEY`, o `JWT_SECRET_KEY` si no existe una clave independiente. Cambiarla sin migrar los secretos cifrados inutiliza las credenciales guardadas. Verificar backups de PostgreSQL y uploads con una restauración aislada.
 
-1. Conectas tu repo de GitHub (`pipejust/secretaria-ai-platform`)
-2. Eliges la rama (`redesign/acten-v1` o `main`)
-3. Activas "Auto Deploy"
-4. **Cada `git push` dispara el build y despliegue automático**
-
-No necesitas escribir GitHub Actions. Coolify expone un webhook que
-GitHub llama al push y Coolify hace `git pull` + `docker compose up
---build` + healthcheck + cutover.
-
-Si algo falla → Coolify mantiene la versión anterior corriendo y
-muestra el log. Si funciona → swap atómico, cero downtime.
-
----
-
-## Pasos siguientes inmediatos
-
-1. **Decide tu dominio** (ej: `acten.app`, `app.acten.com`, etc.).
-2. Lee [`HETZNER_COOLIFY.md`](./HETZNER_COOLIFY.md) — dura ~30 minutos
-   leerlo y ~1 hora ejecutarlo end-to-end.
-3. Avísame cuando tengas el servidor creado y te ayudo con la config
-   específica de variables.
+`render.yaml` queda como alternativa histórica del backend, no como descripción del despliegue completo actual.

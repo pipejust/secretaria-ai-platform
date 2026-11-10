@@ -12,7 +12,6 @@ import { SearchService, SearchGroup } from '../../services/search.service';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { LanguageService } from '../../services/language.service';
 import { Entitlements } from '../../services/billing.service';
 
@@ -31,7 +30,7 @@ interface CurrentUser {
 @Component({
     selector: 'app-admin-layout',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
     templateUrl: './admin-layout.component.html',
     styleUrls: ['./admin-layout.component.css']
 })

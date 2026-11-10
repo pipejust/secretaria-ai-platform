@@ -19,9 +19,9 @@
 #   3. Coolify se encarga del reverse proxy + SSL + dominio.
 #
 # Uso manual (sin Coolify):
-#   1. cp deploy/.env.production.example .env
+#   1. cp -n deploy/.env.production.example .env.production
 #   2. Llena las variables.
-#   3. docker compose -f deploy/docker-compose.prod.yml --env-file .env up -d --build
+#   3. docker compose --project-directory . -f deploy/docker-compose.prod.yml --env-file .env.production up -d --build
 #   4. Configura Caddy/Nginx aparte para SSL + dominio.
 # =============================================================================
 
@@ -57,7 +57,8 @@ services:
 
   # --------------------------------------------------------------------------
   # Backend FastAPI (Python 3.11 + uvicorn).
-  # Workers = 2× CPU cores. En CX22 (2 vCPU) → 4 workers.
+  # Un worker: el scheduler interno se inicia una vez por proceso.
+  # Aumentar workers requiere separar los jobs para no duplicar envíos.
   # Coolify pasará TRAEFIK_* labels para enrutar tráfico hacia este servicio
   # automáticamente — no las añadimos a mano.
   # --------------------------------------------------------------------------
@@ -91,13 +92,15 @@ services:
       #   FRONTEND_URL    = https://app.acten.app
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set la URL pública del backend}
       FRONTEND_URL: ${FRONTEND_URL:?Set la URL pública del frontend}
+      CALENDAR_SECRET_KEY: ${CALENDAR_SECRET_KEY:-}
+      CORS_EXTRA_ORIGINS: ${CORS_EXTRA_ORIGINS:-}
 
       # ── Servicios internos ──────────────────────────────────────────
       GOTENBERG_URL: http://gotenberg:3000
 
       # ── LLMs / integraciones ───────────────────────────────────────
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
       FIREFLIES_API_KEY: ${FIREFLIES_API_KEY:-}
     volumes:
       # Persistencia de uploads (avatares de usuarios, attachments, etc.).
@@ -120,9 +123,9 @@ services:
     # defecto y como uvicorn escucha en 8000 → timeout en api.acten.app.
     #
     # Fix: definimos el service con el nombre EXACTO que el router de Coolify
-    # espera. UUID hardcodeado (`z4tjwakbk1yna94gt3isc2hf`) porque Compose NO
-    # interpola variables dentro de label values.
-    # Si recreás la app en Coolify, copia el nuevo UUID a estas labels.
+    # espera. Compose sí interpola los valores de las labels. Para un recurso
+    # nuevo configura ACTEN_COOLIFY_UUID con su UUID. El valor por defecto
+    # conserva la instalación existente; no es un identificador universal.
     labels:
       - "traefik.enable=true"
       # Solo UNA label de service. Si declaramos dos, Traefik se confunde:
@@ -130,7 +133,7 @@ services:
       # Services" → descarta el router → 503.
       # El router HTTP igual funciona: aplica el middleware `redirect-to-https`
       # ANTES de tocar el upstream, así que no necesita un service real.
-      - "traefik.http.services.https-0-z4tjwakbk1yna94gt3isc2hf-backend.loadbalancer.server.port=8000"
+      - "traefik.http.services.https-0-${ACTEN_COOLIFY_UUID:-z4tjwakbk1yna94gt3isc2hf}-backend.loadbalancer.server.port=8000"
     networks:
       - acten
 
@@ -158,7 +161,7 @@ services:
     # en la app. Forzamos la label explícita.
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.https-0-z4tjwakbk1yna94gt3isc2hf-frontend.loadbalancer.server.port=80"
+      - "traefik.http.services.https-0-${ACTEN_COOLIFY_UUID:-z4tjwakbk1yna94gt3isc2hf}-frontend.loadbalancer.server.port=80"
     networks:
       - acten
 

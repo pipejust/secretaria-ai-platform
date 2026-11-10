@@ -1194,18 +1194,18 @@
             </span>
             <div>
                 <h3>{{ 'tenants.delete_permanent_title' | translate }}</h3>
-                <p class="tn-confirm-msg" [innerHTML]="'tenants.delete_permanent_warning' | translate: { name: hardDeleteConfirm.tenant?.name }">
+                <p class="tn-confirm-msg" [innerHTML]="'tenants.delete_permanent_warning' | translate: { name: hardDeleteConfirm.tenant.name }">
                 </p>
                 <p class="tn-confirm-msg" style="margin-top: 8px; color: #be123c;" [innerHTML]="'tenants.delete_permanent_irreversible' | translate">
                 </p>
                 <div style="margin-top: 16px;">
                     <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">
                         {{ 'tenants.type_slug_to_confirm' | translate }}
-                        <code style="background:#fef2f2; padding:2px 6px; border-radius:4px; color:#991b1b;">{{ hardDeleteConfirm.tenant?.slug }}</code>
+                        <code style="background:#fef2f2; padding:2px 6px; border-radius:4px; color:#991b1b;">{{ hardDeleteConfirm.tenant.slug }}</code>
                     </label>
                     <input type="text"
                            [(ngModel)]="hardDeleteConfirm.typedSlug"
-                           [placeholder]="hardDeleteConfirm.tenant?.slug"
+                           [placeholder]="hardDeleteConfirm.tenant.slug"
                            autocomplete="off"
                            style="width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:8px; font-family:monospace; font-size:14px;"
                            (keyup.enter)="confirmHardDelete()" />
@@ -1216,7 +1216,7 @@
             <button type="button" class="tn-btn" (click)="cancelHardDelete()">{{ 'common.cancel' | translate }}</button>
             <button type="button"
                     class="tn-btn tn-confirm-btn tn-confirm-btn--danger"
-                    [disabled]="(hardDeleteConfirm.typedSlug || '').toLowerCase().trim() !== hardDeleteConfirm.tenant?.slug?.toLowerCase()"
+                    [disabled]="(hardDeleteConfirm.typedSlug || '').toLowerCase().trim() !== hardDeleteConfirm.tenant.slug.toLowerCase()"
                     (click)="confirmHardDelete()">
                 {{ 'tenants.delete_permanently_btn' | translate }}
             </button>
@@ -1238,7 +1238,7 @@
                 </svg>
             </span>
             <div>
-                <h3>{{ 'tenants.company_created_title' | translate: { name: createdSuccess.tenant?.name } }}</h3>
+                <h3>{{ 'tenants.company_created_title' | translate: { name: createdSuccess.tenant.name } }}</h3>
                 <p class="tn-created-sub">
                     {{ 'tenants.company_created_sub' | translate }}
                 </p>

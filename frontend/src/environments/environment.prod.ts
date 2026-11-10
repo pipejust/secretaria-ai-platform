@@ -1,4 +1,4 @@
 export const environment = {
     production: true,
-    apiUrl: 'https://secretaria-ai-platform.onrender.com' // Render backend
+    apiUrl: 'https://api.acten.app' // Docker puede sustituir esta URL con NG_APP_API_URL
 };

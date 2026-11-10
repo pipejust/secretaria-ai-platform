@@ -1,6 +1,6 @@
 # Deploy Acten en Hetzner + Coolify (CD desde GitHub)
 
-> **Costo total:** ~€5/mes (€4,51 servidor + dominio amortizado)
+> **Precios y capacidad:** las cifras de esta guía son históricas; verificar la oferta del proveedor antes de contratar.
 > **Tiempo:** ~1 hora de principio a fin
 > **Resultado:** plataforma en `https://app.tudominio.com` con SSL,
 > auto-deploy en cada `git push`, panel para administrar.
@@ -210,9 +210,11 @@ POSTGRES_USER=acten
 POSTGRES_PASSWORD=<genera con: openssl rand -base64 48>
 JWT_SECRET_KEY=<genera con: python3 -c "import secrets; print(secrets.token_urlsafe(64))">
 OPENAI_API_KEY=sk-...
-GROQ_API_KEY=gsk_...
+# Groq se configura por empresa desde la UI; no se usa la variable legacy.
+GROQ_API_KEY=
 FIREFLIES_API_KEY=
 LOG_LEVEL=INFO
+ACTEN_COOLIFY_UUID=<UUID del recurso que acabas de crear>
 ```
 
 ⚠️ **Marca el checkbox "Is Build Time?" en `PUBLIC_BASE_URL`** — el frontend lo usa como build-arg.
@@ -241,7 +243,7 @@ Coolify configura el webhook de GitHub solo. Cualquier `git push` a esa branch d
 
 ### 6.4 Healthchecks
 
-El compose ya tiene healthchecks definidos. Coolify los respeta y solo hace cutover de tráfico cuando el servicio nuevo está sano.
+El Compose define healthchecks. Revisar el resultado del despliegue y sus logs: estos checks no garantizan por sí solos cero interrupciones ni rollback automático de un stack Compose.
 
 ---
 
@@ -285,8 +287,11 @@ from auth_utils import get_password_hash
 with Session(engine) as db:
     tenant = db.exec(select(Tenant).where(Tenant.slug == 'acten')).first()
     role = db.exec(select(Role).where(Role.name == 'admin')).first()
-    if not tenant or not role:
-        print('Tenant/Role no encontrados — revisa logs del backend.'); exit(1)
+    if not tenant:
+        print('Tenant no encontrado — revisa logs del backend.'); exit(1)
+    if not role:
+        role = Role(name='admin', description='Administrador', is_system=True)
+        db.add(role); db.commit(); db.refresh(role)
 
     u = User(
         email='tu-email@empresa.com',
@@ -304,12 +309,15 @@ with Session(engine) as db:
 
 Login en `https://app.tudominio.com/` con ese email/password.
 
+El ejemplo supone una base nueva. Antes de crear el usuario, comprobar que no existe ya. Tras crear el primer admin, reiniciar el backend de forma controlada para inicializar los permisos de su rol.
+
 ### 8.2 Configura integraciones
 
 Una vez dentro:
-- `/admin/configuración → Correo` → SMTP/Resend
-- `/admin/configuración → Integraciones` → Google Calendar, Trello, Jira...
-- `/admin/configuración → API y Webhooks` → Fireflies webhook
+- `/admin/settings → Correo` → SMTP/Resend
+- Configuración de IA de la empresa → guardar su clave Groq.
+- `/admin/settings → Integraciones` → Google Calendar, Trello, Jira...
+- `/admin/settings → API y Webhooks` → Fireflies webhook
 - `/admin/branding` → Logo y nombre del workspace
 
 ### 8.3 Verifica el flujo completo
@@ -325,8 +333,8 @@ A partir de ahora, cada vez que hagas `git push origin redesign/acten-v1`:
 1. GitHub dispara el webhook de Coolify
 2. Coolify pulea el código nuevo
 3. Rebuilea el contenedor afectado
-4. Sustituye el viejo por el nuevo (zero-downtime gracias a healthchecks)
-5. Si falla → mantiene el viejo + te notifica
+4. Actualiza los servicios del stack
+5. Verifica salud y logs; si falla, revisa el estado y aplica un rollback explícito cuando corresponda
 
 Puedes ver el progreso en **Coolify → Acten → Deployments**.
 

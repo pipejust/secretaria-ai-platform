@@ -17,7 +17,7 @@ Antes de invitar al primer usuario real, verifica que todo funcione:
 - [ ] Sidebar carga las opciones (Resumen / Reuniones / Proyectos / Tareas / Pregunta a Acten / Calendario / Reportes / Plantillas / Configuración)
 - [ ] Dashboard `/admin/dashboard` muestra cards (aunque sean ceros al inicio)
 - [ ] Crear un proyecto en `/admin/projects`
-- [ ] Subir una sesión de prueba en `/admin/upload-meeting` o vía Fireflies webhook
+- [ ] Subir una sesión de prueba en `/admin/meetings` o vía Fireflies webhook
 - [ ] Verificar que el pipeline IA procesa la sesión:
   - Crea tareas (`/admin/pendientes`)
   - Crea decisiones/riesgos/acuerdos (`/admin/curation/{id}`)
@@ -28,13 +28,19 @@ Antes de invitar al primer usuario real, verifica que todo funcione:
 
 ## Integraciones (a medida que las uses)
 
-- [ ] **Fireflies**: copia el webhook URL de `/admin/configuración → API` y pégalo en Fireflies. Manda una grabación de prueba.
-- [ ] **SMTP/Resend**: configura en `/admin/configuración → Correo`. Manda test (botón "Probar conexión") cuando lo agreguemos.
-- [ ] **Google Calendar**: configura OAuth en `/admin/configuración → Integraciones`. Conecta una cuenta en `/admin/calendar`.
+- [ ] Guardar la clave Groq de cada empresa en la configuración de IA; la variable de entorno no la sustituye.
+- [ ] Probar grabación de audio en HTTPS y confirmar que el navegador permite solicitar el micrófono.
+
+- [ ] **Fireflies**: copia el webhook URL de `/admin/settings → API` y pégalo en Fireflies. Manda una grabación de prueba.
+- [ ] **SMTP/Resend**: configura en `/admin/settings → Correo`. Manda test (botón "Probar conexión") cuando lo agreguemos.
+- [ ] **Google Calendar**: configura OAuth en `/admin/settings → Integraciones`. Conecta una cuenta en `/admin/calendar`.
 - [ ] **Microsoft 365**: idem.
-- [ ] **Trello / Jira / ClickUp / Azure DevOps**: configura tokens en `/admin/configuración → Integraciones`. Despacha una tarea de prueba desde `/admin/curation/{id}`.
+- [ ] **Trello / Jira / ClickUp / Azure DevOps**: configura tokens en `/admin/settings → Integraciones`. Despacha una tarea de prueba desde `/admin/curation/{id}`.
 
 ## Seguridad y backups
+
+- [ ] Respaldar y restaurar `acten_uploads` además de PostgreSQL.
+- [ ] Conservar la clave de cifrado de credenciales al restaurar (`CALENDAR_SECRET_KEY`, o `JWT_SECRET_KEY` cuando se deriva de ella).
 
 - [ ] **Backups automáticos de Hetzner activos** (panel → tu server → Backups)
 - [ ] **Backup manual de prueba**:
@@ -71,10 +77,10 @@ Si supera estos límites consistentemente → escala a CX32 (€7.05/mo, 4 vCPU,
 
 ## Despliegue continuo confirmado
 
-- [ ] Hacer un cambio trivial (ej: editar un texto en el frontend)
+- [ ] Revisar el commit que se quiere publicar y guardar su SHA
 - [ ] `git push origin redesign/acten-v1`
 - [ ] Coolify dashboard muestra el deploy iniciándose en ~10s
-- [ ] El cambio aparece en `https://app.tudominio.com/` en ~3 min sin downtime
+- [ ] La versión publicada corresponde al SHA esperado y los servicios están saludables
 
 ---
 
