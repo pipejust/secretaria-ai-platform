@@ -175,7 +175,7 @@ export class BrandingSettingsComponent implements OnInit, OnDestroy {
      *       data URL en los correos reales.
      *  Así el admin ve exactamente lo que llegará al destinatario. */
     get emailPreviewLogoUrl(): string {
-        return this.form.logo_data_url || 'brand/acten-logo-full.png';
+        return this.form.logo_data_url || 'brand/acten-logo-dark.svg';
     }
 
     // ============================================================

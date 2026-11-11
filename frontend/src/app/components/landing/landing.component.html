@@ -13,12 +13,12 @@
     <div class="al-container al-header__inner">
       <a class="al-brand" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
         <!-- LCP candidate: above-the-fold + preloaded en index.html.
-             width/height explícitos previenen CLS (1.18 ratio del logo).
+             width/height explícitos previenen CLS (proporción 1102 / 270 del logo).
              Siempre el SVG estático de Acten — es la marca propia del
              producto y no debe cambiar según el tenant. -->
-        <img src="brand/acten-logo-full.svg" alt="Acten"
+        <img src="brand/acten-logo-light.svg" alt="Acten"
              class="al-brand__logo al-brand__logo--light"
-             width="118" height="32" decoding="async" fetchpriority="high" />
+             width="131" height="32" decoding="async" fetchpriority="high" />
       </a>
 
       <nav class="al-nav" [class.al-nav--open]="mobileMenuOpen" aria-label="Navegación principal">
@@ -855,9 +855,9 @@
       <div class="al-footer__grid">
         <div class="al-footer__brand-col">
           <a class="al-brand al-brand--dark" href="#top" (click)="scrollTo('#top', $event)" aria-label="Acten — Inicio">
-            <img src="brand/acten-logo-full.svg" alt="Acten"
+            <img src="brand/acten-logo-dark.svg" alt="Acten"
                  class="al-brand__logo al-brand__logo--dark"
-                 width="132" height="36" decoding="async" loading="lazy" />
+                 width="147" height="36" decoding="async" loading="lazy" />
           </a>
           <p class="al-footer__tagline">{{ c.footer.tagline }}</p>
           <ul class="al-footer__social" *ngIf="c.footer.social_links?.length">

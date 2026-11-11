@@ -6,11 +6,11 @@
             <a routerLink="/" class="aside-brand"
                [attr.aria-label]="branding.companyName() + ' — inicio'">
                 <!-- Sólo IMAGEN. Si el tenant subió su logo lo usamos, si
-                     no caemos al Acten full logo (asset PNG con buen
+                     no caemos al Acten full logo (asset SVG con buen
                      contraste sobre el navy). NUNCA renderizamos el nombre
                      como texto sobre fondo oscuro: si viene en negro
                      (caso típico de wordmarks negros) no se vería. -->
-                <img [src]="branding.displayLogoUrl()"
+                <img [src]="branding.displayDarkLogoUrl()"
                      [alt]="branding.companyName()"
                      class="aside-logo"
                      [class.aside-logo-client]="branding.hasLogo()" />

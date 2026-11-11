@@ -285,7 +285,7 @@ section[id] { scroll-margin-top: 88px; }
   letter-spacing: -0.01em;
 }
 /* Logo oficial Acten (SVG con monograma + wordmark).
-   --light: invertimos a blanco para que se lea sobre el header oscuro.
+   --light: variante vectorial clara para el header oscuro.
    --dark : colores nativos para el footer claro. */
 .al-brand__logo {
   display: block;
@@ -293,9 +293,8 @@ section[id] { scroll-margin-top: 88px; }
   height: 32px;
 }
 .al-brand__logo--light {
-  /* brightness(0) → todo negro · invert(1) → todo blanco.
-     Robusto frente a un SVG multi-color como el nuestro. */
-  filter: brightness(0) invert(1);
+  /* La variante clara ya tiene tinta blanca y conserva los colores de marca. */
+  filter: none;
 }
 .al-brand__logo--dark {
   height: 36px;

@@ -87,7 +87,7 @@
 
 /* Nota: eliminamos .aside-mono / .aside-mono-letter / .aside-wordmark
    porque ahora SIEMPRE renderizamos una imagen PNG. Si el tenant no
-   subió logo, displayLogoUrl cae al Acten full logo. Evita el caso
+   subió logo, displayDarkLogoUrl cae al Acten full logo. Evita el caso
    "wordmark del tenant en negro sobre navy → invisible". */
 
 /* "Powered by Acten" — link a la web de Acten cuando el tenant no es Acten.

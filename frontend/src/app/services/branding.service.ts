@@ -76,8 +76,9 @@ const DEFAULT_BRAND: Branding = {
 /** Defaults estáticos de Acten (assets en `/public/brand/`). Se usan si el
  *  tenant no tiene su propio logo subido. Mantenerlos sincronizados con
  *  los archivos físicos en `frontend/public/brand/`. */
-const ACTEN_DEFAULT_LOGO_FULL = 'brand/acten-logo-full.png';
-const ACTEN_DEFAULT_ICON      = 'brand/imagologo.png';
+const ACTEN_DEFAULT_LOGO_FULL = 'brand/acten-logo-dark.svg';
+const ACTEN_DEFAULT_LOGO_LIGHT = 'brand/acten-logo-light.svg';
+const ACTEN_DEFAULT_ICON      = 'brand/acten-icon-light.svg';
 
 @Injectable({ providedIn: 'root' })
 export class BrandingService {
@@ -111,7 +112,7 @@ export class BrandingService {
     () =>
       this.brand().logo_dark_data_url ||
       this.brand().logo_data_url ||
-      ACTEN_DEFAULT_LOGO_FULL,
+      ACTEN_DEFAULT_LOGO_LIGHT,
   );
   readonly displayIconUrl = computed(
     () =>
