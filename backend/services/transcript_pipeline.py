@@ -1013,10 +1013,27 @@ async def process_session_with_ai(
                 "error": session_obj.processing_error[:500],
             }, tenant_id=session_obj.tenant_id)
         else:
+            from services.sessions_api import (
+                duration_min_from as _dmf_wh,
+                enriquecer_asistentes as _enrich_wh,
+                leer_asistentes_de_sesion as _leer_wh,
+            )
+            _dur_real = _dmf_wh(session_obj.started_at, session_obj.ended_at)
+            _palabras_wh = len((session_obj.raw_transcript or "").split())
+            _dur_final = _dur_real if _dur_real is not None else (
+                max(1, round(_palabras_wh / 150)) if _palabras_wh else None
+            )
+            _parts = _enrich_wh(db, session_obj.tenant_id, _leer_wh(session_obj))
             send_event_bg("session.processed", {
                 "session_id": session_id,
                 "project_external_id": proyecto_ref,
                 "title": session_obj.title or "",
+                "date": session_obj.date,
+                "started_at": session_obj.started_at,
+                "ended_at": session_obj.ended_at,
+                "duration_min": _dur_final,
+                "duration_is_estimate": _dur_real is None and _dur_final is not None,
+                "participants": _parts,
                 "counts": {"tasks": n_tareas},
             }, tenant_id=session_obj.tenant_id)
     except Exception as exc:  # noqa: BLE001

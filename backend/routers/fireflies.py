@@ -15,7 +15,7 @@ import json
 import logging
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -965,6 +965,25 @@ async def process_transcript_background(
             new_session.raw_transcript = raw_transcript
             new_session.raw_summary = raw_summary
             new_session.status = "pending"
+
+            # Horas reales (fase B contrato Altum): `verified` es ya un ISO; la
+            # duración viene en segundos de la API de Fireflies (campo `duration`
+            # del GraphQL MeetingCore). Si falta o es rara, dejamos ended_at en NULL
+            # y el endpoint cae a la estimación por palabras.
+            try:
+                _duracion_s = ff_data.get("duration")
+                if _duracion_s is not None:
+                    _duracion_s = float(_duracion_s)
+                    if _duracion_s > 0 and _duracion_s < 24 * 3600:
+                        _start = datetime.fromisoformat(verified.replace("Z", "+00:00"))
+                        _end = _start + timedelta(seconds=_duracion_s)
+                        new_session.started_at = verified
+                        new_session.ended_at = _end.isoformat()
+            except (ValueError, TypeError) as _exc:
+                logger.warning(
+                    "No se pudo derivar ended_at para transcript %s (duration=%r): %s",
+                    transcript_id, ff_data.get("duration"), _exc,
+                )
 
             # Si Fireflies o el cleanup del summary fallaron, lo dejamos
             # registrado en la sesión para que el admin lo vea y/o el cron

@@ -85,15 +85,31 @@ def ingest(db: Session, event: ActenBotEvent) -> BotInbox:
             BotControlLink.meeting_id == str(event.meeting_id),
         )
     ).first()
+    # Horas reales (fase B contrato Altum): `date` es el inicio de la captura
+    # y el último segmento del transcript marca el fin (timebase =
+    # seconds_from_recording_start, validado en CaptureData). Sin transcript
+    # válido no habría llegado aquí, pero defendemos por si acaso.
+    _started = event.data.date
+    _started_iso = _started.isoformat()
+    _ended_iso = None
+    try:
+        _last_end = max((seg.end for seg in event.data.transcript), default=0.0)
+        if _last_end > 0:
+            from datetime import timedelta as _td
+            _ended_iso = (_started + _td(seconds=float(_last_end))).isoformat()
+    except (ValueError, TypeError):
+        _ended_iso = None
     session = MeetingSession(
         tenant_id=event.tenant_id,
         fireflies_id=f"BOT-{event.meeting_id}",
         title=event.data.title,
-        date=event.data.date.isoformat(),
+        date=_started_iso,
         raw_transcript=event.data.transcript_text(),
         raw_summary=event.data.summary_text(),
         status="processing",
         project_id=project_id,
+        started_at=_started_iso,
+        ended_at=_ended_iso,
     )
     try:
         db.add(session)
