@@ -296,6 +296,21 @@ def avisar(cfg: dict, room_id: str) -> None:
             {"msgtype": "m.text", "body": cuerpo, "m.mentions": {"room": True}})
 
 
+def _asegurar_bot_en_sala(cfg: dict, room_id: str) -> None:
+    """`/join` idempotente antes de operar sobre una sala propia.
+
+    El servidor Vocem saca al bot creador tras `createRoom` (`membership: leave`),
+    así que cualquier `invite` o `send` posterior devolvería 403. La sala nace
+    `public_chat`, con lo cual `join` vuelve a meter al bot sin invitación. Si
+    el bot ya está dentro, Matrix responde 200 y sigue. Fallo silencioso: la
+    llamada posterior ya reporta el error con su propio detalle.
+    """
+    try:
+        _llamar(cfg, "POST", f"/_matrix/client/v3/join/{quote(room_id, safe='')}", {})
+    except VocemError as exc:
+        logger.info("No se pudo (re)entrar a la sala %s: %s", room_id, exc)
+
+
 def invitar(db: Session, tenant_id: int, room_id: str, cuentas: list[str] | None = None) -> list[str]:
     """Avisa a la gente de la sesión: invitación (con push) y mensaje `@room` con el enlace.
 
@@ -305,6 +320,9 @@ def invitar(db: Session, tenant_id: int, room_id: str, cuentas: list[str] | None
     cfg = cargar(db, tenant_id)
     if not configurada(db, tenant_id):
         return []
+    # El bot pudo haber sido sacado de la sala tras crearla; nos aseguramos de entrar
+    # antes de invitar y mandar el aviso — si no, `invite`/`send` devuelven 403.
+    _asegurar_bot_en_sala(cfg, room_id)
     cuentas = cuentas if cuentas else cuentas_de_usuarios(db, tenant_id, cfg)
     hechas = []
     for cuenta in cuentas:

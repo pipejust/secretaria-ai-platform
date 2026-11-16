@@ -274,3 +274,43 @@ def test_enlace_reunion_error_viaja_como_http_422_con_error_code(db_session, emp
     err = vocem.EnlaceReunionError("sala_cifrada")
     assert err.status_code == 422
     assert err.detail == {"error_code": "sala_cifrada", "message": vocem.MENSAJES_ERROR["sala_cifrada"]}
+
+
+def test_invitar_hace_join_idempotente_antes_de_invite_y_send(db_session, empresa, monkeypatch):
+    """Vocem saca al bot creador tras createRoom (membership: leave). Si no re-entra,
+    `invite`/`send` devuelven 403 y la sesión se queda sin aviso. El fallback hace
+    `/join` idempotente (sala `public_chat`, entra sin invitación)."""
+    vocem.guardar(db_session, empresa.id, {
+        "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+    llamadas = []
+
+    def falso(method, url, json=None, timeout=None, headers=None):
+        llamadas.append((method, url.split("/_matrix/client/v3", 1)[1]))
+        cuerpo = {"name": "Comité"} if url.endswith("/state/m.room.name/") else {}
+        return httpx.Response(200, json=cuerpo, request=httpx.Request(method, url))
+    monkeypatch.setattr(vocem.httpx, "request", falso)
+
+    vocem.invitar(db_session, empresa.id, "!sala", ["@ana:softnexus.co"])
+    # Primera llamada tiene que ser /join a esa sala; luego vienen invite y send.
+    assert llamadas[0] == ("POST", "/join/%21sala")
+    assert any(p.endswith("/invite") for _, p in llamadas[1:])
+    assert any("/send/m.room.message/" in p for _, p in llamadas[1:])
+
+
+def test_invitar_sigue_aunque_el_join_falle(db_session, empresa, monkeypatch, caplog):
+    """Si `/join` devuelve error (sala no existe, 403, red caída), `invitar` loguea
+    y sigue — la llamada posterior fallará con su propio motivo y se verá en logs."""
+    vocem.guardar(db_session, empresa.id, {
+        "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
+
+    def falso(method, url, json=None, timeout=None, headers=None):
+        if "/join/" in url:
+            return httpx.Response(403, json={"errcode": "M_FORBIDDEN"}, request=httpx.Request(method, url))
+        return httpx.Response(200, json={}, request=httpx.Request(method, url))
+    monkeypatch.setattr(vocem.httpx, "request", falso)
+
+    # No lanza: se queda silencioso y procede.
+    hechas = vocem.invitar(db_session, empresa.id, "!sala", ["@ana:softnexus.co"])
+    assert hechas == ["@ana:softnexus.co"]
