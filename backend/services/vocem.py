@@ -150,6 +150,22 @@ def _por_nombre(cfg: dict, nombre: str, servidor: str) -> str | None:
     return iguales[0] if len(iguales) == 1 else None
 
 
+def _resolver_cuentas(usuarios, cfg: dict, servidor: str) -> list[str]:
+    """Para cada usuario, intenta mapa correo→cuenta → parte local del correo → directorio.
+    Devuelve las cuentas Matrix únicas (sin la del bot) ordenadas."""
+    mapa = cfg.get("cuentas") or {}
+    cuentas: list[str] = []
+    for u in usuarios:
+        local = (u.email or "").split("@")[0].strip().lower()
+        candidato = f"@{local}:{servidor}" if local else None
+        cuenta = mapa.get((u.email or "").strip().lower())
+        if not cuenta:
+            cuenta = candidato if candidato and _existe(cfg, candidato) else _por_nombre(cfg, u.full_name or "", servidor)
+        if cuenta and cuenta != cfg["user_id"] and cuenta not in cuentas:
+            cuentas.append(cuenta)
+    return sorted(cuentas)
+
+
 def cuentas_de_usuarios(db: Session, tenant_id: int, cfg: dict) -> list[str]:
     """Cuentas Matrix de los usuarios activos de la empresa que existen en el servidor.
 
@@ -165,17 +181,27 @@ def cuentas_de_usuarios(db: Session, tenant_id: int, cfg: dict) -> list[str]:
     if not servidor:
         return []
     usuarios = db.exec(select(User).where(User.tenant_id == tenant_id, User.is_active == True)).all()  # noqa: E712
-    mapa = cfg.get("cuentas") or {}
-    cuentas: list[str] = []
-    for u in usuarios:
-        local = (u.email or "").split("@")[0].strip().lower()
-        candidato = f"@{local}:{servidor}" if local else None
-        cuenta = mapa.get((u.email or "").strip().lower())
-        if not cuenta:
-            cuenta = candidato if candidato and _existe(cfg, candidato) else _por_nombre(cfg, u.full_name or "", servidor)
-        if cuenta and cuenta != cfg["user_id"] and cuenta not in cuentas:
-            cuentas.append(cuenta)
-    return sorted(cuentas)
+    return _resolver_cuentas(usuarios, cfg, servidor)
+
+
+def cuentas_admin(db: Session, tenant_id: int, cfg: dict) -> list[str]:
+    """Cuentas Matrix de los administradores activos de la empresa.
+
+    Para darles `power_level: 50` en las salas de sesión y así poder expulsar al bot
+    si alguna vez hace falta. Hoy en las salas sólo el organizador puede hacer `kick`;
+    si no está disponible, nadie más puede intervenir.
+    """
+    from models import Role, User
+
+    servidor = servidor_de(cfg)
+    if not servidor:
+        return []
+    admins = db.exec(
+        select(User)
+        .join(Role, User.role_id == Role.id)
+        .where(User.tenant_id == tenant_id, User.is_active == True, Role.name == "admin")  # noqa: E712
+    ).all()
+    return _resolver_cuentas(admins, cfg, servidor)
 
 
 def cuenta_del_organizador(db: Session, tenant_id: int, owner_id: int) -> str:
@@ -208,6 +234,12 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
     if not organizador or not organizador.startswith("@") or not organizador.endswith(":" + servidor_de(cfg)) or organizador == cfg["user_id"]:
         raise VocemError("Indica la cuenta Vocem del organizador humano.")
     explicitos = [u for u in (invitados or []) if u.startswith("@") and ":" in u and u != cfg["user_id"]]
+    # Admins de la empresa con PL 50 además del organizador: así alguien con rol
+    # administrativo puede expulsar al bot de la sala si hace falta (hoy sólo el
+    # organizador tiene kick). Vocem advierte: no repetir en `additional_creators`.
+    users_pls = {organizador: 50}
+    for cuenta in cuentas_admin(db, tenant_id, cfg):
+        users_pls.setdefault(cuenta, 50)
     cuerpo = {
         "name": titulo.strip()[:200] or "Reunión",
         "preset": "public_chat",
@@ -217,7 +249,7 @@ def crear_sala(db: Session, tenant_id: int, titulo: str, invitados: list[str] | 
         # Element Call exige que cada participante publique su propio estado de
         # llamada; con el nivel por defecto (50) entran y se caen («Connection lost»).
         "power_level_content_override": {
-            "users": {organizador: 50},
+            "users": users_pls,
             "users_default": 0, "kick": 50, "ban": 50,
             "events": {"m.rtc.member": 0, "org.matrix.msc3401.call.member": 0,
                        "io.element.video.member": 0, "co.vocem.session": 100}
