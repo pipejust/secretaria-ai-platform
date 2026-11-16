@@ -83,6 +83,10 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE meetingsession ADD COLUMN auto_dispatch_warning_at TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE meetingsession ADD COLUMN auto_dispatch_blocked_reason TEXT NOT NULL DEFAULT ''",
             "ALTER TABLE meetingsession ADD COLUMN session_ready_email_sent_at TEXT NOT NULL DEFAULT ''",
+            # Horas reales de la reunión (fase B del contrato con Altum, 2026-11-16).
+            # Nullable: históricas quedan en NULL; Fireflies y bot propio las pueblan.
+            "ALTER TABLE meetingsession ADD COLUMN started_at TEXT",
+            "ALTER TABLE meetingsession ADD COLUMN ended_at TEXT",
             'ALTER TABLE project ADD COLUMN auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN auto_dispatch_timeout_hours REAL',
             'ALTER TABLE project ADD COLUMN owner_user_id INTEGER REFERENCES "user"(id)',

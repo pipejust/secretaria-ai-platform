@@ -437,6 +437,13 @@ class MeetingSession(SQLModel, table=True):
         description="'auto' | 'openai' | 'groq'",
     )
 
+    # Horas reales de la reunión (no las programadas). Nullable: una sesión
+    # subida por texto no las tiene; una de Fireflies las infiere del archivo;
+    # una grabada por el bot propio las trae del evento de ingesta. ISO 8601.
+    # Si falta alguna, `duration_min` cae a la estimación por palabras.
+    started_at: Optional[str] = Field(default=None, description="ISO, inicio real de la reunión")
+    ended_at: Optional[str] = Field(default=None, description="ISO, fin real de la reunión")
+
     # Vídeo de la reunión copiado a nuestro bucket (S3 compatible) desde la
     # grabación del bot propio: clave del objeto, p. ej.
     # `tenants/1/sessions/9/recording.mp4`. NULL = sin vídeo (solo audio,

@@ -234,12 +234,19 @@ def list_sessions(
     updated_since: Optional[str] = None,
     status_filter: Optional[str] = Query(None, alias="status"),
     search: Optional[str] = None,
+    desde: Optional[str] = Query(None, description="ISO date; MeetingSession.date >= desde"),
+    hasta: Optional[str] = Query(None, description="ISO date; MeetingSession.date <= hasta"),
+    participant: Optional[str] = Query(None, description="Correo o employee_external_id"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=MAX_LIMIT),
     db: Session = Depends(get_session),
     ctx: IntegrationContext = Depends(require_scopes("sessions:read")),
 ):
     """Reuniones visibles para el empleado (proyectos donde es miembro)."""
+    from services.sessions_api import (
+        duration_min_from, ilike_pattern_para_correo,
+        resolver_correos_de_participante,
+    )
     q = select(MeetingSession).where(MeetingSession.tenant_id == ctx.tenant.id)
 
     if ctx.on_behalf_of:
@@ -258,6 +265,16 @@ def list_sessions(
         q = q.where(MeetingSession.title.ilike(f"%{search}%"))
     if updated_since:
         q = q.where(MeetingSession.created_at >= updated_since)
+    if desde:
+        q = q.where(MeetingSession.date >= desde)
+    if hasta:
+        q = q.where(MeetingSession.date <= hasta)
+    if participant:
+        correos = resolver_correos_de_participante(db, ctx.tenant.id, participant)
+        if not correos:
+            return _paginar([], page, limit)
+        patrones = [MeetingSession.processed_attendees.ilike(ilike_pattern_para_correo(c)) for c in correos]
+        q = q.where(or_(*patrones))
 
     rows = db.exec(q.order_by(MeetingSession.id.desc())).all()
     total = len(rows)
@@ -276,10 +293,18 @@ def list_sessions(
         # presente como medida — su interfaz decide si la pinta o no.
         ff = (s.fireflies_id or "").upper()
         palabras = len((s.raw_transcript or "").split())
+        # Duración real (started_at + ended_at pobladas por Fireflies o bot propio)
+        # tiene precedencia sobre la estimación por palabras a 150 wpm.
+        duracion_real = duration_min_from(s.started_at, s.ended_at)
+        duracion_final = duracion_real if duracion_real is not None else (
+            max(1, round(palabras / 150)) if palabras else None
+        )
         items.append({
             "id": s.id,
             "title": s.title or "",
             "date": s.date,
+            "started_at": s.started_at,
+            "ended_at": s.ended_at,
             "project_external_id": proj_refs.get(s.project_id) if s.project_id else None,
             "status": s.status,
             "language": s.language or None,
@@ -288,10 +313,10 @@ def list_sessions(
                 else "bot" if ff.startswith("BOT-")
                 else "web"
             ),
-            "duration_min": max(1, round(palabras / 150)) if palabras else None,
+            "duration_min": duracion_final,
             # Hay grabación de vídeo guardada: se pide en /sessions/{id}/video.
             "has_video": bool(s.recording_video_key),
-            "duration_is_estimate": True,
+            "duration_is_estimate": duracion_real is None and duracion_final is not None,
             "counts": {"tasks": n_tasks},
         })
     sobre = _paginar(rows, page, limit)
@@ -311,20 +336,27 @@ def get_session_detail(
     if ctx.on_behalf_of and s.project_id not in ctx.visible_project_ids:
         raise HTTPException(404, "Sesión no encontrada.")
 
+    from services.sessions_api import enriquecer_asistentes, leer_asistentes_de_sesion
     proj_refs = _project_ref_map(db, ctx.tenant.id)
     tasks = db.exec(select(ActionItem).where(ActionItem.session_id == s.id)).all()
     sp = {s.id: s.project_id}
 
-    import json as _json
-    try:
-        attendees = _json.loads(s.processed_attendees or "[]")
-    except Exception:
-        attendees = []
+    attendees = enriquecer_asistentes(db, ctx.tenant.id, leer_asistentes_de_sesion(s))
 
+    from services.sessions_api import duration_min_from as _dmf
+    _palabras = len((s.raw_transcript or "").split())
+    _dur_real = _dmf(s.started_at, s.ended_at)
+    _dur_final = _dur_real if _dur_real is not None else (
+        max(1, round(_palabras / 150)) if _palabras else None
+    )
     return {
         "id": s.id,
         "title": s.title or "",
         "date": s.date,
+        "started_at": s.started_at,
+        "ended_at": s.ended_at,
+        "duration_min": _dur_final,
+        "duration_is_estimate": _dur_real is None and _dur_final is not None,
         "project_external_id": proj_refs.get(s.project_id) if s.project_id else None,
         "status": s.status,
         "has_video": bool(s.recording_video_key),
