@@ -75,13 +75,10 @@ def test_crear_sala_sin_cifrado_cerrada_al_servidor(db_session, empresa, monkeyp
     # Solo invitados explícitos (sin el bot ni ids inválidos); a nadie más le aparece la llamada en el chat.
     assert enviado["body"]["invite"] == ["@ana:softnexus.co", "@felipe:softnexus.co"]
     assert enviado["body"]["power_level_content_override"]["users"]["@felipe:softnexus.co"] == 50
-    # Admins de la empresa también obtienen PL 50 (hoy todos los usuarios activos del
-    # test son admin), para poder expulsar al bot si hace falta.
-    assert enviado["body"]["power_level_content_override"]["users"] == {
-        "@felipe:softnexus.co": 50,
-        "@ana:softnexus.co": 50,
-        "@danny:softnexus.co": 50,
-    }
+    # Al momento de crear_sala el mapa `cuentas` está vacío, así que sólo el
+    # organizador queda con PL 50. Vocem es la fuente de verdad: si hay admins,
+    # sus cuentas vienen del mapa `cuentas`, no del rol en la DB de Acten.
+    assert enviado["body"]["power_level_content_override"]["users"] == {"@felipe:softnexus.co": 50}
     # La resolución de cuentas sigue disponible para quien la pida explícitamente.
     assert vocem.cuentas_de_usuarios(db_session, empresa.id, vocem.cargar(db_session, empresa.id)) == [
         "@ana:softnexus.co", "@danny:softnexus.co", "@felipe:softnexus.co"]
@@ -135,44 +132,31 @@ def test_las_invitaciones_salen_a_la_hora_de_la_sesion(db_session, empresa, monk
     assert vocem.enviar_invitaciones_pendientes(db_session) == 0
 
 
-def test_crear_sala_no_da_pl50_a_usuarios_sin_rol_admin(db_session, empresa, monkeypatch):
-    """Sólo admins activos de la empresa quedan con PL 50 junto al organizador.
-    Un usuario con otro rol (o sin rol) no tiene permiso para expulsar al bot."""
-    from auth_utils import get_password_hash
-    from models import Role, User
-
+def test_crear_sala_toma_admins_del_mapa_cuentas_de_vocem(db_session, empresa, monkeypatch):
+    """Los administradores con PL 50 vienen del mapa `cuentas` de la config de Vocem,
+    no del rol en la DB de Acten ni de inferencias por dominio de correo. Vocem es
+    la fuente de verdad: Vocem avisa si la lista cambia."""
     vocem.guardar(db_session, empresa.id, {
         "homeserver": "https://matrix.softnexus.co", "user_id": "@integraciones:softnexus.co",
-        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok"})
-    rol_admin = db_session.exec(select(Role).where(Role.name == "admin")).first() or Role(name="admin")
-    rol_viewer = db_session.exec(select(Role).where(Role.name == "viewer")).first() or Role(name="viewer")
-    db_session.add_all([rol_admin, rol_viewer]); db_session.commit()
-    db_session.refresh(rol_admin); db_session.refresh(rol_viewer)
-    db_session.add(User(email="felipe@acme.co", full_name="Felipe", hashed_password=get_password_hash("x"),
-                        role_id=rol_admin.id, tenant_id=empresa.id, is_active=True))
-    db_session.add(User(email="pepe@acme.co", full_name="Pepe", hashed_password=get_password_hash("x"),
-                        role_id=rol_viewer.id, tenant_id=empresa.id, is_active=True))
-    db_session.add(User(email="luisa@acme.co", full_name="Luisa", hashed_password=get_password_hash("x"),
-                        role_id=None, tenant_id=empresa.id, is_active=True))
-    db_session.commit()
+        "call_base_url": "https://call.vocem.softnexus.co", "access_token": "tok",
+        "cuentas": {
+            "felipe@softnexus.co": "@felipe:softnexus.co",
+            "luisa@softnexus.co": "@luisa:softnexus.co",
+            # Estas entradas no deben producir PL 50:
+            "sinvalor@softnexus.co": "",
+            "bot@softnexus.co": "@integraciones:softnexus.co",  # es el user_id del bot
+        }})
     enviado = {}
 
     def falso(method, url, json=None, timeout=None, headers=None):
-        if "/profile/" in url:
-            return httpx.Response(200, json={}, request=httpx.Request(method, url))
-        if url.endswith("/user_directory/search"):
-            return httpx.Response(200, json={"results": [], "limited": False}, request=httpx.Request(method, url))
         if url.endswith("/createRoom"):
             enviado.update(body=json)
         return httpx.Response(200, json={"room_id": "!r"}, request=httpx.Request(method, url))
     monkeypatch.setattr(vocem.httpx, "request", falso)
     vocem.crear_sala(db_session, empresa.id, "s", organizador="@felipe:softnexus.co")
     users_pls = enviado["body"]["power_level_content_override"]["users"]
-    # Organizador y admin (felipe es ambos).
-    assert users_pls == {"@felipe:softnexus.co": 50}
-    # Ni pepe (viewer) ni luisa (sin rol) tienen PL 50.
-    assert "@pepe:softnexus.co" not in users_pls
-    assert "@luisa:softnexus.co" not in users_pls
+    # Organizador + cuentas Matrix del mapa (filtrando el user_id del bot y vacíos).
+    assert users_pls == {"@felipe:softnexus.co": 50, "@luisa:softnexus.co": 50}
 
 
 def test_crear_sala_rechaza_organizador_tecnico_o_ausente(db_session, empresa, monkeypatch):

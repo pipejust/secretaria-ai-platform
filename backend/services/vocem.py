@@ -185,23 +185,18 @@ def cuentas_de_usuarios(db: Session, tenant_id: int, cfg: dict) -> list[str]:
 
 
 def cuentas_admin(db: Session, tenant_id: int, cfg: dict) -> list[str]:
-    """Cuentas Matrix de los administradores activos de la empresa.
+    """Cuentas Matrix autorizadas como administradores de la sala.
 
-    Para darles `power_level: 50` en las salas de sesión y así poder expulsar al bot
-    si alguna vez hace falta. Hoy en las salas sólo el organizador puede hacer `kick`;
-    si no está disponible, nadie más puede intervenir.
+    Vocem pide la lista explícita del mapa `cuentas` de la config (correo → cuenta
+    Matrix), no una inferencia por rol o por dominio del correo: cada entrada del
+    mapa es una cuenta administrativa en su servidor. Si cambia, Vocem avisa.
+
+    `db` y `tenant_id` se mantienen en la signatura por consistencia con
+    `cuentas_de_usuarios`, aunque la implementación actual sólo lee la config.
     """
-    from models import Role, User
-
-    servidor = servidor_de(cfg)
-    if not servidor:
-        return []
-    admins = db.exec(
-        select(User)
-        .join(Role, User.role_id == Role.id)
-        .where(User.tenant_id == tenant_id, User.is_active == True, Role.name == "admin")  # noqa: E712
-    ).all()
-    return _resolver_cuentas(admins, cfg, servidor)
+    mapa = cfg.get("cuentas") or {}
+    cuentas = {v.strip() for v in mapa.values() if v and v.strip() and v.strip() != cfg.get("user_id")}
+    return sorted(cuentas)
 
 
 def cuenta_del_organizador(db: Session, tenant_id: int, owner_id: int) -> str:
