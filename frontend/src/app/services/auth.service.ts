@@ -36,7 +36,7 @@ export class AuthService {
         return this.currentUserSubject.value;
     }
 
-    login(email: string, password: string, tenantSlug?: string): Observable<any> {
+    login(email: string, password: string, tenantSlug?: string, turnstileToken?: string): Observable<any> {
         // Multi-tenant: el slug se manda en el body (canónico) y también queda
         // como header gracias al tenantInterceptor. El backend usa el del body
         // si viene, sino cae al header, sino al default ('acten').
@@ -47,7 +47,9 @@ export class AuthService {
             tenant_slug: slug,
         };
 
-        const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+        const headersInit: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (turnstileToken) headersInit['cf-turnstile-token'] = turnstileToken;
+        const headers = new HttpHeaders(headersInit);
 
         return this.http.post<any>(`${this.apiUrl}/login`, body, { headers })
             .pipe(
@@ -69,13 +71,16 @@ export class AuthService {
     }
 
     /** Completa el login cuando el backend pidió 2FA. */
-    verifyLogin2FA(email: string, code: string, tenantSlug?: string): Observable<any> {
+    verifyLogin2FA(email: string, code: string, tenantSlug?: string, turnstileToken?: string): Observable<any> {
         const slug = tenantSlug || this.tenants.slug();
+        const headers = new HttpHeaders(
+            turnstileToken ? { 'cf-turnstile-token': turnstileToken } : {}
+        );
         return this.http.post<any>(`${this.apiUrl}/login/2fa-verify`, {
             username: email,
             code,
             tenant_slug: slug,
-        }).pipe(
+        }, { headers }).pipe(
             tap((response) => {
                 if (response?.access_token) {
                     localStorage.setItem('access_token', response.access_token);

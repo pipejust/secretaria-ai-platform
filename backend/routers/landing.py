@@ -28,6 +28,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, validator
 from sqlmodel import Session, select
 
+from services.turnstile import ACTION_CONTACT, dep_turnstile
+
 from database import DEFAULT_TENANT_SLUG, get_session
 from models import Tenant, User
 from routers.auth import get_current_tenant, require_admin
@@ -435,7 +437,7 @@ def _render_contact_email_html(
         )
 
 
-@public_router.post("/landing/contact")
+@public_router.post("/landing/contact", dependencies=[Depends(dep_turnstile(ACTION_CONTACT))])
 async def submit_contact_form(
     payload: ContactSubmission,
     request: Request,

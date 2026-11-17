@@ -761,10 +761,12 @@
             <textarea id="al-msg" name="message" rows="4" required [(ngModel)]="contactForm.message"></textarea>
           </div>
 
+          <app-turnstile #tsContact action="contact" (tokenChange)="contactTurnstileToken=$event"></app-turnstile>
+
           <div class="al-contact__submit">
             <button type="submit"
                     class="al-btn al-btn--primary al-btn--lg"
-                    [disabled]="contactLoading">
+                    [disabled]="contactLoading || !contactTurnstileToken">
               <ng-container *ngIf="!contactLoading; else sendingTpl">
                 <span>{{ c.contact.form_cta_label }}</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
