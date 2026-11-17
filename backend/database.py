@@ -136,6 +136,9 @@ def _apply_lightweight_migrations() -> None:
             "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS auto_dispatch_warning_at VARCHAR(64) NOT NULL DEFAULT ''",
             "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS auto_dispatch_blocked_reason VARCHAR(64) NOT NULL DEFAULT ''",
             "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS session_ready_email_sent_at VARCHAR(64) NOT NULL DEFAULT ''",
+            # Horas reales de la reunión (PR #14): se reportan como ISO en GET /sessions.
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS started_at TEXT",
+            "ALTER TABLE meetingsession ADD COLUMN IF NOT EXISTS ended_at TEXT",
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_enabled BOOLEAN',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS auto_dispatch_timeout_hours DOUBLE PRECISION',
             'ALTER TABLE project ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES "user"(id)',
