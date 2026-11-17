@@ -20,9 +20,13 @@ from database import DEFAULT_TENANT_SLUG, get_session
 from datetime import datetime
 from models import Role, RoleActivity, RolePermission, Tenant, User
 from services.turnstile import (
+    ACTION_AVATAR_UPLOAD,
+    ACTION_CHANGE_PASSWORD,
     ACTION_FORGOT_PASSWORD,
     ACTION_LOGIN,
     ACTION_LOGIN_2FA,
+    ACTION_REGISTER_ADMIN,
+    ACTION_RESEND_INVITATION,
     ACTION_RESET_PASSWORD,
     dep_turnstile,
 )
@@ -489,7 +493,7 @@ def _validate_email_matches_tenant_domain(
         )
 
 
-@router.post("/register/admin-only")
+@router.post("/register/admin-only", dependencies=[Depends(dep_turnstile(ACTION_REGISTER_ADMIN))])
 def register_user(
     user_in: UserCreate,
     background_tasks: BackgroundTasks,
@@ -579,7 +583,7 @@ class ChangePasswordPayload(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
-@router.post("/me/change-password")
+@router.post("/me/change-password", dependencies=[Depends(dep_turnstile(ACTION_CHANGE_PASSWORD))])
 def change_password(
     payload: ChangePasswordPayload,
     db: Session = Depends(get_session),
@@ -620,7 +624,7 @@ def change_password(
 # Admin reenvía para usuarios de SU tenant; super-admin reenvía para
 # cualquier admin de cualquier tenant (endpoint en routers/tenants.py).
 # ─────────────────────────────────────────────────────────────────────────
-@router.post("/users/{user_id}/resend-invitation")
+@router.post("/users/{user_id}/resend-invitation", dependencies=[Depends(dep_turnstile(ACTION_RESEND_INVITATION))])
 def resend_invitation(
     user_id: int,
     background_tasks: BackgroundTasks,
@@ -941,7 +945,7 @@ AVATAR_ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp"}
 AVATAR_ALLOWED_EXT = {"png", "jpg", "jpeg", "webp"}
 
 
-@router.post("/me/avatar")
+@router.post("/me/avatar", dependencies=[Depends(dep_turnstile(ACTION_AVATAR_UPLOAD))])
 async def upload_avatar(
     file: UploadFile = File(...),
     db: Session = Depends(get_session),
@@ -1095,7 +1099,7 @@ class PasswordChangeRequest(BaseModel):
     new_password: str
 
 
-@router.put("/password")
+@router.put("/password", dependencies=[Depends(dep_turnstile(ACTION_CHANGE_PASSWORD))])
 def change_password(
     pass_req: PasswordChangeRequest,
     db: Session = Depends(get_session),

@@ -8,6 +8,7 @@ from services.entitlements import require_feature
 from date_utils import is_valid_due_date, normalize_due_date
 from config import settings
 from routers.auth import get_current_tenant, get_current_user, require_admin, require_session_writer
+from services.turnstile import ACTION_DISPATCH_EMAILS, ACTION_DISPATCH_PLATFORMS, ACTION_SESSION_UPLOAD, dep_turnstile
 import uuid
 import os
 import io
@@ -1246,7 +1247,7 @@ MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 AUDIO_EXTENSIONS = ('.mp3', '.wav', '.m4a', '.mp4', '.mpeg', '.mpga', '.webm', '.flac', '.ogg')
 
 
-@router.post("/upload")
+@router.post("/upload", dependencies=[Depends(dep_turnstile(ACTION_SESSION_UPLOAD))])
 async def upload_manual_session(
     title: str = Form(...),
     date: Optional[str] = Form(None),
@@ -1502,7 +1503,7 @@ def generate_word_document_bytes(session_obj, action_items, db: Session) -> io.B
     generator = CorporateDocxGenerator(data)
     return generator.generar_buffer()
 
-@router.post("/{session_id}/dispatch_emails")
+@router.post("/{session_id}/dispatch_emails", dependencies=[Depends(dep_turnstile(ACTION_DISPATCH_EMAILS))])
 async def dispatch_emails(
     session_id: int,
     request: DispatchEmailsRequest,
@@ -1753,7 +1754,7 @@ async def dispatch_emails(
 class DispatchPlatformsRequest(BaseModel):
     action_item_ids: list[int]
 
-@router.post("/{session_id}/dispatch_platforms")
+@router.post("/{session_id}/dispatch_platforms", dependencies=[Depends(dep_turnstile(ACTION_DISPATCH_PLATFORMS))])
 async def dispatch_platforms(
     session_id: int,
     request: DispatchPlatformsRequest,

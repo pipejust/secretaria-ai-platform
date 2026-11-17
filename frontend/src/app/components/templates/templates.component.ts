@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../services/auth.service';
+import { TurnstileDialogService } from '../../shared/turnstile/turnstile-dialog.service';
 import { environment } from '../../../environments/environment';
 
 type DetailTab = 'preview' | 'details' | 'history';
@@ -280,6 +281,7 @@ export class TemplatesComponent implements OnInit {
 
     showConfigurator = false;
     isTraditionalConfigurator = false;
+    private readonly turnstileDialog = inject(TurnstileDialogService);
 
     constructor(
         private http: HttpClient,
@@ -676,11 +678,19 @@ export class TemplatesComponent implements OnInit {
             ? `${environment.apiUrl}/templates/${this.editingTemplateId}`
             : `${environment.apiUrl}/templates/upload`;
 
-        const requestBase = this.editingTemplateId
-            ? this.http.put<any>(url, formData, { headers: this.authService.getAuthHeaders() })
-            : this.http.post<any>(url, formData, { headers: this.authService.getAuthHeaders() });
+        // Solo la ruta POST /templates/upload exige Turnstile; el PUT /templates/{id}
+        // no está entre los protegidos todavía.
+        const tokenPromise = this.editingTemplateId
+            ? Promise.resolve('')
+            : this.turnstileDialog.verify('template_upload');
 
-        requestBase.subscribe({
+        tokenPromise.then((token) => {
+            const headers = this.authService.getAuthHeaders(token || undefined);
+            const requestBase = this.editingTemplateId
+                ? this.http.put<any>(url, formData, { headers })
+                : this.http.post<any>(url, formData, { headers });
+
+            requestBase.subscribe({
             next: (res) => {
                 const newId = this.editingTemplateId || res.template_id;
                 this.lastUploadedTemplateId = newId;
@@ -731,6 +741,9 @@ export class TemplatesComponent implements OnInit {
                 this.errorMsg = err.error?.detail || this.translate.instant('templates.msg_save_failed');
                 this.isUploading = false;
             }
+        });
+        }).catch(() => {
+            this.isUploading = false;
         });
     }
 

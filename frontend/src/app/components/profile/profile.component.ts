@@ -11,6 +11,7 @@ import { NotificationService } from '../../services/notification.service';
 import { PreferencesService } from '../../services/preferences.service';
 import { PasswordInputComponent } from '../shared/password-input/password-input.component';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { TurnstileDialogService } from '../../shared/turnstile/turnstile-dialog.service';
 import { environment } from '../../../environments/environment';
 
 interface ActivityEntry {
@@ -61,6 +62,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     private readonly router = inject(Router);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly translate = inject(TranslateService);
+    private readonly turnstileDialog = inject(TurnstileDialogService);
 
     @ViewChild('avatarInput') avatarInput?: ElementRef<HTMLInputElement>;
 
@@ -348,21 +350,26 @@ export class ProfileComponent implements OnInit, OnDestroy {
             return;
         }
         this.isUploadingAvatar = true;
-        this.authService.uploadAvatar(file)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-                next: () => {
-                    this.isUploadingAvatar = false;
-                    this.toast.success(this.translate.instant('profile.toast_avatar_updated'));
-                    this.refreshActivity();
-                    this.cdr.detectChanges();
-                },
-                error: (err) => {
-                    this.isUploadingAvatar = false;
-                    this.toast.error(err?.error?.detail || this.translate.instant('profile.toast_avatar_upload_error'));
-                    this.cdr.detectChanges();
-                },
-            });
+        this.turnstileDialog.verify('avatar_upload').then((token) => {
+            this.authService.uploadAvatar(file, token)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                    next: () => {
+                        this.isUploadingAvatar = false;
+                        this.toast.success(this.translate.instant('profile.toast_avatar_updated'));
+                        this.refreshActivity();
+                        this.cdr.detectChanges();
+                    },
+                    error: (err) => {
+                        this.isUploadingAvatar = false;
+                        this.toast.error(err?.error?.detail || this.translate.instant('profile.toast_avatar_upload_error'));
+                        this.cdr.detectChanges();
+                    },
+                });
+        }).catch(() => {
+            this.isUploadingAvatar = false;
+            this.cdr.detectChanges();
+        });
     }
 
     removeAvatar(): void {
@@ -402,25 +409,30 @@ export class ProfileComponent implements OnInit, OnDestroy {
             return;
         }
         this.isChangingPassword = true;
-        this.authService.changePassword(this.pwd.current, this.pwd.new)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-                next: (res) => {
-                    this.msg = res?.msg || this.translate.instant('profile.pwd_updated');
-                    this.isError = false;
-                    this.pwd = { current: '', new: '', confirm: '' };
-                    this.isChangingPassword = false;
-                    this.toast.success(this.translate.instant('profile.toast_pwd_updated'));
-                    this.refreshActivity();
-                    this.cdr.detectChanges();
-                },
-                error: (err) => {
-                    this.isError = true;
-                    this.msg = err?.error?.detail || this.translate.instant('profile.pwd_update_error');
-                    this.isChangingPassword = false;
-                    this.cdr.detectChanges();
-                },
-            });
+        this.turnstileDialog.verify('change_password').then((token) => {
+            this.authService.changePassword(this.pwd.current, this.pwd.new, token)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                    next: (res) => {
+                        this.msg = res?.msg || this.translate.instant('profile.pwd_updated');
+                        this.isError = false;
+                        this.pwd = { current: '', new: '', confirm: '' };
+                        this.isChangingPassword = false;
+                        this.toast.success(this.translate.instant('profile.toast_pwd_updated'));
+                        this.refreshActivity();
+                        this.cdr.detectChanges();
+                    },
+                    error: (err) => {
+                        this.isError = true;
+                        this.msg = err?.error?.detail || this.translate.instant('profile.pwd_update_error');
+                        this.isChangingPassword = false;
+                        this.cdr.detectChanges();
+                    },
+                });
+        }).catch(() => {
+            this.isChangingPassword = false;
+            this.cdr.detectChanges();
+        });
     }
 
     // ============================================================

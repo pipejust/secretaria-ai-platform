@@ -15,6 +15,7 @@ import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { BrandingService } from '../../services/branding.service';
 import { PasswordInputComponent } from '../shared/password-input/password-input.component';
+import { TurnstileDialogService } from '../../shared/turnstile/turnstile-dialog.service';
 
 @Component({
     selector: 'app-change-password',
@@ -134,6 +135,7 @@ export class ChangePasswordComponent {
     private router = inject(Router);
     private toast = inject(ToastService);
     private translate = inject(TranslateService);
+    private turnstileDialog = inject(TurnstileDialogService);
     readonly branding = inject(BrandingService);
 
     newPassword = '';
@@ -154,18 +156,22 @@ export class ChangePasswordComponent {
             return;
         }
         this.isSubmitting = true;
-        // Modo forzado: NO mandamos current_password. El backend acepta porque
-        // el user llegó acá con must_change_password=true.
-        this.auth.changePasswordForced(pw).subscribe({
-            next: () => {
-                this.toast.success(this.translate.instant('change_password.success'));
-                this.router.navigate(['/admin/dashboard']);
-            },
-            error: (err) => {
-                this.isSubmitting = false;
-                this.errorMessage = err?.error?.detail
-                    || this.translate.instant('change_password.errors.generic');
-            },
+        this.turnstileDialog.verify('change_password').then((token) => {
+            // Modo forzado: NO mandamos current_password. El backend acepta porque
+            // el user llegó acá con must_change_password=true.
+            this.auth.changePasswordForced(pw, undefined, token).subscribe({
+                next: () => {
+                    this.toast.success(this.translate.instant('change_password.success'));
+                    this.router.navigate(['/admin/dashboard']);
+                },
+                error: (err) => {
+                    this.isSubmitting = false;
+                    this.errorMessage = err?.error?.detail
+                        || this.translate.instant('change_password.errors.generic');
+                },
+            });
+        }).catch(() => {
+            this.isSubmitting = false;
         });
     }
 }

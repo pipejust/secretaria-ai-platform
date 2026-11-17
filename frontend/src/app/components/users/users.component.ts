@@ -9,6 +9,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { BrandingService } from '../../services/branding.service';
+import { TurnstileDialogService } from '../../shared/turnstile/turnstile-dialog.service';
 import { PasswordInputComponent } from '../shared/password-input/password-input.component';
 import { environment } from '../../../environments/environment';
 
@@ -92,6 +93,7 @@ interface ActivityEntry {
 })
 export class UsersComponent implements OnInit, OnDestroy {
     private readonly branding = inject(BrandingService);
+    private readonly turnstileDialog = inject(TurnstileDialogService);
 
     /** SLD del dominio del tenant — derivado del company_website del branding.
      *  Vacío si el admin no configuró aún la página web. */
@@ -361,11 +363,12 @@ export class UsersComponent implements OnInit, OnDestroy {
         if (this.newUser.must_change_password) {
             delete payload.password;
         }
-        this.http.post<{ user_id: number; temporary_password?: string; must_change_password?: boolean }>(
+        this.turnstileDialog.verify('register_admin').then((token) => {
+          this.http.post<{ user_id: number; temporary_password?: string; must_change_password?: boolean }>(
             `${environment.apiUrl}/auth/register/admin-only`,
             payload,
-            { headers: this.authService.getAuthHeaders() },
-        ).pipe(takeUntil(this.destroy$))
+            { headers: this.authService.getAuthHeaders(token) },
+          ).pipe(takeUntil(this.destroy$))
         .subscribe({
             next: (res) => {
                 this.successMsg = res?.temporary_password
@@ -393,6 +396,10 @@ export class UsersComponent implements OnInit, OnDestroy {
                 this.isCreating = false;
                 this.cdr.detectChanges();
             },
+          });
+        }).catch(() => {
+            this.isCreating = false;
+            this.cdr.detectChanges();
         });
     }
 
@@ -416,10 +423,11 @@ export class UsersComponent implements OnInit, OnDestroy {
             confirmLabel: this.translate.instant('users.msg_resend_btn'),
             confirmVariant: 'warning',
             action: () => {
+              this.turnstileDialog.verify('resend_invitation').then((token) => {
                 this.http.post<{ temporary_password?: string }>(
                     `${environment.apiUrl}/auth/users/${user.id}/resend-invitation`,
                     {},
-                    { headers: this.authService.getAuthHeaders() },
+                    { headers: this.authService.getAuthHeaders(token) },
                 ).pipe(takeUntil(this.destroy$)).subscribe({
                     next: (res) => {
                         this.toast.success(
@@ -440,6 +448,7 @@ export class UsersComponent implements OnInit, OnDestroy {
                         this.toast.error(err?.error?.detail || this.translate.instant('users.msg_resend_failed_short'));
                     },
                 });
+              }).catch(() => { /* usuario canceló Turnstile */ });
             },
         });
     }

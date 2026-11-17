@@ -8,6 +8,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { TurnstileDialogService } from '../../shared/turnstile/turnstile-dialog.service';
 import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { UserChipComponent } from '../shared/user-chip/user-chip.component';
@@ -82,6 +83,7 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
 
     // ---------- Sesión en vivo (bot propio) ----------
     private readonly bot = inject(MeetingBotService);
+    private readonly turnstileDialog = inject(TurnstileDialogService);
     showNewMenu = false;
     showLiveModal = false;
     isJoining = false;
@@ -1045,25 +1047,27 @@ export class MeetingsListComponent implements OnInit, OnDestroy {
             formData.append('text_content', this.uploadForm.textContent);
         }
 
-        const headers = this.authService.getAuthHeaders();
-        this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers })
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-                next: () => {
-                    this.toast.success(this.translate.instant('meetings_list.toast_session_created'));
-                    this.showUploadModal = false;
-                    this.isUploading = false;
-                    this.loadSessions();
-                },
-                error: (err) => {
-                    this.toast.error(
-                        this.translate.instant('meetings_list.toast_session_upload_error', {
-                            detail: err?.error?.detail || err?.message || 'desconocido',
-                        }),
-                    );
-                    this.isUploading = false;
-                },
-            });
+        this.turnstileDialog.verify('session_upload').then((token) => {
+            const headers = this.authService.getAuthHeaders(token);
+            this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers })
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                    next: () => {
+                        this.toast.success(this.translate.instant('meetings_list.toast_session_created'));
+                        this.showUploadModal = false;
+                        this.isUploading = false;
+                        this.loadSessions();
+                    },
+                    error: (err) => {
+                        this.toast.error(
+                            this.translate.instant('meetings_list.toast_session_upload_error', {
+                                detail: err?.error?.detail || err?.message || 'desconocido',
+                            }),
+                        );
+                        this.isUploading = false;
+                    },
+                });
+        }).catch(() => { this.isUploading = false; });
     }
 
     generateActa(session: any, format: 'word' | 'pdf' = 'word', evt?: Event) {
