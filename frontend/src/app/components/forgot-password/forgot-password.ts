@@ -1,13 +1,14 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { BrandingService } from '../../services/branding.service';
 import { TenantService } from '../../services/tenant.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 
 /**
  * Forgot Password — réplica del layout split del login.
@@ -17,7 +18,7 @@ import { LanguageSelectorComponent } from '../shared/language-selector/language-
 @Component({
     selector: 'app-forgot-password',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent, TurnstileComponent],
     templateUrl: './forgot-password.html',
     styleUrl: './forgot-password.css',
 })
@@ -31,6 +32,10 @@ export class ForgotPassword implements OnInit {
     tenantSlug = 'acten';
     tenantLocked = false;
     showTenantField = false;
+
+    // Turnstile
+    turnstileToken = '';
+    @ViewChild('ts') ts?: TurnstileComponent;
 
     readonly branding = inject(BrandingService);
     private readonly tenants = inject(TenantService);
@@ -54,6 +59,10 @@ export class ForgotPassword implements OnInit {
 
     onSubmit() {
         if (!this.email) return;
+        if (!this.turnstileToken) {
+            this.errorMessage = 'Espera un momento a que la verificación de seguridad termine de cargar.';
+            return;
+        }
 
         this.isLoading = true;
         this.successMessage = '';
@@ -63,9 +72,10 @@ export class ForgotPassword implements OnInit {
             email: this.email,
             tenant_slug: this.tenantSlug || undefined,
         };
+        const headers = new HttpHeaders({ 'cf-turnstile-token': this.turnstileToken });
 
         this.http
-            .post<{ msg: string }>(`${environment.apiUrl}/auth/forgot-password`, payload)
+            .post<{ msg: string }>(`${environment.apiUrl}/auth/forgot-password`, payload, { headers })
             .subscribe({
                 next: (response) => {
                     this.isLoading = false;
@@ -76,13 +86,17 @@ export class ForgotPassword implements OnInit {
                 },
                 error: (err) => {
                     this.isLoading = false;
-                    if (err.status === 404) {
+                    this.ts?.reset();
+                    this.turnstileToken = '';
+                    const code = err?.error?.detail?.error_code;
+                    if (code === 'turnstile_required' || code === 'turnstile_failed' || code === 'turnstile_action_mismatch') {
+                        this.errorMessage = 'La verificación de seguridad no pasó. Inténtalo de nuevo.';
+                    } else if (err.status === 404) {
                         this.errorMessage = `La empresa "${this.tenantSlug}" no existe o está inactiva.`;
                     } else {
                         this.errorMessage =
                             'No pudimos procesar tu solicitud. Inténtalo de nuevo en unos minutos.';
                     }
-                    console.error('Forgot password error:', err);
                 },
             });
     }

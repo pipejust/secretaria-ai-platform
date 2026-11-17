@@ -349,9 +349,12 @@ export class LandingCmsService {
   }
 
   /** POST público — formulario de contacto del landing. */
-  async submitContact(payload: ContactSubmission): Promise<{ status: string }> {
+  async submitContact(payload: ContactSubmission, turnstileToken?: string): Promise<{ status: string }> {
+    const headers = new HttpHeaders(
+      turnstileToken ? { 'cf-turnstile-token': turnstileToken } : {}
+    );
     return firstValueFrom(
-      this.http.post<{ status: string }>(`${this.publicUrl}/contact`, payload),
+      this.http.post<{ status: string }>(`${this.publicUrl}/contact`, payload, { headers }),
     );
   }
 }

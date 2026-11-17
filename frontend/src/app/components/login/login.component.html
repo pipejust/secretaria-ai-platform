@@ -238,7 +238,9 @@
                         {{ errorMessage }}
                     </div>
 
-                    <button type="submit" class="btn-signin" [disabled]="!loginForm.form.valid || isLoading">
+                    <app-turnstile #tsLogin action="login" (tokenChange)="turnstileToken=$event"></app-turnstile>
+
+                    <button type="submit" class="btn-signin" [disabled]="!loginForm.form.valid || isLoading || !turnstileToken">
                         <span class="btn-signin-label" *ngIf="!isLoading">{{ 'common.login' | translate }}</span>
                         <span class="btn-signin-label" *ngIf="isLoading">{{ 'login.signing_in' | translate }}</span>
                         <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -275,7 +277,9 @@
 
                     <div class="error-banner" *ngIf="errorMessage" role="alert">{{ errorMessage }}</div>
 
-                    <button type="submit" class="btn-signin" [disabled]="isVerifying2FA || !code2FA">
+                    <app-turnstile #ts2fa action="login_2fa" (tokenChange)="turnstile2faToken=$event"></app-turnstile>
+
+                    <button type="submit" class="btn-signin" [disabled]="isVerifying2FA || !code2FA || !turnstile2faToken">
                         <span class="btn-signin-label">{{ (isVerifying2FA ? 'login.verifying' : 'login.verify_and_enter') | translate }}</span>
                     </button>
 

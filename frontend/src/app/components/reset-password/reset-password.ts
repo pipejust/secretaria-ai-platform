@@ -1,12 +1,13 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { BrandingService } from '../../services/branding.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 
 /**
  * Reset Password — réplica del layout split del login.
@@ -16,7 +17,7 @@ import { LanguageSelectorComponent } from '../shared/language-selector/language-
 @Component({
     selector: 'app-reset-password',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent, TurnstileComponent],
     templateUrl: './reset-password.html',
     styleUrl: './reset-password.css',
 })
@@ -25,6 +26,10 @@ export class ResetPassword implements OnInit {
     newPassword = '';
     confirmPassword = '';
     showPassword = false;
+
+    // Turnstile
+    turnstileToken = '';
+    @ViewChild('ts') ts?: TurnstileComponent;
 
     isLoading = false;
     successMessage = '';
@@ -88,14 +93,20 @@ export class ResetPassword implements OnInit {
             return;
         }
 
+        if (!this.turnstileToken) {
+            this.errorMessage = this.translate.instant('reset_password.errors.turnstile_pending');
+            return;
+        }
+
         this.isLoading = true;
         this.successMessage = '';
         this.errorMessage = '';
 
         const payload = { token: this.token, new_password: this.newPassword };
+        const headers = new HttpHeaders({ 'cf-turnstile-token': this.turnstileToken });
 
         this.http
-            .post<{ msg: string }>(`${environment.apiUrl}/auth/reset-password`, payload)
+            .post<{ msg: string }>(`${environment.apiUrl}/auth/reset-password`, payload, { headers })
             .subscribe({
                 next: (response) => {
                     this.isLoading = false;
@@ -109,10 +120,16 @@ export class ResetPassword implements OnInit {
                 },
                 error: (err) => {
                     this.isLoading = false;
-                    this.errorMessage =
-                        err.error?.detail ||
-                        this.translate.instant('reset_password.errors.expired_link');
-                    console.error('Reset password error:', err);
+                    this.ts?.reset();
+                    this.turnstileToken = '';
+                    const code = err?.error?.detail?.error_code;
+                    if (code === 'turnstile_required' || code === 'turnstile_failed' || code === 'turnstile_action_mismatch') {
+                        this.errorMessage = this.translate.instant('reset_password.errors.turnstile_failed');
+                    } else {
+                        this.errorMessage =
+                            err.error?.detail ||
+                            this.translate.instant('reset_password.errors.expired_link');
+                    }
                 },
             });
     }

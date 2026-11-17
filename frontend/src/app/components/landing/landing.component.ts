@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { LandingCmsService, LandingContent, ContactSubmission, TrustLogoItem, LandingPerson } from '../../services/landing-cms.service';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
 import { LanguageService } from '../../services/language.service';
+import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 import { effect } from '@angular/core';
 
 /**
@@ -27,7 +28,7 @@ import { effect } from '@angular/core';
 @Component({
     selector: 'app-landing',
     standalone: true,
-    imports: [CommonModule, FormsModule, HttpClientModule, LanguageSelectorComponent, TranslateModule],
+    imports: [CommonModule, FormsModule, HttpClientModule, LanguageSelectorComponent, TranslateModule, TurnstileComponent],
     templateUrl: './landing.component.html',
     styleUrls: ['./landing.component.css'],
 })
@@ -104,6 +105,8 @@ export class LandingComponent implements OnInit {
     contactSent = false;
     contactError = '';
     contactLoading = false;
+    contactTurnstileToken = '';
+    @ViewChild('tsContact') tsContact?: TurnstileComponent;
 
     async ngOnInit(): Promise<void> {
         // Si el hostname es admin.* (admin.acten.app), esta landing NO debe
@@ -324,6 +327,11 @@ export class LandingComponent implements OnInit {
             return;
         }
 
+        if (!this.contactTurnstileToken) {
+            this.contactError = this.translate.instant('landing.contact_errors.turnstile_pending');
+            return;
+        }
+
         this.contactLoading = true;
         this.contactError = '';
         try {
@@ -334,7 +342,7 @@ export class LandingComponent implements OnInit {
                 role: this.contactForm.role?.trim() || undefined,
                 message: this.contactForm.message.trim(),
                 website: this.contactForm.website || '',
-            });
+            }, this.contactTurnstileToken);
             this.contactSent = true;
             // Reset suave: tras 6s vuelve al formulario vacío por si el usuario
             // quiere enviar otra solicitud (p. ej. para un colega).
@@ -345,13 +353,17 @@ export class LandingComponent implements OnInit {
                 };
             }, 6000);
         } catch (err: any) {
-            console.error('[Landing] Error enviando contacto', err);
             // Mensajes específicos por tipo de error — antes era genérico para
             // todo, lo que confundía cuando el problema era rate limit o
             // validación (cosas que el usuario puede solucionar).
             const status = err?.status;
             const detail = err?.error?.detail;
-            if (status === 429) {
+            const tsCode = typeof detail === 'object' ? detail?.error_code : null;
+            if (tsCode === 'turnstile_required' || tsCode === 'turnstile_failed' || tsCode === 'turnstile_action_mismatch') {
+                this.tsContact?.reset();
+                this.contactTurnstileToken = '';
+                this.contactError = this.translate.instant('landing.contact_errors.turnstile_failed');
+            } else if (status === 429) {
                 this.contactError = typeof detail === 'string' && detail
                     ? detail
                     : this.translate.instant('landing.contact_errors.rate_limit');

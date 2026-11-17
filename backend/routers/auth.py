@@ -19,6 +19,13 @@ from auth_utils import (
 from database import DEFAULT_TENANT_SLUG, get_session
 from datetime import datetime
 from models import Role, RoleActivity, RolePermission, Tenant, User
+from services.turnstile import (
+    ACTION_FORGOT_PASSWORD,
+    ACTION_LOGIN,
+    ACTION_LOGIN_2FA,
+    ACTION_RESET_PASSWORD,
+    dep_turnstile,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -337,7 +344,7 @@ def _login_success_payload(user: User, tenant: Tenant, request: Optional[Request
     }
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(dep_turnstile(ACTION_LOGIN))])
 def login_for_access_token(
     login_req: LoginRequest,
     request: Request,
@@ -392,7 +399,7 @@ class TwoFactorLoginVerify(BaseModel):
         return _normalize_email(v)
 
 
-@router.post("/login/2fa-verify")
+@router.post("/login/2fa-verify", dependencies=[Depends(dep_turnstile(ACTION_LOGIN_2FA))])
 def verify_login_2fa(
     body: TwoFactorLoginVerify,
     request: Request,
@@ -1473,7 +1480,7 @@ class ForgotPasswordRequest(BaseModel):
         return _normalize_email(v)
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(dep_turnstile(ACTION_FORGOT_PASSWORD))])
 async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_session)):
     from auth_utils import create_password_reset_token
     from services.email_service import EmailService
@@ -1508,7 +1515,7 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", dependencies=[Depends(dep_turnstile(ACTION_RESET_PASSWORD))])
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_session)):
     from auth_utils import password_reset_claims, get_password_hash
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -6,13 +6,14 @@ import { AuthService } from '../../services/auth.service';
 import { BrandingService } from '../../services/branding.service';
 import { LanguageService } from '../../services/language.service';
 import { LanguageSelectorComponent } from '../shared/language-selector/language-selector.component';
+import { TurnstileComponent } from '../../shared/turnstile/turnstile.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TenantService } from '../../services/tenant.service';
 
 @Component({
     selector: 'app-login',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LanguageSelectorComponent, TurnstileComponent],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.css']
 })
@@ -30,6 +31,12 @@ export class LoginComponent implements OnInit {
     code2FA = '';
     emailMasked = '';
     isVerifying2FA = false;
+
+    // ─── Turnstile ───────────────────────────────────────────────
+    turnstileToken = '';
+    turnstile2faToken = '';
+    @ViewChild('tsLogin') tsLogin?: TurnstileComponent;
+    @ViewChild('ts2fa') ts2fa?: TurnstileComponent;
 
     /** Multi-tenant: derivado SIEMPRE de la URL (TenantService).
      *  El usuario NUNCA edita esto desde el form — para cambiar de
@@ -91,6 +98,10 @@ export class LoginComponent implements OnInit {
 
     onSubmit() {
         if (!this.email || !this.password) return;
+        if (!this.turnstileToken) {
+            this.errorMessage = this.translate.instant('login.errors.turnstile_pending');
+            return;
+        }
 
         // Normalizar email INMEDIATAMENTE: trim + lowercase. Aunque el
         // backend ya lo hace vía Pydantic validator (defensa real), aquí
@@ -102,7 +113,7 @@ export class LoginComponent implements OnInit {
         this.isLoading = true;
         this.errorMessage = '';
 
-        this.authService.login(this.email, this.password, this.tenantSlug).subscribe({
+        this.authService.login(this.email, this.password, this.tenantSlug, this.turnstileToken).subscribe({
             next: (res) => {
                 this.isLoading = false;
                 // El backend pide 2FA antes de emitir el token.
@@ -132,7 +143,13 @@ export class LoginComponent implements OnInit {
             },
             error: (err) => {
                 this.isLoading = false;
-                if (err.status === 401) {
+                // Tras un fallo con Turnstile, el token ya se consumió — pedir uno nuevo.
+                this.tsLogin?.reset();
+                this.turnstileToken = '';
+                const code = err?.error?.detail?.error_code;
+                if (code === 'turnstile_required' || code === 'turnstile_failed' || code === 'turnstile_action_mismatch') {
+                    this.errorMessage = this.translate.instant('login.errors.turnstile_failed');
+                } else if (err.status === 401) {
                     this.errorMessage = this.translate.instant('login.errors.invalid_credentials');
                 } else if (err.status === 404) {
                     this.errorMessage = this.translate.instant('login.errors.tenant_not_found', { slug: this.tenantSlug });
@@ -148,9 +165,13 @@ export class LoginComponent implements OnInit {
             this.errorMessage = this.translate.instant('login.errors.code_required');
             return;
         }
+        if (!this.turnstile2faToken) {
+            this.errorMessage = this.translate.instant('login.errors.turnstile_pending');
+            return;
+        }
         this.isVerifying2FA = true;
         this.errorMessage = '';
-        this.authService.verifyLogin2FA(this.email, this.code2FA.trim(), this.tenantSlug).subscribe({
+        this.authService.verifyLogin2FA(this.email, this.code2FA.trim(), this.tenantSlug, this.turnstile2faToken).subscribe({
             next: (res) => {
                 this.isVerifying2FA = false;
                 this.branding.loadFromServer();
@@ -162,8 +183,15 @@ export class LoginComponent implements OnInit {
             },
             error: (err) => {
                 this.isVerifying2FA = false;
-                this.errorMessage = err?.error?.detail
-                    || this.translate.instant('login.errors.code_invalid');
+                this.ts2fa?.reset();
+                this.turnstile2faToken = '';
+                const code = err?.error?.detail?.error_code;
+                if (code === 'turnstile_required' || code === 'turnstile_failed' || code === 'turnstile_action_mismatch') {
+                    this.errorMessage = this.translate.instant('login.errors.turnstile_failed');
+                } else {
+                    this.errorMessage = err?.error?.detail
+                        || this.translate.instant('login.errors.code_invalid');
+                }
             },
         });
     }
