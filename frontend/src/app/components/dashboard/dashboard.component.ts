@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { TurnstileDialogService } from '../../shared/turnstile/turnstile-dialog.service';
 import { environment } from '../../../environments/environment';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { UserDirectoryService } from '../../services/user-directory.service';
@@ -108,6 +109,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     isDeleting = false;
 
     private readonly destroy$ = new Subject<void>();
+    private readonly turnstileDialog = inject(TurnstileDialogService);
 
     constructor(
         private http: HttpClient,
@@ -338,25 +340,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
             formData.append('text_content', this.uploadForm.textContent);
         }
 
-        const headers = this.authService.getAuthHeaders();
-        // Angular's HttpClient will automatically set the correct Content-Type for FormData
-        
-        this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
-            next: () => {
-                this.toast.success(this.translate.instant('dashboard.toast_session_created'));
-                this.showUploadModal = false;
-                this.isUploading = false;
-                this.loadSessions();
-            },
-            error: (err) => {
-                this.toast.error(
-                    this.translate.instant('dashboard.toast_session_upload_error', {
-                        detail: err?.error?.detail || err?.message || 'desconocido',
-                    }),
-                );
-                this.isUploading = false;
-            }
-        });
+        this.turnstileDialog.verify('session_upload').then((token) => {
+            const headers = this.authService.getAuthHeaders(token);
+            this.http.post(`${environment.apiUrl}/api/sessions/upload`, formData, { headers }).pipe(takeUntil(this.destroy$)).subscribe({
+                next: () => {
+                    this.toast.success(this.translate.instant('dashboard.toast_session_created'));
+                    this.showUploadModal = false;
+                    this.isUploading = false;
+                    this.loadSessions();
+                },
+                error: (err) => {
+                    this.toast.error(
+                        this.translate.instant('dashboard.toast_session_upload_error', {
+                            detail: err?.error?.detail || err?.message || 'desconocido',
+                        }),
+                    );
+                    this.isUploading = false;
+                }
+            });
+        }).catch(() => { this.isUploading = false; });
     }
 
     loadSessions() {

@@ -91,21 +91,21 @@ export class AuthService {
         );
     }
 
-    changePassword(current_password: string, new_password: string): Observable<any> {
+    changePassword(current_password: string, new_password: string, turnstileToken?: string): Observable<any> {
         return this.http.put(`${this.apiUrl}/password`, {
             current_password,
             new_password
-        }, { headers: this.getAuthHeaders() });
+        }, { headers: this.getAuthHeaders(turnstileToken) });
     }
 
     /** Cambio de password vía POST /auth/me/change-password. Si el user tiene
      *  must_change_password=true, omitir current_password (el backend acepta).
      *  Devuelve { ok: true } al éxito. */
-    changePasswordForced(new_password: string, current_password?: string): Observable<any> {
+    changePasswordForced(new_password: string, current_password?: string, turnstileToken?: string): Observable<any> {
         const body: any = { new_password };
         if (current_password) body.current_password = current_password;
         return this.http.post(`${this.apiUrl}/me/change-password`, body, {
-            headers: this.getAuthHeaders(),
+            headers: this.getAuthHeaders(turnstileToken),
         });
     }
 
@@ -179,10 +179,13 @@ export class AuthService {
     }
 
     /** Sube un avatar (multipart/form-data). */
-    uploadAvatar(file: File): Observable<any> {
+    uploadAvatar(file: File, turnstileToken?: string): Observable<any> {
         const fd = new FormData();
         fd.append('file', file);
-        return this.http.post<any>(`${this.apiUrl}/me/avatar`, fd).pipe(
+        const headers = turnstileToken
+            ? new HttpHeaders({ 'cf-turnstile-token': turnstileToken })
+            : undefined;
+        return this.http.post<any>(`${this.apiUrl}/me/avatar`, fd, headers ? { headers } : {}).pipe(
             tap((user) => this.currentUserSubject.next(user)),
         );
     }
@@ -236,9 +239,11 @@ export class AuthService {
     }
 
     // Use to get headers in other services
-    getAuthHeaders(): HttpHeaders {
-        return new HttpHeaders({
-            'Authorization': `Bearer ${this.token || ''}`
-        });
+    getAuthHeaders(turnstileToken?: string): HttpHeaders {
+        const init: Record<string, string> = {
+            'Authorization': `Bearer ${this.token || ''}`,
+        };
+        if (turnstileToken) init['cf-turnstile-token'] = turnstileToken;
+        return new HttpHeaders(init);
     }
 }

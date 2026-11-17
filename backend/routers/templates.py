@@ -7,6 +7,7 @@ from typing import List
 from database import get_session
 from models import User, Template, Project, Tenant
 from routers.auth import require_admin, get_current_tenant
+from services.turnstile import ACTION_TEMPLATE_UPLOAD, dep_turnstile
 import crud
 import unicodedata
 import re
@@ -65,7 +66,7 @@ def list_templates(
     )
     return list(db.exec(stmt).all())
 
-@router.post("/upload")
+@router.post("/upload", dependencies=[Depends(dep_turnstile(ACTION_TEMPLATE_UPLOAD))])
 async def upload_template(
     project_id: int = Form(...),
     name: str = Form(None),

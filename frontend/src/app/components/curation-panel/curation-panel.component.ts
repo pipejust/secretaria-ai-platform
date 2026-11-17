@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -9,6 +9,7 @@ import { takeUntil } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { TurnstileDialogService } from '../../shared/turnstile/turnstile-dialog.service';
 import { MdRenderPipe } from '../../pipes/md-render.pipe';
 import { isExactIsoDate } from '../../shared/due-date';
 import { SessionVideo } from '../../services/media-storage.service';
@@ -112,6 +113,7 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
   private _lastSyncedProjectId: number | null = null;
 
   private readonly destroy$ = new Subject<void>();
+  private readonly turnstileDialog = inject(TurnstileDialogService);
   
   showManualTaskForm = false;
   isAddingTask = false;
@@ -621,27 +623,29 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     this.showSaveMessage(this.translate.instant('curation.toast_preparing_emails'), false);
     this.cdr.detectChanges();
 
-    const headers = this.authService.getAuthHeaders();
     // We tell the backend to attach the generated summary document directly
-    const payload: any = { 
+    const payload: any = {
         action_item_ids: selectedIds,
         attach_document: true
     };
 
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_emails`, payload, { headers }).subscribe({
-      next: (res: any) => {
-        this.isDispatchingEmails = false;
-        const count = res.results.filter((r:any)=>r.status==='success').length;
-        this.showSaveMessage(this.translate.instant('curation.toast_emails_sent', { count }));
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isDispatchingEmails = false;
-        const msg = err.error && err.error.detail ? err.error.detail : this.translate.instant('curation.toast_emails_error');
-        this.showSaveMessage(msg, true);
-        this.cdr.detectChanges();
-      }
-    });
+    this.turnstileDialog.verify('dispatch_emails').then((token) => {
+      const headers = this.authService.getAuthHeaders(token);
+      this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_emails`, payload, { headers }).subscribe({
+        next: (res: any) => {
+          this.isDispatchingEmails = false;
+          const count = res.results.filter((r:any)=>r.status==='success').length;
+          this.showSaveMessage(this.translate.instant('curation.toast_emails_sent', { count }));
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isDispatchingEmails = false;
+          const msg = err.error && err.error.detail ? err.error.detail : this.translate.instant('curation.toast_emails_error');
+          this.showSaveMessage(msg, true);
+          this.cdr.detectChanges();
+        }
+      });
+    }).catch(() => { this.isDispatchingEmails = false; this.cdr.detectChanges(); });
   }
 
   dispatchPlatforms() {
@@ -649,21 +653,23 @@ export class CurationPanelComponent implements OnInit, OnDestroy {
     if (!selectedIds.length) return;
 
     this.isDispatchingPlatforms = true;
-    const headers = this.authService.getAuthHeaders();
-    this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_platforms`, { action_item_ids: selectedIds }, { headers }).subscribe({
-      next: (res: any) => {
-        this.isDispatchingPlatforms = false;
-        const count = res.results.filter((r:any)=>r.status==='success').length;
-        this.showSaveMessage(this.translate.instant('curation.toast_platforms_sent', { count }));
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isDispatchingPlatforms = false;
-        const msg = err.error && err.error.detail ? err.error.detail : this.translate.instant('curation.toast_platforms_error');
-        this.showSaveMessage(msg, true);
-        this.cdr.detectChanges();
-      }
-    });
+    this.turnstileDialog.verify('dispatch_platforms').then((token) => {
+      const headers = this.authService.getAuthHeaders(token);
+      this.http.post(`${environment.apiUrl}/api/sessions/${this.sessionId}/dispatch_platforms`, { action_item_ids: selectedIds }, { headers }).subscribe({
+        next: (res: any) => {
+          this.isDispatchingPlatforms = false;
+          const count = res.results.filter((r:any)=>r.status==='success').length;
+          this.showSaveMessage(this.translate.instant('curation.toast_platforms_sent', { count }));
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isDispatchingPlatforms = false;
+          const msg = err.error && err.error.detail ? err.error.detail : this.translate.instant('curation.toast_platforms_error');
+          this.showSaveMessage(msg, true);
+          this.cdr.detectChanges();
+        }
+      });
+    }).catch(() => { this.isDispatchingPlatforms = false; this.cdr.detectChanges(); });
   }
 
 
