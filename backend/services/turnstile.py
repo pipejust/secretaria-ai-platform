@@ -33,7 +33,9 @@ logger = logging.getLogger(__name__)
 
 SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 # Hostnames permitidos en producción. Dev/staging se saltan por falta de secret.
-ALLOWED_HOSTNAMES = {"acten.app"}
+# acten.softnexus.io es el alias que usa la plataforma de Softnexus para servir Acten
+# embebido; el widget de Cloudflare ya acepta los dos.
+ALLOWED_HOSTNAMES = {"acten.app", "acten.softnexus.io"}
 # El cliente puede llamar la verify desde preview Vercel; si se necesita, añadir aquí.
 
 # Acciones conocidas — cada endpoint declara la suya. Permiten correlar un token
